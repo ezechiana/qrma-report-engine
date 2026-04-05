@@ -1,0 +1,20 @@
+{
+  "brand_name": "Natural Approaches",
+  "report_title": "Personalised Wellness Scan Report",
+  "subtitle": "Wellness screening summary based on a quantum resonance scan export",
+  "logo_url": "",
+  "cover_image_url": "",
+  "primary_color": "#065f46",
+  "accent_color": "#d97706",
+  "text_color": "#1f2937",
+  "tone": "clinical",
+  "include_toc": true,
+  "include_appendix": true,
+  "include_product_recommendations": true,
+  "product_catalog": "vitalhealth_global",
+  "max_sections": 6,
+  "max_markers_per_section": 3,
+  "clinic_contact": "",
+  "clinic_website": "",
+  "clinic_email": ""
+}

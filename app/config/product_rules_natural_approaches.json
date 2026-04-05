@@ -1,0 +1,125 @@
+{
+  "profile_name": "natural_approaches",
+  "profile_label": "Natural Approaches Default Rules",
+  "notes": [
+    "These are default optional product mappings intended for practitioner review.",
+    "Clinical recommendations should remain separate from product recommendations.",
+    "Practitioners can duplicate and edit these defaults later in a custom profile."
+  ],
+  "product_recommendations": [
+    {
+      "section_titles": [
+        "Gastrointestinal Function",
+        "Large Intestine Function"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_FOOD_SENSITIVITY",
+        "NA_DEEP_DETOX"
+      ],
+      "rationale": "Triggered by digestive, motility, absorption, or gut-environment abnormalities.",
+      "patient_note": "These options may be relevant when digestion, absorption, or inflammatory gut patterns appear central."
+    },
+    {
+      "section_titles": [
+        "Vitamin",
+        "Trace Element",
+        "Amino Acid",
+        "Coenzyme"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_RHYTHM_RESET",
+        "NA_HAIR_MINERAL"
+      ],
+      "rationale": "Triggered by repeated nutrient-related abnormalities or broader foundational depletion patterns.",
+      "patient_note": "These options may help when the scan suggests nutritional insufficiency, poor resilience, or a need for deeper foundational support."
+    },
+    {
+      "section_titles": [
+        "Heavy Metal",
+        "Human Toxin",
+        "Liver Function",
+        "Gallbladder Function",
+        "Kidney Function"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_DEEP_DETOX",
+        "NA_HAIR_MINERAL"
+      ],
+      "rationale": "Triggered by toxic-burden, detoxification, hepatobiliary, or elimination-related abnormalities.",
+      "patient_note": "These options may be relevant where the scan suggests exposure burden, sluggish detoxification, or elimination stress."
+    },
+    {
+      "section_titles": [
+        "Allergy",
+        "Skin"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_FOOD_SENSITIVITY",
+        "NA_DEEP_DETOX"
+      ],
+      "rationale": "Triggered by allergic, inflammatory, barrier, or skin-reactivity patterns.",
+      "patient_note": "These options may be relevant when immune reactivity, dietary triggers, or skin barrier stress appear to overlap."
+    },
+    {
+      "section_titles": [
+        "Cardiovascular and Cerebrovascular",
+        "Blood Sugar",
+        "Obesity",
+        "Essential Fatty Acid"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_RHYTHM_RESET",
+        "NA_DNA_EPIGENETICS"
+      ],
+      "rationale": "Triggered by metabolic, circulatory, cardiovascular, or resilience-related patterns.",
+      "patient_note": "These options may be useful where the scan suggests a broader cardiometabolic support strategy is needed."
+    },
+    {
+      "section_titles": [
+        "Endocrine System",
+        "Thyroid"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_DNA_EPIGENETICS",
+        "NA_HAIR_MINERAL",
+        "NA_RHYTHM_RESET"
+      ],
+      "rationale": "Triggered by endocrine, thyroid, rhythm, or stress-adaptation related patterns.",
+      "patient_note": "These options may be relevant where hormonal rhythm, thyroid balance, or deeper constitutional tendencies need exploration."
+    },
+    {
+      "section_titles": [
+        "Immune System",
+        "Brain Nerve",
+        "Basic Physical Quality",
+        "Lung Function"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_RHYTHM_RESET"
+      ],
+      "rationale": "Triggered by broader resilience, nervous-system, immune, or energy-related abnormalities.",
+      "patient_note": "These options may be useful where the scan suggests a whole-system support approach rather than a single narrow intervention."
+    },
+    {
+      "section_titles": [
+        "Bone Mineral Density",
+        "Rheumatoid Bone Disease",
+        "Bone Growth Index"
+      ],
+      "product_ids": [
+        "NA_DISCOVERY_SESSION",
+        "NA_HAIR_MINERAL",
+        "NA_DNA_EPIGENETICS"
+      ],
+      "rationale": "Triggered by mineral balance, structural support, inflammatory bone/joint, or longer-term rebuilding patterns.",
+      "patient_note": "These options may be useful where the scan suggests deeper mineral, structural, or constitutional support is warranted."
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+.venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+.git
+.gitignore
+node_modules
+app/generated/*.pdf
+app/generated/*.html
+sample_data

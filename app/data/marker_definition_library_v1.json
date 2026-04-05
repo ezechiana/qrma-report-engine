@@ -1,0 +1,39 @@
+{
+  "sections": [
+    {
+      "section": "Vitamin status",
+      "markers": [
+        {
+          "marker": "Vitamin C",
+          "what_it_means": "Vitamin C is used here as part of the scan's picture of antioxidant support, tissue repair, and micronutrient resilience.",
+          "why_it_matters": "Vitamin C is commonly associated with connective tissue support, antioxidant defence, immune resilience, and recovery capacity.",
+          "functional_significance": "A lower result here may fit a broader pattern of reduced antioxidant reserve or nutritional support.",
+          "common_patterns": "This marker is often more meaningful when read with vitamin E, glutathione, skin-related findings, and general resilience patterns.",
+          "patient_interpretation_by_severity": {
+            "low_mild": "A mildly reduced Vitamin C-related reading may suggest softer antioxidant or recovery support in this scan model.",
+            "low_moderate": "A more clearly reduced Vitamin C-related reading may fit a broader pattern of reduced antioxidant reserve or tissue-support capacity."
+          }
+        },
+        {
+          "marker": "Vitamin E",
+          "what_it_means": "Vitamin E is used here as part of the scan's picture of antioxidant protection and membrane-related nutrient support.",
+          "why_it_matters": "Vitamin E is often associated with antioxidant defence, membrane integrity, and tissue resilience.",
+          "functional_significance": "A lower result may fit a broader pattern of softer antioxidant reserve or lipid-membrane support.",
+          "common_patterns": "This marker often reads best alongside essential fatty acids, vitamin C, and skin-related findings."
+        }
+      ]
+    },
+    {
+      "section": "Cardiovascular & circulation",
+      "markers": [
+        {
+          "marker": "Left Ventricular Effective Pump Power",
+          "what_it_means": "This marker is used here as part of the scan's picture of cardiac pumping efficiency and circulatory output.",
+          "why_it_matters": "Pump-related patterns may influence circulation quality, tissue delivery, exertional resilience, and broader cardiovascular workload.",
+          "functional_significance": "A reduced result here may fit a pattern of softer circulatory efficiency or reduced functional output.",
+          "common_patterns": "This marker is often strongest when interpreted with stroke volume, vascular resistance, and perfusion-related markers."
+        }
+      ]
+    }
+  ]
+}

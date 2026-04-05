@@ -1,0 +1,10 @@
+fastapi
+uvicorn[standard]
+beautifulsoup4
+lxml
+jinja2
+pydantic
+python-multipart
+playwright
+openai>=1.0.0
+python-dotenv

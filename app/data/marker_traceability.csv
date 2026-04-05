@@ -1,0 +1,334 @@
+control_id,original_report_category,canonical_system,original_name,clinical_label
+M001,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Blood Viscosity,Blood Viscosity
+M002,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Cholesterol Crystal,Cholesterol Crystal
+M003,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Blood Fat,Blood Fat
+M004,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Vascular Resistance,Vascular Resistance
+M005,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Vascular Elasticity,Vascular Elasticity
+M006,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Myocardial Blood Demand,Myocardial Blood Demand
+M007,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Myocardial Blood Perfusion Volume,Myocardial Perfusion
+M008,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Myocardial Oxygen Consumption,Myocardial Oxygen Consumption
+M009,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Stroke Volume,Stroke Volume
+M010,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Left Ventricular Ejection Impedance,LV Ejection Impedance
+M011,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Left Ventricular Effective Pump Power,LV Pump Power
+M012,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Coronary Artery Elasticity,Coronary Artery Elasticity
+M013,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Coronary Perfusion Pressure,Coronary Perfusion Pressure
+M014,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Cerebral Blood Vessel Elasticity,Cerebral Blood Vessel Elasticity
+M015,(Cardiovascular and Cerebrovascular) Analysis Report Card,Cardiovascular & circulation,Brain Tissue Blood Supply Status,Brain Tissue Blood Supply Status
+M016,(Gastrointestinal Function) Analysis Report Card,Upper digestive function,Pepsin Secretion Coefficient,Pepsin Secretion Coefficient
+M017,(Gastrointestinal Function) Analysis Report Card,Upper digestive function,Gastric Peristalsis Function Coefficient,Gastric Peristalsis Function Coefficient
+M018,(Gastrointestinal Function) Analysis Report Card,Upper digestive function,Gastric Absorption Function Coefficient,Gastric Absorption Function Coefficient
+M019,(Gastrointestinal Function) Analysis Report Card,Upper digestive function,Small Intestine Peristalsis Function Coefficient,Small Intestine Motility
+M020,(Gastrointestinal Function) Analysis Report Card,Upper digestive function,Small Intestine Absorption Function Coefficient,Small Intestine Absorption
+M021,(Large Intestine Function) Analysis Report Card,Lower digestive function,Large intestine peristalsis function coefficient,Colon Motility
+M022,(Large Intestine Function) Analysis Report Card,Lower digestive function,Colonic absorption coefficient,Colon Absorption
+M023,(Large Intestine Function) Analysis Report Card,Lower digestive function,Intestinal bacteria coefficient,Gut Microbiome
+M024,(Large Intestine Function) Analysis Report Card,Lower digestive function,Intraluminal pressure coefficient,Intraluminal pressure coefficient
+M025,(Liver Function) Analysis Report Card,Liver function,Protein Metabolism,Protein Metabolism
+M026,(Liver Function) Analysis Report Card,Liver function,Energy Production  Function,Energy Production Function
+M027,(Liver Function) Analysis Report Card,Liver function,Detoxification Function,Detoxification Function
+M028,(Liver Function) Analysis Report Card,Liver function,Bile Secretion Function,Bile Secretion Function
+M029,(Liver Function) Analysis Report Card,Liver function,Liver Fat Content,Liver Fat Content
+M030,(Gallbladder Function) Analysis Report Card,Gallbladder & bile flow,Serum Globulin (A/G),Serum Globulin (A/G)
+M031,(Gallbladder Function) Analysis Report Card,Gallbladder & bile flow,Total Bilirubin (TBIL),Total Bilirubin (TBIL)
+M032,(Gallbladder Function) Analysis Report Card,Gallbladder & bile flow,Alkaline Phosphatase (ALP),Alkaline Phosphatase (ALP)
+M033,(Gallbladder Function) Analysis Report Card,Gallbladder & bile flow,Serum Total Bile Acid (TBA,Serum Total Bile Acid (TBA
+M034,(Gallbladder Function) Analysis Report Card,Gallbladder & bile flow,Bilirubin (DBIL),Bilirubin (DBIL)
+M035,(Pancreatic Function) Analysis Report Card,Pancreatic function,Insulin,Insulin
+M036,(Pancreatic Function) Analysis Report Card,Pancreatic function,Pancreatic Polypeptide (PP),Pancreatic Polypeptide (PP)
+M037,(Pancreatic Function) Analysis Report Card,Pancreatic function,Glucagon,Glucagon
+M038,(Kidney Function) Analysis Report Card,Kidney & fluid balance,Urobilinogen Index,Urobilinogen Index
+M039,(Kidney Function) Analysis Report Card,Kidney & fluid balance,Uric acid Index,Uric acid Index
+M040,(Kidney Function) Analysis Report Card,Kidney & fluid balance,Blood urea nitrogen(BUN) Index,BUN
+M041,(Kidney Function) Analysis Report Card,Kidney & fluid balance,Proteinuria Index,Proteinuria Index
+M042,(Lung Function) Analysis Report Card,Lung function,Vital Capacity VC,Vital Capacity
+M043,(Lung Function) Analysis Report Card,Lung function,Total Lung Capacity TLC,Total Lung Capacity
+M044,(Lung Function) Analysis Report Card,Lung function,Airway Resistance RAM,Airway Resistance
+M045,(Lung Function) Analysis Report Card,Lung function,Arterial Oxygen Content PaCO2,Arterial Oxygen Content
+M046,(Brain Nerve) Analysis Report Card,Neurological function,Status of Brain Tissue Blood Supply,Brain Tissue Blood Supply
+M047,(Brain Nerve) Analysis Report Card,Neurological function,Cerebral Arteriosclerosis,Cerebral Arteriosclerosis
+M048,(Brain Nerve) Analysis Report Card,Neurological function,Functional Status of Cranial Nerve,Cranial Nerve Function
+M049,(Brain Nerve) Analysis Report Card,Neurological function,Sentiment Index,Sentiment Index
+M050,(Brain Nerve) Analysis Report Card,Neurological function,Memory Index(ZS),Memory
+M051,(Bone Disease) Analysis Report Card,Bone disease patterns,Lumbar Fiber Protruding Dimension,Lumbar Fiber Protruding Dimension
+M052,(Bone Disease) Analysis Report Card,Bone disease patterns,Adhesion Degree of Shoulder Muscle,Adhesion Degree of Shoulder Muscle
+M053,(Bone Disease) Analysis Report Card,Bone disease patterns,Limbs Circulation Limit,Limbs Circulation Limit
+M054,(Bone Disease) Analysis Report Card,Bone disease patterns,Age of Ligament,Age of Ligament
+M055,(Bone Mineral Density) Analysis Report Card,Bone density & structure,Osteoclast Coefficient,Osteoclast Coefficient
+M056,(Bone Mineral Density) Analysis Report Card,Bone density & structure,Amount of Calcium Loss,Amount of Calcium Loss
+M057,(Bone Mineral Density) Analysis Report Card,Bone density & structure,Degree of Bone Hyperplasia,Degree of Bone Hyperplasia
+M058,(Bone Mineral Density) Analysis Report Card,Bone density & structure,Degree of Osteoporosis,Degree of Osteoporosis
+M059,(Bone Mineral Density) Analysis Report Card,Bone density & structure,Bone Mineral Density,Bone Mineral Density
+M060,(Rheumatoid Bone Disease) Analysis Report Card,Inflammatory bone and joint patterns,Degree of Cervical Calcification,Degree of Cervical Calcification
+M061,(Rheumatoid Bone Disease) Analysis Report Card,Inflammatory bone and joint patterns,Degree of Lumbar Calcification,Degree of Lumbar Calcification
+M062,(Rheumatoid Bone Disease) Analysis Report Card,Inflammatory bone and joint patterns,Bone Hyperplasia Coefficient,Bone Hyperplasia Coefficient
+M063,(Rheumatoid Bone Disease) Analysis Report Card,Inflammatory bone and joint patterns,Osteoporosis Coefficient,Osteoporosis Coefficient
+M064,(Rheumatoid Bone Disease) Analysis Report Card,Inflammatory bone and joint patterns,Rheumatism Coefficient,Rheumatism Coefficient
+M065,(Bone Growth Index) Analysis Report Card,Bone growth and repair,Bone alkaline phosphatase,Bone alkaline phosphatase
+M066,(Bone Growth Index) Analysis Report Card,Bone growth and repair,Osteocalcin,Osteocalcin
+M067,(Bone Growth Index) Analysis Report Card,Bone growth and repair,Status of long bone healing,Status of long bone healing
+M068,(Bone Growth Index) Analysis Report Card,Bone growth and repair,Short bone cartilage healing situation,Short bone cartilage healing situation
+M069,(Bone Growth Index) Analysis Report Card,Bone growth and repair,Epiphyseal line,Epiphyseal line
+M070,(Blood Sugar) Analysis Report Card,Blood sugar regulation,Coefficient of Insulin Secretion,Coefficient of Insulin Secretion
+M071,(Blood Sugar) Analysis Report Card,Blood sugar regulation,Blood Sugar Coefficient,Blood Sugar Coefficient
+M072,(Blood Sugar) Analysis Report Card,Blood sugar regulation,Urine Sugar Coefficient,Urine Sugar Coefficient
+M073,(Trace Element) Analysis Report Card,Trace elements & mineral system,Calcium,Calcium
+M074,(Trace Element) Analysis Report Card,Trace elements & mineral system,Iron,Iron
+M075,(Trace Element) Analysis Report Card,Trace elements & mineral system,Zinc,Zinc
+M076,(Trace Element) Analysis Report Card,Trace elements & mineral system,Selenium,Selenium
+M077,(Trace Element) Analysis Report Card,Trace elements & mineral system,Phosphorus,Phosphorus
+M078,(Trace Element) Analysis Report Card,Trace elements & mineral system,Potassium,Potassium
+M079,(Trace Element) Analysis Report Card,Trace elements & mineral system,Magnesium,Magnesium
+M080,(Trace Element) Analysis Report Card,Trace elements & mineral system,Copper,Copper
+M081,(Trace Element) Analysis Report Card,Trace elements & mineral system,Cobalt,Cobalt
+M082,(Trace Element) Analysis Report Card,Trace elements & mineral system,Manganese,Manganese
+M083,(Trace Element) Analysis Report Card,Trace elements & mineral system,Iodine,Iodine
+M084,(Trace Element) Analysis Report Card,Trace elements & mineral system,Nickel,Nickel
+M085,(Trace Element) Analysis Report Card,Trace elements & mineral system,Fluorine,Fluorine
+M086,(Trace Element) Analysis Report Card,Trace elements & mineral system,Molybdenum,Molybdenum
+M087,(Trace Element) Analysis Report Card,Trace elements & mineral system,Vanadium,Vanadium
+M088,(Trace Element) Analysis Report Card,Trace elements & mineral system,Tin,Tin
+M089,(Trace Element) Analysis Report Card,Trace elements & mineral system,Silicon,Silicon
+M090,(Trace Element) Analysis Report Card,Trace Elements & Mineral System,Boron,Boron
+M091,(Vitamin) Analysis Report Card,Vitamin status,Vitamin A,Vitamin A
+M092,(Vitamin) Analysis Report Card,Vitamin status,Vitamin B1,Vitamin B1
+M093,(Vitamin) Analysis Report Card,Vitamin status,Vitamin B2,Vitamin B2
+M094,(Vitamin) Analysis Report Card,Vitamin status,Vitamin B3,Vitamin B3
+M095,(Vitamin) Analysis Report Card,Vitamin status,Vitamin B6,Vitamin B6
+M096,(Vitamin) Analysis Report Card,Vitamin status,Vitamin B12,Vitamin B12
+M097,(Vitamin) Analysis Report Card,Vitamin status,Vitamin C,Vitamin C
+M098,(Vitamin) Analysis Report Card,Vitamin status,Vitamin D3,Vitamin D3
+M099,(Vitamin) Analysis Report Card,Vitamin status,Vitamin E,Vitamin E
+M100,(Vitamin) Analysis Report Card,Vitamin status,Vitamin K,Vitamin K
+M101,(Amino Acid) Analysis Report Card,Amino acid status,Lysine,Lysine
+M102,(Amino Acid) Analysis Report Card,Amino acid status,Tryptophan,Tryptophan
+M103,(Amino Acid) Analysis Report Card,Amino acid status,Phenylalanine,Phenylalanine
+M104,(Amino Acid) Analysis Report Card,Amino acid status,Methionine,Methionine
+M105,(Amino Acid) Analysis Report Card,Amino acid status,Threonine,Threonine
+M106,(Amino Acid) Analysis Report Card,Amino acid status,Isoleucine,Isoleucine
+M107,(Amino Acid) Analysis Report Card,Amino acid status,Leucine,Leucine
+M108,(Amino Acid) Analysis Report Card,Amino acid status,Valine,Valine
+M109,(Amino Acid) Analysis Report Card,Amino acid status,Histidine,Histidine
+M110,(Amino Acid) Analysis Report Card,Amino acid status,Arginine,Arginine
+M111,(Amino Acid) Analysis Report Card,Amino acid status,Homocysteine,Homocysteine
+M112,(Coenzyme) Analysis Report Card,Coenzyme status,Nicotinamide,Nicotinamide
+M113,(Coenzyme) Analysis Report Card,Coenzyme status,Biotin,Biotin
+M114,(Coenzyme) Analysis Report Card,Coenzyme status,Pantothenic acid,Pantothenic acid
+M115,(Coenzyme) Analysis Report Card,Coenzyme status,Folic acid,Folic acid
+M116,(Coenzyme) Analysis Report Card,Coenzyme status,Coenzyme Q10,Coenzyme Q10
+M117,(Coenzyme) Analysis Report Card,Coenzyme status,Glutathione,Glutathione
+M118,(Essential Fatty Acid) Analysis Report Card,Essential fatty acids,Linoleic acid,Linoleic acid
+M119,(Essential Fatty Acid) Analysis Report Card,Essential fatty acids,α-Linolenic acid,α-Linolenic acid
+M120,(Essential Fatty Acid) Analysis Report Card,Essential fatty acids,γ-Linolenic acid,γ-Linolenic acid
+M121,(Essential Fatty Acid) Analysis Report Card,Essential fatty acids,Arachidonic acid,Arachidonic acid
+M122,(Endocrine System) Analysis Report Card,Endocrine system,Thyroid secretion index,Thyroid secretion index
+M123,(Endocrine System) Analysis Report Card,Endocrine system,Parathyroid hormone secretion index,Parathyroid hormone secretion index
+M124,(Endocrine System) Analysis Report Card,Endocrine system,Adrenal glands Index,Adrenal glands Index
+M125,(Endocrine System) Analysis Report Card,Endocrine system,Pituitary secretion index,Pituitary secretion index
+M126,(Endocrine System) Analysis Report Card,Endocrine system,Pineal secretion index,Pineal secretion index
+M127,(Endocrine System) Analysis Report Card,Endocrine system,Thymus gland secretion index,Thymus gland secretion index
+M128,(Endocrine System) Analysis Report Card,Endocrine system,Gland secretion index,Gland secretion index
+M129,(Immune System) Analysis Report Card,Immune system,Lymph node Index,Lymph node Index
+M130,(Immune System) Analysis Report Card,Immune system,Tonsil immune Index,Tonsil immune Index
+M131,(Immune System) Analysis Report Card,Immune system,Bone marrow Index,Bone marrow Index
+M132,(Immune System) Analysis Report Card,Immune system,Spleen index,Spleen index
+M133,(Immune System) Analysis Report Card,Immune system,Thymus index,Thymus index
+M134,(Immune System) Analysis Report Card,Immune system,Immunoglobulin index,Immunoglobulin index
+M135,(Immune System) Analysis Report Card,Immune system,Respiratory immune Index,Respiratory Immunity
+M136,(Immune System) Analysis Report Card,Immune system,Gastrointestinal immune Index,GI Immunity
+M137,(Immune System) Analysis Report Card,Immune system,Mucosa immune Index,Mucosal Immunity
+M138,(Thyroid) Analysis Report Card,Endocrine system,Free thyroxine (FT4),FT4
+M139,(Thyroid) Analysis Report Card,Endocrine system,Thyroglobulin,Thyroglobulin
+M140,(Thyroid) Analysis Report Card,Endocrine system,Anti-thyroglobulin antibodies,Anti-thyroglobulin Ab
+M141,(Thyroid) Analysis Report Card,Endocrine system,Three triiodothyronine (T3),T3
+M142,(Human Toxin) Analysis Report Card,Environmental burden markers,Stimulating Beverage,Stimulating Beverage
+M143,(Human Toxin) Analysis Report Card,Environmental burden markers,Electromagnetic Radiation,Electromagnetic Radiation
+M144,(Human Toxin) Analysis Report Card,Environmental burden markers,Free Radical,Free Radical
+M145,(Human Toxin) Analysis Report Card,Environmental burden markers,Toxic Pesticide Residue,Toxic Pesticide Residue
+M146,(Heavy Metal) Analysis Report Card,Heavy metal burden,Lead,Lead
+M147,(Heavy Metal) Analysis Report Card,Heavy metal burden,Mercury,Mercury
+M148,(Heavy Metal) Analysis Report Card,Heavy metal burden,Cadmium,Cadmium
+M149,(Heavy Metal) Analysis Report Card,Heavy metal burden,Chromium,Chromium
+M150,(Heavy Metal) Analysis Report Card,Heavy metal burden,Arsenic,Arsenic
+M151,(Heavy Metal) Analysis Report Card,Heavy metal burden,Antimony,Antimony
+M152,(Heavy Metal) Analysis Report Card,Heavy metal burden,Thallium,Thallium
+M153,(Heavy Metal) Analysis Report Card,Heavy metal burden,Aluminum,Aluminum
+M154,(Basic Physical Quality) Analysis Report Card,General physical resilience,Response Ability,Response Ability
+M155,(Basic Physical Quality) Analysis Report Card,General physical resilience,Mental Power,Mental Power
+M156,(Basic Physical Quality) Analysis Report Card,General physical resilience,Water Shortage,Water Shortage
+M157,(Basic Physical Quality) Analysis Report Card,General physical resilience,Hypoxia,Hypoxia
+M158,(Basic Physical Quality) Analysis Report Card,General physical resilience,PH,PH
+M159,(Allergy) Analysis Report Card,Allergy-related indicators,Drug allergy index,Drug Sensitivity
+M160,(Allergy) Analysis Report Card,Allergy-related indicators,Alcohol allergy index,Alcohol allergy index
+M161,(Allergy) Analysis Report Card,Allergy-related indicators,Pollen allergy index,Pollen allergy index
+M162,(Allergy) Analysis Report Card,Allergy-related indicators,Injection allergy index,Injection allergy index
+M163,(Allergy) Analysis Report Card,Allergy-related indicators,Chemical products allergy index,Chemical Sensitivity
+M164,(Allergy) Analysis Report Card,Allergy-related indicators,Paint allergy index,Paint allergy index
+M165,(Allergy) Analysis Report Card,Allergy-related indicators,Dust allergy index,Dust allergy index
+M166,(Allergy) Analysis Report Card,Allergy-related indicators,Smoke allergy index,Smoke allergy index
+M167,(Allergy) Analysis Report Card,Allergy-related indicators,Hair dye allergy index,Hair dye allergy index
+M168,(Allergy) Analysis Report Card,Allergy-related indicators,Animal fur allergy index,Animal fur allergy index
+M169,(Allergy) Analysis Report Card,Allergy-related indicators,Metal jewelry allergy index,Metal jewelry allergy index
+M170,(Allergy) Analysis Report Card,Allergy-related indicators,Seafood allergy index,Seafood allergy index
+M171,(Allergy) Analysis Report Card,Allergy-related indicators,Milk allergy index,Milk allergy index
+M172,(Obesity) Analysis Report Card,Obesity and weight patterns,Abnormal lipid metabolism coefficient,Abnormal lipid metabolism coefficient
+M173,(Obesity) Analysis Report Card,Obesity and weight patterns,Brown adipose tissue abnormalities coefficient,Brown adipose tissue abnormalities coefficient
+M174,(Obesity) Analysis Report Card,Reproductive system,Hyperinsulinemia coefficient,Hyperinsulinemia coefficient
+M175,(Obesity) Analysis Report Card,Obesity and weight patterns,Nucleus of the hypothalamus abnormal coefficient,Nucleus of the hypothalamus abnormal coefficient
+M176,(Obesity) Analysis Report Card,Metabolic regulation,Triglyceride content of abnormal coefficient,Triglyceride content of abnormal coefficient
+M177,(Skin) Analysis Report Card,Skin function,Skin Free Radical Index,Skin Free Radical Index
+M178,(Skin) Analysis Report Card,Skin function,Skin Collagen Index,Skin Collagen Index
+M179,(Skin) Analysis Report Card,Skin function,Skin Grease Index,Skin Grease Index
+M180,(Skin) Analysis Report Card,Skin function,Skin Immunity Index,Skin Immunity Index
+M181,(Skin) Analysis Report Card,Skin function,Skin Moisture Index,Skin Moisture Index
+M182,(Skin) Analysis Report Card,Skin function,Skin Moisture Loss,Skin Moisture Loss
+M183,(Skin) Analysis Report Card,Skin function,Skin Red Blood Trace Index,Skin Red Blood Trace Index
+M184,(Skin) Analysis Report Card,Skin function,Skin Elasticity Index,Skin Elasticity Index
+M185,(Skin) Analysis Report Card,Skin function,Skin Melanin Index,Skin Melanin Index
+M186,(Skin) Analysis Report Card,Skin function,Skin Horniness Index,Skin Keratinisation & Thickening
+M187,(Eye) Analysis Report Card,Eye system,Bags under the eyes,Bags under the eyes
+M188,(Eye) Analysis Report Card,Eye system,Collagen eye wrinkle,Collagen eye wrinkle
+M189,(Eye) Analysis Report Card,Eye system,Dark circles,Dark circles
+M190,(Eye) Analysis Report Card,Eye system,Lymphatic obstruction,Lymphatic obstruction
+M191,(Eye) Analysis Report Card,Eye system,Sagging,Sagging
+M192,(Eye) Analysis Report Card,Eye system,Edema,Edema
+M193,(Eye) Analysis Report Card,Eye system,Eye cell activity,Eye cell activity
+M194,(Eye) Analysis Report Card,Eye system,Visual fatigue,Visual fatigue
+M195,(Eye) Analysis Report Card,Eye system,Eye,Overall Eye Function
+M196,(Collagen) Analysis Report Card,Collagen system,Tooth,Endocrine system
+M197,(Collagen) Analysis Report Card,Collagen system,Hair and skin,Hair and skin
+M198,(Collagen) Analysis Report Card,Collagen system,Endocrine system,Endocrine system
+M199,(Collagen) Analysis Report Card,Collagen system,Circulatory system,Circulatory system
+M200,(Collagen) Analysis Report Card,Collagen system,Digestive system,Digestive system
+M201,(Collagen) Analysis Report Card,Collagen system,Immune system,Immune system
+M202,(Collagen) Analysis Report Card,Collagen system,Motion systems,Motion systems
+M203,(Collagen) Analysis Report Card,Collagen system,Muscle Tissue,Muscle Tissue
+M204,(Collagen) Analysis Report Card,Collagen system,Fat Metabolism,Fat Metabolism
+M205,(Collagen) Analysis Report Card,Collagen system,Detoxification and metabolism,Detoxification and metabolism
+M206,(Collagen) Analysis Report Card,Collagen system,Reproductive system,Reproductive system
+M207,(Collagen) Analysis Report Card,Collagen system,Nervous system,Nervous system
+M208,(Collagen) Analysis Report Card,Collagen system,Skeleton,Skeleton
+M209,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Hand Tai Yin Lung Meridian,Hand Tai Yin Lung Meridian
+M210,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Hand Yangming Large Intestine Meridian,Hand Yangming Large Intestine Meridian
+M211,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Foot Yangming Stomach Meridian,Foot Yangming Stomach Meridian
+M212,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Foot Tai Yin Lung Meridian,Foot Tai Yin Lung Meridian
+M213,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Hand Shao Yin Heart Sutra,Hand Shao Yin Heart Sutra
+M214,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Hand the small intestine by the sun,Hand the small intestine by the sun
+M215,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Foot Tai Yang Bladder Meridian,Foot Tai Yang Bladder Meridian
+M216,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Foot Shao Yin Kidney,Foot Shao Yin Kidney
+M217,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Hand Jue Yin Pericardium Meridian,Hand Jue Yin Pericardium Meridian
+M218,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Hand Shao Yang Triple Burner Meridian,Hand Shao Yang Triple Burner Meridian
+M219,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Foot Shao Yang Gall Bladder Meridian,Foot Shao Yang Gall Bladder Meridian
+M220,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Foot Jue Yin Liver Meridian,Foot Jue Yin Liver Meridian
+M221,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Ren channel,Ren channel
+M222,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Governor meridian,Governor meridian
+M223,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Vital meridian,Vital meridian
+M224,(Channels and collaterals) Analysis Report Card,Channels and collaterals,Tai mai,Tai mai
+M225,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Stroke index,Stroke index
+M226,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Stroke volume(SV),Stroke volume(SV)
+M227,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Heart peripheral resistance (TRR),Heart peripheral resistance (TRR)
+M228,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Pulse wave coefficient K,Pulse wave coefficient K
+M229,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Cerebrovascular blood oxygen saturation(Sa),Cerebrovascular blood oxygen saturation(Sa)
+M230,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Cerebrovascular blood oxygen volume(CaCO2),Cerebrovascular blood oxygen volume(CaCO2)
+M231,(Pulse of heart and brain) Analysis Report Card,Pulse of heart and brain,Cerebrovascular blood oxygen presure(PaO2),Cerebrovascular blood oxygen presure(PaO2)
+M232,(Blood lipids) Analysis Report Card,Blood lipids,Blood viscosity,Blood viscosity
+M233,(Blood lipids) Analysis Report Card,Blood lipids,Total cholesterol(TC),Total cholesterol(TC)
+M234,(Blood lipids) Analysis Report Card,Blood lipids,Triglyceride(TG),Triglyceride(TG)
+M235,(Blood lipids) Analysis Report Card,Blood lipids,High-density lipoprotein (HDL-C),High-density lipoprotein (HDL-C)
+M236,(Blood lipids) Analysis Report Card,Blood lipids,Low-density lipoprotein (LDL-C),Low-density lipoprotein (LDL-C)
+M237,(Blood lipids) Analysis Report Card,Blood lipids,Neutral fat(MB),Neutral fat(MB)
+M238,(Blood lipids) Analysis Report Card,Blood lipids,Circulating immune complex(CIC),Circulating immune complex(CIC)
+M239,(Gynecology) Analysis Report Card,Gynaecology,Vaginitis coefficient,Vaginitis coefficient
+M240,(Gynecology) Analysis Report Card,Gynaecology,PID coefficient,PID coefficient
+M241,(Gynecology) Analysis Report Card,Gynaecology,Appendagitis coefficient,Appendagitis coefficient
+M242,(Gynecology) Analysis Report Card,Gynaecology,Cervicitis coefficient,Cervicitis coefficient
+M243,(Gynecology) Analysis Report Card,Gynaecology,Ovarian cyst coefficient,Ovarian cyst coefficient
+M244,(Breast) Analysis Report Card,Breast health,Hyperplasia of mammary glands coefficient,Breast Hyperplasia
+M245,(Breast) Analysis Report Card,Breast health,Acute mastitis coefficient,Acute mastitis coefficient
+M246,(Breast) Analysis Report Card,Breast health,Chronic mastitis coefficient,Chronic mastitis coefficient
+M247,(Breast) Analysis Report Card,Breast health,Endocrine dyscrasia coefficient,Endocrine dyscrasia coefficient
+M248,(Breast) Analysis Report Card,Breast health,Fibroadenoma of breast coefficient,Fibroadenoma of breast coefficient
+M249,(Menstrual cycle) Analysis Report Card,Menstrual cycle,Beta hormone,Beta hormone
+M250,(Menstrual cycle) Analysis Report Card,Menstrual cycle,Reflect protein,Reflect protein
+M251,(Menstrual cycle) Analysis Report Card,Menstrual cycle,Fibrinogen,Fibrinogen
+M252,(Menstrual cycle) Analysis Report Card,Menstrual cycle,Sedimentation rate,Sedimentation rate
+M253,(Female Hormone) Analysis Report Card,Female hormone profile,Estrogen,Estrogen
+M254,(Female Hormone) Analysis Report Card,Female hormone profile,Androgen,Androgen
+M255,(Female Hormone) Analysis Report Card,Female hormone profile,Progesterone(P),Progesterone(P)
+M256,(Female Hormone) Analysis Report Card,Female hormone profile,Luteinizing Hormone (LH),Luteinizing Hormone (LH)
+M257,(Female Hormone) Analysis Report Card,Female hormone profile,Prolactin(PRL),Prolactin(PRL)
+M258,(Female Hormone) Analysis Report Card,Female hormone profile,Follicle Stimulating Hormone(FSH),Follicle Stimulating Hormone(FSH)
+M259,(Human Immunity) Analysis Report Card,Human immunity,Tissue barrier immune index,Tissue barrier immune index
+M260,(Human Immunity) Analysis Report Card,Human immunity,Innate immune cell index,Innate immune cell index
+M261,(Human Immunity) Analysis Report Card,Human immunity,Innate immune molecule index,Innate immune molecule index
+M262,(Human Immunity) Analysis Report Card,Human immunity,Cellular immune index,Cellular immune index
+M263,(Human Immunity) Analysis Report Card,Human immunity,Humoral immunity index,Humoral immunity index
+M264,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Shame,Shame
+M265,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Guilt,Guilt
+M266,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Apathy,Apathy
+M267,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Grief,Grief
+M268,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Fear,Fear
+M269,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Desire,Desire
+M270,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Anger,Anger
+M271,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Pride,Pride
+M272,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Courage,Courage
+M273,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Neutrality,Neutrality
+M274,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Willingness,Willingness
+M275,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Acceptance,Acceptance
+M276,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Reason,Reason
+M277,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Love,Love
+M278,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Joy,Joy
+M279,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Peace,Peace
+M280,(Human Consciousness Level) Analysis Report Card,Human consciousness level,Enlightenment,Enlightenment
+M281,(Respiratory Function) Analysis Report Card,Respiratory function,Volume Tidal(VT),Volume Tidal(VT)
+M282,(Respiratory Function) Analysis Report Card,Respiratory function,Inspiratory Volume(TI),Inspiratory Volume(TI)
+M283,(Respiratory Function) Analysis Report Card,Respiratory function,Functional Residual Capacity(FRC),Functional Residual Capacity(FRC)
+M284,(Respiratory Function) Analysis Report Card,Respiratory function,Residual Volume(RV),Residual Volume(RV)
+M285,(Lecithin) Analysis Report Card,Lecithin & phospholipids,Phospholipid index,Phospholipid index
+M286,(Lecithin) Analysis Report Card,Lecithin & phospholipids,Sphingolipid index,Sphingolipid index
+M288,(Lecithin) Analysis Report Card,Lecithin & phospholipids,Lecithin index,Lecithin index
+M289,(Lecithin) Analysis Report Card,Lecithin & phospholipids,Brain phospholipid index,Brain phospholipid index
+M290,(Lecithin) Analysis Report Card,Lecithin & phospholipids,Liposomal index,Liposomal index
+M291,(Fatty acid) Analysis Report Card,Fatty acid balance,Saturated fatty acid index,Saturated fatty acid index
+M292,(Fatty acid) Analysis Report Card,Fatty acid balance,Unsaturated fatty acid index,Unsaturated fatty acid index
+M293,(Fatty acid) Analysis Report Card,Fatty acid balance,Essential fatty acid index,Essential fatty acid index
+M294,(Fatty acid) Analysis Report Card,Fatty acid balance,Triglyceride index,Triglyceride index
+M299,(Element of Human) Analysis Report Card,Body composition,1.The componential analysis of body: (5)Body fat (Kg),Body Fat Mass
+M300,(Element of Human) Analysis Report Card,Body composition,2.Fat analysis: 1.Height(Cm),Height(Cm)
+M301,(Element of Human) Analysis Report Card,Body composition,2.Fat analysis: 2.Weight(Kg),Weight(Kg)
+M302,(Element of Human) Analysis Report Card,Body composition,2.Fat analysis: 3.Muscle mass,Muscle mass
+M303,(Element of Human) Analysis Report Card,Body composition,2.Fat analysis: 4.Body fat content,Body fat content
+M304,(Element of Human) Analysis Report Card,Body composition,2.Fat analysis: 5.Body fat percentage,Body fat percentage
+M305,(Element of Human) Analysis Report Card,Body composition,2.Fat analysis: 6.Ratio of abdominal fat,Ratio of abdominal fat
+M306,(Prostate) Analysis Report Card,Prostate health,Degree of Prostatic Hyperplasia,Degree of Prostatic Hyperplasia
+M307,(Prostate) Analysis Report Card,Prostate health,Degree of Prostatic Calcification,Degree of Prostatic Calcification
+M308,(Prostate) Analysis Report Card,Prostate health,Prostatitis Syndrome,Prostatitis Syndrome
+M309,(Male Sexual Function) Analysis Report Card,Male sexual function,Testosterone,Testosterone
+M310,(Male Sexual Function) Analysis Report Card,Male sexual function,Gonadotropin,Gonadotropin
+M311,(Male Sexual Function) Analysis Report Card,Male sexual function,Erection Transmitter,Erection Transmitter
+M312,(Sperm and semen) Analysis Report Card,Sperm and semen,Semen volume,Semen volume
+M313,(Sperm and semen) Analysis Report Card,Sperm and semen,liquefying time,Semen liquefying time
+M314,(Sperm and semen) Analysis Report Card,Sperm and semen,Number of sperms,Number of sperms
+M315,(Sperm and semen) Analysis Report Card,Sperm and semen,Sperm motility rate,Sperm motility rate
+M316,(Male Hormone) Analysis Report Card,Male hormone profile,Androgen,Androgen
+M317,(Male Hormone) Analysis Report Card,Male hormone profile,Estrogen,Estrogen
+M318,(Male Hormone) Analysis Report Card,Male hormone profile,Progesterone(P),Progesterone(P)
+M319,(Male Hormone) Analysis Report Card,Male hormone profile,Luteinizing Hormone (LH),Luteinizing Hormone (LH)
+M320,(Male Hormone) Analysis Report Card,Male hormone profile,Prolactin(PRL),Prolactin(PRL)
+M321,(Male Hormone) Analysis Report Card,Male hormone profile,Follicle Stimulating Hormone(FSH),Follicle Stimulating Hormone(FSH)
+M322,(ADHD) Analysis Report Card,ADHD-related patterns,An oxygen-hydroxy phenyl ethanol,An oxygen-hydroxy phenyl ethanol
+M323,(ADHD) Analysis Report Card,ADHD-related patterns,GE neurotransmitters,GE neurotransmitters
+M324,(ADHD) Analysis Report Card,ADHD-related patterns,Vanilloid,Vanilloid
+M325,(ADHD) Analysis Report Card,ADHD-related patterns,Creatine hormone,Creatine hormone
+M326,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Observation,Observation
+M327,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Memory,Memory
+M328,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Imagination,Imagination
+M329,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Creativity,Vanilloid
+M330,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Analysis and Judgment,Analysis and Judgment
+M331,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Thinking Ability,Thinking Ability
+M332,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Resilience,Resilience
+M333,(Adolescent Intelligence) Analysis Report Card,Adolescent intelligence,Reasoning Ability,Reasoning Ability
+M334,(Element of Human) Analysis Report Card,Body composition,Height and body mass index,Height and body mass index
+M335,(Element of Human) Analysis Report Card,Body composition,Height bust index,Height bust index
+M336,(Element of Human) Analysis Report Card,Body composition,Height sitting height index,Height sitting height index
+M338,(Element of Human) Analysis Report Card,Body composition,Grip and back muscle index,Grip and back muscle index
+M339,(Element of Human) Analysis Report Card,Body composition,Vital capacity index,Vital capacity index

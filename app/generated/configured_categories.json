@@ -1,0 +1,2065 @@
+{
+  "category_count": 49,
+  "categories": {
+    "(ADHD) Analysis Report Card": {
+      "canonical_systems": [
+        "ADHD-related patterns"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M322",
+          "original_name": "An oxygen-hydroxy phenyl ethanol",
+          "clinical_label": "An oxygen-hydroxy phenyl ethanol"
+        },
+        {
+          "control_id": "M323",
+          "original_name": "GE neurotransmitters",
+          "clinical_label": "GE neurotransmitters"
+        },
+        {
+          "control_id": "M324",
+          "original_name": "Vanilloid",
+          "clinical_label": "Vanilloid"
+        },
+        {
+          "control_id": "M325",
+          "original_name": "Creatine hormone",
+          "clinical_label": "Creatine hormone"
+        }
+      ]
+    },
+    "(Adolescent Intelligence) Analysis Report Card": {
+      "canonical_systems": [
+        "Adolescent intelligence"
+      ],
+      "marker_count": 8,
+      "markers": [
+        {
+          "control_id": "M326",
+          "original_name": "Observation",
+          "clinical_label": "Observation"
+        },
+        {
+          "control_id": "M327",
+          "original_name": "Memory",
+          "clinical_label": "Memory"
+        },
+        {
+          "control_id": "M328",
+          "original_name": "Imagination",
+          "clinical_label": "Imagination"
+        },
+        {
+          "control_id": "M329",
+          "original_name": "Creativity",
+          "clinical_label": "Vanilloid"
+        },
+        {
+          "control_id": "M330",
+          "original_name": "Analysis and Judgment",
+          "clinical_label": "Analysis and Judgment"
+        },
+        {
+          "control_id": "M331",
+          "original_name": "Thinking Ability",
+          "clinical_label": "Thinking Ability"
+        },
+        {
+          "control_id": "M332",
+          "original_name": "Resilience",
+          "clinical_label": "Resilience"
+        },
+        {
+          "control_id": "M333",
+          "original_name": "Reasoning Ability",
+          "clinical_label": "Reasoning Ability"
+        }
+      ]
+    },
+    "(Allergy) Analysis Report Card": {
+      "canonical_systems": [
+        "Allergy-related indicators"
+      ],
+      "marker_count": 13,
+      "markers": [
+        {
+          "control_id": "M159",
+          "original_name": "Drug allergy index",
+          "clinical_label": "Drug Sensitivity"
+        },
+        {
+          "control_id": "M160",
+          "original_name": "Alcohol allergy index",
+          "clinical_label": "Alcohol allergy index"
+        },
+        {
+          "control_id": "M161",
+          "original_name": "Pollen allergy index",
+          "clinical_label": "Pollen allergy index"
+        },
+        {
+          "control_id": "M162",
+          "original_name": "Injection allergy index",
+          "clinical_label": "Injection allergy index"
+        },
+        {
+          "control_id": "M163",
+          "original_name": "Chemical products allergy index",
+          "clinical_label": "Chemical Sensitivity"
+        },
+        {
+          "control_id": "M164",
+          "original_name": "Paint allergy index",
+          "clinical_label": "Paint allergy index"
+        },
+        {
+          "control_id": "M165",
+          "original_name": "Dust allergy index",
+          "clinical_label": "Dust allergy index"
+        },
+        {
+          "control_id": "M166",
+          "original_name": "Smoke allergy index",
+          "clinical_label": "Smoke allergy index"
+        },
+        {
+          "control_id": "M167",
+          "original_name": "Hair dye allergy index",
+          "clinical_label": "Hair dye allergy index"
+        },
+        {
+          "control_id": "M168",
+          "original_name": "Animal fur allergy index",
+          "clinical_label": "Animal fur allergy index"
+        },
+        {
+          "control_id": "M169",
+          "original_name": "Metal jewelry allergy index",
+          "clinical_label": "Metal jewelry allergy index"
+        },
+        {
+          "control_id": "M170",
+          "original_name": "Seafood allergy index",
+          "clinical_label": "Seafood allergy index"
+        },
+        {
+          "control_id": "M171",
+          "original_name": "Milk allergy index",
+          "clinical_label": "Milk allergy index"
+        }
+      ]
+    },
+    "(Amino Acid) Analysis Report Card": {
+      "canonical_systems": [
+        "Amino acid status"
+      ],
+      "marker_count": 11,
+      "markers": [
+        {
+          "control_id": "M101",
+          "original_name": "Lysine",
+          "clinical_label": "Lysine"
+        },
+        {
+          "control_id": "M102",
+          "original_name": "Tryptophan",
+          "clinical_label": "Tryptophan"
+        },
+        {
+          "control_id": "M103",
+          "original_name": "Phenylalanine",
+          "clinical_label": "Phenylalanine"
+        },
+        {
+          "control_id": "M104",
+          "original_name": "Methionine",
+          "clinical_label": "Methionine"
+        },
+        {
+          "control_id": "M105",
+          "original_name": "Threonine",
+          "clinical_label": "Threonine"
+        },
+        {
+          "control_id": "M106",
+          "original_name": "Isoleucine",
+          "clinical_label": "Isoleucine"
+        },
+        {
+          "control_id": "M107",
+          "original_name": "Leucine",
+          "clinical_label": "Leucine"
+        },
+        {
+          "control_id": "M108",
+          "original_name": "Valine",
+          "clinical_label": "Valine"
+        },
+        {
+          "control_id": "M109",
+          "original_name": "Histidine",
+          "clinical_label": "Histidine"
+        },
+        {
+          "control_id": "M110",
+          "original_name": "Arginine",
+          "clinical_label": "Arginine"
+        },
+        {
+          "control_id": "M111",
+          "original_name": "Homocysteine",
+          "clinical_label": "Homocysteine"
+        }
+      ]
+    },
+    "(Basic Physical Quality) Analysis Report Card": {
+      "canonical_systems": [
+        "General physical resilience"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M154",
+          "original_name": "Response Ability",
+          "clinical_label": "Response Ability"
+        },
+        {
+          "control_id": "M155",
+          "original_name": "Mental Power",
+          "clinical_label": "Mental Power"
+        },
+        {
+          "control_id": "M156",
+          "original_name": "Water Shortage",
+          "clinical_label": "Water Shortage"
+        },
+        {
+          "control_id": "M157",
+          "original_name": "Hypoxia",
+          "clinical_label": "Hypoxia"
+        },
+        {
+          "control_id": "M158",
+          "original_name": "PH",
+          "clinical_label": "PH"
+        }
+      ]
+    },
+    "(Blood Sugar) Analysis Report Card": {
+      "canonical_systems": [
+        "Blood sugar regulation"
+      ],
+      "marker_count": 3,
+      "markers": [
+        {
+          "control_id": "M070",
+          "original_name": "Coefficient of Insulin Secretion",
+          "clinical_label": "Coefficient of Insulin Secretion"
+        },
+        {
+          "control_id": "M071",
+          "original_name": "Blood Sugar Coefficient",
+          "clinical_label": "Blood Sugar Coefficient"
+        },
+        {
+          "control_id": "M072",
+          "original_name": "Urine Sugar Coefficient",
+          "clinical_label": "Urine Sugar Coefficient"
+        }
+      ]
+    },
+    "(Blood lipids) Analysis Report Card": {
+      "canonical_systems": [
+        "Blood lipids"
+      ],
+      "marker_count": 7,
+      "markers": [
+        {
+          "control_id": "M232",
+          "original_name": "Blood viscosity",
+          "clinical_label": "Blood viscosity"
+        },
+        {
+          "control_id": "M233",
+          "original_name": "Total cholesterol(TC)",
+          "clinical_label": "Total cholesterol(TC)"
+        },
+        {
+          "control_id": "M234",
+          "original_name": "Triglyceride(TG)",
+          "clinical_label": "Triglyceride(TG)"
+        },
+        {
+          "control_id": "M235",
+          "original_name": "High-density lipoprotein (HDL-C)",
+          "clinical_label": "High-density lipoprotein (HDL-C)"
+        },
+        {
+          "control_id": "M236",
+          "original_name": "Low-density lipoprotein (LDL-C)",
+          "clinical_label": "Low-density lipoprotein (LDL-C)"
+        },
+        {
+          "control_id": "M237",
+          "original_name": "Neutral fat(MB)",
+          "clinical_label": "Neutral fat(MB)"
+        },
+        {
+          "control_id": "M238",
+          "original_name": "Circulating immune complex(CIC)",
+          "clinical_label": "Circulating immune complex(CIC)"
+        }
+      ]
+    },
+    "(Bone Disease) Analysis Report Card": {
+      "canonical_systems": [
+        "Bone disease patterns"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M051",
+          "original_name": "Lumbar Fiber Protruding Dimension",
+          "clinical_label": "Lumbar Fiber Protruding Dimension"
+        },
+        {
+          "control_id": "M052",
+          "original_name": "Adhesion Degree of Shoulder Muscle",
+          "clinical_label": "Adhesion Degree of Shoulder Muscle"
+        },
+        {
+          "control_id": "M053",
+          "original_name": "Limbs Circulation Limit",
+          "clinical_label": "Limbs Circulation Limit"
+        },
+        {
+          "control_id": "M054",
+          "original_name": "Age of Ligament",
+          "clinical_label": "Age of Ligament"
+        }
+      ]
+    },
+    "(Bone Growth Index) Analysis Report Card": {
+      "canonical_systems": [
+        "Bone growth and repair"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M065",
+          "original_name": "Bone alkaline phosphatase",
+          "clinical_label": "Bone alkaline phosphatase"
+        },
+        {
+          "control_id": "M066",
+          "original_name": "Osteocalcin",
+          "clinical_label": "Osteocalcin"
+        },
+        {
+          "control_id": "M067",
+          "original_name": "Status of long bone healing",
+          "clinical_label": "Status of long bone healing"
+        },
+        {
+          "control_id": "M068",
+          "original_name": "Short bone cartilage healing situation",
+          "clinical_label": "Short bone cartilage healing situation"
+        },
+        {
+          "control_id": "M069",
+          "original_name": "Epiphyseal line",
+          "clinical_label": "Epiphyseal line"
+        }
+      ]
+    },
+    "(Bone Mineral Density) Analysis Report Card": {
+      "canonical_systems": [
+        "Bone density & structure"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M055",
+          "original_name": "Osteoclast Coefficient",
+          "clinical_label": "Osteoclast Coefficient"
+        },
+        {
+          "control_id": "M056",
+          "original_name": "Amount of Calcium Loss",
+          "clinical_label": "Amount of Calcium Loss"
+        },
+        {
+          "control_id": "M057",
+          "original_name": "Degree of Bone Hyperplasia",
+          "clinical_label": "Degree of Bone Hyperplasia"
+        },
+        {
+          "control_id": "M058",
+          "original_name": "Degree of Osteoporosis",
+          "clinical_label": "Degree of Osteoporosis"
+        },
+        {
+          "control_id": "M059",
+          "original_name": "Bone Mineral Density",
+          "clinical_label": "Bone Mineral Density"
+        }
+      ]
+    },
+    "(Brain Nerve) Analysis Report Card": {
+      "canonical_systems": [
+        "Neurological function"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M046",
+          "original_name": "Status of Brain Tissue Blood Supply",
+          "clinical_label": "Brain Tissue Blood Supply"
+        },
+        {
+          "control_id": "M047",
+          "original_name": "Cerebral Arteriosclerosis",
+          "clinical_label": "Cerebral Arteriosclerosis"
+        },
+        {
+          "control_id": "M048",
+          "original_name": "Functional Status of Cranial Nerve",
+          "clinical_label": "Cranial Nerve Function"
+        },
+        {
+          "control_id": "M049",
+          "original_name": "Sentiment Index",
+          "clinical_label": "Sentiment Index"
+        },
+        {
+          "control_id": "M050",
+          "original_name": "Memory Index(ZS)",
+          "clinical_label": "Memory"
+        }
+      ]
+    },
+    "(Breast) Analysis Report Card": {
+      "canonical_systems": [
+        "Breast health"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M244",
+          "original_name": "Hyperplasia of mammary glands coefficient",
+          "clinical_label": "Breast Hyperplasia"
+        },
+        {
+          "control_id": "M245",
+          "original_name": "Acute mastitis coefficient",
+          "clinical_label": "Acute mastitis coefficient"
+        },
+        {
+          "control_id": "M246",
+          "original_name": "Chronic mastitis coefficient",
+          "clinical_label": "Chronic mastitis coefficient"
+        },
+        {
+          "control_id": "M247",
+          "original_name": "Endocrine dyscrasia coefficient",
+          "clinical_label": "Endocrine dyscrasia coefficient"
+        },
+        {
+          "control_id": "M248",
+          "original_name": "Fibroadenoma of breast coefficient",
+          "clinical_label": "Fibroadenoma of breast coefficient"
+        }
+      ]
+    },
+    "(Cardiovascular and Cerebrovascular) Analysis Report Card": {
+      "canonical_systems": [
+        "Cardiovascular & circulation"
+      ],
+      "marker_count": 15,
+      "markers": [
+        {
+          "control_id": "M001",
+          "original_name": "Blood Viscosity",
+          "clinical_label": "Blood Viscosity"
+        },
+        {
+          "control_id": "M002",
+          "original_name": "Cholesterol Crystal",
+          "clinical_label": "Cholesterol Crystal"
+        },
+        {
+          "control_id": "M003",
+          "original_name": "Blood Fat",
+          "clinical_label": "Blood Fat"
+        },
+        {
+          "control_id": "M004",
+          "original_name": "Vascular Resistance",
+          "clinical_label": "Vascular Resistance"
+        },
+        {
+          "control_id": "M005",
+          "original_name": "Vascular Elasticity",
+          "clinical_label": "Vascular Elasticity"
+        },
+        {
+          "control_id": "M006",
+          "original_name": "Myocardial Blood Demand",
+          "clinical_label": "Myocardial Blood Demand"
+        },
+        {
+          "control_id": "M007",
+          "original_name": "Myocardial Blood Perfusion Volume",
+          "clinical_label": "Myocardial Perfusion"
+        },
+        {
+          "control_id": "M008",
+          "original_name": "Myocardial Oxygen Consumption",
+          "clinical_label": "Myocardial Oxygen Consumption"
+        },
+        {
+          "control_id": "M009",
+          "original_name": "Stroke Volume",
+          "clinical_label": "Stroke Volume"
+        },
+        {
+          "control_id": "M010",
+          "original_name": "Left Ventricular Ejection Impedance",
+          "clinical_label": "LV Ejection Impedance"
+        },
+        {
+          "control_id": "M011",
+          "original_name": "Left Ventricular Effective Pump Power",
+          "clinical_label": "LV Pump Power"
+        },
+        {
+          "control_id": "M012",
+          "original_name": "Coronary Artery Elasticity",
+          "clinical_label": "Coronary Artery Elasticity"
+        },
+        {
+          "control_id": "M013",
+          "original_name": "Coronary Perfusion Pressure",
+          "clinical_label": "Coronary Perfusion Pressure"
+        },
+        {
+          "control_id": "M014",
+          "original_name": "Cerebral Blood Vessel Elasticity",
+          "clinical_label": "Cerebral Blood Vessel Elasticity"
+        },
+        {
+          "control_id": "M015",
+          "original_name": "Brain Tissue Blood Supply Status",
+          "clinical_label": "Brain Tissue Blood Supply Status"
+        }
+      ]
+    },
+    "(Channels and collaterals) Analysis Report Card": {
+      "canonical_systems": [
+        "Channels and collaterals"
+      ],
+      "marker_count": 16,
+      "markers": [
+        {
+          "control_id": "M209",
+          "original_name": "Hand Tai Yin Lung Meridian",
+          "clinical_label": "Hand Tai Yin Lung Meridian"
+        },
+        {
+          "control_id": "M210",
+          "original_name": "Hand Yangming Large Intestine Meridian",
+          "clinical_label": "Hand Yangming Large Intestine Meridian"
+        },
+        {
+          "control_id": "M211",
+          "original_name": "Foot Yangming Stomach Meridian",
+          "clinical_label": "Foot Yangming Stomach Meridian"
+        },
+        {
+          "control_id": "M212",
+          "original_name": "Foot Tai Yin Lung Meridian",
+          "clinical_label": "Foot Tai Yin Lung Meridian"
+        },
+        {
+          "control_id": "M213",
+          "original_name": "Hand Shao Yin Heart Sutra",
+          "clinical_label": "Hand Shao Yin Heart Sutra"
+        },
+        {
+          "control_id": "M214",
+          "original_name": "Hand the small intestine by the sun",
+          "clinical_label": "Hand the small intestine by the sun"
+        },
+        {
+          "control_id": "M215",
+          "original_name": "Foot Tai Yang Bladder Meridian",
+          "clinical_label": "Foot Tai Yang Bladder Meridian"
+        },
+        {
+          "control_id": "M216",
+          "original_name": "Foot Shao Yin Kidney",
+          "clinical_label": "Foot Shao Yin Kidney"
+        },
+        {
+          "control_id": "M217",
+          "original_name": "Hand Jue Yin Pericardium Meridian",
+          "clinical_label": "Hand Jue Yin Pericardium Meridian"
+        },
+        {
+          "control_id": "M218",
+          "original_name": "Hand Shao Yang Triple Burner Meridian",
+          "clinical_label": "Hand Shao Yang Triple Burner Meridian"
+        },
+        {
+          "control_id": "M219",
+          "original_name": "Foot Shao Yang Gall Bladder Meridian",
+          "clinical_label": "Foot Shao Yang Gall Bladder Meridian"
+        },
+        {
+          "control_id": "M220",
+          "original_name": "Foot Jue Yin Liver Meridian",
+          "clinical_label": "Foot Jue Yin Liver Meridian"
+        },
+        {
+          "control_id": "M221",
+          "original_name": "Ren channel",
+          "clinical_label": "Ren channel"
+        },
+        {
+          "control_id": "M222",
+          "original_name": "Governor meridian",
+          "clinical_label": "Governor meridian"
+        },
+        {
+          "control_id": "M223",
+          "original_name": "Vital meridian",
+          "clinical_label": "Vital meridian"
+        },
+        {
+          "control_id": "M224",
+          "original_name": "Tai mai",
+          "clinical_label": "Tai mai"
+        }
+      ]
+    },
+    "(Coenzyme) Analysis Report Card": {
+      "canonical_systems": [
+        "Coenzyme status"
+      ],
+      "marker_count": 6,
+      "markers": [
+        {
+          "control_id": "M112",
+          "original_name": "Nicotinamide",
+          "clinical_label": "Nicotinamide"
+        },
+        {
+          "control_id": "M113",
+          "original_name": "Biotin",
+          "clinical_label": "Biotin"
+        },
+        {
+          "control_id": "M114",
+          "original_name": "Pantothenic acid",
+          "clinical_label": "Pantothenic acid"
+        },
+        {
+          "control_id": "M115",
+          "original_name": "Folic acid",
+          "clinical_label": "Folic acid"
+        },
+        {
+          "control_id": "M116",
+          "original_name": "Coenzyme Q10",
+          "clinical_label": "Coenzyme Q10"
+        },
+        {
+          "control_id": "M117",
+          "original_name": "Glutathione",
+          "clinical_label": "Glutathione"
+        }
+      ]
+    },
+    "(Collagen) Analysis Report Card": {
+      "canonical_systems": [
+        "Collagen system"
+      ],
+      "marker_count": 13,
+      "markers": [
+        {
+          "control_id": "M196",
+          "original_name": "Tooth",
+          "clinical_label": "Endocrine system"
+        },
+        {
+          "control_id": "M197",
+          "original_name": "Hair and skin",
+          "clinical_label": "Hair and skin"
+        },
+        {
+          "control_id": "M198",
+          "original_name": "Endocrine system",
+          "clinical_label": "Endocrine system"
+        },
+        {
+          "control_id": "M199",
+          "original_name": "Circulatory system",
+          "clinical_label": "Circulatory system"
+        },
+        {
+          "control_id": "M200",
+          "original_name": "Digestive system",
+          "clinical_label": "Digestive system"
+        },
+        {
+          "control_id": "M201",
+          "original_name": "Immune system",
+          "clinical_label": "Immune system"
+        },
+        {
+          "control_id": "M202",
+          "original_name": "Motion systems",
+          "clinical_label": "Motion systems"
+        },
+        {
+          "control_id": "M203",
+          "original_name": "Muscle Tissue",
+          "clinical_label": "Muscle Tissue"
+        },
+        {
+          "control_id": "M204",
+          "original_name": "Fat Metabolism",
+          "clinical_label": "Fat Metabolism"
+        },
+        {
+          "control_id": "M205",
+          "original_name": "Detoxification and metabolism",
+          "clinical_label": "Detoxification and metabolism"
+        },
+        {
+          "control_id": "M206",
+          "original_name": "Reproductive system",
+          "clinical_label": "Reproductive system"
+        },
+        {
+          "control_id": "M207",
+          "original_name": "Nervous system",
+          "clinical_label": "Nervous system"
+        },
+        {
+          "control_id": "M208",
+          "original_name": "Skeleton",
+          "clinical_label": "Skeleton"
+        }
+      ]
+    },
+    "(Element of Human) Analysis Report Card": {
+      "canonical_systems": [
+        "Body composition"
+      ],
+      "marker_count": 12,
+      "markers": [
+        {
+          "control_id": "M299",
+          "original_name": "1.The componential analysis of body: (5)Body fat (Kg)",
+          "clinical_label": "Body Fat Mass"
+        },
+        {
+          "control_id": "M300",
+          "original_name": "2.Fat analysis: 1.Height(Cm)",
+          "clinical_label": "Height(Cm)"
+        },
+        {
+          "control_id": "M301",
+          "original_name": "2.Fat analysis: 2.Weight(Kg)",
+          "clinical_label": "Weight(Kg)"
+        },
+        {
+          "control_id": "M302",
+          "original_name": "2.Fat analysis: 3.Muscle mass",
+          "clinical_label": "Muscle mass"
+        },
+        {
+          "control_id": "M303",
+          "original_name": "2.Fat analysis: 4.Body fat content",
+          "clinical_label": "Body fat content"
+        },
+        {
+          "control_id": "M304",
+          "original_name": "2.Fat analysis: 5.Body fat percentage",
+          "clinical_label": "Body fat percentage"
+        },
+        {
+          "control_id": "M305",
+          "original_name": "2.Fat analysis: 6.Ratio of abdominal fat",
+          "clinical_label": "Ratio of abdominal fat"
+        },
+        {
+          "control_id": "M334",
+          "original_name": "Height and body mass index",
+          "clinical_label": "Height and body mass index"
+        },
+        {
+          "control_id": "M335",
+          "original_name": "Height bust index",
+          "clinical_label": "Height bust index"
+        },
+        {
+          "control_id": "M336",
+          "original_name": "Height sitting height index",
+          "clinical_label": "Height sitting height index"
+        },
+        {
+          "control_id": "M338",
+          "original_name": "Grip and back muscle index",
+          "clinical_label": "Grip and back muscle index"
+        },
+        {
+          "control_id": "M339",
+          "original_name": "Vital capacity index",
+          "clinical_label": "Vital capacity index"
+        }
+      ]
+    },
+    "(Endocrine System) Analysis Report Card": {
+      "canonical_systems": [
+        "Endocrine system"
+      ],
+      "marker_count": 7,
+      "markers": [
+        {
+          "control_id": "M122",
+          "original_name": "Thyroid secretion index",
+          "clinical_label": "Thyroid secretion index"
+        },
+        {
+          "control_id": "M123",
+          "original_name": "Parathyroid hormone secretion index",
+          "clinical_label": "Parathyroid hormone secretion index"
+        },
+        {
+          "control_id": "M124",
+          "original_name": "Adrenal glands Index",
+          "clinical_label": "Adrenal glands Index"
+        },
+        {
+          "control_id": "M125",
+          "original_name": "Pituitary secretion index",
+          "clinical_label": "Pituitary secretion index"
+        },
+        {
+          "control_id": "M126",
+          "original_name": "Pineal secretion index",
+          "clinical_label": "Pineal secretion index"
+        },
+        {
+          "control_id": "M127",
+          "original_name": "Thymus gland secretion index",
+          "clinical_label": "Thymus gland secretion index"
+        },
+        {
+          "control_id": "M128",
+          "original_name": "Gland secretion index",
+          "clinical_label": "Gland secretion index"
+        }
+      ]
+    },
+    "(Essential Fatty Acid) Analysis Report Card": {
+      "canonical_systems": [
+        "Essential fatty acids"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M118",
+          "original_name": "Linoleic acid",
+          "clinical_label": "Linoleic acid"
+        },
+        {
+          "control_id": "M119",
+          "original_name": "α-Linolenic acid",
+          "clinical_label": "α-Linolenic acid"
+        },
+        {
+          "control_id": "M120",
+          "original_name": "γ-Linolenic acid",
+          "clinical_label": "γ-Linolenic acid"
+        },
+        {
+          "control_id": "M121",
+          "original_name": "Arachidonic acid",
+          "clinical_label": "Arachidonic acid"
+        }
+      ]
+    },
+    "(Eye) Analysis Report Card": {
+      "canonical_systems": [
+        "Eye system"
+      ],
+      "marker_count": 9,
+      "markers": [
+        {
+          "control_id": "M187",
+          "original_name": "Bags under the eyes",
+          "clinical_label": "Bags under the eyes"
+        },
+        {
+          "control_id": "M188",
+          "original_name": "Collagen eye wrinkle",
+          "clinical_label": "Collagen eye wrinkle"
+        },
+        {
+          "control_id": "M189",
+          "original_name": "Dark circles",
+          "clinical_label": "Dark circles"
+        },
+        {
+          "control_id": "M190",
+          "original_name": "Lymphatic obstruction",
+          "clinical_label": "Lymphatic obstruction"
+        },
+        {
+          "control_id": "M191",
+          "original_name": "Sagging",
+          "clinical_label": "Sagging"
+        },
+        {
+          "control_id": "M192",
+          "original_name": "Edema",
+          "clinical_label": "Edema"
+        },
+        {
+          "control_id": "M193",
+          "original_name": "Eye cell activity",
+          "clinical_label": "Eye cell activity"
+        },
+        {
+          "control_id": "M194",
+          "original_name": "Visual fatigue",
+          "clinical_label": "Visual fatigue"
+        },
+        {
+          "control_id": "M195",
+          "original_name": "Eye",
+          "clinical_label": "Overall Eye Function"
+        }
+      ]
+    },
+    "(Fatty acid) Analysis Report Card": {
+      "canonical_systems": [
+        "Fatty acid balance"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M291",
+          "original_name": "Saturated fatty acid index",
+          "clinical_label": "Saturated fatty acid index"
+        },
+        {
+          "control_id": "M292",
+          "original_name": "Unsaturated fatty acid index",
+          "clinical_label": "Unsaturated fatty acid index"
+        },
+        {
+          "control_id": "M293",
+          "original_name": "Essential fatty acid index",
+          "clinical_label": "Essential fatty acid index"
+        },
+        {
+          "control_id": "M294",
+          "original_name": "Triglyceride index",
+          "clinical_label": "Triglyceride index"
+        }
+      ]
+    },
+    "(Female Hormone) Analysis Report Card": {
+      "canonical_systems": [
+        "Female hormone profile"
+      ],
+      "marker_count": 6,
+      "markers": [
+        {
+          "control_id": "M253",
+          "original_name": "Estrogen",
+          "clinical_label": "Estrogen"
+        },
+        {
+          "control_id": "M254",
+          "original_name": "Androgen",
+          "clinical_label": "Androgen"
+        },
+        {
+          "control_id": "M255",
+          "original_name": "Progesterone(P)",
+          "clinical_label": "Progesterone(P)"
+        },
+        {
+          "control_id": "M256",
+          "original_name": "Luteinizing Hormone (LH)",
+          "clinical_label": "Luteinizing Hormone (LH)"
+        },
+        {
+          "control_id": "M257",
+          "original_name": "Prolactin(PRL)",
+          "clinical_label": "Prolactin(PRL)"
+        },
+        {
+          "control_id": "M258",
+          "original_name": "Follicle Stimulating Hormone(FSH)",
+          "clinical_label": "Follicle Stimulating Hormone(FSH)"
+        }
+      ]
+    },
+    "(Gallbladder Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Gallbladder & bile flow"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M030",
+          "original_name": "Serum Globulin (A/G)",
+          "clinical_label": "Serum Globulin (A/G)"
+        },
+        {
+          "control_id": "M031",
+          "original_name": "Total Bilirubin (TBIL)",
+          "clinical_label": "Total Bilirubin (TBIL)"
+        },
+        {
+          "control_id": "M032",
+          "original_name": "Alkaline Phosphatase (ALP)",
+          "clinical_label": "Alkaline Phosphatase (ALP)"
+        },
+        {
+          "control_id": "M033",
+          "original_name": "Serum Total Bile Acid (TBA",
+          "clinical_label": "Serum Total Bile Acid (TBA"
+        },
+        {
+          "control_id": "M034",
+          "original_name": "Bilirubin (DBIL)",
+          "clinical_label": "Bilirubin (DBIL)"
+        }
+      ]
+    },
+    "(Gastrointestinal Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Upper digestive function"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M016",
+          "original_name": "Pepsin Secretion Coefficient",
+          "clinical_label": "Pepsin Secretion Coefficient"
+        },
+        {
+          "control_id": "M017",
+          "original_name": "Gastric Peristalsis Function Coefficient",
+          "clinical_label": "Gastric Peristalsis Function Coefficient"
+        },
+        {
+          "control_id": "M018",
+          "original_name": "Gastric Absorption Function Coefficient",
+          "clinical_label": "Gastric Absorption Function Coefficient"
+        },
+        {
+          "control_id": "M019",
+          "original_name": "Small Intestine Peristalsis Function Coefficient",
+          "clinical_label": "Small Intestine Motility"
+        },
+        {
+          "control_id": "M020",
+          "original_name": "Small Intestine Absorption Function Coefficient",
+          "clinical_label": "Small Intestine Absorption"
+        }
+      ]
+    },
+    "(Gynecology) Analysis Report Card": {
+      "canonical_systems": [
+        "Gynaecology"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M239",
+          "original_name": "Vaginitis coefficient",
+          "clinical_label": "Vaginitis coefficient"
+        },
+        {
+          "control_id": "M240",
+          "original_name": "PID coefficient",
+          "clinical_label": "PID coefficient"
+        },
+        {
+          "control_id": "M241",
+          "original_name": "Appendagitis coefficient",
+          "clinical_label": "Appendagitis coefficient"
+        },
+        {
+          "control_id": "M242",
+          "original_name": "Cervicitis coefficient",
+          "clinical_label": "Cervicitis coefficient"
+        },
+        {
+          "control_id": "M243",
+          "original_name": "Ovarian cyst coefficient",
+          "clinical_label": "Ovarian cyst coefficient"
+        }
+      ]
+    },
+    "(Heavy Metal) Analysis Report Card": {
+      "canonical_systems": [
+        "Heavy metal burden"
+      ],
+      "marker_count": 8,
+      "markers": [
+        {
+          "control_id": "M146",
+          "original_name": "Lead",
+          "clinical_label": "Lead"
+        },
+        {
+          "control_id": "M147",
+          "original_name": "Mercury",
+          "clinical_label": "Mercury"
+        },
+        {
+          "control_id": "M148",
+          "original_name": "Cadmium",
+          "clinical_label": "Cadmium"
+        },
+        {
+          "control_id": "M149",
+          "original_name": "Chromium",
+          "clinical_label": "Chromium"
+        },
+        {
+          "control_id": "M150",
+          "original_name": "Arsenic",
+          "clinical_label": "Arsenic"
+        },
+        {
+          "control_id": "M151",
+          "original_name": "Antimony",
+          "clinical_label": "Antimony"
+        },
+        {
+          "control_id": "M152",
+          "original_name": "Thallium",
+          "clinical_label": "Thallium"
+        },
+        {
+          "control_id": "M153",
+          "original_name": "Aluminum",
+          "clinical_label": "Aluminum"
+        }
+      ]
+    },
+    "(Human Consciousness Level) Analysis Report Card": {
+      "canonical_systems": [
+        "Human consciousness level"
+      ],
+      "marker_count": 17,
+      "markers": [
+        {
+          "control_id": "M264",
+          "original_name": "Shame",
+          "clinical_label": "Shame"
+        },
+        {
+          "control_id": "M265",
+          "original_name": "Guilt",
+          "clinical_label": "Guilt"
+        },
+        {
+          "control_id": "M266",
+          "original_name": "Apathy",
+          "clinical_label": "Apathy"
+        },
+        {
+          "control_id": "M267",
+          "original_name": "Grief",
+          "clinical_label": "Grief"
+        },
+        {
+          "control_id": "M268",
+          "original_name": "Fear",
+          "clinical_label": "Fear"
+        },
+        {
+          "control_id": "M269",
+          "original_name": "Desire",
+          "clinical_label": "Desire"
+        },
+        {
+          "control_id": "M270",
+          "original_name": "Anger",
+          "clinical_label": "Anger"
+        },
+        {
+          "control_id": "M271",
+          "original_name": "Pride",
+          "clinical_label": "Pride"
+        },
+        {
+          "control_id": "M272",
+          "original_name": "Courage",
+          "clinical_label": "Courage"
+        },
+        {
+          "control_id": "M273",
+          "original_name": "Neutrality",
+          "clinical_label": "Neutrality"
+        },
+        {
+          "control_id": "M274",
+          "original_name": "Willingness",
+          "clinical_label": "Willingness"
+        },
+        {
+          "control_id": "M275",
+          "original_name": "Acceptance",
+          "clinical_label": "Acceptance"
+        },
+        {
+          "control_id": "M276",
+          "original_name": "Reason",
+          "clinical_label": "Reason"
+        },
+        {
+          "control_id": "M277",
+          "original_name": "Love",
+          "clinical_label": "Love"
+        },
+        {
+          "control_id": "M278",
+          "original_name": "Joy",
+          "clinical_label": "Joy"
+        },
+        {
+          "control_id": "M279",
+          "original_name": "Peace",
+          "clinical_label": "Peace"
+        },
+        {
+          "control_id": "M280",
+          "original_name": "Enlightenment",
+          "clinical_label": "Enlightenment"
+        }
+      ]
+    },
+    "(Human Immunity) Analysis Report Card": {
+      "canonical_systems": [
+        "Human immunity"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M259",
+          "original_name": "Tissue barrier immune index",
+          "clinical_label": "Tissue barrier immune index"
+        },
+        {
+          "control_id": "M260",
+          "original_name": "Innate immune cell index",
+          "clinical_label": "Innate immune cell index"
+        },
+        {
+          "control_id": "M261",
+          "original_name": "Innate immune molecule index",
+          "clinical_label": "Innate immune molecule index"
+        },
+        {
+          "control_id": "M262",
+          "original_name": "Cellular immune index",
+          "clinical_label": "Cellular immune index"
+        },
+        {
+          "control_id": "M263",
+          "original_name": "Humoral immunity index",
+          "clinical_label": "Humoral immunity index"
+        }
+      ]
+    },
+    "(Human Toxin) Analysis Report Card": {
+      "canonical_systems": [
+        "Environmental burden markers"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M142",
+          "original_name": "Stimulating Beverage",
+          "clinical_label": "Stimulating Beverage"
+        },
+        {
+          "control_id": "M143",
+          "original_name": "Electromagnetic Radiation",
+          "clinical_label": "Electromagnetic Radiation"
+        },
+        {
+          "control_id": "M144",
+          "original_name": "Free Radical",
+          "clinical_label": "Free Radical"
+        },
+        {
+          "control_id": "M145",
+          "original_name": "Toxic Pesticide Residue",
+          "clinical_label": "Toxic Pesticide Residue"
+        }
+      ]
+    },
+    "(Immune System) Analysis Report Card": {
+      "canonical_systems": [
+        "Immune system"
+      ],
+      "marker_count": 9,
+      "markers": [
+        {
+          "control_id": "M129",
+          "original_name": "Lymph node Index",
+          "clinical_label": "Lymph node Index"
+        },
+        {
+          "control_id": "M130",
+          "original_name": "Tonsil immune Index",
+          "clinical_label": "Tonsil immune Index"
+        },
+        {
+          "control_id": "M131",
+          "original_name": "Bone marrow Index",
+          "clinical_label": "Bone marrow Index"
+        },
+        {
+          "control_id": "M132",
+          "original_name": "Spleen index",
+          "clinical_label": "Spleen index"
+        },
+        {
+          "control_id": "M133",
+          "original_name": "Thymus index",
+          "clinical_label": "Thymus index"
+        },
+        {
+          "control_id": "M134",
+          "original_name": "Immunoglobulin index",
+          "clinical_label": "Immunoglobulin index"
+        },
+        {
+          "control_id": "M135",
+          "original_name": "Respiratory immune Index",
+          "clinical_label": "Respiratory Immunity"
+        },
+        {
+          "control_id": "M136",
+          "original_name": "Gastrointestinal immune Index",
+          "clinical_label": "GI Immunity"
+        },
+        {
+          "control_id": "M137",
+          "original_name": "Mucosa immune Index",
+          "clinical_label": "Mucosal Immunity"
+        }
+      ]
+    },
+    "(Kidney Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Kidney & fluid balance"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M038",
+          "original_name": "Urobilinogen Index",
+          "clinical_label": "Urobilinogen Index"
+        },
+        {
+          "control_id": "M039",
+          "original_name": "Uric acid Index",
+          "clinical_label": "Uric acid Index"
+        },
+        {
+          "control_id": "M040",
+          "original_name": "Blood urea nitrogen(BUN) Index",
+          "clinical_label": "BUN"
+        },
+        {
+          "control_id": "M041",
+          "original_name": "Proteinuria Index",
+          "clinical_label": "Proteinuria Index"
+        }
+      ]
+    },
+    "(Large Intestine Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Lower digestive function"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M021",
+          "original_name": "Large intestine peristalsis function coefficient",
+          "clinical_label": "Colon Motility"
+        },
+        {
+          "control_id": "M022",
+          "original_name": "Colonic absorption coefficient",
+          "clinical_label": "Colon Absorption"
+        },
+        {
+          "control_id": "M023",
+          "original_name": "Intestinal bacteria coefficient",
+          "clinical_label": "Gut Microbiome"
+        },
+        {
+          "control_id": "M024",
+          "original_name": "Intraluminal pressure coefficient",
+          "clinical_label": "Intraluminal pressure coefficient"
+        }
+      ]
+    },
+    "(Lecithin) Analysis Report Card": {
+      "canonical_systems": [
+        "Lecithin & phospholipids"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M285",
+          "original_name": "Phospholipid index",
+          "clinical_label": "Phospholipid index"
+        },
+        {
+          "control_id": "M286",
+          "original_name": "Sphingolipid index",
+          "clinical_label": "Sphingolipid index"
+        },
+        {
+          "control_id": "M288",
+          "original_name": "Lecithin index",
+          "clinical_label": "Lecithin index"
+        },
+        {
+          "control_id": "M289",
+          "original_name": "Brain phospholipid index",
+          "clinical_label": "Brain phospholipid index"
+        },
+        {
+          "control_id": "M290",
+          "original_name": "Liposomal index",
+          "clinical_label": "Liposomal index"
+        }
+      ]
+    },
+    "(Liver Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Liver function"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M025",
+          "original_name": "Protein Metabolism",
+          "clinical_label": "Protein Metabolism"
+        },
+        {
+          "control_id": "M026",
+          "original_name": "Energy Production  Function",
+          "clinical_label": "Energy Production Function"
+        },
+        {
+          "control_id": "M027",
+          "original_name": "Detoxification Function",
+          "clinical_label": "Detoxification Function"
+        },
+        {
+          "control_id": "M028",
+          "original_name": "Bile Secretion Function",
+          "clinical_label": "Bile Secretion Function"
+        },
+        {
+          "control_id": "M029",
+          "original_name": "Liver Fat Content",
+          "clinical_label": "Liver Fat Content"
+        }
+      ]
+    },
+    "(Lung Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Lung function"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M042",
+          "original_name": "Vital Capacity VC",
+          "clinical_label": "Vital Capacity"
+        },
+        {
+          "control_id": "M043",
+          "original_name": "Total Lung Capacity TLC",
+          "clinical_label": "Total Lung Capacity"
+        },
+        {
+          "control_id": "M044",
+          "original_name": "Airway Resistance RAM",
+          "clinical_label": "Airway Resistance"
+        },
+        {
+          "control_id": "M045",
+          "original_name": "Arterial Oxygen Content PaCO2",
+          "clinical_label": "Arterial Oxygen Content"
+        }
+      ]
+    },
+    "(Male Hormone) Analysis Report Card": {
+      "canonical_systems": [
+        "Male hormone profile"
+      ],
+      "marker_count": 6,
+      "markers": [
+        {
+          "control_id": "M316",
+          "original_name": "Androgen",
+          "clinical_label": "Androgen"
+        },
+        {
+          "control_id": "M317",
+          "original_name": "Estrogen",
+          "clinical_label": "Estrogen"
+        },
+        {
+          "control_id": "M318",
+          "original_name": "Progesterone(P)",
+          "clinical_label": "Progesterone(P)"
+        },
+        {
+          "control_id": "M319",
+          "original_name": "Luteinizing Hormone (LH)",
+          "clinical_label": "Luteinizing Hormone (LH)"
+        },
+        {
+          "control_id": "M320",
+          "original_name": "Prolactin(PRL)",
+          "clinical_label": "Prolactin(PRL)"
+        },
+        {
+          "control_id": "M321",
+          "original_name": "Follicle Stimulating Hormone(FSH)",
+          "clinical_label": "Follicle Stimulating Hormone(FSH)"
+        }
+      ]
+    },
+    "(Male Sexual Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Male sexual function"
+      ],
+      "marker_count": 3,
+      "markers": [
+        {
+          "control_id": "M309",
+          "original_name": "Testosterone",
+          "clinical_label": "Testosterone"
+        },
+        {
+          "control_id": "M310",
+          "original_name": "Gonadotropin",
+          "clinical_label": "Gonadotropin"
+        },
+        {
+          "control_id": "M311",
+          "original_name": "Erection Transmitter",
+          "clinical_label": "Erection Transmitter"
+        }
+      ]
+    },
+    "(Menstrual cycle) Analysis Report Card": {
+      "canonical_systems": [
+        "Menstrual cycle"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M249",
+          "original_name": "Beta hormone",
+          "clinical_label": "Beta hormone"
+        },
+        {
+          "control_id": "M250",
+          "original_name": "Reflect protein",
+          "clinical_label": "Reflect protein"
+        },
+        {
+          "control_id": "M251",
+          "original_name": "Fibrinogen",
+          "clinical_label": "Fibrinogen"
+        },
+        {
+          "control_id": "M252",
+          "original_name": "Sedimentation rate",
+          "clinical_label": "Sedimentation rate"
+        }
+      ]
+    },
+    "(Obesity) Analysis Report Card": {
+      "canonical_systems": [
+        "Metabolic regulation",
+        "Obesity and weight patterns",
+        "Reproductive system"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M172",
+          "original_name": "Abnormal lipid metabolism coefficient",
+          "clinical_label": "Abnormal lipid metabolism coefficient"
+        },
+        {
+          "control_id": "M173",
+          "original_name": "Brown adipose tissue abnormalities coefficient",
+          "clinical_label": "Brown adipose tissue abnormalities coefficient"
+        },
+        {
+          "control_id": "M174",
+          "original_name": "Hyperinsulinemia coefficient",
+          "clinical_label": "Hyperinsulinemia coefficient"
+        },
+        {
+          "control_id": "M175",
+          "original_name": "Nucleus of the hypothalamus abnormal coefficient",
+          "clinical_label": "Nucleus of the hypothalamus abnormal coefficient"
+        },
+        {
+          "control_id": "M176",
+          "original_name": "Triglyceride content of abnormal coefficient",
+          "clinical_label": "Triglyceride content of abnormal coefficient"
+        }
+      ]
+    },
+    "(Pancreatic Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Pancreatic function"
+      ],
+      "marker_count": 3,
+      "markers": [
+        {
+          "control_id": "M035",
+          "original_name": "Insulin",
+          "clinical_label": "Insulin"
+        },
+        {
+          "control_id": "M036",
+          "original_name": "Pancreatic Polypeptide (PP)",
+          "clinical_label": "Pancreatic Polypeptide (PP)"
+        },
+        {
+          "control_id": "M037",
+          "original_name": "Glucagon",
+          "clinical_label": "Glucagon"
+        }
+      ]
+    },
+    "(Prostate) Analysis Report Card": {
+      "canonical_systems": [
+        "Prostate health"
+      ],
+      "marker_count": 3,
+      "markers": [
+        {
+          "control_id": "M306",
+          "original_name": "Degree of Prostatic Hyperplasia",
+          "clinical_label": "Degree of Prostatic Hyperplasia"
+        },
+        {
+          "control_id": "M307",
+          "original_name": "Degree of Prostatic Calcification",
+          "clinical_label": "Degree of Prostatic Calcification"
+        },
+        {
+          "control_id": "M308",
+          "original_name": "Prostatitis Syndrome",
+          "clinical_label": "Prostatitis Syndrome"
+        }
+      ]
+    },
+    "(Pulse of heart and brain) Analysis Report Card": {
+      "canonical_systems": [
+        "Pulse of heart and brain"
+      ],
+      "marker_count": 7,
+      "markers": [
+        {
+          "control_id": "M225",
+          "original_name": "Stroke index",
+          "clinical_label": "Stroke index"
+        },
+        {
+          "control_id": "M226",
+          "original_name": "Stroke volume(SV)",
+          "clinical_label": "Stroke volume(SV)"
+        },
+        {
+          "control_id": "M227",
+          "original_name": "Heart peripheral resistance (TRR)",
+          "clinical_label": "Heart peripheral resistance (TRR)"
+        },
+        {
+          "control_id": "M228",
+          "original_name": "Pulse wave coefficient K",
+          "clinical_label": "Pulse wave coefficient K"
+        },
+        {
+          "control_id": "M229",
+          "original_name": "Cerebrovascular blood oxygen saturation(Sa)",
+          "clinical_label": "Cerebrovascular blood oxygen saturation(Sa)"
+        },
+        {
+          "control_id": "M230",
+          "original_name": "Cerebrovascular blood oxygen volume(CaCO2)",
+          "clinical_label": "Cerebrovascular blood oxygen volume(CaCO2)"
+        },
+        {
+          "control_id": "M231",
+          "original_name": "Cerebrovascular blood oxygen presure(PaO2)",
+          "clinical_label": "Cerebrovascular blood oxygen presure(PaO2)"
+        }
+      ]
+    },
+    "(Respiratory Function) Analysis Report Card": {
+      "canonical_systems": [
+        "Respiratory function"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M281",
+          "original_name": "Volume Tidal(VT)",
+          "clinical_label": "Volume Tidal(VT)"
+        },
+        {
+          "control_id": "M282",
+          "original_name": "Inspiratory Volume(TI)",
+          "clinical_label": "Inspiratory Volume(TI)"
+        },
+        {
+          "control_id": "M283",
+          "original_name": "Functional Residual Capacity(FRC)",
+          "clinical_label": "Functional Residual Capacity(FRC)"
+        },
+        {
+          "control_id": "M284",
+          "original_name": "Residual Volume(RV)",
+          "clinical_label": "Residual Volume(RV)"
+        }
+      ]
+    },
+    "(Rheumatoid Bone Disease) Analysis Report Card": {
+      "canonical_systems": [
+        "Inflammatory bone and joint patterns"
+      ],
+      "marker_count": 5,
+      "markers": [
+        {
+          "control_id": "M060",
+          "original_name": "Degree of Cervical Calcification",
+          "clinical_label": "Degree of Cervical Calcification"
+        },
+        {
+          "control_id": "M061",
+          "original_name": "Degree of Lumbar Calcification",
+          "clinical_label": "Degree of Lumbar Calcification"
+        },
+        {
+          "control_id": "M062",
+          "original_name": "Bone Hyperplasia Coefficient",
+          "clinical_label": "Bone Hyperplasia Coefficient"
+        },
+        {
+          "control_id": "M063",
+          "original_name": "Osteoporosis Coefficient",
+          "clinical_label": "Osteoporosis Coefficient"
+        },
+        {
+          "control_id": "M064",
+          "original_name": "Rheumatism Coefficient",
+          "clinical_label": "Rheumatism Coefficient"
+        }
+      ]
+    },
+    "(Skin) Analysis Report Card": {
+      "canonical_systems": [
+        "Skin function"
+      ],
+      "marker_count": 10,
+      "markers": [
+        {
+          "control_id": "M177",
+          "original_name": "Skin Free Radical Index",
+          "clinical_label": "Skin Free Radical Index"
+        },
+        {
+          "control_id": "M178",
+          "original_name": "Skin Collagen Index",
+          "clinical_label": "Skin Collagen Index"
+        },
+        {
+          "control_id": "M179",
+          "original_name": "Skin Grease Index",
+          "clinical_label": "Skin Grease Index"
+        },
+        {
+          "control_id": "M180",
+          "original_name": "Skin Immunity Index",
+          "clinical_label": "Skin Immunity Index"
+        },
+        {
+          "control_id": "M181",
+          "original_name": "Skin Moisture Index",
+          "clinical_label": "Skin Moisture Index"
+        },
+        {
+          "control_id": "M182",
+          "original_name": "Skin Moisture Loss",
+          "clinical_label": "Skin Moisture Loss"
+        },
+        {
+          "control_id": "M183",
+          "original_name": "Skin Red Blood Trace Index",
+          "clinical_label": "Skin Red Blood Trace Index"
+        },
+        {
+          "control_id": "M184",
+          "original_name": "Skin Elasticity Index",
+          "clinical_label": "Skin Elasticity Index"
+        },
+        {
+          "control_id": "M185",
+          "original_name": "Skin Melanin Index",
+          "clinical_label": "Skin Melanin Index"
+        },
+        {
+          "control_id": "M186",
+          "original_name": "Skin Horniness Index",
+          "clinical_label": "Skin Keratinisation & Thickening"
+        }
+      ]
+    },
+    "(Sperm and semen) Analysis Report Card": {
+      "canonical_systems": [
+        "Sperm and semen"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M312",
+          "original_name": "Semen volume",
+          "clinical_label": "Semen volume"
+        },
+        {
+          "control_id": "M313",
+          "original_name": "liquefying time",
+          "clinical_label": "Semen liquefying time"
+        },
+        {
+          "control_id": "M314",
+          "original_name": "Number of sperms",
+          "clinical_label": "Number of sperms"
+        },
+        {
+          "control_id": "M315",
+          "original_name": "Sperm motility rate",
+          "clinical_label": "Sperm motility rate"
+        }
+      ]
+    },
+    "(Thyroid) Analysis Report Card": {
+      "canonical_systems": [
+        "Endocrine system"
+      ],
+      "marker_count": 4,
+      "markers": [
+        {
+          "control_id": "M138",
+          "original_name": "Free thyroxine (FT4)",
+          "clinical_label": "FT4"
+        },
+        {
+          "control_id": "M139",
+          "original_name": "Thyroglobulin",
+          "clinical_label": "Thyroglobulin"
+        },
+        {
+          "control_id": "M140",
+          "original_name": "Anti-thyroglobulin antibodies",
+          "clinical_label": "Anti-thyroglobulin Ab"
+        },
+        {
+          "control_id": "M141",
+          "original_name": "Three triiodothyronine (T3)",
+          "clinical_label": "T3"
+        }
+      ]
+    },
+    "(Trace Element) Analysis Report Card": {
+      "canonical_systems": [
+        "Trace Elements & Mineral System",
+        "Trace elements & mineral system"
+      ],
+      "marker_count": 18,
+      "markers": [
+        {
+          "control_id": "M073",
+          "original_name": "Calcium",
+          "clinical_label": "Calcium"
+        },
+        {
+          "control_id": "M074",
+          "original_name": "Iron",
+          "clinical_label": "Iron"
+        },
+        {
+          "control_id": "M075",
+          "original_name": "Zinc",
+          "clinical_label": "Zinc"
+        },
+        {
+          "control_id": "M076",
+          "original_name": "Selenium",
+          "clinical_label": "Selenium"
+        },
+        {
+          "control_id": "M077",
+          "original_name": "Phosphorus",
+          "clinical_label": "Phosphorus"
+        },
+        {
+          "control_id": "M078",
+          "original_name": "Potassium",
+          "clinical_label": "Potassium"
+        },
+        {
+          "control_id": "M079",
+          "original_name": "Magnesium",
+          "clinical_label": "Magnesium"
+        },
+        {
+          "control_id": "M080",
+          "original_name": "Copper",
+          "clinical_label": "Copper"
+        },
+        {
+          "control_id": "M081",
+          "original_name": "Cobalt",
+          "clinical_label": "Cobalt"
+        },
+        {
+          "control_id": "M082",
+          "original_name": "Manganese",
+          "clinical_label": "Manganese"
+        },
+        {
+          "control_id": "M083",
+          "original_name": "Iodine",
+          "clinical_label": "Iodine"
+        },
+        {
+          "control_id": "M084",
+          "original_name": "Nickel",
+          "clinical_label": "Nickel"
+        },
+        {
+          "control_id": "M085",
+          "original_name": "Fluorine",
+          "clinical_label": "Fluorine"
+        },
+        {
+          "control_id": "M086",
+          "original_name": "Molybdenum",
+          "clinical_label": "Molybdenum"
+        },
+        {
+          "control_id": "M087",
+          "original_name": "Vanadium",
+          "clinical_label": "Vanadium"
+        },
+        {
+          "control_id": "M088",
+          "original_name": "Tin",
+          "clinical_label": "Tin"
+        },
+        {
+          "control_id": "M089",
+          "original_name": "Silicon",
+          "clinical_label": "Silicon"
+        },
+        {
+          "control_id": "M090",
+          "original_name": "Boron",
+          "clinical_label": "Boron"
+        }
+      ]
+    },
+    "(Vitamin) Analysis Report Card": {
+      "canonical_systems": [
+        "Vitamin status"
+      ],
+      "marker_count": 10,
+      "markers": [
+        {
+          "control_id": "M091",
+          "original_name": "Vitamin A",
+          "clinical_label": "Vitamin A"
+        },
+        {
+          "control_id": "M092",
+          "original_name": "Vitamin B1",
+          "clinical_label": "Vitamin B1"
+        },
+        {
+          "control_id": "M093",
+          "original_name": "Vitamin B2",
+          "clinical_label": "Vitamin B2"
+        },
+        {
+          "control_id": "M094",
+          "original_name": "Vitamin B3",
+          "clinical_label": "Vitamin B3"
+        },
+        {
+          "control_id": "M095",
+          "original_name": "Vitamin B6",
+          "clinical_label": "Vitamin B6"
+        },
+        {
+          "control_id": "M096",
+          "original_name": "Vitamin B12",
+          "clinical_label": "Vitamin B12"
+        },
+        {
+          "control_id": "M097",
+          "original_name": "Vitamin C",
+          "clinical_label": "Vitamin C"
+        },
+        {
+          "control_id": "M098",
+          "original_name": "Vitamin D3",
+          "clinical_label": "Vitamin D3"
+        },
+        {
+          "control_id": "M099",
+          "original_name": "Vitamin E",
+          "clinical_label": "Vitamin E"
+        },
+        {
+          "control_id": "M100",
+          "original_name": "Vitamin K",
+          "clinical_label": "Vitamin K"
+        }
+      ]
+    }
+  }
+}

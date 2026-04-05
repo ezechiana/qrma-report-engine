@@ -1,0 +1,1986 @@
+{
+  "male": {
+    "profile": "male",
+    "section_count": 41,
+    "sections": [
+      {
+        "section": "Cardiovascular and Cerebrovascular",
+        "marker_count": 15,
+        "markers": [
+          "Blood Viscosity",
+          "Cholesterol Crystal",
+          "Blood Fat",
+          "Vascular Resistance",
+          "Vascular Elasticity",
+          "Myocardial Blood Demand",
+          "Myocardial Blood Perfusion Volume",
+          "Myocardial Oxygen Consumption",
+          "Stroke Volume",
+          "Left Ventricular Ejection Impedance",
+          "Left Ventricular Effective Pump Power",
+          "Coronary Artery Elasticity",
+          "Coronary Perfusion Pressure",
+          "Cerebral Blood Vessel Elasticity",
+          "Brain Tissue Blood Supply Status"
+        ]
+      },
+      {
+        "section": "Gastrointestinal Function",
+        "marker_count": 5,
+        "markers": [
+          "Pepsin Secretion Coefficient",
+          "Gastric Peristalsis Function Coefficient",
+          "Gastric Absorption Function Coefficient",
+          "Small Intestine Peristalsis Function Coefficient",
+          "Small Intestine Absorption Function Coefficient"
+        ]
+      },
+      {
+        "section": "Large Intestine Function",
+        "marker_count": 4,
+        "markers": [
+          "Large intestine peristalsis function coefficient",
+          "Colonic absorption coefficient",
+          "Intestinal bacteria coefficient",
+          "Intraluminal pressure coefficient"
+        ]
+      },
+      {
+        "section": "Liver Function",
+        "marker_count": 5,
+        "markers": [
+          "Protein Metabolism",
+          "Energy Production Function",
+          "Detoxification Function",
+          "Bile Secretion Function",
+          "Liver Fat Content"
+        ]
+      },
+      {
+        "section": "Gallbladder Function",
+        "marker_count": 5,
+        "markers": [
+          "Serum Globulin (A/G)",
+          "Total Bilirubin (TBIL)",
+          "Alkaline Phosphatase (ALP)",
+          "Serum Total Bile Acid (TBA)",
+          "Bilirubin (DBIL)"
+        ]
+      },
+      {
+        "section": "Pancreatic Function",
+        "marker_count": 3,
+        "markers": [
+          "Insulin",
+          "Pancreatic Polypeptide (PP)",
+          "Glucagon"
+        ]
+      },
+      {
+        "section": "Kidney Function",
+        "marker_count": 4,
+        "markers": [
+          "Urobilinogen Index",
+          "Uric acid Index",
+          "Blood urea nitrogen(BUN) Index",
+          "Proteinuria Index"
+        ]
+      },
+      {
+        "section": "Lung Function",
+        "marker_count": 4,
+        "markers": [
+          "Vital Capacity VC",
+          "Total Lung Capacity TLC",
+          "Airway Resistance RAM",
+          "Arterial Oxygen Content PaCO2"
+        ]
+      },
+      {
+        "section": "Brain Nerve",
+        "marker_count": 5,
+        "markers": [
+          "Status of Brain Tissue Blood Supply",
+          "Cerebral Arteriosclerosis",
+          "Functional Status of Cranial Nerve",
+          "Sentiment Index",
+          "Memory Index(ZS)"
+        ]
+      },
+      {
+        "section": "Bone Mineral Density",
+        "marker_count": 5,
+        "markers": [
+          "Osteoclast Coefficient",
+          "Amount of Calcium Loss",
+          "Degree of Bone Hyperplasia",
+          "Degree of Osteoporosis",
+          "Bone Mineral Density"
+        ]
+      },
+      {
+        "section": "Rheumatoid Bone Disease",
+        "marker_count": 5,
+        "markers": [
+          "Degree of Cervical Calcification",
+          "Degree of Lumbar Calcification",
+          "Bone Hyperplasia Coefficient",
+          "Osteoporosis Coefficient",
+          "Rheumatism Coefficient"
+        ]
+      },
+      {
+        "section": "Bone Growth Index",
+        "marker_count": 5,
+        "markers": [
+          "Bone alkaline phosphatase",
+          "Osteocalcin",
+          "Status of long bone healing",
+          "Short bone cartilage healing situation",
+          "Epiphyseal line"
+        ]
+      },
+      {
+        "section": "Blood Sugar",
+        "marker_count": 3,
+        "markers": [
+          "Coefficient of Insulin Secretion",
+          "Blood Sugar Coefficient",
+          "Urine Sugar Coefficient"
+        ]
+      },
+      {
+        "section": "Trace Element",
+        "marker_count": 19,
+        "markers": [
+          "Calcium",
+          "Iron",
+          "Zinc",
+          "Selenium",
+          "Phosphorus",
+          "Potassium",
+          "Magnesium",
+          "Copper",
+          "Cobalt",
+          "Manganese",
+          "Iodine",
+          "Nickel",
+          "Fluorine",
+          "Molybdenum",
+          "Vanadium",
+          "Tin",
+          "Silicon",
+          "Strontium",
+          "Boron"
+        ]
+      },
+      {
+        "section": "Vitamin",
+        "marker_count": 10,
+        "markers": [
+          "Vitamin A",
+          "Vitamin B1",
+          "Vitamin B2",
+          "Vitamin B3",
+          "Vitamin B6",
+          "Vitamin B12",
+          "Vitamin C",
+          "Vitamin D3",
+          "Vitamin E",
+          "Vitamin K"
+        ]
+      },
+      {
+        "section": "Amino Acid",
+        "marker_count": 11,
+        "markers": [
+          "Lysine",
+          "Tryptophan",
+          "Phenylalanine",
+          "Methionine",
+          "Threonine",
+          "Isoleucine",
+          "Leucine",
+          "Valine",
+          "Histidine",
+          "Arginine",
+          "Homocysteine"
+        ]
+      },
+      {
+        "section": "Coenzyme",
+        "marker_count": 6,
+        "markers": [
+          "Nicotinamide",
+          "Biotin",
+          "Pantothenic acid",
+          "Folic acid",
+          "Coenzyme Q10",
+          "Glutathione"
+        ]
+      },
+      {
+        "section": "Essential Fatty Acid",
+        "marker_count": 4,
+        "markers": [
+          "Linoleic acid",
+          "α-Linolenic acid",
+          "γ-Linolenic acid",
+          "Arachidonic acid"
+        ]
+      },
+      {
+        "section": "Endocrine System",
+        "marker_count": 7,
+        "markers": [
+          "Thyroid secretion index",
+          "Parathyroid hormone secretion index",
+          "Adrenal glands Index",
+          "Pituitary secretion index",
+          "Pineal secretion index",
+          "Thymus gland secretion index",
+          "Gland secretion index"
+        ]
+      },
+      {
+        "section": "Immune System",
+        "marker_count": 9,
+        "markers": [
+          "Lymph node Index",
+          "Tonsil immune Index",
+          "Bone marrow Index",
+          "Spleen index",
+          "Thymus index",
+          "Immunoglobulin index",
+          "Respiratory immune Index",
+          "Gastrointestinal immune Index",
+          "Mucosa immune Index"
+        ]
+      },
+      {
+        "section": "Thyroid",
+        "marker_count": 4,
+        "markers": [
+          "Free thyroxine (FT4)",
+          "Thyroglobulin",
+          "Anti-thyroglobulin antibodies",
+          "Three triiodothyronine (T3)"
+        ]
+      },
+      {
+        "section": "Human Toxin",
+        "marker_count": 4,
+        "markers": [
+          "Stimulating Beverage",
+          "Electromagnetic Radiation",
+          "Free Radical",
+          "Toxic Pesticide Residue"
+        ]
+      },
+      {
+        "section": "Heavy Metal",
+        "marker_count": 8,
+        "markers": [
+          "Lead",
+          "Mercury",
+          "Cadmium",
+          "Chromium",
+          "Arsenic",
+          "Antimony",
+          "Thallium",
+          "Aluminum"
+        ]
+      },
+      {
+        "section": "Basic Physical Quality",
+        "marker_count": 5,
+        "markers": [
+          "Response Ability",
+          "Mental Power",
+          "Water Shortage",
+          "Hypoxia",
+          "PH"
+        ]
+      },
+      {
+        "section": "Allergy",
+        "marker_count": 13,
+        "markers": [
+          "Drug allergy index",
+          "Alcohol allergy index",
+          "Pollen allergy index",
+          "Injection allergy index",
+          "Chemical products allergy index",
+          "Paint allergy index",
+          "Dust allergy index",
+          "Smoke allergy index",
+          "Hair dye allergy index",
+          "Animal fur allergy index",
+          "Metal jewelry allergy index",
+          "Seafood allergy index",
+          "Milk allergy index"
+        ]
+      },
+      {
+        "section": "Obesity",
+        "marker_count": 5,
+        "markers": [
+          "Abnormal lipid metabolism coefficient",
+          "Brown adipose tissue abnormalities coefficient",
+          "Hyperinsulinemia coefficient",
+          "Nucleus of the hypothalamus abnormal coefficient",
+          "Triglyceride content of abnormal coefficient"
+        ]
+      },
+      {
+        "section": "Skin",
+        "marker_count": 10,
+        "markers": [
+          "Skin Free Radical Index",
+          "Skin Collagen Index",
+          "Skin Grease Index",
+          "Skin Immunity Index",
+          "Skin Moisture Index",
+          "Skin Moisture Loss",
+          "Skin Red Blood Trace Index",
+          "Skin Elasticity Index",
+          "Skin Melanin Index",
+          "Skin Horniness Index"
+        ]
+      },
+      {
+        "section": "Eye",
+        "marker_count": 8,
+        "markers": [
+          "Bags under the eyes",
+          "Collagen eye wrinkle",
+          "Dark circles",
+          "Lymphatic obstruction",
+          "Sagging",
+          "Edema",
+          "Eye cell activity",
+          "Visual fatigue"
+        ]
+      },
+      {
+        "section": "Collagen",
+        "marker_count": 14,
+        "markers": [
+          "Eye",
+          "Tooth",
+          "Hair and skin",
+          "Endocrine system",
+          "Circulatory system",
+          "Digestive system",
+          "Immune system",
+          "Motion systems",
+          "Muscle Tissue",
+          "Fat Metabolism",
+          "Detoxification and metabolism",
+          "Reproductive system",
+          "Nervous system",
+          "Skeleton"
+        ]
+      },
+      {
+        "section": "Channels and collaterals",
+        "marker_count": 16,
+        "markers": [
+          "Hand Tai Yin Lung Meridian",
+          "Hand Yangming Large Intestine Meridian",
+          "Foot Yangming Stomach Meridian",
+          "Foot Tai Yin Lung Meridian",
+          "Hand Shao Yin Heart Sutra",
+          "Hand the small intestine by the sun",
+          "Foot Tai Yang Bladder Meridian",
+          "Foot Shao Yin Kidney",
+          "Hand Jue Yin Pericardium Meridian",
+          "Hand Shao Yang Triple Burner Meridian",
+          "Foot Shao Yang Gall Bladder Meridian",
+          "Foot Jue Yin Liver Meridian",
+          "Ren channel",
+          "Governor meridian",
+          "Vital meridian",
+          "Tai mai"
+        ]
+      },
+      {
+        "section": "Pulse of heart and brain",
+        "marker_count": 7,
+        "markers": [
+          "Stroke index",
+          "Stroke volume(SV)",
+          "Heart peripheral resistance(TRR)",
+          "Pulse wave coefficient K",
+          "Cerebrovascular blood oxygen saturation(Sa)",
+          "Cerebrovascular blood oxygen volume(CaCO2)",
+          "Cerebrovascular blood oxygen presure(PaO2)"
+        ]
+      },
+      {
+        "section": "Blood lipids",
+        "marker_count": 7,
+        "markers": [
+          "Blood viscosity",
+          "Total cholesterol(TC)",
+          "Triglyceride(TG)",
+          "High-density lipoprotein(HDL-C)",
+          "Low-density lipoprotein(LDL-C)",
+          "Neutral fat(MB)",
+          "Circulating immune complex(CIC)"
+        ]
+      },
+      {
+        "section": "Prostate",
+        "marker_count": 3,
+        "markers": [
+          "Degree of Prostatic Hyperplasia",
+          "Degree of Prostatic Calcification",
+          "Prostatitis Syndrome"
+        ]
+      },
+      {
+        "section": "Male Sexual Function",
+        "marker_count": 3,
+        "markers": [
+          "Testosterone",
+          "Gonadotropin",
+          "Erection Transmitter"
+        ]
+      },
+      {
+        "section": "Sperm and semen",
+        "marker_count": 4,
+        "markers": [
+          "Semen volume",
+          "liquefying time",
+          "Number of sperms",
+          "Sperm motility rate"
+        ]
+      },
+      {
+        "section": "Male Hormone",
+        "marker_count": 6,
+        "markers": [
+          "Androgen",
+          "Estrogen",
+          "Progesterone(P)",
+          "Luteinizing Hormone (LH)",
+          "Prolactin(PRL)",
+          "Follicle Stimulating Hormone(FSH)"
+        ]
+      },
+      {
+        "section": "Human Immunity",
+        "marker_count": 5,
+        "markers": [
+          "Tissue barrier immune index",
+          "Innate immune cell index",
+          "Innate immune molecule index",
+          "Cellular immune index",
+          "Humoral immunity index"
+        ]
+      },
+      {
+        "section": "Human Consciousness Level",
+        "marker_count": 17,
+        "markers": [
+          "Shame",
+          "Guilt",
+          "Apathy",
+          "Grief",
+          "Fear",
+          "Desire",
+          "Anger",
+          "Pride",
+          "Courage",
+          "Neutrality",
+          "Willingness",
+          "Acceptance",
+          "Reason",
+          "Love",
+          "Joy",
+          "Peace",
+          "Enlightenment"
+        ]
+      },
+      {
+        "section": "Respiratory Function",
+        "marker_count": 4,
+        "markers": [
+          "Volume Tidal(VT)",
+          "Inspiratory Volume(TI)",
+          "Functional Residual Capacity(FRC)",
+          "Residual Volume(RV)"
+        ]
+      },
+      {
+        "section": "Lecithin",
+        "marker_count": 6,
+        "markers": [
+          "Phospholipid index",
+          "Sphingolipid index",
+          "Sphingomyelin index",
+          "Lecithin index",
+          "Brain phospholipid index",
+          "Liposomal index"
+        ]
+      },
+      {
+        "section": "Fatty acid",
+        "marker_count": 4,
+        "markers": [
+          "Saturated fatty acid index",
+          "Unsaturated fatty acid index",
+          "Essential fatty acid index",
+          "Triglyceride index"
+        ]
+      }
+    ]
+  },
+  "female": {
+    "profile": "female",
+    "section_count": 41,
+    "sections": [
+      {
+        "section": "Cardiovascular and Cerebrovascular",
+        "marker_count": 15,
+        "markers": [
+          "Blood Viscosity",
+          "Cholesterol Crystal",
+          "Blood Fat",
+          "Vascular Resistance",
+          "Vascular Elasticity",
+          "Myocardial Blood Demand",
+          "Myocardial Blood Perfusion Volume",
+          "Myocardial Oxygen Consumption",
+          "Stroke Volume",
+          "Left Ventricular Ejection Impedance",
+          "Left Ventricular Effective Pump Power",
+          "Coronary Artery Elasticity",
+          "Coronary Perfusion Pressure",
+          "Cerebral Blood Vessel Elasticity",
+          "Brain Tissue Blood Supply Status"
+        ]
+      },
+      {
+        "section": "Gastrointestinal Function",
+        "marker_count": 5,
+        "markers": [
+          "Pepsin Secretion Coefficient",
+          "Gastric Peristalsis Function Coefficient",
+          "Gastric Absorption Function Coefficient",
+          "Small Intestine Peristalsis Function Coefficient",
+          "Small Intestine Absorption Function Coefficient"
+        ]
+      },
+      {
+        "section": "Large Intestine Function",
+        "marker_count": 4,
+        "markers": [
+          "Large intestine peristalsis function coefficient",
+          "Colonic absorption coefficient",
+          "Intestinal bacteria coefficient",
+          "Intraluminal pressure coefficient"
+        ]
+      },
+      {
+        "section": "Liver Function",
+        "marker_count": 5,
+        "markers": [
+          "Protein Metabolism",
+          "Energy Production Function",
+          "Detoxification Function",
+          "Bile Secretion Function",
+          "Liver Fat Content"
+        ]
+      },
+      {
+        "section": "Gallbladder Function",
+        "marker_count": 5,
+        "markers": [
+          "Serum Globulin (A/G)",
+          "Total Bilirubin (TBIL)",
+          "Alkaline Phosphatase (ALP)",
+          "Serum Total Bile Acid (TBA)",
+          "Bilirubin (DBIL)"
+        ]
+      },
+      {
+        "section": "Pancreatic Function",
+        "marker_count": 3,
+        "markers": [
+          "Insulin",
+          "Pancreatic Polypeptide (PP)",
+          "Glucagon"
+        ]
+      },
+      {
+        "section": "Kidney Function",
+        "marker_count": 4,
+        "markers": [
+          "Urobilinogen Index",
+          "Uric acid Index",
+          "Blood urea nitrogen(BUN) Index",
+          "Proteinuria Index"
+        ]
+      },
+      {
+        "section": "Lung Function",
+        "marker_count": 4,
+        "markers": [
+          "Vital Capacity VC",
+          "Total Lung Capacity TLC",
+          "Airway Resistance RAM",
+          "Arterial Oxygen Content PaCO2"
+        ]
+      },
+      {
+        "section": "Brain Nerve",
+        "marker_count": 5,
+        "markers": [
+          "Status of Brain Tissue Blood Supply",
+          "Cerebral Arteriosclerosis",
+          "Functional Status of Cranial Nerve",
+          "Sentiment Index",
+          "Memory Index(ZS)"
+        ]
+      },
+      {
+        "section": "Bone Mineral Density",
+        "marker_count": 5,
+        "markers": [
+          "Osteoclast Coefficient",
+          "Amount of Calcium Loss",
+          "Degree of Bone Hyperplasia",
+          "Degree of Osteoporosis",
+          "Bone Mineral Density"
+        ]
+      },
+      {
+        "section": "Rheumatoid Bone Disease",
+        "marker_count": 5,
+        "markers": [
+          "Degree of Cervical Calcification",
+          "Degree of Lumbar Calcification",
+          "Bone Hyperplasia Coefficient",
+          "Osteoporosis Coefficient",
+          "Rheumatism Coefficient"
+        ]
+      },
+      {
+        "section": "Bone Growth Index",
+        "marker_count": 5,
+        "markers": [
+          "Bone alkaline phosphatase",
+          "Osteocalcin",
+          "Status of long bone healing",
+          "Short bone cartilage healing situation",
+          "Epiphyseal line"
+        ]
+      },
+      {
+        "section": "Blood Sugar",
+        "marker_count": 3,
+        "markers": [
+          "Coefficient of Insulin Secretion",
+          "Blood Sugar Coefficient",
+          "Urine Sugar Coefficient"
+        ]
+      },
+      {
+        "section": "Trace Element",
+        "marker_count": 19,
+        "markers": [
+          "Calcium",
+          "Iron",
+          "Zinc",
+          "Selenium",
+          "Phosphorus",
+          "Potassium",
+          "Magnesium",
+          "Copper",
+          "Cobalt",
+          "Manganese",
+          "Iodine",
+          "Nickel",
+          "Fluorine",
+          "Molybdenum",
+          "Vanadium",
+          "Tin",
+          "Silicon",
+          "Strontium",
+          "Boron"
+        ]
+      },
+      {
+        "section": "Vitamin",
+        "marker_count": 10,
+        "markers": [
+          "Vitamin A",
+          "Vitamin B1",
+          "Vitamin B2",
+          "Vitamin B3",
+          "Vitamin B6",
+          "Vitamin B12",
+          "Vitamin C",
+          "Vitamin D3",
+          "Vitamin E",
+          "Vitamin K"
+        ]
+      },
+      {
+        "section": "Amino Acid",
+        "marker_count": 11,
+        "markers": [
+          "Lysine",
+          "Tryptophan",
+          "Phenylalanine",
+          "Methionine",
+          "Threonine",
+          "Isoleucine",
+          "Leucine",
+          "Valine",
+          "Histidine",
+          "Arginine",
+          "Homocysteine"
+        ]
+      },
+      {
+        "section": "Coenzyme",
+        "marker_count": 6,
+        "markers": [
+          "Nicotinamide",
+          "Biotin",
+          "Pantothenic acid",
+          "Folic acid",
+          "Coenzyme Q10",
+          "Glutathione"
+        ]
+      },
+      {
+        "section": "Essential Fatty Acid",
+        "marker_count": 4,
+        "markers": [
+          "Linoleic acid",
+          "α-Linolenic acid",
+          "γ-Linolenic acid",
+          "Arachidonic acid"
+        ]
+      },
+      {
+        "section": "Endocrine System",
+        "marker_count": 7,
+        "markers": [
+          "Thyroid secretion index",
+          "Parathyroid hormone secretion index",
+          "Adrenal glands Index",
+          "Pituitary secretion index",
+          "Pineal secretion index",
+          "Thymus gland secretion index",
+          "Gland secretion index"
+        ]
+      },
+      {
+        "section": "Immune System",
+        "marker_count": 9,
+        "markers": [
+          "Lymph node Index",
+          "Tonsil immune Index",
+          "Bone marrow Index",
+          "Spleen index",
+          "Thymus index",
+          "Immunoglobulin index",
+          "Respiratory immune Index",
+          "Gastrointestinal immune Index",
+          "Mucosa immune Index"
+        ]
+      },
+      {
+        "section": "Thyroid",
+        "marker_count": 4,
+        "markers": [
+          "Free thyroxine (FT4)",
+          "Thyroglobulin",
+          "Anti-thyroglobulin antibodies",
+          "Three triiodothyronine (T3)"
+        ]
+      },
+      {
+        "section": "Human Toxin",
+        "marker_count": 4,
+        "markers": [
+          "Stimulating Beverage",
+          "Electromagnetic Radiation",
+          "Free Radical",
+          "Toxic Pesticide Residue"
+        ]
+      },
+      {
+        "section": "Heavy Metal",
+        "marker_count": 8,
+        "markers": [
+          "Lead",
+          "Mercury",
+          "Cadmium",
+          "Chromium",
+          "Arsenic",
+          "Antimony",
+          "Thallium",
+          "Aluminum"
+        ]
+      },
+      {
+        "section": "Basic Physical Quality",
+        "marker_count": 5,
+        "markers": [
+          "Response Ability",
+          "Mental Power",
+          "Water Shortage",
+          "Hypoxia",
+          "PH"
+        ]
+      },
+      {
+        "section": "Allergy",
+        "marker_count": 13,
+        "markers": [
+          "Drug allergy index",
+          "Alcohol allergy index",
+          "Pollen allergy index",
+          "Injection allergy index",
+          "Chemical products allergy index",
+          "Paint allergy index",
+          "Dust allergy index",
+          "Smoke allergy index",
+          "Hair dye allergy index",
+          "Animal fur allergy index",
+          "Metal jewelry allergy index",
+          "Seafood allergy index",
+          "Milk allergy index"
+        ]
+      },
+      {
+        "section": "Obesity",
+        "marker_count": 5,
+        "markers": [
+          "Abnormal lipid metabolism coefficient",
+          "Brown adipose tissue abnormalities coefficient",
+          "Hyperinsulinemia coefficient",
+          "Nucleus of the hypothalamus abnormal coefficient",
+          "Triglyceride content of abnormal coefficient"
+        ]
+      },
+      {
+        "section": "Skin",
+        "marker_count": 10,
+        "markers": [
+          "Skin Free Radical Index",
+          "Skin Collagen Index",
+          "Skin Grease Index",
+          "Skin Immunity Index",
+          "Skin Moisture Index",
+          "Skin Moisture Loss",
+          "Skin Red Blood Trace Index",
+          "Skin Elasticity Index",
+          "Skin Melanin Index",
+          "Skin Horniness Index"
+        ]
+      },
+      {
+        "section": "Eye",
+        "marker_count": 8,
+        "markers": [
+          "Bags under the eyes",
+          "Collagen eye wrinkle",
+          "Dark circles",
+          "Lymphatic obstruction",
+          "Sagging",
+          "Edema",
+          "Eye cell activity",
+          "Visual fatigue"
+        ]
+      },
+      {
+        "section": "Collagen",
+        "marker_count": 14,
+        "markers": [
+          "Eye",
+          "Tooth",
+          "Hair and skin",
+          "Endocrine system",
+          "Circulatory system",
+          "Digestive system",
+          "Immune system",
+          "Motion systems",
+          "Muscle Tissue",
+          "Fat Metabolism",
+          "Detoxification and metabolism",
+          "Reproductive system",
+          "Nervous system",
+          "Skeleton"
+        ]
+      },
+      {
+        "section": "Channels and collaterals",
+        "marker_count": 16,
+        "markers": [
+          "Hand Tai Yin Lung Meridian",
+          "Hand Yangming Large Intestine Meridian",
+          "Foot Yangming Stomach Meridian",
+          "Foot Tai Yin Lung Meridian",
+          "Hand Shao Yin Heart Sutra",
+          "Hand the small intestine by the sun",
+          "Foot Tai Yang Bladder Meridian",
+          "Foot Shao Yin Kidney",
+          "Hand Jue Yin Pericardium Meridian",
+          "Hand Shao Yang Triple Burner Meridian",
+          "Foot Shao Yang Gall Bladder Meridian",
+          "Foot Jue Yin Liver Meridian",
+          "Ren channel",
+          "Governor meridian",
+          "Vital meridian",
+          "Tai mai"
+        ]
+      },
+      {
+        "section": "Pulse of heart and brain",
+        "marker_count": 7,
+        "markers": [
+          "Stroke index",
+          "Stroke volume(SV)",
+          "Heart peripheral resistance(TRR)",
+          "Pulse wave coefficient K",
+          "Cerebrovascular blood oxygen saturation(Sa)",
+          "Cerebrovascular blood oxygen volume(CaCO2)",
+          "Cerebrovascular blood oxygen presure(PaO2)"
+        ]
+      },
+      {
+        "section": "Blood lipids",
+        "marker_count": 7,
+        "markers": [
+          "Blood viscosity",
+          "Total cholesterol(TC)",
+          "Triglyceride(TG)",
+          "High-density lipoprotein(HDL-C)",
+          "Low-density lipoprotein(LDL-C)",
+          "Neutral fat(MB)",
+          "Circulating immune complex(CIC)"
+        ]
+      },
+      {
+        "section": "Gynecology",
+        "marker_count": 5,
+        "markers": [
+          "Vaginitis coefficient",
+          "PID coefficient",
+          "Appendagitis coefficient",
+          "Cervicitis coefficient",
+          "Ovarian cyst coefficient"
+        ]
+      },
+      {
+        "section": "Breast",
+        "marker_count": 5,
+        "markers": [
+          "Hyperplasia of mammary glands coefficient",
+          "Acute mastitis coefficient",
+          "Chronic mastitis coefficient",
+          "Endocrine dyscrasia coefficient",
+          "Fibroadenoma of breast coefficient"
+        ]
+      },
+      {
+        "section": "Menstrual cycle",
+        "marker_count": 4,
+        "markers": [
+          "Beta hormone",
+          "Reflect protein",
+          "Fibrinogen",
+          "Sedimentation rate"
+        ]
+      },
+      {
+        "section": "Female Hormone",
+        "marker_count": 6,
+        "markers": [
+          "Estrogen",
+          "Androgen",
+          "Progesterone(P)",
+          "Luteinizing Hormone (LH)",
+          "Prolactin(PRL)",
+          "Follicle Stimulating Hormone(FSH)"
+        ]
+      },
+      {
+        "section": "Human Immunity",
+        "marker_count": 5,
+        "markers": [
+          "Tissue barrier immune index",
+          "Innate immune cell index",
+          "Innate immune molecule index",
+          "Cellular immune index",
+          "Humoral immunity index"
+        ]
+      },
+      {
+        "section": "Human Consciousness Level",
+        "marker_count": 17,
+        "markers": [
+          "Shame",
+          "Guilt",
+          "Apathy",
+          "Grief",
+          "Fear",
+          "Desire",
+          "Anger",
+          "Pride",
+          "Courage",
+          "Neutrality",
+          "Willingness",
+          "Acceptance",
+          "Reason",
+          "Love",
+          "Joy",
+          "Peace",
+          "Enlightenment"
+        ]
+      },
+      {
+        "section": "Respiratory Function",
+        "marker_count": 4,
+        "markers": [
+          "Volume Tidal(VT)",
+          "Inspiratory Volume(TI)",
+          "Functional Residual Capacity(FRC)",
+          "Residual Volume(RV)"
+        ]
+      },
+      {
+        "section": "Lecithin",
+        "marker_count": 6,
+        "markers": [
+          "Phospholipid index",
+          "Sphingolipid index",
+          "Sphingomyelin index",
+          "Lecithin index",
+          "Brain phospholipid index",
+          "Liposomal index"
+        ]
+      },
+      {
+        "section": "Fatty acid",
+        "marker_count": 4,
+        "markers": [
+          "Saturated fatty acid index",
+          "Unsaturated fatty acid index",
+          "Essential fatty acid index",
+          "Triglyceride index"
+        ]
+      }
+    ]
+  },
+  "child": {
+    "profile": "child",
+    "section_count": 10,
+    "sections": [
+      {
+        "section": "Trace Element",
+        "marker_count": 19,
+        "markers": [
+          "Calcium",
+          "Iron",
+          "Zinc",
+          "Selenium",
+          "Phosphorus",
+          "Potassium",
+          "Magnesium",
+          "Copper",
+          "Cobalt",
+          "Manganese",
+          "Iodine",
+          "Nickel",
+          "Fluorine",
+          "Molybdenum",
+          "Vanadium",
+          "Tin",
+          "Silicon",
+          "Strontium",
+          "Boron"
+        ]
+      },
+      {
+        "section": "Vitamin",
+        "marker_count": 10,
+        "markers": [
+          "Vitamin A",
+          "Vitamin B1",
+          "Vitamin B2",
+          "Vitamin B3",
+          "Vitamin B6",
+          "Vitamin B12",
+          "Vitamin C",
+          "Vitamin D3",
+          "Vitamin E",
+          "Vitamin K"
+        ]
+      },
+      {
+        "section": "Amino Acid",
+        "marker_count": 11,
+        "markers": [
+          "Lysine",
+          "Tryptophan",
+          "Phenylalanine",
+          "Methionine",
+          "Threonine",
+          "Isoleucine",
+          "Leucine",
+          "Valine",
+          "Histidine",
+          "Arginine",
+          "Homocysteine"
+        ]
+      },
+      {
+        "section": "Coenzyme",
+        "marker_count": 6,
+        "markers": [
+          "Nicotinamide",
+          "Biotin",
+          "Pantothenic acid",
+          "Folic acid",
+          "Coenzyme Q10",
+          "Glutathione"
+        ]
+      },
+      {
+        "section": "Essential Fatty Acid",
+        "marker_count": 4,
+        "markers": [
+          "Linoleic acid",
+          "α-Linolenic acid",
+          "γ-Linolenic acid",
+          "Arachidonic acid"
+        ]
+      },
+      {
+        "section": "ADHD",
+        "marker_count": 4,
+        "markers": [
+          "An oxygen-hydroxy phenyl ethanol",
+          "GE neurotransmitters",
+          "Vanilloid",
+          "Creatine hormone"
+        ]
+      },
+      {
+        "section": "Adolescent Intelligence",
+        "marker_count": 8,
+        "markers": [
+          "Observation",
+          "Memory",
+          "Imagination",
+          "Creativity",
+          "Analysis and Judgment",
+          "Thinking Ability",
+          "Resilience",
+          "Reasoning Ability"
+        ]
+      },
+      {
+        "section": "Adolescent Growth Index",
+        "marker_count": 6,
+        "markers": [
+          "Height and body mass index",
+          "Height bust index",
+          "Height sitting height index",
+          "BMI index",
+          "Grip and back muscle index",
+          "Vital capacity index"
+        ]
+      },
+      {
+        "section": "Lecithin",
+        "marker_count": 6,
+        "markers": [
+          "Phospholipid index",
+          "Sphingolipid index",
+          "Sphingomyelin index",
+          "Lecithin index",
+          "Brain phospholipid index",
+          "Liposomal index"
+        ]
+      },
+      {
+        "section": "Fatty acid",
+        "marker_count": 4,
+        "markers": [
+          "Saturated fatty acid index",
+          "Unsaturated fatty acid index",
+          "Essential fatty acid index",
+          "Triglyceride index"
+        ]
+      }
+    ]
+  },
+  "unique_parsed_category_count": 48,
+  "unique_parsed_categories": [
+    "ADHD",
+    "Adolescent Growth Index",
+    "Adolescent Intelligence",
+    "Allergy",
+    "Amino Acid",
+    "Basic Physical Quality",
+    "Blood Sugar",
+    "Blood lipids",
+    "Bone Growth Index",
+    "Bone Mineral Density",
+    "Brain Nerve",
+    "Breast",
+    "Cardiovascular and Cerebrovascular",
+    "Channels and collaterals",
+    "Coenzyme",
+    "Collagen",
+    "Endocrine System",
+    "Essential Fatty Acid",
+    "Eye",
+    "Fatty acid",
+    "Female Hormone",
+    "Gallbladder Function",
+    "Gastrointestinal Function",
+    "Gynecology",
+    "Heavy Metal",
+    "Human Consciousness Level",
+    "Human Immunity",
+    "Human Toxin",
+    "Immune System",
+    "Kidney Function",
+    "Large Intestine Function",
+    "Lecithin",
+    "Liver Function",
+    "Lung Function",
+    "Male Hormone",
+    "Male Sexual Function",
+    "Menstrual cycle",
+    "Obesity",
+    "Pancreatic Function",
+    "Prostate",
+    "Pulse of heart and brain",
+    "Respiratory Function",
+    "Rheumatoid Bone Disease",
+    "Skin",
+    "Sperm and semen",
+    "Thyroid",
+    "Trace Element",
+    "Vitamin"
+  ],
+  "combined_marker_registry": {
+    "Cardiovascular and Cerebrovascular": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Blood Viscosity",
+        "Cholesterol Crystal",
+        "Blood Fat",
+        "Vascular Resistance",
+        "Vascular Elasticity",
+        "Myocardial Blood Demand",
+        "Myocardial Blood Perfusion Volume",
+        "Myocardial Oxygen Consumption",
+        "Stroke Volume",
+        "Left Ventricular Ejection Impedance",
+        "Left Ventricular Effective Pump Power",
+        "Coronary Artery Elasticity",
+        "Coronary Perfusion Pressure",
+        "Cerebral Blood Vessel Elasticity",
+        "Brain Tissue Blood Supply Status"
+      ]
+    },
+    "Gastrointestinal Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Pepsin Secretion Coefficient",
+        "Gastric Peristalsis Function Coefficient",
+        "Gastric Absorption Function Coefficient",
+        "Small Intestine Peristalsis Function Coefficient",
+        "Small Intestine Absorption Function Coefficient"
+      ]
+    },
+    "Large Intestine Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Large intestine peristalsis function coefficient",
+        "Colonic absorption coefficient",
+        "Intestinal bacteria coefficient",
+        "Intraluminal pressure coefficient"
+      ]
+    },
+    "Liver Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Protein Metabolism",
+        "Energy Production Function",
+        "Detoxification Function",
+        "Bile Secretion Function",
+        "Liver Fat Content"
+      ]
+    },
+    "Gallbladder Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Serum Globulin (A/G)",
+        "Total Bilirubin (TBIL)",
+        "Alkaline Phosphatase (ALP)",
+        "Serum Total Bile Acid (TBA)",
+        "Bilirubin (DBIL)"
+      ]
+    },
+    "Pancreatic Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Insulin",
+        "Pancreatic Polypeptide (PP)",
+        "Glucagon"
+      ]
+    },
+    "Kidney Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Urobilinogen Index",
+        "Uric acid Index",
+        "Blood urea nitrogen(BUN) Index",
+        "Proteinuria Index"
+      ]
+    },
+    "Lung Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Vital Capacity VC",
+        "Total Lung Capacity TLC",
+        "Airway Resistance RAM",
+        "Arterial Oxygen Content PaCO2"
+      ]
+    },
+    "Brain Nerve": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Status of Brain Tissue Blood Supply",
+        "Cerebral Arteriosclerosis",
+        "Functional Status of Cranial Nerve",
+        "Sentiment Index",
+        "Memory Index(ZS)"
+      ]
+    },
+    "Bone Mineral Density": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Osteoclast Coefficient",
+        "Amount of Calcium Loss",
+        "Degree of Bone Hyperplasia",
+        "Degree of Osteoporosis",
+        "Bone Mineral Density"
+      ]
+    },
+    "Rheumatoid Bone Disease": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Degree of Cervical Calcification",
+        "Degree of Lumbar Calcification",
+        "Bone Hyperplasia Coefficient",
+        "Osteoporosis Coefficient",
+        "Rheumatism Coefficient"
+      ]
+    },
+    "Bone Growth Index": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Bone alkaline phosphatase",
+        "Osteocalcin",
+        "Status of long bone healing",
+        "Short bone cartilage healing situation",
+        "Epiphyseal line"
+      ]
+    },
+    "Blood Sugar": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Coefficient of Insulin Secretion",
+        "Blood Sugar Coefficient",
+        "Urine Sugar Coefficient"
+      ]
+    },
+    "Trace Element": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Calcium",
+        "Iron",
+        "Zinc",
+        "Selenium",
+        "Phosphorus",
+        "Potassium",
+        "Magnesium",
+        "Copper",
+        "Cobalt",
+        "Manganese",
+        "Iodine",
+        "Nickel",
+        "Fluorine",
+        "Molybdenum",
+        "Vanadium",
+        "Tin",
+        "Silicon",
+        "Strontium",
+        "Boron"
+      ]
+    },
+    "Vitamin": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Vitamin A",
+        "Vitamin B1",
+        "Vitamin B2",
+        "Vitamin B3",
+        "Vitamin B6",
+        "Vitamin B12",
+        "Vitamin C",
+        "Vitamin D3",
+        "Vitamin E",
+        "Vitamin K"
+      ]
+    },
+    "Amino Acid": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Lysine",
+        "Tryptophan",
+        "Phenylalanine",
+        "Methionine",
+        "Threonine",
+        "Isoleucine",
+        "Leucine",
+        "Valine",
+        "Histidine",
+        "Arginine",
+        "Homocysteine"
+      ]
+    },
+    "Coenzyme": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Nicotinamide",
+        "Biotin",
+        "Pantothenic acid",
+        "Folic acid",
+        "Coenzyme Q10",
+        "Glutathione"
+      ]
+    },
+    "Essential Fatty Acid": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Linoleic acid",
+        "α-Linolenic acid",
+        "γ-Linolenic acid",
+        "Arachidonic acid"
+      ]
+    },
+    "Endocrine System": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Thyroid secretion index",
+        "Parathyroid hormone secretion index",
+        "Adrenal glands Index",
+        "Pituitary secretion index",
+        "Pineal secretion index",
+        "Thymus gland secretion index",
+        "Gland secretion index"
+      ]
+    },
+    "Immune System": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Lymph node Index",
+        "Tonsil immune Index",
+        "Bone marrow Index",
+        "Spleen index",
+        "Thymus index",
+        "Immunoglobulin index",
+        "Respiratory immune Index",
+        "Gastrointestinal immune Index",
+        "Mucosa immune Index"
+      ]
+    },
+    "Thyroid": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Free thyroxine (FT4)",
+        "Thyroglobulin",
+        "Anti-thyroglobulin antibodies",
+        "Three triiodothyronine (T3)"
+      ]
+    },
+    "Human Toxin": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Stimulating Beverage",
+        "Electromagnetic Radiation",
+        "Free Radical",
+        "Toxic Pesticide Residue"
+      ]
+    },
+    "Heavy Metal": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Lead",
+        "Mercury",
+        "Cadmium",
+        "Chromium",
+        "Arsenic",
+        "Antimony",
+        "Thallium",
+        "Aluminum"
+      ]
+    },
+    "Basic Physical Quality": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Response Ability",
+        "Mental Power",
+        "Water Shortage",
+        "Hypoxia",
+        "PH"
+      ]
+    },
+    "Allergy": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Drug allergy index",
+        "Alcohol allergy index",
+        "Pollen allergy index",
+        "Injection allergy index",
+        "Chemical products allergy index",
+        "Paint allergy index",
+        "Dust allergy index",
+        "Smoke allergy index",
+        "Hair dye allergy index",
+        "Animal fur allergy index",
+        "Metal jewelry allergy index",
+        "Seafood allergy index",
+        "Milk allergy index"
+      ]
+    },
+    "Obesity": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Abnormal lipid metabolism coefficient",
+        "Brown adipose tissue abnormalities coefficient",
+        "Hyperinsulinemia coefficient",
+        "Nucleus of the hypothalamus abnormal coefficient",
+        "Triglyceride content of abnormal coefficient"
+      ]
+    },
+    "Skin": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Skin Free Radical Index",
+        "Skin Collagen Index",
+        "Skin Grease Index",
+        "Skin Immunity Index",
+        "Skin Moisture Index",
+        "Skin Moisture Loss",
+        "Skin Red Blood Trace Index",
+        "Skin Elasticity Index",
+        "Skin Melanin Index",
+        "Skin Horniness Index"
+      ]
+    },
+    "Eye": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Bags under the eyes",
+        "Collagen eye wrinkle",
+        "Dark circles",
+        "Lymphatic obstruction",
+        "Sagging",
+        "Edema",
+        "Eye cell activity",
+        "Visual fatigue"
+      ]
+    },
+    "Collagen": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Eye",
+        "Tooth",
+        "Hair and skin",
+        "Endocrine system",
+        "Circulatory system",
+        "Digestive system",
+        "Immune system",
+        "Motion systems",
+        "Muscle Tissue",
+        "Fat Metabolism",
+        "Detoxification and metabolism",
+        "Reproductive system",
+        "Nervous system",
+        "Skeleton"
+      ]
+    },
+    "Channels and collaterals": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Hand Tai Yin Lung Meridian",
+        "Hand Yangming Large Intestine Meridian",
+        "Foot Yangming Stomach Meridian",
+        "Foot Tai Yin Lung Meridian",
+        "Hand Shao Yin Heart Sutra",
+        "Hand the small intestine by the sun",
+        "Foot Tai Yang Bladder Meridian",
+        "Foot Shao Yin Kidney",
+        "Hand Jue Yin Pericardium Meridian",
+        "Hand Shao Yang Triple Burner Meridian",
+        "Foot Shao Yang Gall Bladder Meridian",
+        "Foot Jue Yin Liver Meridian",
+        "Ren channel",
+        "Governor meridian",
+        "Vital meridian",
+        "Tai mai"
+      ]
+    },
+    "Pulse of heart and brain": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Stroke index",
+        "Stroke volume(SV)",
+        "Heart peripheral resistance(TRR)",
+        "Pulse wave coefficient K",
+        "Cerebrovascular blood oxygen saturation(Sa)",
+        "Cerebrovascular blood oxygen volume(CaCO2)",
+        "Cerebrovascular blood oxygen presure(PaO2)"
+      ]
+    },
+    "Blood lipids": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Blood viscosity",
+        "Total cholesterol(TC)",
+        "Triglyceride(TG)",
+        "High-density lipoprotein(HDL-C)",
+        "Low-density lipoprotein(LDL-C)",
+        "Neutral fat(MB)",
+        "Circulating immune complex(CIC)"
+      ]
+    },
+    "Prostate": {
+      "profiles": [
+        "male"
+      ],
+      "markers": [
+        "Degree of Prostatic Hyperplasia",
+        "Degree of Prostatic Calcification",
+        "Prostatitis Syndrome"
+      ]
+    },
+    "Male Sexual Function": {
+      "profiles": [
+        "male"
+      ],
+      "markers": [
+        "Testosterone",
+        "Gonadotropin",
+        "Erection Transmitter"
+      ]
+    },
+    "Sperm and semen": {
+      "profiles": [
+        "male"
+      ],
+      "markers": [
+        "Semen volume",
+        "liquefying time",
+        "Number of sperms",
+        "Sperm motility rate"
+      ]
+    },
+    "Male Hormone": {
+      "profiles": [
+        "male"
+      ],
+      "markers": [
+        "Androgen",
+        "Estrogen",
+        "Progesterone(P)",
+        "Luteinizing Hormone (LH)",
+        "Prolactin(PRL)",
+        "Follicle Stimulating Hormone(FSH)"
+      ]
+    },
+    "Human Immunity": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Tissue barrier immune index",
+        "Innate immune cell index",
+        "Innate immune molecule index",
+        "Cellular immune index",
+        "Humoral immunity index"
+      ]
+    },
+    "Human Consciousness Level": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Shame",
+        "Guilt",
+        "Apathy",
+        "Grief",
+        "Fear",
+        "Desire",
+        "Anger",
+        "Pride",
+        "Courage",
+        "Neutrality",
+        "Willingness",
+        "Acceptance",
+        "Reason",
+        "Love",
+        "Joy",
+        "Peace",
+        "Enlightenment"
+      ]
+    },
+    "Respiratory Function": {
+      "profiles": [
+        "male",
+        "female"
+      ],
+      "markers": [
+        "Volume Tidal(VT)",
+        "Inspiratory Volume(TI)",
+        "Functional Residual Capacity(FRC)",
+        "Residual Volume(RV)"
+      ]
+    },
+    "Lecithin": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Phospholipid index",
+        "Sphingolipid index",
+        "Sphingomyelin index",
+        "Lecithin index",
+        "Brain phospholipid index",
+        "Liposomal index"
+      ]
+    },
+    "Fatty acid": {
+      "profiles": [
+        "male",
+        "female",
+        "child"
+      ],
+      "markers": [
+        "Saturated fatty acid index",
+        "Unsaturated fatty acid index",
+        "Essential fatty acid index",
+        "Triglyceride index"
+      ]
+    },
+    "Gynecology": {
+      "profiles": [
+        "female"
+      ],
+      "markers": [
+        "Vaginitis coefficient",
+        "PID coefficient",
+        "Appendagitis coefficient",
+        "Cervicitis coefficient",
+        "Ovarian cyst coefficient"
+      ]
+    },
+    "Breast": {
+      "profiles": [
+        "female"
+      ],
+      "markers": [
+        "Hyperplasia of mammary glands coefficient",
+        "Acute mastitis coefficient",
+        "Chronic mastitis coefficient",
+        "Endocrine dyscrasia coefficient",
+        "Fibroadenoma of breast coefficient"
+      ]
+    },
+    "Menstrual cycle": {
+      "profiles": [
+        "female"
+      ],
+      "markers": [
+        "Beta hormone",
+        "Reflect protein",
+        "Fibrinogen",
+        "Sedimentation rate"
+      ]
+    },
+    "Female Hormone": {
+      "profiles": [
+        "female"
+      ],
+      "markers": [
+        "Estrogen",
+        "Androgen",
+        "Progesterone(P)",
+        "Luteinizing Hormone (LH)",
+        "Prolactin(PRL)",
+        "Follicle Stimulating Hormone(FSH)"
+      ]
+    },
+    "ADHD": {
+      "profiles": [
+        "child"
+      ],
+      "markers": [
+        "An oxygen-hydroxy phenyl ethanol",
+        "GE neurotransmitters",
+        "Vanilloid",
+        "Creatine hormone"
+      ]
+    },
+    "Adolescent Intelligence": {
+      "profiles": [
+        "child"
+      ],
+      "markers": [
+        "Observation",
+        "Memory",
+        "Imagination",
+        "Creativity",
+        "Analysis and Judgment",
+        "Thinking Ability",
+        "Resilience",
+        "Reasoning Ability"
+      ]
+    },
+    "Adolescent Growth Index": {
+      "profiles": [
+        "child"
+      ],
+      "markers": [
+        "Height and body mass index",
+        "Height bust index",
+        "Height sitting height index",
+        "BMI index",
+        "Grip and back muscle index",
+        "Vital capacity index"
+      ]
+    }
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "model": "gpt-4o-mini",
+  "temperature": 0.55,
+  "purpose": "Premium practitioner-facing narrative synthesis layer",
+  "outputs": [
+    "practitioner_summary",
+    "key_patterns",
+    "priority_actions",
+    "narrative"
+  ],
+  "fallback_behavior": "Deterministic fallback used if API key is missing or model call fails."
+}

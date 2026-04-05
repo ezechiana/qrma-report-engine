@@ -1,0 +1,86 @@
+{
+  "marker_rules": {
+    "Liver Fat Content": {
+      "high_mild": ["V-GLUTATION PLUS", "V-DAILY"],
+      "high_moderate": ["V-GLUTATION PLUS", "V-DAILY"],
+      "high_severe": ["V-GLUTATION PLUS", "V-DAILY"]
+    },
+    "Detoxification Function": {
+      "low_mild": ["V-GLUTATION PLUS"],
+      "low_moderate": ["V-GLUTATION PLUS"],
+      "low_severe": ["V-GLUTATION PLUS"]
+    },
+    "Vitamin C": {
+      "low_mild": ["V-DAILY"],
+      "low_moderate": ["V-DAILY"],
+      "low_severe": ["V-DAILY"]
+    },
+    "Vitamin D3": {
+      "low_mild": ["V-DAILY"],
+      "low_moderate": ["V-DAILY"],
+      "low_severe": ["V-DAILY"]
+    },
+    "Iron": {
+      "low_mild": ["V-DAILY"],
+      "low_moderate": ["V-DAILY"],
+      "low_severe": ["V-DAILY"]
+    },
+    "Copper": {
+      "low_mild": ["V-DAILY"],
+      "low_moderate": ["V-DAILY"],
+      "low_severe": ["V-DAILY"]
+    },
+    "Coenzyme Q10": {
+      "low_mild": ["V-DAILY", "V-NITRO"],
+      "low_moderate": ["V-DAILY", "V-NITRO"],
+      "low_severe": ["V-DAILY", "V-NITRO"]
+    },
+    "Vascular Resistance": {
+      "high_mild": ["V-OMEGA 3", "V-NITRO"],
+      "high_moderate": ["V-OMEGA 3", "V-NITRO"],
+      "high_severe": ["V-OMEGA 3", "V-NITRO"]
+    },
+    "Blood Viscosity": {
+      "high_mild": ["V-OMEGA 3", "V-NITRO"],
+      "high_moderate": ["V-OMEGA 3", "V-NITRO"],
+      "high_severe": ["V-OMEGA 3", "V-NITRO"]
+    },
+    "Coronary Perfusion Pressure": {
+      "high_mild": ["V-OMEGA 3", "V-NITRO"],
+      "high_moderate": ["V-OMEGA 3", "V-NITRO"],
+      "high_severe": ["V-OMEGA 3", "V-NITRO"]
+    },
+    "Essential Fatty Acid balance": {
+      "low_mild": ["V-OMEGA 3"],
+      "low_moderate": ["V-OMEGA 3"],
+      "low_severe": ["V-OMEGA 3"]
+    },
+    "Collagen": {
+      "low_mild": ["VITALAGE COLLAGEN"],
+      "low_moderate": ["VITALAGE COLLAGEN"],
+      "low_severe": ["VITALAGE COLLAGEN"]
+    }
+  },
+  "section_rules": {
+    "Liver & metabolic function": {
+      "high": ["V-GLUTATION PLUS", "V-DAILY"],
+      "medium": ["V-GLUTATION PLUS"]
+    },
+    "Trace elements": {
+      "high": ["V-DAILY"],
+      "medium": ["V-DAILY"]
+    },
+    "Vitamin status": {
+      "high": ["V-DAILY"],
+      "medium": ["V-DAILY"]
+    },
+    "Cardiovascular & circulation": {
+      "high": ["V-OMEGA 3", "V-NITRO"],
+      "medium": ["V-OMEGA 3"]
+    },
+    "Collagen-related structure": {
+      "high": ["VITALAGE COLLAGEN"],
+      "medium": ["VITALAGE COLLAGEN"]
+    }
+  }
+}

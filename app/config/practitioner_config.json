@@ -1,0 +1,27 @@
+{
+  "report_title": "Personalised Wellness Scan Report",
+  "brand_name": "NaturalApproaches.com",
+  "subtitle": "Wellness screening summary",
+  "primary_color": "#065f46",
+  "accent_color": "#d97706",
+  "text_color": "#1f2937",
+  "include_toc": true,
+  "include_appendix": true,
+  "include_product_recommendations": false,
+  "max_sections": 6,
+  "max_markers_per_section": 4,
+  "logo_url": "https://naturalapproaches.com/wp-content/uploads/2024/03/Logo-transp.png",
+  "cover_image_url": "https://naturalapproaches.com/wp-content/uploads/2026/02/naturalapproaches_human_silhouette_with_gentle_glowing_immune_229deec2-52b9-43b1-aa05-7a8db138e514_3.png",
+  "clinic_contact": "Eze Chiana",
+  "clinic_email": "care@naturalapproaches.com",
+  "clinic_website": "https://www.naturalapproaches.com",
+  "recommendation_mode": {
+    "enable_clinical_recommendations": true,
+    "enable_product_recommendations": false,
+    "enable_vital_health": false,
+    "enable_practitioner_override": true,
+    "product_profile": "natural_approaches",
+    "max_clinical_recommendations": 6,
+    "max_product_recommendations": 8
+  }
+}

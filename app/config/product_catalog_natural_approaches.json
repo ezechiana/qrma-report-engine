@@ -1,0 +1,68 @@
+{
+  "profile_name": "natural_approaches",
+  "profile_label": "Natural Approaches Default",
+  "brand_name": "Natural Approaches",
+  "description": "Default Natural Approaches product catalog for optional product recommendations in the wellness scan platform.",
+  "products": [
+    {
+      "id": "NA_DISCOVERY_SESSION",
+      "sku": "NA-DISCOVERY",
+      "name": "Discovery Session",
+      "brand": "Natural Approaches",
+      "category": "Consultation",
+      "summary": "A practitioner-led consultation to interpret findings, prioritise next steps, and build a personalised plan.",
+      "patient_note": "Useful when findings need practitioner interpretation, prioritisation, or a more tailored plan.",
+      "url": "https://naturalapproaches.com/product/discovery-session/"
+    },
+    {
+      "id": "NA_RHYTHM_RESET",
+      "sku": "NA-RHYTHM-RESET",
+      "name": "Rhythm Reset Code\u2122",
+      "brand": "Natural Approaches",
+      "category": "Foundational Protocol",
+      "summary": "A structured foundational protocol designed to support energy, rhythm, metabolic resilience, and broader whole-body recovery.",
+      "patient_note": "Often relevant when scan patterns suggest a broader need for systemic support rather than one isolated intervention.",
+      "url": "https://naturalapproaches.com/product/renewal-rhythm-reset-code/"
+    },
+    {
+      "id": "NA_DEEP_DETOX",
+      "sku": "NA-DEEP-DETOX",
+      "name": "Deep Detox Code\u2122",
+      "brand": "Natural Approaches",
+      "category": "Detox Protocol",
+      "summary": "A structured detoxification programme intended to support elimination, liver-gut function, and reduction of accumulated internal burden.",
+      "patient_note": "Often considered when the scan suggests toxic load, sluggish elimination, inflammatory burden, or broader detoxification stress.",
+      "url": "https://naturalapproaches.com/product/rebalance-deep-detox-code/"
+    },
+    {
+      "id": "NA_DNA_EPIGENETICS",
+      "sku": "NA-DNA-EPIGENETICS",
+      "name": "DNA & Epigenetic Testing",
+      "brand": "Natural Approaches",
+      "category": "Advanced Testing",
+      "summary": "An advanced testing option to explore inherited tendencies and modifiable expression patterns that may help explain recurring functional themes.",
+      "patient_note": "Useful where repeated patterns suggest a need to understand deeper constitutional or metabolic tendencies.",
+      "url": "https://naturalapproaches.com/product/reveal-dna-and-epigenetics-testing/"
+    },
+    {
+      "id": "NA_FOOD_SENSITIVITY",
+      "sku": "NA-FOOD-SENSITIVITY",
+      "name": "Food Sensitivity Testing",
+      "brand": "Natural Approaches",
+      "category": "Functional Testing",
+      "summary": "A testing option to explore delayed food-reactivity patterns that may contribute to inflammatory, digestive, skin, or immune presentations.",
+      "patient_note": "Often relevant where gut, skin, allergy, or inflammatory patterns suggest hidden dietary triggers may be involved.",
+      "url": "https://naturalapproaches.com/product/restore-food-sensitivity-testing/"
+    },
+    {
+      "id": "NA_HAIR_MINERAL",
+      "sku": "NA-HAIR-MINERAL",
+      "name": "Hair Tissue Mineral Analysis",
+      "brand": "Natural Approaches",
+      "category": "Functional Testing",
+      "summary": "A mineral and toxic-element screen that can help explore nutrient trends, stress patterns, and longer-term exposure load.",
+      "patient_note": "Often useful where mineral imbalance, fatigue, thyroid patterns, stress adaptation, or toxic burden are recurring themes.",
+      "url": "https://naturalapproaches.com/product/restore-hair-tissue-mineral-analysis/"
+    }
+  ]
+}

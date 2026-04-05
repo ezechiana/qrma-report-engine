@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ report_title }}</title>
+  <link rel="stylesheet" href="../static/report.css" />
+</head>
+<body>
+  <div class="page cover">
+    <h1>{{ report_title }}</h1>
+    <p class="subtitle">Natural Approaches</p>
+
+    <div class="patient-card">
+      <h2>Patient details</h2>
+      <p><strong>Name:</strong> {{ patient.full_name }}</p>
+      <p><strong>Sex:</strong> {{ patient.sex }}</p>
+      <p><strong>Age:</strong> {{ patient.age }}</p>
+      <p><strong>Height:</strong> {{ patient.height_cm }} cm</p>
+      <p><strong>Weight:</strong> {{ patient.weight_kg }} kg</p>
+      <p><strong>Profile:</strong> {{ report_profile|title }}</p>
+    </div>
+
+    <div class="disclaimer-box">
+      <p>This report is for wellness education and discussion only. It is not a medical diagnosis.</p>
+    </div>
+  </div>
+
+  <div class="page">
+    <h2>Overall summary</h2>
+    <p>{{ overall_summary }}</p>
+
+    {% if priority_sections %}
+    <h3>Top priority sections</h3>
+    <ul>
+      {% for section in priority_sections %}
+      <li>{{ section }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+  </div>
+
+  {% for section in section_blocks %}
+  <div class="page">
+    <div class="section-header">
+      <h2>{{ section.display_title }}</h2>
+      <span class="badge badge-{{ section.priority }}">{{ section.priority_label }}</span>
+    </div>
+
+    <p>{{ section.summary }}</p>
+
+    {% if section.top_findings %}
+    <h3>Top findings</h3>
+    <ul>
+      {% for finding in section.top_findings %}
+      <li>{{ finding }}</li>
+      {% endfor %}
+    </ul>
+    {% endif %}
+
+    <h3>Marker explanations</h3>
+
+    {% for marker in section.markers %}
+    <div class="marker-card">
+      <h4>{{ marker.source_name }}</h4>
+      <p><strong>Result:</strong> {{ marker.actual_value_text }} {% if marker.normal_range_text %}(range: {{ marker.normal_range_text }}){% endif %}</p>
+      <p><strong>What this marker means:</strong> {{ marker.what_it_means }}</p>
+      <p><strong>Why it matters:</strong> {{ marker.why_it_matters }}</p>
+      <p><strong>Your result in this scan:</strong> {{ marker.patient_interpretation }}</p>
+    </div>
+    {% endfor %}
+  </div>
+  {% endfor %}
+
+  <div class="page">
+    <h2>Appendix: detailed results</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>Section</th>
+          <th>Marker</th>
+          <th>Range</th>
+          <th>Value</th>
+          <th>Status</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in appendix_rows %}
+        <tr>
+          <td>{{ row.section }}</td>
+          <td>{{ row.marker }}</td>
+          <td>{{ row.range }}</td>
+          <td>{{ row.value }}</td>
+          <td>{{ row.severity }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</body>
+</html>

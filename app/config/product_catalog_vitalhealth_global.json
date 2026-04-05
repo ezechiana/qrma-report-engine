@@ -1,0 +1,42 @@
+{
+  "V-DAILY": {
+    "name": "V-DAILY",
+    "brand": "VitalHealth Global",
+    "summary": "Broad daily nutritional support formula intended to support general micronutrient sufficiency and metabolic resilience.",
+    "category": "Foundational support",
+    "url": "",
+    "patient_note": "A broad-spectrum foundational option where multiple nutrient-related markers appear softer than expected."
+  },
+  "V-GLUTATION PLUS": {
+    "name": "V-GLUTATION PLUS",
+    "brand": "VitalHealth Global",
+    "summary": "Antioxidant and detox-support product intended to support oxidative balance and liver-related resilience.",
+    "category": "Detox and antioxidant support",
+    "url": "",
+    "patient_note": "May be relevant where burden-related, liver-related, or oxidative-support patterns are more prominent."
+  },
+  "VITALAGE COLLAGEN": {
+    "name": "VITALAGE COLLAGEN",
+    "brand": "VitalHealth Global",
+    "summary": "Structural support product intended to support collagen-related tissues including skin, connective tissue, and repair pathways.",
+    "category": "Structural support",
+    "url": "",
+    "patient_note": "May be relevant where collagen, skin, or tissue-repair-related markers suggest weaker support."
+  },
+  "V-OMEGA 3": {
+    "name": "V-OMEGA 3",
+    "brand": "VitalHealth Global",
+    "summary": "Essential fatty acid support product intended to support membrane health, inflammatory balance, and cardiovascular resilience.",
+    "category": "Essential fatty acids",
+    "url": "",
+    "patient_note": "May be relevant where essential fatty acid or cardiovascular support patterns are flagged."
+  },
+  "V-NITRO": {
+    "name": "V-NITRO",
+    "brand": "VitalHealth Global",
+    "summary": "Circulatory and vitality support product intended to support blood flow, energy, and performance-related resilience.",
+    "category": "Circulation and vitality",
+    "url": "",
+    "patient_note": "May be relevant where circulation, vitality, or cardiovascular support patterns are flagged."
+  }
+}

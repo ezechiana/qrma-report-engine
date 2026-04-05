@@ -1,0 +1,11 @@
+{
+  "configured_unique_count": 52,
+  "parsed_unique_count": 48,
+  "missing_from_sample_exports_count": 4,
+  "missing_from_sample_exports": [
+    "Bone Disease",
+    "Element of Human",
+    "Expert analysis",
+    "Hand analysis"
+  ]
+}

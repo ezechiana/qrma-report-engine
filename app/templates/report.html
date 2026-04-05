@@ -1,0 +1,902 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>{{ report_title }}</title>
+  <style>
+    :root{
+      --primary-color:{{ config.primary_color or '#065f46' }};
+      --accent-color:{{ config.accent_color or '#d97706' }};
+      --text-color:{{ config.text_color or '#1f2937' }};
+      --muted-text:#475569;
+      --border-color:#d1d5db;
+      --panel-bg:#f8fafc;
+      --card-bg:#fff;
+      --sev-normal-bg:#dff5df;
+      --sev-normal-text:#1f5f2e;
+      --sev-mild-bg:#dbeafe;
+      --sev-mild-text:#1e40af;
+      --sev-moderate-bg:#fef3c7;
+      --sev-moderate-text:#92400e;
+      --sev-severe-bg:#fee2e2;
+      --sev-severe-text:#991b1b;
+    }
+
+    @page{size:A4;margin:14mm;}
+
+    body{
+      font-family:Arial,sans-serif;
+      color:var(--text-color);
+      margin:0;
+      padding:0;
+      background:#fff;
+      font-size:13px;
+      line-height:1.5;
+    }
+
+    .page{
+      width:100%;
+      min-height:257mm;
+      box-sizing:border-box;
+      page-break-after:always;
+    }
+    .page:last-child{page-break-after:auto;}
+
+    .cover{display:flex;flex-direction:column;justify-content:flex-start}
+    .cover-image{
+      width:100%;
+      height:70mm;
+      object-fit:cover;
+      border-radius:12px;
+      margin-bottom:18px;
+      border:1px solid var(--border-color);
+    }
+
+    .brand-row{display:flex;align-items:center;gap:14px;margin-bottom:12px}
+    .logo{max-height:26mm;max-width:60mm;object-fit:contain}
+    .brand-name{font-size:15px;font-weight:bold;color:var(--primary-color);}
+    .report-title{font-size:30px;font-weight:bold;color:#0f172a;margin:6px 0 8px}
+    .subtitle{font-size:15px;color:var(--muted-text);margin-bottom:18px}
+
+    h1,h2,h3,h4{margin:0;color:#0f172a}
+    h2{font-size:22px;margin-bottom:12px}
+    h3{font-size:16px;margin-bottom:8px}
+    h4{font-size:14px;margin-bottom:8px}
+    p{margin:0 0 10px 0}
+    ul{margin:0 0 10px 0;padding-left:20px}
+    li{margin-bottom:5px}
+
+    .panel{
+      border:1px solid var(--border-color);
+      border-radius:10px;
+      background:var(--panel-bg);
+      padding:14px;
+      margin-bottom:14px;
+    }
+
+    .two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+    .summary-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+
+    .mini-card{
+      border:1px solid var(--border-color);
+      border-radius:8px;
+      background:var(--card-bg);
+      padding:10px 12px;
+    }
+    .mini-card-title{font-weight:bold;margin-bottom:6px}
+
+    .section-header{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:12px;
+      margin-bottom:10px;
+    }
+
+    .section-subtitle{
+      margin:-4px 0 12px 0;
+      font-size:12px;
+      color:var(--muted-text);
+    }
+
+    .section-bullets{
+      margin:10px 0 10px 18px;
+      padding-left:18px;
+    }
+
+    .section-bullets li{
+      margin-bottom:6px;
+    }
+
+    .label{font-weight:bold;color:#111827}
+    .small-note{font-size:12px;color:var(--muted-text)}
+    .toc-list{list-style:none;padding-left:0;margin:0}
+    .toc-list li{padding:7px 0;border-bottom:1px dashed var(--border-color);}
+
+    .page-info-header{
+      border-bottom:1px solid var(--border-color);
+      padding-bottom:8px;
+      margin-bottom:14px;
+      font-size:11px;
+      color:#334155;
+      display:grid;
+      grid-template-columns:1.3fr 0.9fr 0.9fr 1.4fr;
+      gap:10px
+    }
+
+    .badge{
+      padding:6px 10px;
+      border-radius:999px;
+      font-size:12px;
+      font-weight:bold;
+      white-space:nowrap;
+      border:1px solid transparent
+    }
+    .badge-high{background:var(--sev-severe-bg);color:var(--sev-severe-text)}
+    .badge-medium{background:var(--sev-moderate-bg);color:var(--sev-moderate-text)}
+    .badge-low{background:var(--sev-mild-bg);color:var(--sev-mild-text)}
+    .badge-normal{background:var(--sev-normal-bg);color:var(--sev-normal-text)}
+
+    .severity-pill{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:bold;
+      border:1px solid transparent
+    }
+    .sev-normal{background:var(--sev-normal-bg);color:var(--sev-normal-text)}
+    .sev-mild{background:var(--sev-mild-bg);color:var(--sev-mild-text)}
+    .sev-moderate{background:var(--sev-moderate-bg);color:var(--sev-moderate-text)}
+    .sev-severe{background:var(--sev-severe-bg);color:var(--sev-severe-text)}
+
+    .marker-card{
+      border:1px solid var(--border-color);
+      border-left:6px solid var(--primary-color);
+      border-radius:8px;
+      background:var(--card-bg);
+      padding:12px;
+      margin-bottom:12px
+    }
+    .marker-card.sev-normal{border-left-color:#4caf50}
+    .marker-card.sev-mild{border-left-color:#3b82f6}
+    .marker-card.sev-moderate{border-left-color:#eab308}
+    .marker-card.sev-severe{border-left-color:#ef4444}
+
+    .marker-meta{font-size:12px;color:var(--muted-text);margin-bottom:10px}
+    .marker-title-row{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin-bottom:6px}
+    .marker-source-name{font-size:11px;color:var(--muted-text);margin-top:2px}
+
+    .bodycomp-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      margin-top:8px;
+      align-items:start;
+    }
+    
+    .bodycomp-card{
+      border:1px solid var(--border-color);
+      border-radius:10px;
+      background:var(--card-bg);
+      padding:10px 12px;
+      page-break-inside:avoid;
+      break-inside:avoid-page;
+    }
+
+    .bodycomp-group{
+      page-break-inside:avoid;
+      break-inside:avoid-page;
+    }
+
+    .bodycomp-row{
+      display:grid;
+      grid-template-columns:1.35fr 0.85fr;
+      gap:10px;
+      padding:6px 0;
+      border-bottom:1px dashed var(--border-color);
+    }
+
+    .bodycomp-row:last-child{
+      border-bottom:none;
+    }
+
+    .bodycomp-measure{
+      font-weight:bold;
+      color:#0f172a;
+    }
+
+    .bodycomp-value{
+      text-align:right;
+      color:var(--text-color);
+      white-space:nowrap;
+    }
+
+    .recommendation-card{
+      border:1px solid var(--border-color);
+      border-left:6px solid var(--accent-color);
+      border-radius:8px;
+      background:var(--card-bg);
+      padding:12px;
+      margin-bottom:12px
+    }
+    .recommendation-title{font-size:15px;font-weight:bold;margin-bottom:6px;color:#0f172a}
+
+    .full-table,.appendix-table{
+      width:100%;
+      border-collapse:collapse;
+      font-size:11px;
+      margin-top:10px
+    }
+    .full-table th,.full-table td,.appendix-table th,.appendix-table td{
+      border:1px solid var(--border-color);
+      padding:6px;
+      text-align:left;
+      vertical-align:top
+    }
+    .full-table th,.appendix-table th{background:#f1f5f9}
+    .full-table tr.sev-normal td,.appendix-table tr.sev-normal td{background:#eef9ee;color:#1f5f2e}
+    .full-table tr.sev-mild td,.appendix-table tr.sev-mild td{background:#eef5ff;color:#1e40af}
+    .full-table tr.sev-moderate td,.appendix-table tr.sev-moderate td{background:#fff8dc;color:#92400e}
+    .full-table tr.sev-severe td,.appendix-table tr.sev-severe td{background:#fff0f0;color:#991b1b}
+    .appendix-status{
+      font-size:11px;
+      font-weight:bold;
+      border-radius:999px;
+      padding:4px 7px;
+      display:inline-block
+    }
+
+    .footer-contact{margin-top:16px;font-size:12px;color:var(--muted-text)}
+    .no-break{page-break-inside:avoid}
+
+    .status-bar-wrap{min-width:150px}
+    .status-bar{
+      position:relative;
+      width:150px;
+      height:14px;
+      border:1px solid #444;
+      box-sizing:border-box;
+      background:#fff;
+      overflow:visible
+    }
+    .status-bar-track{
+      display:grid;
+      grid-template-columns:1.1fr 1fr 1.2fr 1fr 1.1fr;
+      width:100%;
+      height:100%
+    }
+    .status-bar-track-lung{
+      display:grid;
+      grid-template-columns:1.2fr 1fr 1.2fr;
+      width:100%;
+      height:100%
+    }
+    .zone-red{background:#ef4423}
+    .zone-yellow{background:#f3ef3a}
+    .zone-blue{background:#3155a6}
+    .zone-center-green{background:#79df45}
+    .status-pointer{
+      position:absolute;
+      top:-6px;
+      width:0;
+      height:0;
+      transform:translateX(-50%)
+    }
+    .status-pointer::before{
+      content:"";
+      position:absolute;
+      left:-5px;
+      top:0;
+      width:10px;
+      height:10px;
+      background:#c9c9c9;
+      border:1px solid #555;
+      border-radius:1px
+    }
+    .status-pointer::after{
+      content:"";
+      position:absolute;
+      left:-1px;
+      top:10px;
+      width:2px;
+      height:8px;
+      background:#555
+    }
+
+    .score-page-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:14px;
+      align-items:start;
+      margin-bottom:14px;
+    }
+
+    .overall-score-panel{
+      display:flex;
+      flex-direction:column;
+      align-items:center;
+      justify-content:center;
+      min-height:260px;
+    }
+
+    .system-score-grid{
+      display:grid;
+      grid-template-columns:1fr 1fr;
+      gap:12px;
+      align-items:start;
+    }
+
+    .system-score-card{
+      border:1px solid var(--border-color);
+      border-radius:10px;
+      background:var(--card-bg);
+      padding:12px 10px;
+      text-align:center;
+      page-break-inside:avoid;
+      break-inside:avoid-page;
+      min-height:190px;
+      display:flex;
+      flex-direction:column;
+      justify-content:flex-start;
+    }
+
+    .system-score-title{
+      font-weight:bold;
+      font-size:13px;
+      min-height:34px;
+      margin-bottom:4px;
+    }
+
+    .score-subtext{
+      font-size:11px;
+      color:var(--muted-text);
+      margin-top:6px;
+      min-height:22px;
+    }
+
+    .score-includes{
+      font-size:10.5px;
+      color:#64748b;
+      margin-top:5px;
+      line-height:1.3;
+      min-height:36px;
+    }
+
+
+    .score-legend{margin-top:8px;font-size:12px}
+    .score-legend div{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+    .legend-box{width:20px;height:10px;border-radius:2px;display:inline-block}
+    .overview-grid-two{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+    .full-section-caption{font-size:12px;color:var(--muted-text);margin-bottom:8px}
+
+    .priority-highlight{
+      border:2px solid #e53935;
+      background:linear-gradient(135deg, #fff5f5, #fff);
+      border-radius:12px;
+      padding:14px;
+    }
+    .priority-highlight h3{color:#b91c1c}
+
+    .clinical-rec-card{
+      border:1px solid #cbd5e1;
+      border-left:6px solid var(--primary-color);
+      border-radius:10px;
+      background:#fff;
+      padding:14px;
+      margin-bottom:12px;
+      box-shadow:0 1px 2px rgba(15,23,42,0.04)
+    }
+
+
+    .soft-emphasis{background:linear-gradient(180deg,#f8fafc,#ffffff)}
+  </style>
+</head>
+<body>
+  {% macro page_header(ph) -%}
+    <div class="page-info-header">
+      <div><span class="label">Name:</span> {{ ph.name }}</div>
+      <div><span class="label">{{ ph.age_or_dob_label }}:</span> {{ ph.age_or_dob_value }}</div>
+      <div><span class="label">Sex:</span> {{ ph.sex }}</div>
+      <div><span class="label">Scan time:</span> {{ ph.scan_datetime }}</div>
+    </div>
+  {%- endmacro %}
+
+  {% macro render_status_bar(variant, pointer_position) -%}
+    <div class="status-bar-wrap">
+      <div class="status-bar">
+        {% if variant == 'lung' %}
+          <div class="status-bar-track-lung">
+            <div class="zone-red"></div>
+            <div class="zone-center-green"></div>
+            <div class="zone-red"></div>
+          </div>
+        {% else %}
+          <div class="status-bar-track">
+            <div class="zone-red"></div>
+            <div class="zone-yellow"></div>
+            <div class="zone-blue"></div>
+            <div class="zone-yellow"></div>
+            <div class="zone-red"></div>
+          </div>
+        {% endif %}
+        <div class="status-pointer" style="left: {{ pointer_position }};"></div>
+      </div>
+    </div>
+  {%- endmacro %}
+
+  {% macro render_ring_gauge(score, color, size=118, stroke=10) -%}
+    {% set radius = ((size - stroke) / 2) | int %}
+    {% set circumference = (6.28318 * radius) %}
+    {% set progress = (score / 100.0) %}
+    {% set dash = circumference * progress %}
+    {% set gap = circumference - dash %}
+    <svg width="{{ size }}" height="{{ size }}" viewBox="0 0 {{ size }} {{ size }}">
+      <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="#e5e7eb" stroke-width="{{ stroke }}" />
+      <circle cx="{{ size/2 }}" cy="{{ size/2 }}" r="{{ radius }}" fill="none" stroke="{{ color }}" stroke-width="{{ stroke }}" stroke-linecap="round" transform="rotate(-90 {{ size/2 }} {{ size/2 }})" stroke-dasharray="{{ dash }} {{ gap }}" />
+      <text x="50%" y="47%" text-anchor="middle" font-size="{{ 24 if size > 100 else 20 }}" font-weight="700" fill="#111827">{{ score }}</text>
+      <text x="50%" y="63%" text-anchor="middle" font-size="{{ 11 if size > 100 else 10 }}" fill="#475569">Points</text>
+    </svg>
+  {%- endmacro %}
+
+  <div class="page cover">
+    {% if config.cover_image_url %}
+      <img src="{{ config.cover_image_url }}" alt="Cover image" class="cover-image" />
+    {% endif %}
+    <div class="brand-row">
+      {% if config.logo_url %}
+        <img src="{{ config.logo_url }}" alt="{{ clinic_name }} logo" class="logo" />
+      {% endif %}
+      <div class="brand-text">
+        <div class="brand-name">{{ clinic_name }}</div>
+      </div>
+    </div>
+    <div class="report-title">{{ report_title }}</div>
+    {% if subtitle %}
+      <p class="subtitle">{{ subtitle }}</p>
+    {% endif %}
+    <div class="panel">
+      <h2>Patient details</h2>
+      <div class="two-col">
+        <div>
+          <p><span class="label">Name:</span> {{ patient.full_name }}</p>
+          <p><span class="label">Sex:</span> {{ patient.sex }}</p>
+          <p><span class="label">Age:</span> {{ patient.age }}</p>
+          {% if patient.date_of_birth %}
+            <p><span class="label">DOB:</span> {{ patient.date_of_birth }}</p>
+          {% endif %}
+        </div>
+        <div>
+          <p><span class="label">Height:</span> {{ patient.height_cm }} cm</p>
+          <p><span class="label">Weight:</span> {{ patient.weight_kg }} kg</p>
+          <p><span class="label">Profile:</span> {{ report_profile|title }}</p>
+          <p><span class="label">Scan time:</span> {{ patient_header.scan_datetime }}</p>
+        </div>
+      </div>
+    </div>
+    <div class="panel">
+      <p>This report is for wellness education and discussion only. It is not a medical diagnosis.</p>
+      {% if practitioner_notes.disclaimer_note %}
+        <p><span class="label">Practitioner note:</span> {{ practitioner_notes.disclaimer_note }}</p>
+      {% endif %}
+    </div>
+    {% if config.clinic_contact or config.clinic_email or config.clinic_website %}
+      <div class="footer-contact">
+        {% if config.clinic_contact %}<div>{{ config.clinic_contact }}</div>{% endif %}
+        {% if config.clinic_email %}<div>{{ config.clinic_email }}</div>{% endif %}
+        {% if config.clinic_website %}<div>{{ config.clinic_website }}</div>{% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+  {% if include_toc %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <h2>Table of contents</h2>
+      <div class="panel">
+        <ul class="toc-list">
+          {% for item in toc_items %}
+            <li>{{ item }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="page">
+    {{ page_header(patient_header) }}
+    <h2>At a glance</h2>
+
+    {% if overall_summary %}
+      <div class="panel soft-emphasis">
+        <h3>Clinical snapshot</h3>
+        <p>{{ overall_summary }}</p>
+      </div>
+    {% endif %}
+
+    {% if practitioner_summary %}
+      <div class="panel">
+        <h3>Practitioner overview</h3>
+        <p>{{ practitioner_summary }}</p>
+      </div>
+    {% endif %}
+
+    {% if primary_pattern %}
+      <div class="panel">
+        <h3>Primary pattern</h3>
+        <p><strong>{{ primary_pattern.title }}</strong></p>
+
+        {% if primary_pattern.clinical_summary %}
+          <p>{{ primary_pattern.clinical_summary }}</p>
+        {% endif %}
+
+        {% if primary_pattern.follow_up_focus %}
+          <p><span class="label">Follow-up focus:</span> {{ primary_pattern.follow_up_focus | join(', ') }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+
+    {% if contributing_patterns %}
+      <div class="panel">
+        <h3>Contributing patterns</h3>
+        <ul>
+          {% for item in contributing_patterns[:3] %}
+            <li>
+              <strong>{{ item.title }}</strong>
+              {% if item.clinical_summary %} — {{ item.clinical_summary }}{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% elif patterns %}
+      <div class="panel">
+        <h3>Contributing patterns</h3>
+        <ul>
+          {% for item in patterns[1:4] %}
+            <li>
+              <strong>{{ item.name }}</strong>
+              {% if item.description %} — {{ item.description }}{% endif %}
+            </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if priority_actions %}
+      <div class="panel">
+        <h3>Immediate priorities for follow-up</h3>
+        <ul>
+          {% for a in priority_actions %}
+            <li>{{ a }}</li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {% if category_completeness %}
+      <div class="panel">
+        <h3>Technical integrity check</h3>
+        <p>
+          Profile: {{ category_completeness.profile }} |
+          Matched: {{ category_completeness.matched_count }}/{{ category_completeness.expected_count }} |
+          Completeness: {{ category_completeness.completeness_percent }}%
+        </p>
+        {% if category_completeness.missing_categories %}
+          <p><strong>Missing categories:</strong> {{ category_completeness.missing_categories | join(', ') }}</p>
+        {% endif %}
+      </div>
+    {% endif %}
+  </div>
+
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <h2>Scan score overview</h2>
+
+      <div class="score-page-grid">
+        <div class="panel overall-score-panel">
+          {{ render_ring_gauge(overall_scan_score, overall_scan_gauge_color, 150, 12) }}
+          <div style="font-weight:700;font-size:18px;margin-top:8px;">Overall Scan Score</div>
+          <div class="small-note">{{ overall_scan_band_label|replace('_', ' ')|title }}</div>
+          <div class="score-legend">
+            <div><span class="legend-box" style="background:#2e7d32;"></span> Very Good (85-100)</div>
+            <div><span class="legend-box" style="background:#1565c0;"></span> General (70-84)</div>
+            <div><span class="legend-box" style="background:#f1c40f;"></span> Relatively Poor (55-69)</div>
+            <div><span class="legend-box" style="background:#e53935;"></span> Very Bad (0-54)</div>
+          </div>
+        </div>
+
+        <div class="panel soft-emphasis">
+          <h3>How to read this dashboard</h3>
+          <p>
+            This dashboard provides a weighted clinical overview of the scan. The overall score and body-system cards are not based on a simple count of flagged markers. They are derived from the severity, distribution, and clustering of findings across related sections, with greater weighting given to patterns that may carry broader functional significance.
+          </p>
+          <p>
+            Each body-system card may include more than one underlying scan section, which is why the totals shown here may differ from the marker counts shown later on individual section pages. In general, lower scores suggest a more active pattern worth reviewing in follow-up, while higher scores suggest a more stable pattern on this dashboard view.
+          </p>
+          <p>
+            These scores are designed to help organise clinical attention. They are not a diagnosis and should always be interpreted alongside symptoms, history, and appropriate clinical assessment.
+          </p>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="system-score-grid">
+          {% for card in system_score_cards %}
+            <div class="system-score-card">
+              <div class="system-score-title">{{ card.title }}</div>
+              {{ render_ring_gauge(card.score, card.gauge_color, 98, 9) }}
+              <div class="score-subtext">
+                {{ card.flagged_count }} flagged · {{ card.within_count }} within range
+              </div>
+              {% if card.included_sections %}
+                <div class="score-includes">
+                  Includes: {{ card.included_sections | join(', ') }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="overview-grid-two">
+        <div class="panel">
+          <h3>Priority overview</h3>
+          <div class="summary-grid">
+            {% for item in priority_overview %}
+              <div class="mini-card">
+                <div class="mini-card-title">{{ item.title }}</div>
+                <p><span class="label">Priority:</span> {{ item.priority_label }}</p>
+                <p><span class="label">Flagged markers:</span> {{ item.abnormal_count }}</p>
+                <p><span class="label">Section score:</span> {{ item.section_score }}</p>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+
+        {% if priority_sections %}
+          <div class="panel priority-highlight">
+            <h3>Top sections for follow-up</h3>
+            <ul>
+              {% for section in priority_sections %}
+                <li>{{ section }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+
+
+  {% if clinical_recommendations %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <h2>Clinical recommendations</h2>
+
+      {% for rec in clinical_recommendations %}
+        <div class="clinical-rec-card no-break">
+          <h3>{{ rec.title }}</h3>
+          <p>{{ rec.summary }}</p>
+          {% if rec.rationale %}
+            <p class="small-note"><span class="label">Why this was suggested:</span> {{ rec.rationale }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% for section in section_blocks %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <div class="section-header">
+        <h2>{{ section.display_title }}</h2>
+        <span class="badge badge-{{ section.priority }}">{{ section.priority_label }}</span>
+      </div>
+      <div class="panel">
+        <h3>Priority interpretation</h3>
+        <p>{{ section.summary }}</p>
+        <p class="small-note">Moderately and severely abnormal markers are prioritised here for faster clinical reading.</p>
+        <p class="small-note">Flagged markers: {{ section.flagged_count }} | Within range: {{ section.within_count }} | Section score: {{ section.section_score }}</p>
+      </div>
+
+      {% if section.top_findings %}
+        <div class="panel">
+          <h3>Top findings</h3>
+          <ul>
+            {% for finding in section.top_findings %}
+              <li>{{ finding }}</li>
+            {% endfor %}
+          </ul>
+        </div>
+      {% endif %}
+
+      <h3>Priority marker explanations</h3>
+      {% for marker in section.markers %}
+        <div class="marker-card {{ marker.severity_class }} no-break">
+          <div class="marker-title-row">
+            <div>
+              <h4>{{ marker.display_name or marker.source_name }}</h4>
+              {% if marker.display_name and marker.display_name != marker.source_name %}
+                <div class="marker-source-name">Software marker: {{ marker.source_name }}</div>
+              {% endif %}
+            </div>
+          </div>
+          <div class="marker-meta">
+            <span class="label">Result:</span> {{ marker.actual_value_text }}
+            {% if marker.normal_range_text %}
+              &nbsp; | &nbsp;<span class="label">Reference range:</span> {{ marker.normal_range_text }}
+            {% endif %}
+            &nbsp; | &nbsp;<span class="severity-pill {{ marker.severity_class }}">{{ marker.severity_display }}</span>
+          </div>
+          <div style="margin-bottom:10px;">{{ render_status_bar(marker.status_bar_variant, marker.status_pointer_position) }}</div>
+
+          {% if marker.what_it_means %}
+            <p><span class="label">What this marker means:</span> {{ marker.what_it_means }}</p>
+          {% endif %}
+          {% if marker.why_it_matters %}
+            <p><span class="label">Why it matters:</span> {{ marker.why_it_matters }}</p>
+          {% endif %}
+          {% if marker.functional_significance %}
+            <p><span class="label">Functional significance:</span> {{ marker.functional_significance }}</p>
+          {% endif %}
+          {% if marker.common_patterns %}
+            <p><span class="label">Common patterns:</span> {{ marker.common_patterns }}</p>
+          {% endif %}
+          {% if marker.patient_interpretation %}
+            <p><span class="label">Your result in this scan:</span> {{ marker.patient_interpretation }}</p>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endfor %}
+
+  {% if body_composition_block %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+
+      <div class="section-header">
+        <h2>{{ body_composition_block.title }}</h2>
+        <span class="badge badge-{{ body_composition_block.priority }}">{{ body_composition_block.priority_label }}</span>
+      </div>
+      {% if body_composition_block.source_subtitle %}
+        <p class="section-subtitle">{{ body_composition_block.source_subtitle }}</p>
+      {% endif %}
+
+      <div class="panel">
+        <h3>Section interpretation</h3>
+        <p>{{ body_composition_block.summary }}</p>
+        {% if body_composition_block.interpretation_lines %}
+          <ul class="section-bullets">
+            {% for line in body_composition_block.interpretation_lines %}
+              <li>{{ line }}</li>
+            {% endfor %}
+          </ul>
+        {% endif %}
+        <p class="small-note">This section presents body-composition findings in a dedicated summary layout so the scan is easier to review clinically.</p>
+      </div>
+
+      <div class="bodycomp-grid">
+        {% for group in body_composition_block.groups %}
+          <div class="bodycomp-card bodycomp-group">
+            <h3>{{ group.title }}</h3>
+            {% for row in group.rows %}
+              <div class="bodycomp-row">
+                <div class="bodycomp-measure">{{ row.display_name or row.marker }}</div>
+                <div class="bodycomp-value">{{ row.value }}</div>
+              </div>
+            {% endfor %}
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+  {% endif %}
+
+  <div class="page">
+    {{ page_header(patient_header) }}
+    <h2>Complete system marker tables</h2>
+    <div class="panel">
+      <p>This section includes every parsed system and every marker across the report, including those within range. It acts as the complete explained reference layer of the report.</p>
+    </div>
+  </div>
+
+  {% for table in full_marker_tables %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <div class="section-header">
+        <h2>{{ table.title }}</h2>
+        <span class="badge badge-{{ table.priority }}">{{ table.priority_label }}</span>
+      </div>
+      <div class="panel">
+        <div class="full-section-caption">Complete system marker table — all markers and all severity grades are shown below.</div>
+        <p class="small-note">Flagged markers: {{ table.abnormal_count }} | Within range: {{ table.normal_count }}</p>
+        <table class="full-table">
+          <thead>
+            <tr>
+              <th style="width:17%;">Marker</th>
+              <th style="width:16%;">Reference range</th>
+              <th style="width:10%;">Value</th>
+              <th style="width:12%;">Status</th>
+              <th style="width:17%;">Visual</th>
+              <th style="width:28%;">Meaning</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for row in table.rows %}
+              <tr class="{{ row.severity_class }}">
+                <td>{{ row.display_name or row.marker }}</td>
+                <td>{{ row.range }}</td>
+                <td>{{ row.value }}</td>
+                <td><span class="appendix-status {{ row.severity_class }}">{{ row.severity }}</span></td>
+                <td>{{ render_status_bar(row.status_bar_variant, row.status_pointer_position) }}</td>
+                <td>{{ row.meaning }}</td>
+              </tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  {% endfor %}
+
+  {% if include_product_recommendations and product_recommendations %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <h2>Optional product recommendations</h2>
+      <div class="panel">
+        <p>The products below are optional suggestions shown only when product recommendations are enabled. They are kept separate from clinical recommendations.</p>
+      </div>
+      {% for product in product_recommendations %}
+        <div class="recommendation-card no-break">
+          <div class="recommendation-title">
+            {{ product.name }}
+            {% if product.brand %}
+              <span class="small-note">— {{ product.brand }}</span>
+            {% endif %}
+          </div>
+          {% if product.category %}<p><span class="label">Category:</span> {{ product.category }}</p>{% endif %}
+          {% if product.summary %}<p><span class="label">Summary:</span> {{ product.summary }}</p>{% endif %}
+          {% if product.patient_note %}<p><span class="label">Why it may be relevant:</span> {{ product.patient_note }}</p>{% endif %}
+          {% if product.reasons %}
+            <p><span class="label">Triggered by:</span></p>
+            <ul>
+              {% for reason in product.reasons %}
+                <li>{{ reason }}</li>
+              {% endfor %}
+            </ul>
+          {% endif %}
+          {% if product.url %}<p><span class="label">Product link:</span> {{ product.url }}</p>{% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
+  {% if include_appendix %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+      <h2>Appendix: full marker table summary</h2>
+      <table class="appendix-table">
+        <thead>
+          <tr>
+            <th>Section</th>
+            <th>Marker</th>
+            <th>Range</th>
+            <th>Value</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for row in appendix_rows %}
+            <tr class="{{ row.severity_class }}">
+              <td>{{ row.section }}</td>
+              <td>{{ row.display_name or row.marker }}</td>
+              <td>{{ row.range }}</td>
+              <td>{{ row.value }}</td>
+              <td><span class="appendix-status {{ row.severity_class }}">{{ row.severity }}</span></td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+      <p class="small-note">These scan findings are best interpreted alongside symptoms, history, and appropriate clinical assessment.</p>
+    </div>
+  {% endif %}
+</body>
+</html>

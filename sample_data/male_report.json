@@ -1,0 +1,2799 @@
+{
+  "patient": {
+    "full_name": "Test Test",
+    "sex": "Male",
+    "age": 58,
+    "height_cm": 184,
+    "weight_kg": 90
+  },
+  "sections": [
+    {
+      "source_title": "Cardiovascular and Cerebrovascular",
+      "parameters": [
+        {
+          "source_name": "Blood Viscosity",
+          "normal_range_text": "48.264 - 65.371",
+          "actual_value_text": "53.723",
+          "actual_value_numeric": 53.723,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Cholesterol Crystal",
+          "normal_range_text": "56.749 - 67.522",
+          "actual_value_text": "66.455",
+          "actual_value_numeric": 66.455,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Blood Fat",
+          "normal_range_text": "0.481 - 1.043",
+          "actual_value_text": "0.902",
+          "actual_value_numeric": 0.902,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vascular Resistance",
+          "normal_range_text": "0.327 - 0.937",
+          "actual_value_text": "1.226",
+          "actual_value_numeric": 1.226,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Vascular Elasticity",
+          "normal_range_text": "1.672 - 1.978",
+          "actual_value_text": "1.934",
+          "actual_value_numeric": 1.934,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Myocardial Blood Demand",
+          "normal_range_text": "0.192 - 0.412",
+          "actual_value_text": "0.407",
+          "actual_value_numeric": 0.407,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Myocardial Blood Perfusion Volume",
+          "normal_range_text": "4.832 - 5.147",
+          "actual_value_text": "5.132",
+          "actual_value_numeric": 5.132,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Myocardial Oxygen Consumption",
+          "normal_range_text": "3.321 - 4.244",
+          "actual_value_text": "3.382",
+          "actual_value_numeric": 3.382,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Stroke Volume",
+          "normal_range_text": "1.338 - 1.672",
+          "actual_value_text": "1.29",
+          "actual_value_numeric": 1.29,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Left Ventricular Ejection Impedance",
+          "normal_range_text": "0.669 - 1.544",
+          "actual_value_text": "1.456",
+          "actual_value_numeric": 1.456,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Left Ventricular Effective Pump Power",
+          "normal_range_text": "1.554 - 1.988",
+          "actual_value_text": "0.991",
+          "actual_value_numeric": 0.991,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Coronary Artery Elasticity",
+          "normal_range_text": "1.553 - 2.187",
+          "actual_value_text": "1.66",
+          "actual_value_numeric": 1.66,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Coronary Perfusion Pressure",
+          "normal_range_text": "11.719 - 18.418",
+          "actual_value_text": "19.312",
+          "actual_value_numeric": 19.312,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Cerebral Blood Vessel Elasticity",
+          "normal_range_text": "0.708 - 1.942",
+          "actual_value_text": "1.021",
+          "actual_value_numeric": 1.021,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Brain Tissue Blood Supply Status",
+          "normal_range_text": "6.138 - 21.396",
+          "actual_value_text": "20.196",
+          "actual_value_numeric": 20.196,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Gastrointestinal Function",
+      "parameters": [
+        {
+          "source_name": "Pepsin Secretion Coefficient",
+          "normal_range_text": "59.847 - 65.234",
+          "actual_value_text": "59.915",
+          "actual_value_numeric": 59.915,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Gastric Peristalsis Function Coefficient",
+          "normal_range_text": "58.425 - 61.213",
+          "actual_value_text": "58.71",
+          "actual_value_numeric": 58.71,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Gastric Absorption Function Coefficient",
+          "normal_range_text": "34.367 - 35.642",
+          "actual_value_text": "29.734",
+          "actual_value_numeric": 29.734,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Small Intestine Peristalsis Function Coefficient",
+          "normal_range_text": "133.437 - 140.476",
+          "actual_value_text": "126.057",
+          "actual_value_numeric": 126.057,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Small Intestine Absorption Function Coefficient",
+          "normal_range_text": "3.572 - 6.483",
+          "actual_value_text": "2.82",
+          "actual_value_numeric": 2.82,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Large Intestine Function",
+      "parameters": [
+        {
+          "source_name": "Large intestine peristalsis function coefficient",
+          "normal_range_text": "4.572 - 6.483",
+          "actual_value_text": "3.088",
+          "actual_value_numeric": 3.088,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Colonic absorption coefficient",
+          "normal_range_text": "2.946 - 3.815",
+          "actual_value_text": "2.952",
+          "actual_value_numeric": 2.952,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Intestinal bacteria coefficient",
+          "normal_range_text": "1.734 - 2.621",
+          "actual_value_text": "0.807",
+          "actual_value_numeric": 0.807,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Intraluminal pressure coefficient",
+          "normal_range_text": "1.173 - 2.297",
+          "actual_value_text": "2.639",
+          "actual_value_numeric": 2.639,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Liver Function",
+      "parameters": [
+        {
+          "source_name": "Protein Metabolism",
+          "normal_range_text": "116.34 - 220.621",
+          "actual_value_text": "116.569",
+          "actual_value_numeric": 116.569,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Energy Production Function",
+          "normal_range_text": "0.713 - 0.992",
+          "actual_value_text": "0.881",
+          "actual_value_numeric": 0.881,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Detoxification Function",
+          "normal_range_text": "0.202 - 0.991",
+          "actual_value_text": "0.977",
+          "actual_value_numeric": 0.977,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Bile Secretion Function",
+          "normal_range_text": "0.432 - 0.826",
+          "actual_value_text": "0.717",
+          "actual_value_numeric": 0.717,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Liver Fat Content",
+          "normal_range_text": "0.097 - 0.419",
+          "actual_value_text": "0.636",
+          "actual_value_numeric": 0.636,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Gallbladder Function",
+      "parameters": [
+        {
+          "source_name": "Serum Globulin (A/G)",
+          "normal_range_text": "126 - 159",
+          "actual_value_text": "126.767",
+          "actual_value_numeric": 126.767,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Total Bilirubin (TBIL)",
+          "normal_range_text": "0.232 - 0.686",
+          "actual_value_text": "0.542",
+          "actual_value_numeric": 0.542,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Alkaline Phosphatase (ALP)",
+          "normal_range_text": "0.082 - 0.342",
+          "actual_value_text": "0.316",
+          "actual_value_numeric": 0.316,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Serum Total Bile Acid (TBA)",
+          "normal_range_text": "0.317 - 0.695",
+          "actual_value_text": "0.704",
+          "actual_value_numeric": 0.704,
+          "result_image_code": "YC10",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Bilirubin (DBIL)",
+          "normal_range_text": "0.218 - 0.549",
+          "actual_value_text": "0.56",
+          "actual_value_numeric": 0.56,
+          "result_image_code": "YC10",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Pancreatic Function",
+      "parameters": [
+        {
+          "source_name": "Insulin",
+          "normal_range_text": "2.845 - 4.017",
+          "actual_value_text": "3.036",
+          "actual_value_numeric": 3.036,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Pancreatic Polypeptide (PP)",
+          "normal_range_text": "3.210 - 6.854",
+          "actual_value_text": "3.26",
+          "actual_value_numeric": 3.26,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Glucagon",
+          "normal_range_text": "2.412 - 2.974",
+          "actual_value_text": "2.666",
+          "actual_value_numeric": 2.666,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Kidney Function",
+      "parameters": [
+        {
+          "source_name": "Urobilinogen Index",
+          "normal_range_text": "2.762 - 5.424",
+          "actual_value_text": "6.215",
+          "actual_value_numeric": 6.215,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Uric acid Index",
+          "normal_range_text": "1.435 - 1.987",
+          "actual_value_text": "2.689",
+          "actual_value_numeric": 2.689,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Blood urea nitrogen(BUN) Index",
+          "normal_range_text": "4.725 - 8.631",
+          "actual_value_text": "4.766",
+          "actual_value_numeric": 4.766,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Proteinuria Index",
+          "normal_range_text": "1.571 - 4.079",
+          "actual_value_text": "4.761",
+          "actual_value_numeric": 4.761,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Lung Function",
+      "parameters": [
+        {
+          "source_name": "Vital Capacity VC",
+          "normal_range_text": "3348 - 3529",
+          "actual_value_text": "3489",
+          "actual_value_numeric": 3489,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Total Lung Capacity TLC",
+          "normal_range_text": "4301 - 4782",
+          "actual_value_text": "4286",
+          "actual_value_numeric": 4286,
+          "result_image_code": "YC09",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Airway Resistance RAM",
+          "normal_range_text": "1.374 - 1.709",
+          "actual_value_text": "1.621",
+          "actual_value_numeric": 1.621,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Arterial Oxygen Content PaCO2",
+          "normal_range_text": "17.903 - 21.012",
+          "actual_value_text": "20.78",
+          "actual_value_numeric": 20.78,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Brain Nerve",
+      "parameters": [
+        {
+          "source_name": "Status of Brain Tissue Blood Supply",
+          "normal_range_text": "143.37 - 210.81",
+          "actual_value_text": "168.036",
+          "actual_value_numeric": 168.036,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Cerebral Arteriosclerosis",
+          "normal_range_text": "0.103 - 0.642",
+          "actual_value_text": "0.196",
+          "actual_value_numeric": 0.196,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Functional Status of Cranial Nerve",
+          "normal_range_text": "0.253 - 0.659",
+          "actual_value_text": "0.292",
+          "actual_value_numeric": 0.292,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Sentiment Index",
+          "normal_range_text": "0.109 - 0.351",
+          "actual_value_text": "0.262",
+          "actual_value_numeric": 0.262,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Memory Index(ZS)",
+          "normal_range_text": "0.442 - 0.817",
+          "actual_value_text": "0.379",
+          "actual_value_numeric": 0.379,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Bone Mineral Density",
+      "parameters": [
+        {
+          "source_name": "Osteoclast Coefficient",
+          "normal_range_text": "86.73 - 180.97",
+          "actual_value_text": "151.19",
+          "actual_value_numeric": 151.19,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Amount of Calcium Loss",
+          "normal_range_text": "0.209 - 0.751",
+          "actual_value_text": "0.469",
+          "actual_value_numeric": 0.469,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Degree of Bone Hyperplasia",
+          "normal_range_text": "0.046 - 0.167",
+          "actual_value_text": "0.389",
+          "actual_value_numeric": 0.389,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Degree of Osteoporosis",
+          "normal_range_text": "0.124 - 0.453",
+          "actual_value_text": "0.528",
+          "actual_value_numeric": 0.528,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Bone Mineral Density",
+          "normal_range_text": "0.796 - 0.433",
+          "actual_value_text": "0.435",
+          "actual_value_numeric": 0.435,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Rheumatoid Bone Disease",
+      "parameters": [
+        {
+          "source_name": "Degree of Cervical Calcification",
+          "normal_range_text": "421 - 490",
+          "actual_value_text": "502.068",
+          "actual_value_numeric": 502.068,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Degree of Lumbar Calcification",
+          "normal_range_text": "4.326 - 7.531",
+          "actual_value_text": "7.352",
+          "actual_value_numeric": 7.352,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Bone Hyperplasia Coefficient",
+          "normal_range_text": "2.954 - 5.543",
+          "actual_value_text": "6",
+          "actual_value_numeric": 6,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Osteoporosis Coefficient",
+          "normal_range_text": "2.019 - 4.721",
+          "actual_value_text": "4.705",
+          "actual_value_numeric": 4.705,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Rheumatism Coefficient",
+          "normal_range_text": "4.023 - 11.627",
+          "actual_value_text": "16.843",
+          "actual_value_numeric": 16.843,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Bone Growth Index",
+      "parameters": [
+        {
+          "source_name": "Bone alkaline phosphatase",
+          "normal_range_text": "0.433 - 0.796",
+          "actual_value_text": "0.399",
+          "actual_value_numeric": 0.399,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Osteocalcin",
+          "normal_range_text": "0.525 - 0.817",
+          "actual_value_text": "0.508",
+          "actual_value_numeric": 0.508,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Status of long bone healing",
+          "normal_range_text": "0.713 - 0.992",
+          "actual_value_text": "0.606",
+          "actual_value_numeric": 0.606,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Short bone cartilage healing situation",
+          "normal_range_text": "0.202 - 0.991",
+          "actual_value_text": "0.362",
+          "actual_value_numeric": 0.362,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Epiphyseal line",
+          "normal_range_text": "0.432 - 0.826",
+          "actual_value_text": "0.769",
+          "actual_value_numeric": 0.769,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Blood Sugar",
+      "parameters": [
+        {
+          "source_name": "Coefficient of Insulin Secretion",
+          "normal_range_text": "2.967 - 3.528",
+          "actual_value_text": "3.043",
+          "actual_value_numeric": 3.043,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Blood Sugar Coefficient",
+          "normal_range_text": "2.163 - 7.321",
+          "actual_value_text": "3.191",
+          "actual_value_numeric": 3.191,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Urine Sugar Coefficient",
+          "normal_range_text": "2.204 - 2.819",
+          "actual_value_text": "2.535",
+          "actual_value_numeric": 2.535,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Trace Element",
+      "parameters": [
+        {
+          "source_name": "Calcium",
+          "normal_range_text": "1.219 - 3.021",
+          "actual_value_text": "1.518",
+          "actual_value_numeric": 1.518,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Iron",
+          "normal_range_text": "1.151 - 1.847",
+          "actual_value_text": "0.743",
+          "actual_value_numeric": 0.743,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Zinc",
+          "normal_range_text": "1.143 - 1.989",
+          "actual_value_text": "1.336",
+          "actual_value_numeric": 1.336,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Selenium",
+          "normal_range_text": "0.847 - 2.045",
+          "actual_value_text": "1.096",
+          "actual_value_numeric": 1.096,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Phosphorus",
+          "normal_range_text": "1.195 - 2.134",
+          "actual_value_text": "2.087",
+          "actual_value_numeric": 2.087,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Potassium",
+          "normal_range_text": "0.689 - 0.987",
+          "actual_value_text": "0.977",
+          "actual_value_numeric": 0.977,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Magnesium",
+          "normal_range_text": "0.568 - 0.992",
+          "actual_value_text": "0.761",
+          "actual_value_numeric": 0.761,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Copper",
+          "normal_range_text": "0.474 - 0.749",
+          "actual_value_text": "0.23",
+          "actual_value_numeric": 0.23,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Cobalt",
+          "normal_range_text": "2.326 - 5.531",
+          "actual_value_text": "2.493",
+          "actual_value_numeric": 2.493,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Manganese",
+          "normal_range_text": "0.497 - 0.879",
+          "actual_value_text": "0.732",
+          "actual_value_numeric": 0.732,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Iodine",
+          "normal_range_text": "1.421 - 5.490",
+          "actual_value_text": "5.311",
+          "actual_value_numeric": 5.311,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Nickel",
+          "normal_range_text": "2.462 - 5.753",
+          "actual_value_text": "2.481",
+          "actual_value_numeric": 2.481,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Fluorine",
+          "normal_range_text": "1.954 - 4.543",
+          "actual_value_text": "2.019",
+          "actual_value_numeric": 2.019,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Molybdenum",
+          "normal_range_text": "0.938 - 1.712",
+          "actual_value_text": "1.43",
+          "actual_value_numeric": 1.43,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vanadium",
+          "normal_range_text": "1.019 - 3.721",
+          "actual_value_text": "2.638",
+          "actual_value_numeric": 2.638,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Tin",
+          "normal_range_text": "1.023 - 7.627",
+          "actual_value_text": "7.159",
+          "actual_value_numeric": 7.159,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Silicon",
+          "normal_range_text": "1.425 - 5.872",
+          "actual_value_text": "1.367",
+          "actual_value_numeric": 1.367,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Strontium",
+          "normal_range_text": "1.142 - 5.862",
+          "actual_value_text": "3.508",
+          "actual_value_numeric": 3.508,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Boron",
+          "normal_range_text": "1.124 - 3.453",
+          "actual_value_text": "2.537",
+          "actual_value_numeric": 2.537,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Vitamin",
+      "parameters": [
+        {
+          "source_name": "Vitamin A",
+          "normal_range_text": "0.346 - 0.401",
+          "actual_value_text": "0.338",
+          "actual_value_numeric": 0.338,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Vitamin B1",
+          "normal_range_text": "2.124 - 4.192",
+          "actual_value_text": "1.679",
+          "actual_value_numeric": 1.679,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Vitamin B2",
+          "normal_range_text": "1.549 - 2.213",
+          "actual_value_text": "1.549",
+          "actual_value_numeric": 1.549,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vitamin B3",
+          "normal_range_text": "14.477 - 21.348",
+          "actual_value_text": "14.72",
+          "actual_value_numeric": 14.72,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vitamin B6",
+          "normal_range_text": "0.824 - 1.942",
+          "actual_value_text": "1.616",
+          "actual_value_numeric": 1.616,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vitamin B12",
+          "normal_range_text": "6.428 - 21.396",
+          "actual_value_text": "6.962",
+          "actual_value_numeric": 6.962,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vitamin C",
+          "normal_range_text": "4.543 - 5.023",
+          "actual_value_text": "3.55",
+          "actual_value_numeric": 3.55,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Vitamin D3",
+          "normal_range_text": "5.327 - 7.109",
+          "actual_value_text": "5.259",
+          "actual_value_numeric": 5.259,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Vitamin E",
+          "normal_range_text": "4.826 - 6.013",
+          "actual_value_text": "4.11",
+          "actual_value_numeric": 4.11,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Vitamin K",
+          "normal_range_text": "0.717 - 1.486",
+          "actual_value_text": "0.599",
+          "actual_value_numeric": 0.599,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Amino Acid",
+      "parameters": [
+        {
+          "source_name": "Lysine",
+          "normal_range_text": "0.962 - 1.213",
+          "actual_value_text": "0.853",
+          "actual_value_numeric": 0.853,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Tryptophan",
+          "normal_range_text": "4.978 - 6.289",
+          "actual_value_text": "6.008",
+          "actual_value_numeric": 6.008,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Phenylalanine",
+          "normal_range_text": "1.928 - 2.491",
+          "actual_value_text": "2.057",
+          "actual_value_numeric": 2.057,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Methionine",
+          "normal_range_text": "1.245 - 1.637",
+          "actual_value_text": "1.398",
+          "actual_value_numeric": 1.398,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Threonine",
+          "normal_range_text": "1.194 - 1.685",
+          "actual_value_text": "1.37",
+          "actual_value_numeric": 1.37,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Isoleucine",
+          "normal_range_text": "4.582 - 5.657",
+          "actual_value_text": "4.175",
+          "actual_value_numeric": 4.175,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Leucine",
+          "normal_range_text": "6.982 - 9.256",
+          "actual_value_text": "7.041",
+          "actual_value_numeric": 7.041,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Valine",
+          "normal_range_text": "6.982 - 9.677",
+          "actual_value_text": "7.565",
+          "actual_value_numeric": 7.565,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Histidine",
+          "normal_range_text": "5.113 - 6.258",
+          "actual_value_text": "5.261",
+          "actual_value_numeric": 5.261,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Arginine",
+          "normal_range_text": "1.812 - 2.337",
+          "actual_value_text": "1.975",
+          "actual_value_numeric": 1.975,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Homocysteine",
+          "normal_range_text": "0.983 - 1.265",
+          "actual_value_text": "1.073",
+          "actual_value_numeric": 1.073,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Coenzyme",
+      "parameters": [
+        {
+          "source_name": "Nicotinamide",
+          "normal_range_text": "2.074 - 3.309",
+          "actual_value_text": "2.293",
+          "actual_value_numeric": 2.293,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Biotin",
+          "normal_range_text": "1.833 - 2.979",
+          "actual_value_text": "1.241",
+          "actual_value_numeric": 1.241,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Pantothenic acid",
+          "normal_range_text": "1.116 - 2.101",
+          "actual_value_text": "0.604",
+          "actual_value_numeric": 0.604,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Folic acid",
+          "normal_range_text": "1.449 - 2.246",
+          "actual_value_text": "2.236",
+          "actual_value_numeric": 2.236,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Coenzyme Q10",
+          "normal_range_text": "0.831 - 1.588",
+          "actual_value_text": "0.643",
+          "actual_value_numeric": 0.643,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Glutathione",
+          "normal_range_text": "0.726 - 1.281",
+          "actual_value_text": "1.114",
+          "actual_value_numeric": 1.114,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Essential Fatty Acid",
+      "parameters": [
+        {
+          "source_name": "Linoleic acid",
+          "normal_range_text": "0.642 - 0.985",
+          "actual_value_text": "0.447",
+          "actual_value_numeric": 0.447,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "α-Linolenic acid",
+          "normal_range_text": "0.814 - 1.202",
+          "actual_value_text": "0.852",
+          "actual_value_numeric": 0.852,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "γ-Linolenic acid",
+          "normal_range_text": "0.921 - 1.334",
+          "actual_value_text": "0.996",
+          "actual_value_numeric": 0.996,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Arachidonic acid",
+          "normal_range_text": "0.661 - 0.808",
+          "actual_value_text": "0.575",
+          "actual_value_numeric": 0.575,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Endocrine System",
+      "parameters": [
+        {
+          "source_name": "Thyroid secretion index",
+          "normal_range_text": "2.954 - 5.543",
+          "actual_value_text": "2.996",
+          "actual_value_numeric": 2.996,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Parathyroid hormone secretion index",
+          "normal_range_text": "2.845 - 4.017",
+          "actual_value_text": "2.121",
+          "actual_value_numeric": 2.121,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Adrenal glands Index",
+          "normal_range_text": "2.412 - 2.974",
+          "actual_value_text": "2.149",
+          "actual_value_numeric": 2.149,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Pituitary secretion index",
+          "normal_range_text": "2.163 - 7.34",
+          "actual_value_text": "5.512",
+          "actual_value_numeric": 5.512,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Pineal secretion index",
+          "normal_range_text": "3.210 - 6.854",
+          "actual_value_text": "6.778",
+          "actual_value_numeric": 6.778,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Thymus gland secretion index",
+          "normal_range_text": "2.967 - 3.528",
+          "actual_value_text": "2.969",
+          "actual_value_numeric": 2.969,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Gland secretion index",
+          "normal_range_text": "2.204 - 2.819",
+          "actual_value_text": "2.492",
+          "actual_value_numeric": 2.492,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Immune System",
+      "parameters": [
+        {
+          "source_name": "Lymph node Index",
+          "normal_range_text": "133.437 - 140.47",
+          "actual_value_text": "134.342",
+          "actual_value_numeric": 134.342,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Tonsil immune Index",
+          "normal_range_text": "0.124 - 0.453",
+          "actual_value_text": "0.307",
+          "actual_value_numeric": 0.307,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Bone marrow Index",
+          "normal_range_text": "0.146 - 3.218",
+          "actual_value_text": "1.068",
+          "actual_value_numeric": 1.068,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Spleen index",
+          "normal_range_text": "34.367 - 35.642",
+          "actual_value_text": "35.434",
+          "actual_value_numeric": 35.434,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Thymus index",
+          "normal_range_text": "58.425 - 61.213",
+          "actual_value_text": "59.292",
+          "actual_value_numeric": 59.292,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Immunoglobulin index",
+          "normal_range_text": "3.712 - 6.981",
+          "actual_value_text": "4.089",
+          "actual_value_numeric": 4.089,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Respiratory immune Index",
+          "normal_range_text": "3.241 - 9.814",
+          "actual_value_text": "3.384",
+          "actual_value_numeric": 3.384,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Gastrointestinal immune Index",
+          "normal_range_text": "0.638 - 1.712",
+          "actual_value_text": "0.949",
+          "actual_value_numeric": 0.949,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Mucosa immune Index",
+          "normal_range_text": "4.111 - 18.741",
+          "actual_value_text": "10.307",
+          "actual_value_numeric": 10.307,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Thyroid",
+      "parameters": [
+        {
+          "source_name": "Free thyroxine (FT4)",
+          "normal_range_text": "0.103 - 0.316",
+          "actual_value_text": "0.6",
+          "actual_value_numeric": 0.6,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Thyroglobulin",
+          "normal_range_text": "0.114 - 0.202",
+          "actual_value_text": "0.294",
+          "actual_value_numeric": 0.294,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Anti-thyroglobulin antibodies",
+          "normal_range_text": "0.421 - 0.734",
+          "actual_value_text": "0.711",
+          "actual_value_numeric": 0.711,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Three triiodothyronine (T3)",
+          "normal_range_text": "0.161 - 0.308",
+          "actual_value_text": "0.518",
+          "actual_value_numeric": 0.518,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Human Toxin",
+      "parameters": [
+        {
+          "source_name": "Stimulating Beverage",
+          "normal_range_text": "0.209 - 0.751",
+          "actual_value_text": "0.475",
+          "actual_value_numeric": 0.475,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Electromagnetic Radiation",
+          "normal_range_text": "0.046 - 0.167",
+          "actual_value_text": "0.109",
+          "actual_value_numeric": 0.109,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Free Radical",
+          "normal_range_text": "0.124 - 0.453",
+          "actual_value_text": "0.178",
+          "actual_value_numeric": 0.178,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Toxic Pesticide Residue",
+          "normal_range_text": "0.013 - 0.313",
+          "actual_value_text": "0.305",
+          "actual_value_numeric": 0.305,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Heavy Metal",
+      "parameters": [
+        {
+          "source_name": "Lead",
+          "normal_range_text": "0.052 - 0.643",
+          "actual_value_text": "0.976",
+          "actual_value_numeric": 0.976,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Mercury",
+          "normal_range_text": "0.013 - 0.336",
+          "actual_value_text": "0.468",
+          "actual_value_numeric": 0.468,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Cadmium",
+          "normal_range_text": "0.527 - 1.523",
+          "actual_value_text": "1.556",
+          "actual_value_numeric": 1.556,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Chromium",
+          "normal_range_text": "0.176 - 1.183",
+          "actual_value_text": "0.345",
+          "actual_value_numeric": 0.345,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Arsenic",
+          "normal_range_text": "0.153 - 0.621",
+          "actual_value_text": "0.596",
+          "actual_value_numeric": 0.596,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Antimony",
+          "normal_range_text": "0.162 - 0.412",
+          "actual_value_text": "0.323",
+          "actual_value_numeric": 0.323,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Thallium",
+          "normal_range_text": "0.182 - 0.542",
+          "actual_value_text": "0.388",
+          "actual_value_numeric": 0.388,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Aluminum",
+          "normal_range_text": "0.192 - 0.412",
+          "actual_value_text": "0.57",
+          "actual_value_numeric": 0.57,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Basic Physical Quality",
+      "parameters": [
+        {
+          "source_name": "Response Ability",
+          "normal_range_text": "59.786 - 65.424",
+          "actual_value_text": "61.674",
+          "actual_value_numeric": 61.674,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Mental Power",
+          "normal_range_text": "58.715 - 63.213",
+          "actual_value_text": "61.23",
+          "actual_value_numeric": 61.23,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Water Shortage",
+          "normal_range_text": "33.967 - 37.642",
+          "actual_value_text": "34.512",
+          "actual_value_numeric": 34.512,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Hypoxia",
+          "normal_range_text": "133.642 - 141.476",
+          "actual_value_text": "130.994",
+          "actual_value_numeric": 130.994,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "PH",
+          "normal_range_text": "3.156 - 3.694",
+          "actual_value_text": "3.248",
+          "actual_value_numeric": 3.248,
+          "result_image_code": "YC08",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Allergy",
+      "parameters": [
+        {
+          "source_name": "Drug allergy index",
+          "normal_range_text": "0.431 - 1.329",
+          "actual_value_text": "0.563",
+          "actual_value_numeric": 0.563,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Alcohol allergy index",
+          "normal_range_text": "0.432 - 1.246",
+          "actual_value_text": "1.207",
+          "actual_value_numeric": 1.207,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Pollen allergy index",
+          "normal_range_text": "0.143 - 1.989",
+          "actual_value_text": "1.646",
+          "actual_value_numeric": 1.646,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Injection allergy index",
+          "normal_range_text": "0.847 - 1.045",
+          "actual_value_text": "1.184",
+          "actual_value_numeric": 1.184,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Chemical products allergy index",
+          "normal_range_text": "0.842 - 1.643",
+          "actual_value_text": "1.896",
+          "actual_value_numeric": 1.896,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Paint allergy index",
+          "normal_range_text": "0.346 - 1.401",
+          "actual_value_text": "0.489",
+          "actual_value_numeric": 0.489,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Dust allergy index",
+          "normal_range_text": "0.543 - 1.023",
+          "actual_value_text": "1.263",
+          "actual_value_numeric": 1.263,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Smoke allergy index",
+          "normal_range_text": "0.826 - 1.013",
+          "actual_value_text": "2.532",
+          "actual_value_numeric": 2.532,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Hair dye allergy index",
+          "normal_range_text": "0.717 - 1.486",
+          "actual_value_text": "2.856",
+          "actual_value_numeric": 2.856,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Animal fur allergy index",
+          "normal_range_text": "0.124 - 1.192",
+          "actual_value_text": "0.571",
+          "actual_value_numeric": 0.571,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Metal jewelry allergy index",
+          "normal_range_text": "0.549 - 1.213",
+          "actual_value_text": "0.743",
+          "actual_value_numeric": 0.743,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Seafood allergy index",
+          "normal_range_text": "0.449 - 1.246",
+          "actual_value_text": "2.379",
+          "actual_value_numeric": 2.379,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Milk allergy index",
+          "normal_range_text": "0.477 - 1.348",
+          "actual_value_text": "0.739",
+          "actual_value_numeric": 0.739,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Obesity",
+      "parameters": [
+        {
+          "source_name": "Abnormal lipid metabolism coefficient",
+          "normal_range_text": "1.992 - 3.713",
+          "actual_value_text": "0.89",
+          "actual_value_numeric": 0.89,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Brown adipose tissue abnormalities coefficient",
+          "normal_range_text": "2.791 - 4.202",
+          "actual_value_text": "1.858",
+          "actual_value_numeric": 1.858,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Hyperinsulinemia coefficient",
+          "normal_range_text": "0.097 - 0.215",
+          "actual_value_text": "0.206",
+          "actual_value_numeric": 0.206,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Nucleus of the hypothalamus abnormal coefficient",
+          "normal_range_text": "0.332 - 0.626",
+          "actual_value_text": "0.719",
+          "actual_value_numeric": 0.719,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Triglyceride content of abnormal coefficient",
+          "normal_range_text": "1.341 - 1.991",
+          "actual_value_text": "5.222",
+          "actual_value_numeric": 5.222,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Skin",
+      "parameters": [
+        {
+          "source_name": "Skin Free Radical Index",
+          "normal_range_text": "0.124 - 3.453",
+          "actual_value_text": "2.972",
+          "actual_value_numeric": 2.972,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Skin Collagen Index",
+          "normal_range_text": "4.471 - 6.079",
+          "actual_value_text": "2.899",
+          "actual_value_numeric": 2.899,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skin Grease Index",
+          "normal_range_text": "14.477 - 21.348",
+          "actual_value_text": "25.821",
+          "actual_value_numeric": 25.821,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skin Immunity Index",
+          "normal_range_text": "1.035 - 3.230",
+          "actual_value_text": "4.02",
+          "actual_value_numeric": 4.02,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skin Moisture Index",
+          "normal_range_text": "0.218 - 0.953",
+          "actual_value_text": "2.145",
+          "actual_value_numeric": 2.145,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skin Moisture Loss",
+          "normal_range_text": "2.214 - 4.158",
+          "actual_value_text": "3.125",
+          "actual_value_numeric": 3.125,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Skin Red Blood Trace Index",
+          "normal_range_text": "0.824 - 1.942",
+          "actual_value_text": "1.055",
+          "actual_value_numeric": 1.055,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Skin Elasticity Index",
+          "normal_range_text": "2.717 - 3.512",
+          "actual_value_text": "1.571",
+          "actual_value_numeric": 1.571,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skin Melanin Index",
+          "normal_range_text": "0.346 - 0.501",
+          "actual_value_text": "0.612",
+          "actual_value_numeric": 0.612,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skin Horniness Index",
+          "normal_range_text": "0.842 - 1.858",
+          "actual_value_text": "1.419",
+          "actual_value_numeric": 1.419,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Eye",
+      "parameters": [
+        {
+          "source_name": "Bags under the eyes",
+          "normal_range_text": "0.510 - 3.109",
+          "actual_value_text": "3.004",
+          "actual_value_numeric": 3.004,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Collagen eye wrinkle",
+          "normal_range_text": "2.031 - 3.107",
+          "actual_value_text": "1.31",
+          "actual_value_numeric": 1.31,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Dark circles",
+          "normal_range_text": "0.831 - 3.188",
+          "actual_value_text": "3.883",
+          "actual_value_numeric": 3.883,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Lymphatic obstruction",
+          "normal_range_text": "1.116 - 4.101",
+          "actual_value_text": "3.52",
+          "actual_value_numeric": 3.52,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Sagging",
+          "normal_range_text": "0.233 - 0.559",
+          "actual_value_text": "0.751",
+          "actual_value_numeric": 0.751,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Edema",
+          "normal_range_text": "0.332 - 0.726",
+          "actual_value_text": "1.234",
+          "actual_value_numeric": 1.234,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Eye cell activity",
+          "normal_range_text": "0.118 - 0.892",
+          "actual_value_text": "0.895",
+          "actual_value_numeric": 0.895,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Visual fatigue",
+          "normal_range_text": "2.017 - 5.157",
+          "actual_value_text": "8.04",
+          "actual_value_numeric": 8.04,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Collagen",
+      "parameters": [
+        {
+          "source_name": "Eye",
+          "normal_range_text": "6.352 - 8.325",
+          "actual_value_text": "8.31",
+          "actual_value_numeric": 8.31,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Tooth",
+          "normal_range_text": "7.245 - 8.562",
+          "actual_value_text": "7.491",
+          "actual_value_numeric": 7.491,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Hair and skin",
+          "normal_range_text": "4.533 - 6.179",
+          "actual_value_text": "4.806",
+          "actual_value_numeric": 4.806,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Endocrine system",
+          "normal_range_text": "6.178 - 8.651",
+          "actual_value_text": "8.253",
+          "actual_value_numeric": 8.253,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Circulatory system",
+          "normal_range_text": "3.586 - 4.337",
+          "actual_value_text": "4.153",
+          "actual_value_numeric": 4.153,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Digestive system",
+          "normal_range_text": "3.492 - 4.723",
+          "actual_value_text": "3.168",
+          "actual_value_numeric": 3.168,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Immune system",
+          "normal_range_text": "3.376 - 4.582",
+          "actual_value_text": "2.938",
+          "actual_value_numeric": 2.938,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Motion systems",
+          "normal_range_text": "6.458 - 8.133",
+          "actual_value_text": "5.573",
+          "actual_value_numeric": 5.573,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Muscle Tissue",
+          "normal_range_text": "6.552 - 8.268",
+          "actual_value_text": "5.774",
+          "actual_value_numeric": 5.774,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Fat Metabolism",
+          "normal_range_text": "6.338 - 8.368",
+          "actual_value_text": "4.551",
+          "actual_value_numeric": 4.551,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Detoxification and metabolism",
+          "normal_range_text": "6.187 - 8.466",
+          "actual_value_text": "6.519",
+          "actual_value_numeric": 6.519,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Reproductive system",
+          "normal_range_text": "3.778 - 4.985",
+          "actual_value_text": "3.997",
+          "actual_value_numeric": 3.997,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Nervous system",
+          "normal_range_text": "3.357 - 4.239",
+          "actual_value_text": "2.643",
+          "actual_value_numeric": 2.643,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Skeleton",
+          "normal_range_text": "6.256 - 8.682",
+          "actual_value_text": "7.975",
+          "actual_value_numeric": 7.975,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Channels and collaterals",
+      "parameters": [
+        {
+          "source_name": "Hand Tai Yin Lung Meridian",
+          "normal_range_text": "48.264 - 65.371",
+          "actual_value_text": "63.778",
+          "actual_value_numeric": 63.778,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Hand Yangming Large Intestine Meridian",
+          "normal_range_text": "56.749 - 67.522",
+          "actual_value_text": "61.756",
+          "actual_value_numeric": 61.756,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Foot Yangming Stomach Meridian",
+          "normal_range_text": "0.481 - 1.043",
+          "actual_value_text": "0.485",
+          "actual_value_numeric": 0.485,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Foot Tai Yin Lung Meridian",
+          "normal_range_text": "0.327 - 0.937",
+          "actual_value_text": "0.465",
+          "actual_value_numeric": 0.465,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Hand Shao Yin Heart Sutra",
+          "normal_range_text": "1.672 - 1.978",
+          "actual_value_text": "1.477",
+          "actual_value_numeric": 1.477,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Hand the small intestine by the sun",
+          "normal_range_text": "0.192 - 0.412",
+          "actual_value_text": "0.199",
+          "actual_value_numeric": 0.199,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Foot Tai Yang Bladder Meridian",
+          "normal_range_text": "4.832 - 5.147",
+          "actual_value_text": "3.773",
+          "actual_value_numeric": 3.773,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Foot Shao Yin Kidney",
+          "normal_range_text": "3.321 - 4.244",
+          "actual_value_text": "3.937",
+          "actual_value_numeric": 3.937,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Hand Jue Yin Pericardium Meridian",
+          "normal_range_text": "1.338 - 1.672",
+          "actual_value_text": "1.34",
+          "actual_value_numeric": 1.34,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Hand Shao Yang Triple Burner Meridian",
+          "normal_range_text": "0.669 - 1.544",
+          "actual_value_text": "0.548",
+          "actual_value_numeric": 0.548,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Foot Shao Yang Gall Bladder Meridian",
+          "normal_range_text": "1.554 - 1.988",
+          "actual_value_text": "1.868",
+          "actual_value_numeric": 1.868,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Foot Jue Yin Liver Meridian",
+          "normal_range_text": "1.553 - 2.187",
+          "actual_value_text": "1.652",
+          "actual_value_numeric": 1.652,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Ren channel",
+          "normal_range_text": "11.719 - 18.418",
+          "actual_value_text": "12.572",
+          "actual_value_numeric": 12.572,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Governor meridian",
+          "normal_range_text": "0.708 - 1.942",
+          "actual_value_text": "1.536",
+          "actual_value_numeric": 1.536,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Vital meridian",
+          "normal_range_text": "6.138 - 21.396",
+          "actual_value_text": "6.331",
+          "actual_value_numeric": 6.331,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Tai mai",
+          "normal_range_text": "5.733 - 7.109",
+          "actual_value_text": "5.146",
+          "actual_value_numeric": 5.146,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Pulse of heart and brain",
+      "parameters": [
+        {
+          "source_name": "Stroke index",
+          "normal_range_text": "60.735 - 65.396",
+          "actual_value_text": "62.076",
+          "actual_value_numeric": 62.076,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Stroke volume(SV)",
+          "normal_range_text": "63.012 - 67.892",
+          "actual_value_text": "61.901",
+          "actual_value_numeric": 61.901,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Heart peripheral resistance(TRR)",
+          "normal_range_text": "0.983 - 1.265",
+          "actual_value_text": "1.638",
+          "actual_value_numeric": 1.638,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Pulse wave coefficient K",
+          "normal_range_text": "0.316 - 0.401",
+          "actual_value_text": "0.391",
+          "actual_value_numeric": 0.391,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Cerebrovascular blood oxygen saturation(Sa)",
+          "normal_range_text": "0.710 - 1.109",
+          "actual_value_text": "0.894",
+          "actual_value_numeric": 0.894,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Cerebrovascular blood oxygen volume(CaCO2)",
+          "normal_range_text": "7.880 - 10.090",
+          "actual_value_text": "8.081",
+          "actual_value_numeric": 8.081,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Cerebrovascular blood oxygen presure(PaO2)",
+          "normal_range_text": "5.017 - 5.597",
+          "actual_value_text": "5.169",
+          "actual_value_numeric": 5.169,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Blood lipids",
+      "parameters": [
+        {
+          "source_name": "Blood viscosity",
+          "normal_range_text": "4.131 - 4.562",
+          "actual_value_text": "5.233",
+          "actual_value_numeric": 5.233,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Total cholesterol(TC)",
+          "normal_range_text": "1.833 - 2.979",
+          "actual_value_text": "2.75",
+          "actual_value_numeric": 2.75,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Triglyceride(TG)",
+          "normal_range_text": "1.116 - 2.101",
+          "actual_value_text": "2.218",
+          "actual_value_numeric": 2.218,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "High-density lipoprotein(HDL-C)",
+          "normal_range_text": "1.449 - 2.246",
+          "actual_value_text": "2.955",
+          "actual_value_numeric": 2.955,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Low-density lipoprotein(LDL-C)",
+          "normal_range_text": "0.831 - 1.588",
+          "actual_value_text": "1.015",
+          "actual_value_numeric": 1.015,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Neutral fat(MB)",
+          "normal_range_text": "0.726 - 1.281",
+          "actual_value_text": "3.096",
+          "actual_value_numeric": 3.096,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Circulating immune complex(CIC)",
+          "normal_range_text": "13.012 - 17.291",
+          "actual_value_text": "18.601",
+          "actual_value_numeric": 18.601,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Prostate",
+      "parameters": [
+        {
+          "source_name": "Degree of Prostatic Hyperplasia",
+          "normal_range_text": "1.023 - 3.230",
+          "actual_value_text": "5.03",
+          "actual_value_numeric": 5.03,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Degree of Prostatic Calcification",
+          "normal_range_text": "1.471 - 6.079",
+          "actual_value_text": "8.907",
+          "actual_value_numeric": 8.907,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Prostatitis Syndrome",
+          "normal_range_text": "2.213 - 2.717",
+          "actual_value_text": "6.11",
+          "actual_value_numeric": 6.11,
+          "result_image_code": "YC06",
+          "severity": "high_moderate",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Male Sexual Function",
+      "parameters": [
+        {
+          "source_name": "Testosterone",
+          "normal_range_text": "3.342 - 9.461",
+          "actual_value_text": "2.492",
+          "actual_value_numeric": 2.492,
+          "result_image_code": "YC02",
+          "severity": "low_moderate",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Gonadotropin",
+          "normal_range_text": "4.111 - 18.741",
+          "actual_value_text": "3.558",
+          "actual_value_numeric": 3.558,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Erection Transmitter",
+          "normal_range_text": "3.241 - 9.814",
+          "actual_value_text": "3.03",
+          "actual_value_numeric": 3.03,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Sperm and semen",
+      "parameters": [
+        {
+          "source_name": "Semen volume",
+          "normal_range_text": "1.502 - 6.028",
+          "actual_value_text": "5.263",
+          "actual_value_numeric": 5.263,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "liquefying time",
+          "normal_range_text": "10.283 - 30.282",
+          "actual_value_text": "26.982",
+          "actual_value_numeric": 26.982,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Number of sperms",
+          "normal_range_text": "2.483 - 3.932",
+          "actual_value_text": "3",
+          "actual_value_numeric": 3,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Sperm motility rate",
+          "normal_range_text": "0.637 - 0.877",
+          "actual_value_text": "0.689",
+          "actual_value_numeric": 0.689,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Male Hormone",
+      "parameters": [
+        {
+          "source_name": "Androgen",
+          "normal_range_text": "1.372 - 1.878",
+          "actual_value_text": "1.492",
+          "actual_value_numeric": 1.492,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Estrogen",
+          "normal_range_text": "0.521 - 1.036",
+          "actual_value_text": "0.672",
+          "actual_value_numeric": 0.672,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Progesterone(P)",
+          "normal_range_text": "0.686 - 1.432",
+          "actual_value_text": "0.651",
+          "actual_value_numeric": 0.651,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Luteinizing Hormone (LH)",
+          "normal_range_text": "0.679 - 1.324",
+          "actual_value_text": "0.593",
+          "actual_value_numeric": 0.593,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Prolactin(PRL)",
+          "normal_range_text": "0.738 - 1.742",
+          "actual_value_text": "1.386",
+          "actual_value_numeric": 1.386,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Follicle Stimulating Hormone(FSH)",
+          "normal_range_text": "0.387 - 0.956",
+          "actual_value_text": "0.54",
+          "actual_value_numeric": 0.54,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Human Immunity",
+      "parameters": [
+        {
+          "source_name": "Tissue barrier immune index",
+          "normal_range_text": "7.435 - 8.847",
+          "actual_value_text": "9.626",
+          "actual_value_numeric": 9.626,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Innate immune cell index",
+          "normal_range_text": "7.424 - 9.052",
+          "actual_value_text": "10.784",
+          "actual_value_numeric": 10.784,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Innate immune molecule index",
+          "normal_range_text": "7.143 - 9.214",
+          "actual_value_text": "7.585",
+          "actual_value_numeric": 7.585,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Cellular immune index",
+          "normal_range_text": "5.769 - 7.643",
+          "actual_value_text": "8.547",
+          "actual_value_numeric": 8.547,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Humoral immunity index",
+          "normal_range_text": "6.424 - 8.219",
+          "actual_value_text": "8.708",
+          "actual_value_numeric": 8.708,
+          "result_image_code": "YC05",
+          "severity": "high_mild",
+          "is_abnormal": true
+        }
+      ]
+    },
+    {
+      "source_title": "Human Consciousness Level",
+      "parameters": [
+        {
+          "source_name": "Shame",
+          "normal_range_text": "2.214 - 3.925",
+          "actual_value_text": "3.056",
+          "actual_value_numeric": 3.056,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Guilt",
+          "normal_range_text": "2.154 - 3.478",
+          "actual_value_text": "2.543",
+          "actual_value_numeric": 2.543,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Apathy",
+          "normal_range_text": "2.343 - 4.089",
+          "actual_value_text": "2.263",
+          "actual_value_numeric": 2.263,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Grief",
+          "normal_range_text": "1.845 - 3.241",
+          "actual_value_text": "1.997",
+          "actual_value_numeric": 1.997,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Fear",
+          "normal_range_text": "2.155 - 4.031",
+          "actual_value_text": "1.681",
+          "actual_value_numeric": 1.681,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Desire",
+          "normal_range_text": "1.484 - 2.485",
+          "actual_value_text": "1.711",
+          "actual_value_numeric": 1.711,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Anger",
+          "normal_range_text": "1.256 - 2.529",
+          "actual_value_text": "1.466",
+          "actual_value_numeric": 1.466,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Pride",
+          "normal_range_text": "1.378 - 2.489",
+          "actual_value_text": "1.025",
+          "actual_value_numeric": 1.025,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Courage",
+          "normal_range_text": "1.727 - 3.315",
+          "actual_value_text": "1.8",
+          "actual_value_numeric": 1.8,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Neutrality",
+          "normal_range_text": "2.471 - 3.892",
+          "actual_value_text": "2.16",
+          "actual_value_numeric": 2.16,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Willingness",
+          "normal_range_text": "2.216 - 4.094",
+          "actual_value_text": "2.598",
+          "actual_value_numeric": 2.598,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Acceptance",
+          "normal_range_text": "1.668 - 4.053",
+          "actual_value_text": "2.239",
+          "actual_value_numeric": 2.239,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Reason",
+          "normal_range_text": "1.352 - 3.436",
+          "actual_value_text": "2.693",
+          "actual_value_numeric": 2.693,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Love",
+          "normal_range_text": "2.138 - 3.754",
+          "actual_value_text": "1.871",
+          "actual_value_numeric": 1.871,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Joy",
+          "normal_range_text": "2.129 - 4.021",
+          "actual_value_text": "2.654",
+          "actual_value_numeric": 2.654,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Peace",
+          "normal_range_text": "2.243 - 4.022",
+          "actual_value_text": "2.099",
+          "actual_value_numeric": 2.099,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Enlightenment",
+          "normal_range_text": "2.225 - 3.822",
+          "actual_value_text": "3.556",
+          "actual_value_numeric": 3.556,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Respiratory Function",
+      "parameters": [
+        {
+          "source_name": "Volume Tidal(VT)",
+          "normal_range_text": "5.431 - 7.479",
+          "actual_value_text": "4.051",
+          "actual_value_numeric": 4.051,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Inspiratory Volume(TI)",
+          "normal_range_text": "4.126 - 6.045",
+          "actual_value_text": "4.442",
+          "actual_value_numeric": 4.442,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Functional Residual Capacity(FRC)",
+          "normal_range_text": "5.147 - 6.219",
+          "actual_value_text": "5.503",
+          "actual_value_numeric": 5.503,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Residual Volume(RV)",
+          "normal_range_text": "4.363 - 5.647",
+          "actual_value_text": "5.322",
+          "actual_value_numeric": 5.322,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Lecithin",
+      "parameters": [
+        {
+          "source_name": "Phospholipid index",
+          "normal_range_text": "3.654 - 4.478",
+          "actual_value_text": "4.471",
+          "actual_value_numeric": 4.471,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Sphingolipid index",
+          "normal_range_text": "3.121 - 3.853",
+          "actual_value_text": "2.842",
+          "actual_value_numeric": 2.842,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Sphingomyelin index",
+          "normal_range_text": "3.341 - 4.214",
+          "actual_value_text": "3.894",
+          "actual_value_numeric": 3.894,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Lecithin index",
+          "normal_range_text": "4.365 - 5.142",
+          "actual_value_text": "4.165",
+          "actual_value_numeric": 4.165,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Brain phospholipid index",
+          "normal_range_text": "4.225 - 5.713",
+          "actual_value_text": "4.038",
+          "actual_value_numeric": 4.038,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Liposomal index",
+          "normal_range_text": "3.112 - 4.081",
+          "actual_value_text": "4.071",
+          "actual_value_numeric": 4.071,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        }
+      ]
+    },
+    {
+      "source_title": "Fatty acid",
+      "parameters": [
+        {
+          "source_name": "Saturated fatty acid index",
+          "normal_range_text": "1.334 - 2.407",
+          "actual_value_text": "1.437",
+          "actual_value_numeric": 1.437,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Unsaturated fatty acid index",
+          "normal_range_text": "2.224 - 3.153",
+          "actual_value_text": "2.834",
+          "actual_value_numeric": 2.834,
+          "result_image_code": "YC04",
+          "severity": "normal",
+          "is_abnormal": false
+        },
+        {
+          "source_name": "Essential fatty acid index",
+          "normal_range_text": "2.144 - 3.238",
+          "actual_value_text": "2.087",
+          "actual_value_numeric": 2.087,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        },
+        {
+          "source_name": "Triglyceride index",
+          "normal_range_text": "3.361 - 4.644",
+          "actual_value_text": "2.377",
+          "actual_value_numeric": 2.377,
+          "result_image_code": "YC03",
+          "severity": "low_mild",
+          "is_abnormal": true
+        }
+      ]
+    }
+  ]
+}
