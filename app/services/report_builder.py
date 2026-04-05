@@ -6,6 +6,9 @@ from app.services.pdf_service import save_html, save_pdf
 from app.services.marker_definition_service import load_marker_definition_index, get_marker_definition
 from app.services.scoring_engine import compute_scan_scores
 from app.services.pattern_engine_v2 import attach_pattern_engine_v2_output
+from app.services.product_resolver import resolve_all_products
+from app.services.protocol_composer import compose_protocol
+from app.services.ai_narrative_engine_v2 import enrich_protocol_plan_with_narrative
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES_DIR = ROOT / "app" / "templates"
@@ -431,8 +434,7 @@ def _section_card_map(report: ParsedReport):
     # 🔥 ADD THIS LINE (Pattern Engine V2)
     report = attach_pattern_engine_v2_output(report)
 
-    print("PRIMARY PATTERN:", getattr(report, "primary_pattern", None))
-    print("PATTERNS:", getattr(report, "detected_patterns", None))
+  
 
     return {
         (card["title"] or "").strip().lower(): card
@@ -1194,6 +1196,9 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
     patient_header = build_patient_header(report)
     body_composition_block = build_body_composition_block(report)
     priority_sections = build_priority_sections_list(report)
+    products = resolve_all_products(report)
+    protocol = compose_protocol(report, products)
+    protocol = enrich_protocol_plan_with_narrative(report, protocol)
 
     section_blocks = []
     for section in selected_sections:
@@ -1378,6 +1383,8 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "key_patterns": key_patterns,
         "priority_actions": priority_actions,
         "detected_patterns": getattr(report, "detected_patterns", []),
+        "product_recommendations": products, #
+        "protocol_plan": protocol, # 
 
         "primary_pattern": (
             {

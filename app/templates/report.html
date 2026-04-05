@@ -388,7 +388,24 @@
       box-shadow:0 1px 2px rgba(15,23,42,0.04)
     }
 
+    .product-source-badge{
+      display:inline-block;
+      padding:4px 8px;
+      border-radius:999px;
+      font-size:11px;
+      font-weight:bold;
+      background:#eef2ff;
+      color:#3730a3;
+      border:1px solid #c7d2fe;
+    }
 
+    .phase-panel .mini-card{
+      min-height:110px;
+    }
+
+    .phase-panel .mini-card p{
+      margin-bottom:0;
+    }
     .soft-emphasis{background:linear-gradient(180deg,#f8fafc,#ffffff)}
   </style>
 </head>
@@ -684,6 +701,54 @@
       {% endfor %}
     </div>
   {% endif %}
+
+
+    {% if protocol_plan %}
+    <div class="page">
+      {{ page_header(patient_header) }}
+
+      <h2>{{ protocol_plan.section_heading or "Recommended support plan" }}</h2>
+
+      <div class="panel">
+        <h3>{{ protocol_plan.title }}</h3>
+        <p>{{ protocol_plan.summary }}</p>
+        {% if protocol_plan.section_intro %}
+          <p class="small-note">{{ protocol_plan.section_intro }}</p>
+        {% endif %}
+      </div>
+
+      {% for phase in protocol_plan.phases %}
+        <div class="panel phase-panel">
+          <h3>{{ phase.title }}</h3>
+
+          {% if phase.summary %}
+            <p class="small-note">{{ phase.summary }}</p>
+          {% endif %}
+
+          <div class="summary-grid">
+            {% for p in phase.products %}
+              <div class="mini-card">
+                <div class="section-header" style="margin-bottom:6px;">
+                  <div>
+                    <div class="mini-card-title" style="margin-bottom:4px;">{{ p.name }}</div>
+                    {% if p.is_core %}
+                      <span class="severity-pill sev-moderate">Core</span>
+                    {% endif %}
+                  </div>
+                  <span class="severity-pill sev-normal">{{ p.source_label }}</span>
+                </div>
+
+                {% if p.display_rationale %}
+                  <p>{{ p.display_rationale }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      {% endfor %}
+    </div>
+  {% endif %}
+
 
   {% for section in section_blocks %}
     <div class="page">
