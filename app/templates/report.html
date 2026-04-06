@@ -379,13 +379,30 @@
     .priority-highlight h3{color:#b91c1c}
 
     .clinical-rec-card{
-      border:1px solid #cbd5e1;
-      border-left:6px solid var(--primary-color);
-      border-radius:10px;
-      background:#fff;
-      padding:14px;
-      margin-bottom:12px;
-      box-shadow:0 1px 2px rgba(15,23,42,0.04)
+      border:1px solid var(--border-color);
+      border-left:3px solid var(--primary-color); /* thinner accent */
+      border-radius:8px;
+      background:#ffffff;
+      padding:12px;
+      margin-bottom:10px;
+      box-shadow:none; /* remove elevation */
+    }
+
+    .clinical-rec-card h3{
+      font-size:15px;
+      margin-bottom:4px;
+      font-weight:600;
+    }
+
+    .clinical-rec-card p{
+      font-size:12.5px;
+      color:#334155;
+    }
+
+
+    .clinical-rec-card .small-note{
+      font-size:11.5px;
+      color:#64748b;
     }
 
     .product-source-badge{
@@ -406,6 +423,115 @@
     .phase-panel .mini-card p{
       margin-bottom:0;
     }
+
+    .section-page-header{
+      margin-bottom:18px;
+    }
+
+    .section-page-kicker{
+      font-size:11px;
+      font-weight:700;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:var(--primary-color);
+      margin-bottom:6px;
+    }
+
+    .section-page-title{
+      font-size:26px;
+      line-height:1.15;
+      font-weight:800;
+      color:#0f172a;
+      margin:0;
+    }
+
+    .section-page-intro{
+      border:1px solid var(--border-color);
+      border-left:8px solid var(--primary-color);
+      border-radius:14px;
+      background:linear-gradient(180deg,#f8fafc,#ffffff);
+      padding:16px 18px;
+      margin-bottom:16px;
+    }
+
+    .section-page-intro p:last-child{
+      margin-bottom:0;
+    }
+
+    .section-intro {
+      margin-top: 40px;
+      padding: 24px;
+      border-radius: 12px;
+      background: #f8faf9;
+      border-left: 4px solid #0f5c4d;
+    }
+
+    .section-intro h1 {
+      font-size: 24px;
+      margin-bottom: 10px;
+    }
+
+    .section-intro p {
+      color: #444;
+      line-height: 1.6;
+    }
+
+    .section-intro-page{
+      padding-top: 8mm;
+    }
+
+    .section-intro-hero{
+      border:1px solid var(--border-color);
+      border-left:8px solid var(--primary-color);
+      border-radius:14px;
+      background:linear-gradient(180deg, #f8fafc, #ffffff);
+      padding:18px 18px 14px 18px;
+      margin-bottom:16px;
+    }
+
+    .section-intro-kicker{
+      font-size:11px;
+      font-weight:bold;
+      letter-spacing:0.08em;
+      text-transform:uppercase;
+      color:var(--primary-color);
+      margin-bottom:8px;
+    
+
+    .section-intro-title{
+      font-size:28px;
+      line-height:1.15;
+      font-weight:800;
+      color:#0f172a;
+      margin:0 0 10px 0;
+    }
+
+    .section-intro-summary{
+      font-size:14px;
+      line-height:1.6;
+      color:#334155;
+      margin:0;
+    }
+
+    .section-intro-hero{
+      page-break-inside:avoid;
+      break-inside:avoid-page;
+    }
+
+
+
+    .phase-panel{
+      page-break-inside:avoid;
+      break-inside:avoid-page;
+    }
+
+
+
+    .phase-panel .mini-card{
+      page-break-inside:avoid;
+      break-inside:avoid-page;
+    }
+
     .soft-emphasis{background:linear-gradient(180deg,#f8fafc,#ffffff)}
   </style>
 </head>
@@ -418,6 +544,15 @@
       <div><span class="label">Scan time:</span> {{ ph.scan_datetime }}</div>
     </div>
   {%- endmacro %}
+  {% macro section_hero(section_type, title, summary) -%}
+        <div class="section-intro-hero">
+          <div class="section-intro-kicker">{{ section_type }}</div>
+          <h2 class="section-intro-title">{{ title }}</h2>
+          {% if summary %}
+            <p class="section-intro-summary">{{ summary }}</p>
+          {% endif %}
+        </div>
+      {%- endmacro %}
 
   {% macro render_status_bar(variant, pointer_position) -%}
     <div class="status-bar-wrap">
@@ -507,9 +642,13 @@
   </div>
 
   {% if include_toc %}
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
-      <h2>Table of contents</h2>
+      {{ section_hero(
+          "Navigation",
+          "Table of contents",
+          ""
+        ) }}
       <div class="panel">
         <ul class="toc-list">
           {% for item in toc_items %}
@@ -520,9 +659,20 @@
     </div>
   {% endif %}
 
-  <div class="page">
+  <div class="page" style="page-break-before:always;">
     {{ page_header(patient_header) }}
-    <h2>At a glance</h2>
+    
+    {{ section_hero(
+      "Overview",
+      "At a glance",
+      "This section summarises the dominant patterns in the scan, the wider downstream themes they may be influencing, and the immediate priorities for follow-up."
+    ) }}
+   
+  
+    <div class="section-page-header">
+      <div class="section-page-kicker">Overview</div>
+      <h2 class="section-page-title">Scan score overview</h2>
+    </div>
 
     {% if overall_summary %}
       <div class="panel soft-emphasis">
@@ -590,24 +740,17 @@
       </div>
     {% endif %}
 
-    {% if category_completeness %}
-      <div class="panel">
-        <h3>Technical integrity check</h3>
-        <p>
-          Profile: {{ category_completeness.profile }} |
-          Matched: {{ category_completeness.matched_count }}/{{ category_completeness.expected_count }} |
-          Completeness: {{ category_completeness.completeness_percent }}%
-        </p>
-        {% if category_completeness.missing_categories %}
-          <p><strong>Missing categories:</strong> {{ category_completeness.missing_categories | join(', ') }}</p>
-        {% endif %}
-      </div>
-    {% endif %}
+
   </div>
 
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
-      <h2>Scan score overview</h2>
+        {{ section_hero(
+          "Overview",
+          "Scan score overview",
+          "This section provides a weighted overview of the scan, helping organise attention across major body systems before moving into more detailed interpretation."
+        ) }}
+
 
       <div class="score-page-grid">
         <div class="panel overall-score-panel">
@@ -686,10 +829,14 @@
 
 
   {% if clinical_recommendations %}
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
-      <h2>Clinical recommendations</h2>
-
+    <div class="section-page-header">
+      {{ section_hero(
+        "Recommendations",
+        "Clinical recommendations",
+        "This section translates the scan findings into high-level clinical priorities, showing which functional areas appear most relevant for follow-up support."
+      ) }}
       {% for rec in clinical_recommendations %}
         <div class="clinical-rec-card no-break">
           <h3>{{ rec.title }}</h3>
@@ -704,11 +851,14 @@
 
 
     {% if protocol_plan %}
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
 
-      <h2>{{ protocol_plan.section_heading or "Recommended support plan" }}</h2>
-
+        {{ section_hero(
+          "Recommendations",
+          protocol_plan.section_heading or "Recommended support plan",
+          "This section organises suggested support options into a staged plan, combining foundational and targeted measures based on the dominant scan patterns."
+        ) }}
       <div class="panel">
         <h3>{{ protocol_plan.title }}</h3>
         <p>{{ protocol_plan.summary }}</p>
@@ -716,8 +866,9 @@
           <p class="small-note">{{ protocol_plan.section_intro }}</p>
         {% endif %}
       </div>
-
-      {% for phase in protocol_plan.phases %}
+      
+      
+        {% for phase in protocol_plan.phases %}
         <div class="panel phase-panel">
           <h3>{{ phase.title }}</h3>
 
@@ -750,8 +901,81 @@
   {% endif %}
 
 
+
+
+  {% if complete_product_mapping %}
+    <div class="page" style="page-break-before:always;">
+      {{ page_header(patient_header) }}
+
+          {{ section_hero(
+            "Reference mapping",
+            "Complete product recommendation mapping",
+            "This section lists all products identified through the scan analysis. It includes full mapping across systems and markers to support practitioner review, product selection, and fulfilment planning."
+          ) }}
+
+      <table style="width:100%; border-collapse:collapse; font-size:12px;">
+        <thead>
+          <tr style="background:#f3f4f6;">
+            <th style="text-align:left; padding:8px;">Product</th>
+            <th style="text-align:left; padding:8px;">Source</th>
+            <th style="text-align:left; padding:8px;">Systems</th>
+            <th style="text-align:left; padding:8px;">Key markers</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for p in complete_product_mapping %}
+            <tr style="border-bottom:1px solid #e5e7eb;">
+              <td style="padding:8px;"><strong>{{ p.name }}</strong></td>
+              <td style="padding:8px;">{{ p.source_label }}</td>
+              <td style="padding:8px;">
+                {{ p.sections | join(', ') }}
+              </td>
+              <td style="padding:8px;">
+                {{ p.markers[:5] | join(', ') }}
+              </td>
+            </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  {% endif %}
+
+
+    {% if priority_section_intro %}
+      <div class="page section-intro-page">
+        {{ page_header(patient_header) }}
+
+        <div class="section-intro-hero">
+          <div class="section-intro-kicker">Section overview</div>
+          <h1 class="section-intro-title">{{ priority_section_intro.title }}</h1>
+          <p class="section-intro-summary">
+            This section presents the most relevant functional categories identified in the scan. These categories have been prioritised based on the number, severity, and clustering of non-optimal markers.
+          </p>
+        </div>
+
+        <div class="panel">
+          <p>Each category page summarises the strongest findings in that category and highlights the most clinically relevant marker explanations to support efficient interpretation and follow-up planning.</p>
+        </div>
+
+        {% if priority_section_intro.top_sections %}
+          <div class="panel">
+            <h3>Categories included in this section</h3>
+            <ul>
+              {% for item in priority_section_intro.top_sections %}
+                <li>{{ item }}</li>
+              {% endfor %}
+            </ul>
+          </div>
+        {% endif %}
+      </div>
+    {% endif %}
+
+
+
+
+
   {% for section in section_blocks %}
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
       <div class="section-header">
         <h2>{{ section.display_title }}</h2>
@@ -819,13 +1043,20 @@
     <div class="page">
       {{ page_header(patient_header) }}
 
-      <div class="section-header">
-        <h2>{{ body_composition_block.title }}</h2>
-        <span class="badge badge-{{ body_composition_block.priority }}">{{ body_composition_block.priority_label }}</span>
-      </div>
-      {% if body_composition_block.source_subtitle %}
-        <p class="section-subtitle">{{ body_composition_block.source_subtitle }}</p>
-      {% endif %}
+    {{ section_hero(
+      "Dedicated summary",
+      body_composition_block.title,
+      "This section summarises QRMA-derived body composition and metabolic profile indicators, including hydration, lean tissue, adiposity, and weight-related measures."
+    ) }}
+
+    <div class="section-header" style="margin-top:-6px;">
+      <div></div>
+      <span class="badge badge-{{ body_composition_block.priority }}">{{ body_composition_block.priority_label }}</span>
+    </div>
+
+    {% if body_composition_block.source_subtitle %}
+      <p class="section-subtitle">{{ body_composition_block.source_subtitle }}</p>
+    {% endif %}
 
       <div class="panel">
         <h3>Section interpretation</h3>
@@ -856,13 +1087,13 @@
     </div>
   {% endif %}
 
-  <div class="page">
+  <div class="page" style="page-break-before:always;">
     {{ page_header(patient_header) }}
-    <h2>Complete system marker tables</h2>
-    <div class="panel">
-      <p>This section includes every parsed system and every marker across the report, including those within range. It acts as the complete explained reference layer of the report.</p>
-    </div>
-  </div>
+      {{ section_hero(
+        "Technical reference",
+        "Complete system marker tables",
+        "This section includes every parsed system and every marker across the report, including those within range, as the full explained reference layer."
+      ) }}
 
   {% for table in full_marker_tables %}
     <div class="page">
@@ -903,12 +1134,13 @@
   {% endfor %}
 
   {% if include_product_recommendations and product_recommendations %}
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
-      <h2>Optional product recommendations</h2>
-      <div class="panel">
-        <p>The products below are optional suggestions shown only when product recommendations are enabled. They are kept separate from clinical recommendations.</p>
-      </div>
+        {{ section_hero(
+          "Recommendations",
+          "Optional product recommendations",
+          "This section lists optional product suggestions when product recommendations are enabled. They are shown separately from the main clinical recommendations."
+        ) }}
       {% for product in product_recommendations %}
         <div class="recommendation-card no-break">
           <div class="recommendation-title">
@@ -935,9 +1167,13 @@
   {% endif %}
 
   {% if include_appendix %}
-    <div class="page">
+    <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
-      <h2>Appendix: full marker table summary</h2>
+        {{ section_hero(
+          "Technical reference",
+          "Appendix",
+          "This section contains supporting technical material and summary reference tables used in the report."
+        ) }}
       <table class="appendix-table">
         <thead>
           <tr>

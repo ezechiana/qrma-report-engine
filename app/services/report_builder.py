@@ -9,6 +9,7 @@ from app.services.pattern_engine_v2 import attach_pattern_engine_v2_output
 from app.services.product_resolver import resolve_all_products
 from app.services.protocol_composer import compose_protocol
 from app.services.ai_narrative_engine_v2 import enrich_protocol_plan_with_narrative
+from app.services.product_mapping_builder import build_complete_product_mapping
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES_DIR = ROOT / "app" / "templates"
@@ -548,6 +549,25 @@ def build_priority_sections_list(report: ParsedReport) -> list[str]:
     ][:6]
 
 
+
+def build_priority_category_review_intro(priority_sections: list[str]) -> dict | None:
+    if not priority_sections:
+        return None
+
+    return {
+        "title": "Priority category review",
+        "summary": (
+            "This section presents the most relevant functional categories identified in the scan. "
+            "These categories have been prioritised based on the number, severity, and clustering of "
+            "non-optimal markers.\n\n"
+            "Each category page summarises the strongest findings in that category and highlights the "
+            "most clinically relevant marker explanations to support efficient interpretation and follow-up planning."
+        ),
+        "top_sections": priority_sections[:6],
+    }
+
+
+
 def body_comp_display_name(source_name: str) -> str:
     raw = (source_name or "").strip()
     key = raw.lower()
@@ -979,8 +999,8 @@ def build_toc_items(section_blocks, include_product_recommendations, product_rec
         items.append("Practitioner recommendations")
     if practitioner_notes.follow_up_suggestions:
         items.append("Follow-up suggestions")
-    for section in section_blocks:
-        items.append(section["display_title"])
+    if section_blocks:
+        items.append("Priority category review")
     if has_body_composition:
         items.append("Body composition analysis")
     if section_blocks:
@@ -1196,9 +1216,11 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
     patient_header = build_patient_header(report)
     body_composition_block = build_body_composition_block(report)
     priority_sections = build_priority_sections_list(report)
+    priority_section_intro = build_priority_category_review_intro(priority_sections)
     products = resolve_all_products(report)
     protocol = compose_protocol(report, products)
     protocol = enrich_protocol_plan_with_narrative(report, protocol)
+    complete_mapping = build_complete_product_mapping(products)
 
     section_blocks = []
     for section in selected_sections:
@@ -1382,9 +1404,11 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "practitioner_summary": build_v2_practitioner_overview(report),
         "key_patterns": key_patterns,
         "priority_actions": priority_actions,
+        "priority_section_intro": priority_section_intro,
         "detected_patterns": getattr(report, "detected_patterns", []),
         "product_recommendations": products, #
         "protocol_plan": protocol, # 
+        "complete_product_mapping": complete_mapping,
 
         "primary_pattern": (
             {
