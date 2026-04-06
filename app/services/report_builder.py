@@ -10,6 +10,13 @@ from app.services.product_resolver import resolve_all_products
 from app.services.protocol_composer import compose_protocol
 from app.services.ai_narrative_engine_v2 import enrich_protocol_plan_with_narrative
 from app.services.product_mapping_builder import build_complete_product_mapping
+from app.services.ai_narrative_engine_v3 import (
+    enrich_protocol_plan_with_narrative_v3,
+    rewrite_clinical_recommendations_v3,
+    rewrite_at_a_glance_v3,
+)
+
+
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES_DIR = ROOT / "app" / "templates"
@@ -1005,7 +1012,9 @@ def build_toc_items(section_blocks, include_product_recommendations, product_rec
         items.append("Body composition analysis")
     if section_blocks:
         items.append("Clinical recommendations")
-    items.append("Complete system marker tables")
+        items.append("Recommended support plan")
+        items.append("Complete product recommendation mapping")
+        items.append("Complete system marker tables")
     if include_product_recommendations and product_recommendations:
         items.append("Optional product recommendations")
     if include_appendix:
@@ -1219,7 +1228,7 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
     priority_section_intro = build_priority_category_review_intro(priority_sections)
     products = resolve_all_products(report)
     protocol = compose_protocol(report, products)
-    protocol = enrich_protocol_plan_with_narrative(report, protocol)
+    protocol = enrich_protocol_plan_with_narrative_v3(report, protocol)
     complete_mapping = build_complete_product_mapping(products)
 
     section_blocks = []
@@ -1364,8 +1373,54 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
             ),
             "summary": summary,
             "rationale": rationale,
-    })
+        })
 
+    clinical_recommendations = rewrite_clinical_recommendations_v3(clinical_recommendations)
+
+
+    primary_pattern_context = (
+        {
+            "title": report.primary_pattern.label,
+            "clinical_summary": report.primary_pattern.summary,
+            "follow_up_focus": report.primary_pattern.suggested_focus_areas,
+            "confidence": report.primary_pattern.confidence,
+            "severity": report.primary_pattern.severity,
+            "score": report.primary_pattern.score,
+        }
+        if getattr(report, "primary_pattern", None)
+        else None
+    )
+
+    raw_contributing_patterns = (
+        list(getattr(report, "contributing_patterns", []) or [])
+        or list((getattr(report, "patterns", []) or [])[1:4])
+    )
+
+    contributing_patterns_context = [
+        {
+            "title": getattr(p, "label", None) or getattr(p, "title", None) or "",
+            "clinical_summary": getattr(p, "summary", None) or getattr(p, "clinical_summary", None) or "",
+            "follow_up_focus": getattr(p, "suggested_focus_areas", None) or getattr(p, "follow_up_focus", None) or [],
+            "confidence": getattr(p, "confidence", None),
+            "severity": getattr(p, "severity", None),
+            "score": getattr(p, "score", None),
+        }
+        for p in raw_contributing_patterns
+    ]
+
+
+    glance_narrative = rewrite_at_a_glance_v3(
+        report,
+        build_v2_clinical_snapshot(report),
+        build_v2_practitioner_overview(report),
+        primary_pattern_context,
+        contributing_patterns_context,
+    )
+
+    overall_summary = glance_narrative["overall_summary"]
+    practitioner_summary = glance_narrative["practitioner_summary"]
+    primary_pattern_context = glance_narrative["primary_pattern"]
+    contributing_patterns_context = glance_narrative["contributing_patterns"]
 
         
     system_score_cards = [
@@ -1387,7 +1442,7 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "patient": report.patient,
         "patient_header": patient_header,
         "report_profile": getattr(report, "report_profile", None),
-        "overall_summary": build_v2_clinical_snapshot(report),
+        "overall_summary": overall_summary,
         "priority_sections": priority_sections,
         "priority_overview": priority_overview,
         "section_blocks": section_blocks,
@@ -1401,7 +1456,7 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "product_recommendations": getattr(report, "product_recommendations", []),
         "include_product_recommendations": include_product_recommendations,
         "practitioner_notes": overrides.practitioner_notes,
-        "practitioner_summary": build_v2_practitioner_overview(report),
+        "practitioner_summary": practitioner_summary,
         "key_patterns": key_patterns,
         "priority_actions": priority_actions,
         "priority_section_intro": priority_section_intro,
@@ -1410,30 +1465,9 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "protocol_plan": protocol, # 
         "complete_product_mapping": complete_mapping,
 
-        "primary_pattern": (
-            {
-                "title": report.primary_pattern.label,
-                "clinical_summary": report.primary_pattern.summary,
-                "follow_up_focus": report.primary_pattern.suggested_focus_areas,
-                "confidence": report.primary_pattern.confidence,
-                "severity": report.primary_pattern.severity,
-                "score": report.primary_pattern.score,
-            }
-            if getattr(report, "primary_pattern", None)
-            else None
-        ),
+        "primary_pattern": primary_pattern_context,
 
-        "contributing_patterns": [
-            {
-                "title": p.label,
-                "clinical_summary": p.summary,
-                "follow_up_focus": p.suggested_focus_areas,
-                "confidence": p.confidence,
-                "severity": p.severity,
-                "score": p.score,
-            }
-            for p in getattr(report, "contributing_patterns", [])
-        ],
+        "contributing_patterns": contributing_patterns_context,
 
         "patterns": [
             {
@@ -1446,6 +1480,8 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
             }
             for p in getattr(report, "patterns", [])
         ],
+
+
         "category_completeness": getattr(report, "category_completeness", {}),
         "overall_scan_score": scan_scores["overall_score"],
         "overall_scan_band_label": scan_scores["overall_band_label"],

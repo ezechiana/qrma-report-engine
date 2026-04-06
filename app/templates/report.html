@@ -108,6 +108,11 @@
       margin-bottom:6px;
     }
 
+    .section-block {
+      page-break-inside: avoid;
+    }
+
+
     .label{font-weight:bold;color:#111827}
     .small-note{font-size:12px;color:var(--muted-text)}
     .toc-list{list-style:none;padding-left:0;margin:0}
@@ -405,6 +410,43 @@
       color:#64748b;
     }
 
+    .child-rec-list{
+      display:flex;
+      flex-direction:column;
+      gap:8px;
+    }
+
+    .child-rec-card{
+      border:1px solid #e5e7eb;
+      border-radius:8px;
+      background:#fcfdff;
+      padding:9px 11px;
+      margin-bottom:0;
+      box-shadow:none;
+    }
+
+    .child-rec-title{
+      font-size:13px;
+      font-weight:700;
+      margin-bottom:3px;
+      color:#0f172a;
+    }
+
+    .child-rec-summary{
+      font-size:11.75px;
+      line-height:1.4;
+      color:#334155;
+      margin-bottom:3px;
+    }
+
+    .child-rec-why{
+      font-size:10.75px;
+      line-height:1.35;
+      color:#64748b;
+      margin:0;
+    }
+
+
     .product-source-badge{
       display:inline-block;
       padding:4px 8px;
@@ -423,6 +465,22 @@
     .phase-panel .mini-card p{
       margin-bottom:0;
     }
+
+    .phase-panel{
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .phase-panel .mini-card{
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
+    .section-intro-hero{
+      page-break-inside: avoid;
+      break-inside: avoid-page;
+    }
+
 
     .section-page-header{
       margin-bottom:18px;
@@ -668,12 +726,6 @@
       "This section summarises the dominant patterns in the scan, the wider downstream themes they may be influencing, and the immediate priorities for follow-up."
     ) }}
    
-  
-    <div class="section-page-header">
-      <div class="section-page-kicker">Overview</div>
-      <h2 class="section-page-title">Scan score overview</h2>
-    </div>
-
     {% if overall_summary %}
       <div class="panel soft-emphasis">
         <h3>Clinical snapshot</h3>
@@ -715,21 +767,10 @@
           {% endfor %}
         </ul>
       </div>
-    {% elif patterns %}
-      <div class="panel">
-        <h3>Contributing patterns</h3>
-        <ul>
-          {% for item in patterns[1:4] %}
-            <li>
-              <strong>{{ item.name }}</strong>
-              {% if item.description %} — {{ item.description }}{% endif %}
-            </li>
-          {% endfor %}
-        </ul>
-      </div>
     {% endif %}
 
     {% if priority_actions %}
+      <div class="no-break"></div>
       <div class="panel">
         <h3>Immediate priorities for follow-up</h3>
         <ul>
@@ -737,6 +778,7 @@
             <li>{{ a }}</li>
           {% endfor %}
         </ul>
+      </div>
       </div>
     {% endif %}
 
@@ -828,31 +870,44 @@
 
 
 
-  {% if clinical_recommendations %}
-    <div class="page" style="page-break-before:always;">
-      {{ page_header(patient_header) }}
-    <div class="section-page-header">
-      {{ section_hero(
-        "Recommendations",
-        "Clinical recommendations",
-        "This section translates the scan findings into high-level clinical priorities, showing which functional areas appear most relevant for follow-up support."
-      ) }}
-      {% for rec in clinical_recommendations %}
-        <div class="clinical-rec-card no-break">
-          <h3>{{ rec.title }}</h3>
-          <p>{{ rec.summary }}</p>
-          {% if rec.rationale %}
-            <p class="small-note"><span class="label">Why this was suggested:</span> {{ rec.rationale }}</p>
+      {% if clinical_recommendations %}
+        <div class="page">
+          {{ page_header(patient_header) }}
+
+          {{ section_hero(
+            "Recommendations",
+            "Clinical recommendations",
+            "This section translates the scan findings into high-level clinical priorities, showing which functional areas appear most relevant for follow-up support."
+          ) }}
+
+          {% if report_profile and report_profile|lower == "child" %}
+            <div class="child-rec-list">
+              {% for rec in clinical_recommendations %}
+                <div class="child-rec-card no-break">
+                  <div class="child-rec-title">{{ rec.title }}</div>
+                  <div class="child-rec-summary">{{ rec.summary }}</div>
+                  {% if rec.rationale %}
+                    <p class="child-rec-why"><span class="label">Why this was suggested:</span> {{ rec.rationale }}</p>
+                  {% endif %}
+                </div>
+              {% endfor %}
+            </div>
+          {% else %}
+            {% for rec in clinical_recommendations %}
+              <div class="clinical-rec-card no-break">
+                <h3>{{ rec.title }}</h3>
+                <p>{{ rec.summary }}</p>
+                {% if rec.rationale %}
+                  <p class="small-note"><span class="label">Why this was suggested:</span> {{ rec.rationale }}</p>
+                {% endif %}
+              </div>
+            {% endfor %}
           {% endif %}
         </div>
-      {% endfor %}
-    </div>
-  {% endif %}
+      {% endif %}
 
-
-    {% if protocol_plan %}
-    <div class="page" style="page-break-before:always;">
-      {{ page_header(patient_header) }}
+      {% if protocol_plan %}
+        <div class="page" style="page-break-before: always;">
 
         {{ section_hero(
           "Recommendations",
@@ -1087,13 +1142,14 @@
     </div>
   {% endif %}
 
-  <div class="page" style="page-break-before:always;">
-    {{ page_header(patient_header) }}
+    <div class="page">
+      {{ page_header(patient_header) }}
       {{ section_hero(
         "Technical reference",
         "Complete system marker tables",
         "This section includes every parsed system and every marker across the report, including those within range, as the full explained reference layer."
       ) }}
+    </div>
 
   {% for table in full_marker_tables %}
     <div class="page">
