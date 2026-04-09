@@ -10,6 +10,9 @@ from app.services.product_resolver import resolve_all_products
 from app.services.protocol_composer import compose_protocol
 from app.services.ai_narrative_engine_v2 import enrich_protocol_plan_with_narrative
 from app.services.product_mapping_builder import build_complete_product_mapping
+from datetime import datetime
+from zoneinfo import ZoneInfo
+import os
 from app.services.ai_narrative_engine_v3 import (
     enrich_protocol_plan_with_narrative_v3,
     rewrite_clinical_recommendations_v3,
@@ -1434,6 +1437,10 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         for card in scan_scores["system_score_cards"]
     ]
 
+    report_generated_at = datetime.now(ZoneInfo("Europe/London")).strftime("%d/%m/%Y %H:%M %Z")
+    build_version = os.getenv("REPORT_BUILD_VERSION", "dev")
+    recommendation_mode = os.getenv("REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical")
+
     return {
         "config": config,
         "report_title": config.get("report_title", "Personalised Wellness Scan Report"),
@@ -1442,6 +1449,9 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "patient": report.patient,
         "patient_header": patient_header,
         "report_profile": getattr(report, "report_profile", None),
+        "report_generated_at": report_generated_at,
+        "build_version": build_version,
+        "recommendation_mode": recommendation_mode,
         "overall_summary": overall_summary,
         "priority_sections": priority_sections,
         "priority_overview": priority_overview,
