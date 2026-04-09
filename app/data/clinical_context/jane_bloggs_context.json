@@ -1,0 +1,9 @@
+{
+    "clinical_context": {
+        "conditions": ["Hashimoto's", "IBS"],
+        "symptoms": ["fatigue", "bloating"],
+        "goals": ["energy", "gut healing"],
+        "contraindications": ["stimulants"],
+        "priority_focus": ["gut", "thyroid"]
+    }
+}

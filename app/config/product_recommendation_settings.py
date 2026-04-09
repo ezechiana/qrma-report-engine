@@ -2,17 +2,34 @@
 
 from __future__ import annotations
 
-VALID_VITALHEALTH_STRATEGIES = {
-    "legacy_vitalhealth",
-    "mechanism_weighted",
-    "hybrid",
+VALID_RECOMMENDATION_MODES = {
+    "recommendations_off",
+    "affiliate_vitalhealth",
+    "vitalhealth_clinical_optimised",
+    "natural_approaches_clinical",
+    "mixed_clinical",
 }
 
-DEFAULT_VITALHEALTH_STRATEGY = "mechanism_weighted"
+DEFAULT_RECOMMENDATION_MODE = "natural_approaches_clinical"
 
 
-def normalize_vitalhealth_strategy(strategy: str | None) -> str:
-    value = (strategy or DEFAULT_VITALHEALTH_STRATEGY).strip().lower()
-    if value not in VALID_VITALHEALTH_STRATEGIES:
-        return DEFAULT_VITALHEALTH_STRATEGY
+def normalize_recommendation_mode(mode: str | None) -> str:
+    value = (mode or DEFAULT_RECOMMENDATION_MODE).strip().lower()
+    if value not in VALID_RECOMMENDATION_MODES:
+        return DEFAULT_RECOMMENDATION_MODE
     return value
+
+
+def recommendations_enabled(mode: str | None) -> bool:
+    return normalize_recommendation_mode(mode) != "recommendations_off"
+
+
+def products_enabled(mode: str | None) -> bool:
+    return normalize_recommendation_mode(mode) != "recommendations_off"
+
+
+def clinical_recommendations_enabled(mode: str | None) -> bool:
+    # keep clinical recommendations on by default except in a future stricter “full off” mode
+    return True
+
+

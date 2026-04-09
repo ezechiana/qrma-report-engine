@@ -18,6 +18,10 @@ from app.services.ai_narrative_engine_v3 import (
     rewrite_clinical_recommendations_v3,
     rewrite_at_a_glance_v3,
 )
+from app.config.product_recommendation_settings import (
+    normalize_recommendation_mode,
+    products_enabled,
+)
 
 
 
@@ -1001,27 +1005,53 @@ def build_full_marker_tables(report: ParsedReport):
     return tables
 
 
-def build_toc_items(section_blocks, include_product_recommendations, product_recommendations, include_appendix, practitioner_notes, has_body_composition):
+def build_toc_items(
+    section_blocks,
+    include_product_recommendations,
+    product_recommendations,
+    include_appendix,
+    practitioner_notes,
+    has_body_composition,
+    recommendation_mode,
+    clinical_recommendations,
+    protocol_plan,
+    complete_product_mapping,
+):
     items = ["Cover", "At a glance", "Scan score overview"]
+
     if practitioner_notes.practitioner_summary:
         items.append("Practitioner summary")
     if practitioner_notes.recommendations:
         items.append("Practitioner recommendations")
     if practitioner_notes.follow_up_suggestions:
         items.append("Follow-up suggestions")
+
     if section_blocks:
         items.append("Priority category review")
+
     if has_body_composition:
         items.append("Body composition analysis")
-    if section_blocks:
+
+    if clinical_recommendations:
         items.append("Clinical recommendations")
-        items.append("Recommended support plan")
-        items.append("Complete product recommendation mapping")
+
+    mode = normalize_recommendation_mode(recommendation_mode)
+
+    if products_enabled(mode):
+        if protocol_plan:
+            items.append("Recommended support plan")
+        if complete_product_mapping:
+            items.append("Complete product recommendation mapping")
+
+    if section_blocks:
         items.append("Complete system marker tables")
+
     if include_product_recommendations and product_recommendations:
         items.append("Optional product recommendations")
+
     if include_appendix:
         items.append("Appendix")
+
     return items
 
 
@@ -1229,10 +1259,26 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
     body_composition_block = build_body_composition_block(report)
     priority_sections = build_priority_sections_list(report)
     priority_section_intro = build_priority_category_review_intro(priority_sections)
-    products = resolve_all_products(report)
-    protocol = compose_protocol(report, products)
-    protocol = enrich_protocol_plan_with_narrative_v3(report, protocol)
-    complete_mapping = build_complete_product_mapping(products)
+
+    clinical_context = None
+
+    recommendation_mode = normalize_recommendation_mode(
+        os.getenv("REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical")
+    )
+
+    products = resolve_all_products(
+        report,
+        recommendation_mode=recommendation_mode,
+        clinical_context=clinical_context,
+    )
+
+    if products_enabled(recommendation_mode):
+        protocol = compose_protocol(report, products)
+        protocol = enrich_protocol_plan_with_narrative_v3(report, protocol)
+        complete_mapping = build_complete_product_mapping(products)
+    else:
+        protocol = None
+        complete_mapping = []
 
     section_blocks = []
     for section in selected_sections:
@@ -1318,14 +1364,7 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
 
     include_appendix = config.get("include_appendix", True)
     include_product_recommendations = config.get("include_product_recommendations", False)
-    toc_items = build_toc_items(
-        section_blocks,
-        include_product_recommendations,
-        getattr(report, "product_recommendations", []),
-        include_appendix,
-        overrides.practitioner_notes,
-        body_composition_block is not None,
-    )
+
 
     overall_summary = normalise_recommendation_narrative(
         normalise_narrative_text(getattr(report, "overall_summary", None))
@@ -1379,7 +1418,19 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         })
 
     clinical_recommendations = rewrite_clinical_recommendations_v3(clinical_recommendations)
-
+    toc_items = build_toc_items(
+            section_blocks=section_blocks,
+            include_product_recommendations=include_product_recommendations,
+            product_recommendations=getattr(report, "product_recommendations", []),
+            include_appendix=include_appendix,
+            practitioner_notes=overrides.practitioner_notes,
+            has_body_composition=body_composition_block is not None,
+            recommendation_mode=recommendation_mode,
+            clinical_recommendations=clinical_recommendations,
+            protocol_plan=protocol,
+            complete_product_mapping=complete_mapping,
+        )
+        
 
     primary_pattern_context = (
         {
@@ -1439,7 +1490,6 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
 
     report_generated_at = datetime.now(ZoneInfo("Europe/London")).strftime("%d/%m/%Y %H:%M %Z")
     build_version = os.getenv("REPORT_BUILD_VERSION", "dev")
-    recommendation_mode = os.getenv("REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical")
 
     return {
         "config": config,

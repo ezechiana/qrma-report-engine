@@ -1,0 +1,10 @@
+
+{
+    "clinical_context": {
+        "conditions": ["Benign Prostate Hyperplasia", "Chronic Kidney Disease"],
+        "symptoms": ["gout", "headaches"],
+        "goals": ["energy", "gut healing"],
+        "contraindications": ["blood thiners"],
+        "priority_focus": ["detox", "prostate"]
+    }
+}
