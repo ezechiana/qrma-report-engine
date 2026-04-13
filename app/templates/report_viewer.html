@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Wellness Report</title>
+    <style>
+        :root {
+            --bg: #f6f8f5;
+            --surface: #ffffff;
+            --surface-soft: #f9fbf8;
+            --text: #183028;
+            --muted: #5f7269;
+            --line: #dfe7e1;
+            --brand: #2f4f2f;
+            --brand-soft: #e9f1ea;
+            --shadow: 0 10px 28px rgba(19, 31, 24, 0.08);
+            --radius: 16px;
+            --content-width: 1200px;
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        html {
+            scroll-behavior: smooth;
+        }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        a {
+            color: inherit;
+        }
+
+        .shell {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 24px;
+        }
+
+        .topbar {
+            display: flex;
+            gap: 16px;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 20px;
+        }
+
+        .hero {
+            background: linear-gradient(180deg, #ffffff 0%, #f9fbf8 100%);
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 22px;
+            flex: 1;
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: 34px;
+            line-height: 1.1;
+        }
+
+        .hero p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.5;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .stat {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 15px;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-width: 220px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 44px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            text-decoration: none;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--text);
+            font-weight: 700;
+            box-shadow: var(--shadow);
+        }
+
+        .btn.primary {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: #fff;
+        }
+
+        .layout {
+            display: grid;
+            grid-template-columns: 280px minmax(0, 1fr);
+            gap: 20px;
+            align-items: start;
+        }
+
+        .sidebar {
+            position: sticky;
+            top: 20px;
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            padding: 18px;
+            max-height: calc(100vh - 40px);
+            overflow: auto;
+        }
+
+        .sidebar h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        .sidebar .hint {
+            margin: 0 0 16px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-list li + li {
+            margin-top: 8px;
+        }
+
+        .nav-list a {
+            display: block;
+            padding: 10px 12px;
+            border-radius: 10px;
+            text-decoration: none;
+            color: var(--text);
+            background: transparent;
+            border: 1px solid transparent;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+
+        .nav-list a:hover,
+        .nav-list a.active {
+            background: var(--brand-soft);
+            border-color: #d5e3d7;
+        }
+
+        .viewer-card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+            overflow: hidden;
+        }
+
+        .viewer-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid var(--line);
+            background: var(--surface-soft);
+        }
+
+        .viewer-header h2 {
+            margin: 0 0 4px;
+            font-size: 20px;
+        }
+
+        .viewer-header p {
+            margin: 0;
+            color: var(--muted);
+            font-size: 14px;
+        }
+
+        .viewer-body {
+            padding: 20px;
+        }
+
+        .report-html {
+            color: var(--text);
+        }
+
+        .report-html img {
+            max-width: 100%;
+            height: auto;
+        }
+
+        .report-html table {
+            width: 100%;
+            border-collapse: collapse;
+            display: block;
+            overflow-x: auto;
+            white-space: nowrap;
+            margin: 16px 0 24px;
+        }
+
+        .report-html th,
+        .report-html td {
+            border: 1px solid var(--line);
+            padding: 10px 12px;
+            text-align: left;
+            vertical-align: top;
+            white-space: normal;
+        }
+
+        .report-html th {
+            background: #f4f7f4;
+        }
+
+        .report-html h1,
+        .report-html h2,
+        .report-html h3,
+        .report-html h4 {
+            scroll-margin-top: 90px;
+            color: var(--text);
+        }
+
+        .report-html h1 {
+            font-size: 30px;
+            line-height: 1.15;
+            margin: 28px 0 14px;
+        }
+
+        .report-html h2 {
+            font-size: 24px;
+            line-height: 1.2;
+            margin: 24px 0 12px;
+            padding-top: 4px;
+            border-top: 1px solid var(--line);
+        }
+
+        .report-html h3 {
+            font-size: 19px;
+            margin: 20px 0 10px;
+        }
+
+        .report-html p,
+        .report-html li {
+            line-height: 1.65;
+            font-size: 15px;
+        }
+
+        .report-html pre {
+            background: #f3f5f3;
+            padding: 14px;
+            border-radius: 12px;
+            overflow: auto;
+        }
+
+        .report-html .na-empty {
+            background: #fff8e8;
+            border: 1px solid #f1dfb2;
+            color: #6f5a1e;
+            padding: 14px 16px;
+            border-radius: 12px;
+        }
+
+        .section-chip-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin: 0 0 20px;
+        }
+
+        .chip {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: var(--brand-soft);
+            border: 1px solid #d7e5d8;
+            font-size: 13px;
+            color: var(--brand);
+        }
+
+        @media (max-width: 1024px) {
+            .hero-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .layout {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                position: static;
+                max-height: none;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .shell {
+                padding: 14px;
+            }
+
+            .topbar {
+                flex-direction: column;
+            }
+
+            .actions {
+                width: 100%;
+                min-width: 0;
+            }
+
+            .hero-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .hero h1 {
+                font-size: 28px;
+            }
+
+            .viewer-body {
+                padding: 14px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="shell">
+        <div class="topbar">
+            <div class="hero">
+                <h1>Personalised Wellness Report</h1>
+                <p>
+                    A simplified web view of the generated scan report designed for easier reading,
+                    cleaner navigation, and future extension into trends, dashboards, and multi-device data.
+                </p>
+
+                <div class="hero-grid">
+                    <div class="stat">
+                        <div class="stat-label">Case</div>
+                        <div class="stat-value">{{ report.case_id }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Status</div>
+                        <div class="stat-value">{{ report.status }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Version</div>
+                        <div class="stat-value">{{ report.version_number }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Mode</div>
+                        <div class="stat-value">{{ report.recommendation_mode }}</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="actions">
+                <a class="btn primary" href="{{ report.pdf_url }}" target="_blank" rel="noopener noreferrer">Download PDF</a>
+                <a class="btn" href="{{ report.html_url }}" target="_blank" rel="noopener noreferrer">Open Raw HTML</a>
+                <a class="btn" href="{{ report.data_url }}" target="_blank" rel="noopener noreferrer">View JSON Data</a>
+            </div>
+        </div>
+
+        <div class="layout">
+            <aside class="sidebar">
+                <h2>Navigation</h2>
+                <p class="hint">
+                    This menu is built automatically from the report headings so the experience stays
+                    compatible with future report versions and new data sources.
+                </p>
+                <ul id="report-nav" class="nav-list"></ul>
+            </aside>
+
+            <main class="viewer-card">
+                <div class="viewer-header">
+                    <h2>Structured report view</h2>
+                    <p>Readable, mobile-friendly, and ready to evolve into trends and dashboard panels.</p>
+                </div>
+
+                <div class="viewer-body">
+                    <div id="section-chips" class="section-chip-row"></div>
+                    <div id="report-root" class="report-html">
+                        {{ report.html_content | safe }}
+                    </div>
+                </div>
+            </main>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            const root = document.getElementById("report-root");
+            const nav = document.getElementById("report-nav");
+            const chips = document.getElementById("section-chips");
+
+            if (!root || !nav) return;
+
+            const headings = root.querySelectorAll("h1, h2, h3");
+            let count = 0;
+
+            headings.forEach((heading) => {
+                const text = (heading.textContent || "").trim();
+                if (!text) return;
+
+                if (!heading.id) {
+                    count += 1;
+                    heading.id = "section-" + count;
+                }
+
+                const li = document.createElement("li");
+                const a = document.createElement("a");
+                a.href = "#" + heading.id;
+                a.textContent = text;
+                a.dataset.target = heading.id;
+
+                li.appendChild(a);
+                nav.appendChild(li);
+
+                if (heading.tagName === "H2" && chips) {
+                    const chip = document.createElement("a");
+                    chip.className = "chip";
+                    chip.href = "#" + heading.id;
+                    chip.textContent = text;
+                    chips.appendChild(chip);
+                }
+            });
+
+            const navLinks = nav.querySelectorAll("a");
+            const observer = new IntersectionObserver(
+                (entries) => {
+                    entries.forEach((entry) => {
+                        if (!entry.isIntersecting) return;
+                        const id = entry.target.id;
+                        navLinks.forEach((link) => {
+                            link.classList.toggle("active", link.dataset.target === id);
+                        });
+                    });
+                },
+                {
+                    rootMargin: "-30% 0px -60% 0px",
+                    threshold: 0
+                }
+            );
+
+            headings.forEach((h) => observer.observe(h));
+        })();
+    </script>
+</body>
+</html>

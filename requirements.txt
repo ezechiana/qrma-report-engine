@@ -8,3 +8,10 @@ python-multipart
 playwright
 openai>=1.0.0
 python-dotenv
+sqlalchemy
+psycopg[binary]
+alembic
+pytest
+pytest-asyncio
+pytest-cov
+passlib

@@ -1,0 +1,200 @@
+#app/db/models.py
+import enum
+import uuid
+from datetime import date, datetime
+from typing import Optional
+
+from sqlalchemy import (
+    Boolean,
+    Date,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    String,
+    Text,
+    UniqueConstraint,
+    func,
+)
+from sqlalchemy.dialects.postgresql import JSONB, UUID
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from app.db.base import Base
+
+
+class CaseStatus(str, enum.Enum):
+    draft = "draft"
+    generated = "generated"
+    final = "final"
+    archived = "archived"
+
+
+class ReportStatus(str, enum.Enum):
+    draft = "draft"
+    final = "final"
+
+
+class RecommendationMode(str, enum.Enum):
+    recommendations_off = "recommendations_off"
+    affiliate_vitalhealth = "affiliate_vitalhealth"
+    vitalhealth_clinical_optimised = "vitalhealth_clinical_optimised"
+    natural_approaches_clinical = "natural_approaches_clinical"
+    mixed_clinical = "mixed_clinical"
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[str] = mapped_column(String(255))
+    full_name: Mapped[str] = mapped_column(String(255))
+    clinic_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    patients: Mapped[list["Patient"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    cases: Mapped[list["Case"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+
+
+class Patient(Base):
+    __tablename__ = "patients"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+
+    first_name: Mapped[str] = mapped_column(String(120))
+    last_name: Mapped[str] = mapped_column(String(120))
+    full_name: Mapped[str] = mapped_column(String(255), index=True)
+
+    date_of_birth: Mapped[Optional[date]] = mapped_column(Date, nullable=True)
+    age: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    sex: Mapped[Optional[str]] = mapped_column(String(30), nullable=True)
+    height_cm: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+    weight_kg: Mapped[Optional[float]] = mapped_column(Float, nullable=True)
+
+    email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+    notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="patients")
+    cases: Mapped[list["Case"]] = relationship(back_populates="patient", cascade="all, delete-orphan")
+
+
+class Case(Base):
+    __tablename__ = "cases"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), index=True)
+
+    title: Mapped[str] = mapped_column(String(255))
+    status: Mapped[CaseStatus] = mapped_column(Enum(CaseStatus), default=CaseStatus.draft, index=True)
+    recommendation_mode: Mapped[RecommendationMode] = mapped_column(
+        Enum(RecommendationMode),
+        default=RecommendationMode.natural_approaches_clinical,
+    )
+
+    clinical_context_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    source_patient_data_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+
+    raw_scan_html_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    scan_datetime: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="cases")
+    patient: Mapped["Patient"] = relationship(back_populates="cases")
+    report_versions: Mapped[list["ReportVersion"]] = relationship(back_populates="case", cascade="all, delete-orphan")
+
+
+class ReportVersion(Base):
+    __tablename__ = "report_versions"
+    __table_args__ = (
+        UniqueConstraint("case_id", "version_number", name="uq_case_version_number"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), index=True)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+
+    version_number: Mapped[int] = mapped_column(Integer)
+    status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus), default=ReportStatus.draft)
+    report_json: Mapped[dict] = mapped_column(JSONB)
+    html_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    build_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    recommendation_mode: Mapped[RecommendationMode] = mapped_column(Enum(RecommendationMode))
+    generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    case: Mapped["Case"] = relationship(back_populates="report_versions")
+    overrides: Mapped[Optional["ReportOverride"]] = relationship(
+        back_populates="report_version",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
+    share_links: Mapped[list["ShareLink"]] = relationship(back_populates="report_version", cascade="all, delete-orphan")
+
+
+class ReportOverride(Base):
+    __tablename__ = "report_overrides"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_version_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+
+    practitioner_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    follow_up_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    clinical_recommendations_override_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    support_plan_override_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    report_version: Mapped["ReportVersion"] = relationship(back_populates="overrides")
+
+
+class ShareLink(Base):
+    __tablename__ = "share_links"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    report_version_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    token: Mapped[str] = mapped_column(String(255), unique=True, index=True)
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    report_version: Mapped["ReportVersion"] = relationship(back_populates="share_links")
+
+
+class AuditLog(Base):
+    __tablename__ = "audit_logs"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
+    case_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="SET NULL"), nullable=True, index=True)
+    report_version_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+
+    action: Mapped[str] = mapped_column(String(120), index=True)
+    metadata_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
