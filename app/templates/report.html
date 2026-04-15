@@ -254,30 +254,25 @@
     }
     .recommendation-title{font-size:15px;font-weight:bold;margin-bottom:6px;color:#0f172a}
 
-    .full-table,.appendix-table{
-      width:100%;
-      border-collapse:collapse;
-      font-size:11px;
-      margin-top:10px
+    .full-table, .appendix-table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11px;
+      margin-top: 10px;
     }
-    .full-table th,.full-table td,.appendix-table th,.appendix-table td{
-      border:1px solid var(--border-color);
-      padding:6px;
-      text-align:left;
-      vertical-align:top
+
+    .full-table th, .full-table td, .appendix-table th, .appendix-table td {
+      border: 1px solid var(--border-color);
+      padding: 6px;
+      text-align: left;
+      vertical-align: top;
     }
-    .full-table th,.appendix-table th{background:#f1f5f9}
-    .full-table tr.sev-normal td,.appendix-table tr.sev-normal td{background:#eef9ee;color:#1f5f2e}
-    .full-table tr.sev-mild td,.appendix-table tr.sev-mild td{background:#eef5ff;color:#1e40af}
-    .full-table tr.sev-moderate td,.appendix-table tr.sev-moderate td{background:#fff8dc;color:#92400e}
-    .full-table tr.sev-severe td,.appendix-table tr.sev-severe td{background:#fff0f0;color:#991b1b}
-    .appendix-status{
-      font-size:11px;
-      font-weight:bold;
-      border-radius:999px;
-      padding:4px 7px;
-      display:inline-block
-    }
+
+    .full-table th, .appendix-table th { background: #f1f5f9; }
+    .full-table tr.sev-normal td, .appendix-table tr.sev-normal td { background:#eef9ee; color:#1f5f2e; }
+    .full-table tr.sev-mild td, .appendix-table tr.sev-mild td { background:#eef5ff; color:#1e40af; }
+    .full-table tr.sev-moderate td, .appendix-table tr.sev-moderate td { background:#fff8dc; color:#92400e; }
+    .full-table tr.sev-severe td, .appendix-table tr.sev-severe td { background:#fff0f0; color:#991b1b; }
 
     .footer-contact{margin-top:16px;font-size:12px;color:var(--muted-text)}
     .no-break{page-break-inside:avoid}
@@ -290,14 +285,16 @@
       border:1px solid #444;
       box-sizing:border-box;
       background:#fff;
-      overflow:visible
+      overflow:visible;
     }
+
     .status-bar-track{
       display:grid;
-      grid-template-columns:1.1fr 1fr 1.2fr 1fr 1.1fr;
+      grid-template-columns: 1fr 1fr 1fr 1fr 1fr 1fr 1fr;
       width:100%;
-      height:100%
+      height:100%;
     }
+
     .status-bar-track-lung{
       display:grid;
       grid-template-columns:1.2fr 1fr 1.2fr;
@@ -653,6 +650,8 @@
             <div class="zone-red"></div>
             <div class="zone-yellow"></div>
             <div class="zone-blue"></div>
+            <div class="zone-center-green"></div>
+            <div class="zone-blue"></div>
             <div class="zone-yellow"></div>
             <div class="zone-red"></div>
           </div>
@@ -661,6 +660,34 @@
       </div>
     </div>
   {%- endmacro %}
+  {% macro render_marker_row(marker) -%}
+  <div class="marker-card sev-{{ marker.severity_class }}">
+    
+    <div class="marker-title-row">
+      <div>
+        <div class="marker-title">{{ marker.display_label }}</div>
+        <div class="marker-meta">
+          Reference: {{ marker.normal_range_text }}
+          &nbsp;|&nbsp;
+          Value: {{ marker.actual_value }}
+        </div>
+      </div>
+
+      <div>
+        <span class="severity-pill sev-{{ marker.severity_class }}">
+          {{ marker.status_label }}
+        </span>
+      </div>
+    </div>
+
+    {{ render_status_bar(marker.bar_variant, marker.pointer_position) }}
+
+    {% if marker.explanation %}
+      <p class="small-note">{{ marker.explanation }}</p>
+    {% endif %}
+
+  </div>
+{%- endmacro %}
 
   {% macro render_ring_gauge(score, color, size=118, stroke=10) -%}
     {% set radius = ((size - stroke) / 2) | int %}
@@ -823,7 +850,7 @@
       {{ page_header(patient_header) }}
         {{ section_hero(
           "Overview",
-          "Scan score overview",
+          "Health Index overview",
           "This section provides a weighted overview of the scan, helping organise attention across major body systems before moving into more detailed interpretation."
         ) }}
 
@@ -844,7 +871,7 @@
         <div class="panel soft-emphasis">
           <h3>How to read this dashboard</h3>
           <p>
-            This dashboard provides a weighted clinical overview of the scan. The overall score and body-system cards are not based on a simple count of flagged markers. They are derived from the severity, distribution, and clustering of findings across related sections, with greater weighting given to patterns that may carry broader functional significance.
+            This dashboard provides a weighted clinical overview of the scan. The Health Index and body-system cards are not based on a simple count of flagged markers. They are derived from the severity, distribution, and clustering of findings across related sections, with greater weighting given to patterns that may carry broader functional significance.
           </p>
           <p>
             Each body-system card may include more than one underlying scan section, which is why the totals shown here may differ from the marker counts shown later on individual section pages. In general, lower scores suggest a more active pattern worth reviewing in follow-up, while higher scores suggest a more stable pattern on this dashboard view.
@@ -883,7 +910,7 @@
                 <div class="mini-card-title">{{ item.title }}</div>
                 <p><span class="label">Priority:</span> {{ item.priority_label }}</p>
                 <p><span class="label">Flagged markers:</span> {{ item.abnormal_count }}</p>
-                <p><span class="label">Section score:</span> {{ item.section_score }}</p>
+                <p><span class="label">Section Index:</span> {{ item.section_score }}</p>
               </div>
             {% endfor %}
           </div>
@@ -1074,7 +1101,7 @@
         <h3>Priority interpretation</h3>
         <p>{{ section.summary }}</p>
         <p class="small-note">Moderately and severely abnormal markers are prioritised here for faster clinical reading.</p>
-        <p class="small-note">Flagged markers: {{ section.flagged_count }} | Within range: {{ section.within_count }} | Section score: {{ section.section_score }}</p>
+        <p class="small-note">Flagged markers: {{ section.flagged_count }} | Within range: {{ section.within_count }} | Section Index: {{ section.section_score }}</p>
       </div>
 
       {% if section.top_findings %}
@@ -1089,42 +1116,36 @@
       {% endif %}
 
       <h3>Priority marker explanations</h3>
-      {% for marker in section.markers %}
-        <div class="marker-card {{ marker.severity_class }} no-break">
-          <div class="marker-title-row">
-            <div>
-              <h4>{{ marker.display_name or marker.source_name }}</h4>
-              {% if marker.display_name and marker.display_name != marker.source_name %}
-                <div class="marker-source-name">Software marker: {{ marker.source_name }}</div>
-              {% endif %}
-            </div>
-          </div>
-          <div class="marker-meta">
-            <span class="label">Result:</span> {{ marker.actual_value_text }}
-            {% if marker.normal_range_text %}
-              &nbsp; | &nbsp;<span class="label">Reference range:</span> {{ marker.normal_range_text }}
-            {% endif %}
-            &nbsp; | &nbsp;<span class="severity-pill {{ marker.severity_class }}">{{ marker.severity_display }}</span>
-          </div>
-          <div style="margin-bottom:10px;">{{ render_status_bar(marker.status_bar_variant, marker.status_pointer_position) }}</div>
+        {% for marker in section.markers %}
+          <div class="marker-card {{ marker.severity_class }} no-break">
 
-          {% if marker.what_it_means %}
-            <p><span class="label">What this marker means:</span> {{ marker.what_it_means }}</p>
-          {% endif %}
-          {% if marker.why_it_matters %}
-            <p><span class="label">Why it matters:</span> {{ marker.why_it_matters }}</p>
-          {% endif %}
-          {% if marker.functional_significance %}
-            <p><span class="label">Functional significance:</span> {{ marker.functional_significance }}</p>
-          {% endif %}
-          {% if marker.common_patterns %}
-            <p><span class="label">Common patterns:</span> {{ marker.common_patterns }}</p>
-          {% endif %}
-          {% if marker.patient_interpretation %}
-            <p><span class="label">Your result in this scan:</span> {{ marker.patient_interpretation }}</p>
-          {% endif %}
-        </div>
-      {% endfor %}
+            <div class="marker-title-row">
+              <div>
+                <h4>{{ marker.display_name or marker.source_name }}</h4>
+                {% if marker.display_name and marker.display_name != marker.source_name %}
+                  <div class="marker-source-name">Software marker: {{ marker.source_name }}</div>
+                {% endif %}
+              </div>
+            </div>
+
+            <div class="marker-meta">
+              <span class="label">Result:</span> {{ marker.actual_value_text }}
+              {% if marker.normal_range_text %}
+                &nbsp; | &nbsp;<span class="label">Reference range:</span> {{ marker.normal_range_text }}
+              {% endif %}
+              &nbsp; | &nbsp;<span class="severity-pill {{ marker.severity_class }}">{{ marker.severity_display }}</span>
+            </div>
+
+            <div style="margin-bottom:10px;">
+              {{ render_status_bar(marker.status_bar_variant, marker.status_pointer_position) }}
+            </div>
+
+            <p class="small-note">
+              See Appendix for full clinical interpretation of this marker.
+            </p>
+
+          </div>
+        {% endfor %}
     </div>
   {% endfor %}
 
@@ -1185,40 +1206,66 @@
       ) }}
     </div>
 
-  {% for table in full_marker_tables %}
+   {% for table in full_marker_tables %}
     <div class="page">
       {{ page_header(patient_header) }}
+
       <div class="section-header">
         <h2>{{ table.title }}</h2>
         <span class="badge badge-{{ table.priority }}">{{ table.priority_label }}</span>
       </div>
+
       <div class="panel">
-        <div class="full-section-caption">Complete system marker table — all markers and all severity grades are shown below.</div>
-        <p class="small-note">Flagged markers: {{ table.abnormal_count }} | Within range: {{ table.normal_count }}</p>
-        <table class="full-table">
-          <thead>
-            <tr>
-              <th style="width:17%;">Marker</th>
-              <th style="width:16%;">Reference range</th>
-              <th style="width:10%;">Value</th>
-              <th style="width:12%;">Status</th>
-              <th style="width:17%;">Visual</th>
-              <th style="width:28%;">Meaning</th>
-            </tr>
-          </thead>
-          <tbody>
-            {% for row in table.rows %}
-              <tr class="{{ row.severity_class }}">
-                <td>{{ row.display_name or row.marker }}</td>
-                <td>{{ row.range }}</td>
-                <td>{{ row.value }}</td>
-                <td><span class="appendix-status {{ row.severity_class }}">{{ row.severity }}</span></td>
-                <td>{{ render_status_bar(row.status_bar_variant, row.status_pointer_position) }}</td>
-                <td>{{ row.meaning }}</td>
-              </tr>
-            {% endfor %}
-          </tbody>
-        </table>
+        <div class="full-section-caption">
+          Complete system marker table — all markers and all severity grades are shown below.
+        </div>
+        <p class="small-note">
+          Flagged markers: {{ table.abnormal_count }} | Within range: {{ table.normal_count }}
+        </p>
+
+        {% for row in table.rows %}
+          <div class="marker-card {{ row.severity_class }}">
+            <div class="marker-title-row">
+              <div>
+                <h4 style="margin:0;">{{ row.display_name or row.marker }}</h4>
+                {% if table.title %}
+                  <div class="marker-source-name">{{ table.title }}</div>
+                {% endif %}
+              </div>
+              <div>
+                <span class="severity-pill {{ row.severity_class }}">{{ row.severity }}</span>
+              </div>
+            </div>
+
+            <div class="marker-meta">
+              <strong>Reference range:</strong> {{ row.range or "—" }}
+              &nbsp;&nbsp;|&nbsp;&nbsp;
+              <strong>Value:</strong> {{ row.value or "—" }}
+            </div>
+
+            {{ render_status_bar(row.status_bar_variant, row.status_pointer_position) }}
+
+            {% if row.meaning %}
+              <p style="margin-top:10px;"><strong>What this means:</strong> {{ row.meaning }}</p>
+            {% endif %}
+
+            {% if row.why_it_matters %}
+              <p><strong>Why it matters:</strong> {{ row.why_it_matters }}</p>
+            {% endif %}
+
+            {% if row.functional_significance %}
+              <p><strong>Functional significance:</strong> {{ row.functional_significance }}</p>
+            {% endif %}
+
+            {% if row.common_patterns %}
+              <p><strong>Common patterns:</strong> {{ row.common_patterns }}</p>
+            {% endif %}
+
+            {% if row.your_result_summary %}
+              <p><strong>Your result in this scan:</strong> {{ row.your_result_summary }}</p>
+            {% endif %}
+          </div>
+        {% endfor %}
       </div>
     </div>
   {% endfor %}

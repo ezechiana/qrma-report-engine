@@ -28,6 +28,31 @@ def _listify(value: Any) -> list:
         return value
     return [value]
 
+def _build_related_markers(section, max_markers: int = 3) -> list[dict]:
+    """
+    Structured marker references for hyperlinkable recommendation rationale.
+    """
+    section_title = _safe_getattr(section, "display_title", None) or _safe_getattr(section, "source_title", "")
+    markers = sorted(
+        list(_safe_getattr(section, "parameters", []) or []),
+        key=_severity_weight,
+        reverse=True,
+    )
+
+    related = []
+    for marker in markers:
+        if _severity_weight(marker) <= 0:
+            continue
+
+        related.append({
+            "name": _safe_getattr(marker, "display_label", None) or _safe_getattr(marker, "source_name", ""),
+            "section": section_title,
+        })
+
+        if len(related) >= max_markers:
+            break
+
+    return related
 
 def _get_recommendation_mode(config: dict) -> dict:
     mode = config.get("recommendation_mode") or {}
@@ -144,7 +169,8 @@ def _default_clinical_recommendations(report, max_items: int) -> list[dict]:
             "summary": summary,
             "rationale": f"{title} contains {abnormal_count} flagged markers" + (f", led by {', '.join(marker_names)}." if marker_names else "."),
             "source": "system_default",
-            "section": title,
+            "related_section": title,
+            "related_markers": _build_related_markers(section, max_markers=3),
             "priority_rank": len(recommendations) + 1,
         })
 
@@ -186,7 +212,8 @@ def _rules_based_clinical_recommendations(report, rules: dict, max_items: int) -
                 "summary": rule.get("summary", ""),
                 "rationale": rule.get("rationale", f"Triggered by {section_title}."),
                 "source": "system_default",
-                "section": section_title,
+                "related_section": section_title,
+                "related_markers": _build_related_markers(section, max_markers=3),
                 "priority_rank": len(generated) + 1,
             })
             seen_titles.add(title)

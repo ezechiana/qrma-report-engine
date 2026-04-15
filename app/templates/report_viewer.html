@@ -385,7 +385,7 @@
         .score-card-number {
             font-size: 34px;
             font-weight: 700;
-            color: #374151; /* charcoal instead of black */
+            color: #414347; /* charcoal instead of black */
         }
 
 
@@ -516,6 +516,15 @@
             color: var(--muted);
             font-size: 13px;
             line-height: 1.5;
+        }
+
+        .section-link {
+        color: #2563eb;
+        text-decoration: none;
+        cursor: pointer;
+        }
+        .section-link:hover {
+        text-decoration: underline;
         }
 
         .marker-group {
@@ -815,11 +824,11 @@
                         <div class="stat-value">{{ patient.scan_datetime or "—" }}</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-label">Overall score</div>
-                        <div class="stat-value">{{ ov.overall_scan_score or "—" }}</div>
+                        <div class="stat-label">Health Index</div>
+                        <div class="stat-value">{{ ov.overall_scan_score or "—" }} / 100</div>
                     </div>
                     <div class="stat">
-                        <div class="stat-label">Overall band</div>
+                        <div class="stat-label">Index band</div>
                         <div class="stat-value">{{ ov.overall_scan_band_label or "—" }}</div>
                     </div>
                 </div>
@@ -940,9 +949,9 @@
                 </section>
 
                 <section id="systems-overview" class="panel card">
-                    <h2 style="font-size: 28px; margin-bottom: 6px;">Scan score overview</h2>
+                    <h2 style="font-size: 28px; margin-bottom: 6px;">Health Index overview</h2>
                     <p class="subtle" style="font-size:15px; margin-bottom:18px;">
-                        Weighted overview to organise attention across major body systems before deeper review.
+                        A whole-scan index designed to summarise overall functional balance before deeper review.
                     </p>
 
                     <div class="grid-2" style="margin-top:14px; align-items:stretch;">
@@ -958,7 +967,7 @@
                             </div>
 
                             <p class="subtle" style="margin-bottom:10px;">
-                                Lower scores suggest a more active or clustered functional pattern worth reviewing in follow-up.
+                                Lower index values suggest broader clustering or more active functional strain across systems and may warrant closer follow-up.
                             </p>
 
                             <div class="subtle" style="font-size:13px;">
@@ -969,8 +978,7 @@
                         <div class="summary-card" style="padding:20px;">
                             <h3 style="margin-top:0;">How to read this</h3>
                             <p class="subtle">
-                                These scores are weighted from severity, clustering, and distribution of findings across related sections.
-                                They help organise attention; they are not a diagnosis.
+                                The Health Index reflects whole-scan balance across systems, adjusted for clinical importance and clustering. It is designed to guide attention, not provide a diagnosis.
                             </p>
                         </div>
                     </div>
@@ -1008,10 +1016,15 @@
 
                                 {% if card.included_sections %}
                                     <div class="score-card-includes">
-                                        Includes: {{ card.included_sections | join(", ") }}
+                                        Includes:
+                                        {% for section in card.included_sections %}
+                                            <a href="#marker-section-{{ section_slug(section) }}" class="section-link">
+                                                {{ section }}
+                                            </a>{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
                                     </div>
                                 {% endif %}
-                            </div>
+                                    </div>
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -1030,11 +1043,20 @@
                         {% if recs.clinical_recommendations %}
                             <div class="grid-2">
                                 {% for rec in recs.clinical_recommendations %}
-                                    <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section) }}"style="cursor:pointer;">
+                                    <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section or rec.section) }}" style="cursor:pointer;">
                                         <h4>{{ rec.title }}</h4>
                                         <div>{{ rec.summary }}</div>
                                         {% if rec.rationale %}
-                                            <div class="rec-rationale"><strong>Why this was suggested:</strong> {{ rec.rationale }}</div>
+                                            <div class="rec-rationale">Why this was suggested:
+                                            {% if rec.related_markers %}
+                                                {% for m in rec.related_markers %}
+                                                <a href="#marker-section-{{ section_slug(m.section) }}" class="section-link">
+                                                    {{ m.name }}
+                                                </a>{% if not loop.last %}, {% endif %}
+                                                {% endfor %}
+                                            {% else %}
+                                                {{ rec.rationale }}
+                                            {% endif %}</div>
                                         {% endif %}
                                     </div>
                                 {% endfor %}
@@ -1376,6 +1398,17 @@
             const el = document.getElementById(id);
             if (el) el.classList.toggle('open');
         }
+
+        document.querySelectorAll("[data-marker-target]").forEach((el) => {
+            el.addEventListener("click", () => {
+                const target = el.getAttribute("data-marker-target");
+                const section = document.getElementById(target);
+                if (section) {
+                    section.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            });
+        });
+
     </script>
 </body>
 </html>

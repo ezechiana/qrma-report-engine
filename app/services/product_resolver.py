@@ -933,8 +933,18 @@ def resolve_all_products(
     if not products_enabled(final_mode):
         return []
 
-    vitalhealth_products = resolve_vitalhealth_products(report, mode=final_mode, clinical_context=context)
-    na_products = resolve_na_products(report, mode=final_mode)
+    # Hard source gating by mode to avoid cross-brand leakage.
+    if final_mode == "natural_approaches_clinical":
+        vitalhealth_products: List[Dict[str, Any]] = []
+        na_products = resolve_na_products(report, mode=final_mode)
+    elif final_mode in {"affiliate_vitalhealth", "vitalhealth_clinical_optimised"}:
+        vitalhealth_products = resolve_vitalhealth_products(report, mode=final_mode, clinical_context=context)
+        na_products = []
+    else:
+        # mixed_clinical and any future mixed-compatible modes
+        vitalhealth_products = resolve_vitalhealth_products(report, mode=final_mode, clinical_context=context)
+        na_products = resolve_na_products(report, mode=final_mode)
+
     custom_products = resolve_custom_practitioner_products(context)
 
     product_map: Dict[str, Dict[str, Any]] = {}
@@ -982,6 +992,12 @@ def resolve_all_products(
         add_product(p)
 
     results = list(product_map.values())
+
+    # Safety net: enforce final source policy even after merge.
+    if final_mode == "natural_approaches_clinical":
+        results = [p for p in results if p.get("source") in {"natural_approaches", "custom"}]
+    elif final_mode in {"affiliate_vitalhealth", "vitalhealth_clinical_optimised"}:
+        results = [p for p in results if p.get("source") in {"vitalhealth", "custom"}]
 
     def sort_key(item: Dict[str, Any]):
         source = (item.get("source") or "").lower()

@@ -14,14 +14,14 @@ NON_DISPLAY_SECTIONS = {"expert analysis", "hand analysis"}
 # -----------------------------------------
 
 SEVERITY_BANDS = {
-    "normal": (90, 100),
-    "low_mild": (78, 89),
-    "high_mild": (78, 89),
-    "low_moderate": (58, 76),
-    "high_moderate": (58, 76),
-    "low_severe": (28, 55),
-    "high_severe": (28, 55),
-    "unknown": (70, 84),
+    "normal": (88, 100),
+    "low_mild": (72, 84),
+    "high_mild": (72, 84),
+    "low_moderate": (50, 68),
+    "high_moderate": (50, 68),
+    "low_severe": (20, 46),
+    "high_severe": (20, 46),
+    "unknown": (66, 80),
 }
 
 BAND_CONFIG = [
@@ -750,6 +750,76 @@ def _pattern_multiplier(section_cards: List[Dict[str, Any]]) -> Tuple[float, Lis
 # OVERALL SCORE
 # -----------------------------------------
 
+def compute_overall_score_from_systems(body_system_cards: List[Dict[str, Any]]) -> int:
+    """
+    Clinically credible overall score derived ONLY from visible system cards.
+
+    Design principles:
+    - explainable from UI
+    - slightly stricter (real-world clinical feel)
+    - penalises cross-system clustering
+    - avoids hidden distortions
+    """
+
+    if not body_system_cards:
+        return 0
+
+    weighted_total = 0.0
+    weight_sum = 0.0
+    cross_system_penalty = 0.0
+
+    for card in body_system_cards:
+        score = float(card.get("score", 0) or 0)
+
+        section_titles = (
+            card.get("section_titles")
+            or card.get("included_sections")
+            or []
+        )
+
+        if section_titles:
+            system_weight = sum(_section_weight(title) for title in section_titles) / len(section_titles)
+        else:
+            system_weight = 1.0
+
+        weighted_total += score * system_weight
+        weight_sum += system_weight
+
+        flagged = int(card.get("flagged_count", 0) or 0)
+
+        # 🔥 stricter clustering penalty 
+        if flagged >= 25:
+            cross_system_penalty += 2.2
+        elif flagged >= 15:
+            cross_system_penalty += 1.5
+        elif flagged >= 8:
+            cross_system_penalty += 0.9
+        elif flagged >= 4:
+            cross_system_penalty += 0.5
+
+    if weight_sum <= 0:
+        return 0
+
+    overall = weighted_total / weight_sum
+
+    # cap total penalty (keeps behaviour stable)
+    cross_system_penalty = min(cross_system_penalty, 10.0)
+    overall -= cross_system_penalty
+
+    # 🔥 compress high scores → makes system feel stricter
+    if overall > 75:
+        overall = 75 + ((overall - 75) * 0.78)
+
+    # 🔥 final calibration (small downward bias)
+    overall -= 2.0
+
+    return int(round(_clamp(overall, 0, 100)))
+
+
+# -----------------------------------------
+# OVERALL SCORE
+# -----------------------------------------
+
 def compute_scan_scores(sections: List[Any]) -> Dict[str, Any]:
     visible_sections = [
         section
@@ -779,82 +849,39 @@ def compute_scan_scores(sections: List[Any]) -> Dict[str, Any]:
             "triggered_patterns": [],
         }
 
-    # Build body-system rollups first because these are the cards the user actually sees
     body_system_cards = compute_body_system_scores(visible_sections)
-
-    # Keep section-level data for detail views and diagnostics
-    raw_contributions: List[Tuple[Dict[str, Any], float]] = []
-    for card in section_cards:
-        contribution = card["total_count"] * card["section_weight"]
-        raw_contributions.append((card, contribution))
-
-    total_contribution = sum(c for _, c in raw_contributions) or 1.0
-
-    capped_contributions: List[Tuple[Dict[str, Any], float]] = []
-    max_allowed = total_contribution * MAX_SECTION_SHARE
-    for card, contribution in raw_contributions:
-        capped_contributions.append((card, min(contribution, max_allowed)))
-
-    capped_total = sum(c for _, c in capped_contributions) or 1.0
-
-    weighted_average = sum(
-        card["score"] * contribution for card, contribution in capped_contributions
-    ) / capped_total
-
-    total_mild = sum(card["mild_count"] for card in section_cards)
-    total_moderate = sum(card["moderate_count"] for card in section_cards)
-    total_severe = sum(card["severe_count"] for card in section_cards)
-
     pattern_multiplier, triggered_patterns = _pattern_multiplier(section_cards)
 
-    # --- NEW OVERALL SCORE MODEL ---
-    # Anchor overall score to the visible body-system cards instead of the hidden section model
     if body_system_cards:
-        visible_system_average = sum(card["score"] for card in body_system_cards) / len(body_system_cards)
-        min_body_system_score = min(card["score"] for card in body_system_cards)
+        overall_score = compute_overall_score_from_systems(body_system_cards)
     else:
-        visible_system_average = weighted_average
-        min_body_system_score = min(card["score"] for card in section_cards)
+        raw_contributions: List[Tuple[Dict[str, Any], float]] = []
+        for card in section_cards:
+            contribution = card["total_count"] * card["section_weight"]
+            raw_contributions.append((card, contribution))
 
-    # Apply only a light penalty so the overall score remains interpretable relative to the visible cards
-    burden_penalty = (
-        total_mild * 0.02
-        + total_moderate * 0.08
-        + total_severe * 0.18
-    )
+        total_contribution = sum(c for _, c in raw_contributions) or 1.0
+        capped_contributions: List[Tuple[Dict[str, Any], float]] = []
+        max_allowed = total_contribution * MAX_SECTION_SHARE
+        for card, contribution in raw_contributions:
+            capped_contributions.append((card, min(contribution, max_allowed)))
 
-    # Convert pattern multiplier into a modest downward adjustment
-    pattern_penalty = (pattern_multiplier - 1.0) * 8.0
-
-    adjusted_score = visible_system_average - burden_penalty - pattern_penalty
-    overall_score = round(_clamp(adjusted_score, 0, 100))
-
-    # Guardrail: overall score should not drift too far below the lowest visible system card
-    lower_guardrail = max(0, min_body_system_score - 5)
-    overall_score = max(overall_score, lower_guardrail)
+        capped_total = sum(c for _, c in capped_contributions) or 1.0
+        weighted_average = sum(
+            card["score"] * contribution for card, contribution in capped_contributions
+        ) / capped_total
+        overall_score = round(_clamp(weighted_average, 0, 100))
 
     overall_band = score_to_band(overall_score)
 
     _log_debug(
         "[OVERALL SCORE] "
         f"visible_sections={len(section_cards)} "
-        f"visible_system_average={visible_system_average:.2f} "
-        f"weighted_average={weighted_average:.2f} "
-        f"burden_penalty={burden_penalty:.2f} "
-        f"pattern_penalty={pattern_penalty:.2f} "
+        f"body_system_cards={len(body_system_cards)} "
+        f"pattern_multiplier={pattern_multiplier:.3f} "
         f"triggered_patterns={triggered_patterns} "
         f"overall_score={overall_score}"
     )
-
-    for card, contribution in capped_contributions:
-        _log_debug(
-            "[SECTION CONTRIBUTION] "
-            f"title={card['title']} "
-            f"score={card['score']} "
-            f"section_weight={card['section_weight']:.2f} "
-            f"flagged={card['flagged_count']} "
-            f"contribution={contribution:.2f}"
-        )
 
     return {
         "overall_score": overall_score,

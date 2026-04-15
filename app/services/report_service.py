@@ -53,11 +53,18 @@ async def generate_report_version(db: Session, case: Case, user: User) -> Report
 
     enriched_report = parse_and_enrich_case_html(case)
 
+    recommendation_mode = (
+        case.recommendation_mode.value
+        if hasattr(case.recommendation_mode, "value")
+        else str(case.recommendation_mode)
+    )
+
     built = await build_report(
         enriched_report,
         overrides=None,
         html_filename=html_filename,
         pdf_filename=pdf_filename,
+        recommendation_mode=recommendation_mode,
     )
 
     html_path = _to_str_path(built.get("html_path"))
@@ -68,7 +75,7 @@ async def generate_report_version(db: Session, case: Case, user: User) -> Report
     report_json = {
         "case_id": str(case.id),
         "version_number": version_number,
-        "recommendation_mode": case.recommendation_mode.value,
+        "recommendation_mode": recommendation_mode,
         "html_path": html_path,
         "pdf_path": pdf_path,
         "viewer": viewer_payload,
@@ -99,3 +106,4 @@ async def generate_report_version(db: Session, case: Case, user: User) -> Report
         metadata_json={"version_number": version_number},
     )
     return report
+

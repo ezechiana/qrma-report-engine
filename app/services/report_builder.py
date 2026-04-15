@@ -412,15 +412,16 @@ def status_pointer_position(severity: str | None, variant: str = "standard") -> 
 
     Reduced values sit LEFT of green.
     Elevated values sit RIGHT of green.
+    Tightened slightly for better visual alignment.
     """
     mapping = {
-        "low_severe": "8%",
-        "low_moderate": "20%",
+        "low_severe": "6%",
+        "low_moderate": "18%",
         "low_mild": "34%",
         "normal": "50%",
         "high_mild": "66%",
-        "high_moderate": "80%",
-        "high_severe": "92%",
+        "high_moderate": "82%",
+        "high_severe": "94%",
         "unknown": "50%",
     }
     return mapping.get(severity or "unknown", "50%")
@@ -1019,6 +1020,11 @@ def build_full_marker_tables(report: ParsedReport):
                 "status_pointer_position": status_pointer_position(param.severity, bar_variant),
                 "status_bar_variant": bar_variant,
                 "meaning": _meaning_text(param),
+                "what_it_means": getattr(param, "what_it_means", None) or _meaning_text(param),
+                "why_it_matters": getattr(param, "why_it_matters", None) or "",
+                "functional_significance": getattr(param, "functional_significance", None) or "",
+                "common_patterns": getattr(param, "common_patterns", None) or "",
+                "your_result_summary": getattr(param, "patient_interpretation", None) or "",
             })
 
         if not rows:
@@ -1255,7 +1261,11 @@ def build_v2_practitioner_overview(report) -> str:
     )
 
 
-def build_report_context(report: ParsedReport, overrides: ReportOverrides | None = None):
+def build_report_context(
+    report: ParsedReport,
+    overrides: ReportOverrides | None = None,
+    recommendation_mode: str | None = None,
+):
     config = load_practitioner_config()
     overrides = overrides or ReportOverrides()
 
@@ -1295,7 +1305,7 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
     clinical_context = None
 
     recommendation_mode = normalize_recommendation_mode(
-        os.getenv("REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical")
+        recommendation_mode or os.getenv("REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical")
     )
 
     products = resolve_all_products(
@@ -1591,12 +1601,20 @@ def _safe_dict(value):
     return value if isinstance(value, dict) else {}
 
 
-def build_viewer_payload(report: ParsedReport, overrides: ReportOverrides | None = None) -> dict:
+def build_viewer_payload(
+    report: ParsedReport,
+    overrides: ReportOverrides | None = None,
+    recommendation_mode: str | None = None,
+) -> dict:
     """
     Build a structured payload for the web viewer using the same context that powers
     the printable report, but without document-only concerns like page layout.
     """
-    ctx = build_report_context(report, overrides=overrides)
+    ctx = build_report_context(
+        report,
+        overrides=overrides,
+        recommendation_mode=recommendation_mode,
+    )
 
     patient = ctx.get("patient")
     patient_header = ctx.get("patient_header", {}) or {}
@@ -1698,10 +1716,20 @@ def get_jinja_env():
     )
 
 
-def render_report_html(report: ParsedReport, overrides: ReportOverrides | None = None) -> str:
+def render_report_html(
+    report: ParsedReport,
+    overrides: ReportOverrides | None = None,
+    recommendation_mode: str | None = None,
+) -> str:
     env = get_jinja_env()
     template = env.get_template("report.html")
-    return template.render(**build_report_context(report, overrides=overrides))
+    return template.render(
+        **build_report_context(
+            report,
+            overrides=overrides,
+            recommendation_mode=recommendation_mode,
+        )
+    )
 
 
 async def build_report(
@@ -1709,11 +1737,20 @@ async def build_report(
     overrides: ReportOverrides | None = None,
     html_filename: str = "wellness_report.html",
     pdf_filename: str = "wellness_report.pdf",
+    recommendation_mode: str | None = None,
 ) -> dict[str, str]:
-    report_html = render_report_html(report, overrides=overrides)
+    report_html = render_report_html(
+        report,
+        overrides=overrides,
+        recommendation_mode=recommendation_mode,
+    )
     html_path = save_html(report_html, html_filename)
     pdf_path = await save_pdf(report_html, pdf_filename)
-    viewer_payload = build_viewer_payload(report, overrides=overrides)
+    viewer_payload = build_viewer_payload(
+        report,
+        overrides=overrides,
+        recommendation_mode=recommendation_mode,
+    )
 
     return {
         "html": report_html,
