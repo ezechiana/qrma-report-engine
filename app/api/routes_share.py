@@ -1,6 +1,5 @@
 # app/api/routes_share.py
 
-from pathlib import Path
 from uuid import UUID
 import os
 
@@ -39,15 +38,6 @@ def _get_report_for_share_or_404(db: Session, link: ShareLink) -> ReportVersion:
     return report
 
 
-def _load_report_html(report: ReportVersion) -> str:
-    if not report.html_path:
-        return "<div class='na-empty'>No HTML report is available for this report version.</div>"
-
-    html_file = Path(report.html_path)
-    if not html_file.exists():
-        return "<div class='na-empty'>The generated HTML report file could not be found.</div>"
-
-    return html_file.read_text(encoding="utf-8")
 
 
 def _tenant_theme_from_report(report: ReportVersion) -> dict:
@@ -81,7 +71,12 @@ def _tenant_theme_from_report(report: ReportVersion) -> dict:
     }
 
 
+
+
 def _public_report_payload(report: ReportVersion, token: str) -> dict:
+    report_json = report.report_json or {}
+    viewer = report_json.get("viewer") or {}
+
     return {
         "id": str(report.id),
         "case_id": str(report.case_id),
@@ -96,8 +91,9 @@ def _public_report_payload(report: ReportVersion, token: str) -> dict:
         "pdf_url": f"/api/reports/{report.id}/pdf",
         "html_url": f"/api/reports/{report.id}/html",
         "data_url": f"/share/{token}/data",
-        "html_content": _load_report_html(report),
+        "viewer": viewer,
     }
+
 
 
 @router.post("/api/reports/{report_version_id}/share-links", response_model=ShareLinkRead)

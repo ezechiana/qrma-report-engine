@@ -365,6 +365,22 @@ def priority_label(priority: str | None) -> str:
     }.get(priority or "normal", "Within range")
 
 
+
+def polished_overall_band_label(score: float | int | None) -> str:
+    if score is None:
+        return "Unclassified"
+
+    score = float(score)
+
+    if score >= 85:
+        return "Robust functional balance"
+    if score >= 70:
+        return "Generally balanced"
+    if score >= 55:
+        return "Needs focused support"
+    return "Priority review recommended"
+
+
 def severity_display(severity: str | None) -> str:
     mapping = {
         "normal": "Within range",
@@ -390,30 +406,25 @@ def severity_class(severity: str | None) -> str:
 
 
 def status_pointer_position(severity: str | None, variant: str = "standard") -> str:
-    if variant == "lung":
-        mapping = {
-            "low_severe": "10%",
-            "low_moderate": "22%",
-            "low_mild": "34%",
-            "normal": "50%",
-            "high_mild": "66%",
-            "high_moderate": "78%",
-            "high_severe": "90%",
-            "unknown": "50%",
-        }
-        return mapping.get(severity or "unknown", "50%")
+    """
+    7-band QRMA-style layout:
+    red | yellow | blue | green | blue | yellow | red
 
+    Reduced values sit LEFT of green.
+    Elevated values sit RIGHT of green.
+    """
     mapping = {
         "low_severe": "8%",
-        "low_moderate": "24%",
-        "low_mild": "40%",
+        "low_moderate": "20%",
+        "low_mild": "34%",
         "normal": "50%",
-        "high_mild": "60%",
-        "high_moderate": "76%",
+        "high_mild": "66%",
+        "high_moderate": "80%",
         "high_severe": "92%",
         "unknown": "50%",
     }
     return mapping.get(severity or "unknown", "50%")
+
 
 
 def status_bar_variant_for_section(section_title: str | None) -> str:
@@ -884,7 +895,15 @@ def _body_comp_summary_text(patient, metric_map: dict) -> str:
 
 
 def build_body_composition_block(report: ParsedReport):
-    target = next((s for s in dedupe_sections_by_title(report.sections) if is_body_composition_section(s.display_title or s.source_title)), None)
+    target = next(
+        (
+            s
+            for s in dedupe_sections_by_title(report.sections)
+            if is_body_composition_section(s.display_title or s.source_title)
+        ),
+        None,
+    )
+
     if not target or not getattr(target, "parameters", None):
         return None
 
@@ -908,7 +927,6 @@ def build_body_composition_block(report: ParsedReport):
 
         dedupe_key = mapped_name.strip().lower()
 
-        existing = next((r for r in all_rows if r["dedupe_key"] == dedupe_key), None)
         candidate = {
             "dedupe_key": dedupe_key,
             "marker": raw_name,
@@ -919,8 +937,14 @@ def build_body_composition_block(report: ParsedReport):
             "severity_class": severity_class(param.severity),
             "status_pointer_position": status_pointer_position(param.severity, "standard"),
             "meaning": _meaning_text(param),
+            "what_it_means": getattr(param, "what_it_means", None) or _meaning_text(param),
+            "why_it_matters": getattr(param, "why_it_matters", None) or "",
+            "functional_significance": getattr(param, "functional_significance", None) or "",
+            "common_patterns": getattr(param, "common_patterns", None) or "",
+            "your_result_summary": getattr(param, "patient_interpretation", None) or "",
         }
 
+        existing = next((r for r in all_rows if r["dedupe_key"] == dedupe_key), None)
         if existing:
             existing_value = existing.get("value", "")
             if len(clean_value) > len(existing_value):
@@ -932,16 +956,24 @@ def build_body_composition_block(report: ParsedReport):
     metric_map = _body_comp_metric_map(all_rows)
 
     for row in all_rows:
-        grouped[classify_body_comp_marker(row["display_name"])].append({
-            "marker": row["marker"],
-            "display_name": row["display_name"],
-            "range": row["range"],
-            "value": row["value"],
-            "severity": row["severity"],
-            "severity_class": row["severity_class"],
-            "status_pointer_position": row["status_pointer_position"],
-            "meaning": row["meaning"],
-        })
+        group_title = classify_body_comp_marker(row["display_name"])
+        grouped[group_title].append(
+            {
+                "marker": row["marker"],
+                "display_name": row["display_name"],
+                "range": row["range"],
+                "value": row["value"],
+                "severity": row["severity"],
+                "severity_class": row["severity_class"],
+                "status_pointer_position": row["status_pointer_position"],
+                "meaning": row["meaning"],
+                "what_it_means": row["what_it_means"],
+                "why_it_matters": row["why_it_matters"],
+                "functional_significance": row["functional_significance"],
+                "common_patterns": row["common_patterns"],
+                "your_result_summary": row["your_result_summary"],
+            }
+        )
 
     return {
         "title": "Body Composition & Metabolic Profile",
@@ -949,13 +981,13 @@ def build_body_composition_block(report: ParsedReport):
         "source_subtitle": "QRMA category: Element of Human",
         "priority": target.priority or "normal",
         "priority_label": priority_label(target.priority),
+        "status_label": priority_label(target.priority),
         "abnormal_count": target.abnormal_count,
         "normal_count": target.normal_count,
         "summary": _body_comp_summary_text(report.patient, metric_map),
         "interpretation_lines": _body_comp_interpretation_lines(report.patient, metric_map),
         "groups": [{"title": k, "rows": v} for k, v in grouped.items() if v],
     }
-
 
 def build_full_marker_tables(report: ParsedReport):
     tables = []
@@ -1551,6 +1583,113 @@ def build_report_context(report: ParsedReport, overrides: ReportOverrides | None
         "body_system_cards": scan_scores.get("body_system_cards", []),
     }
 
+def _safe_list(value):
+    return value if isinstance(value, list) else []
+
+
+def _safe_dict(value):
+    return value if isinstance(value, dict) else {}
+
+
+def build_viewer_payload(report: ParsedReport, overrides: ReportOverrides | None = None) -> dict:
+    """
+    Build a structured payload for the web viewer using the same context that powers
+    the printable report, but without document-only concerns like page layout.
+    """
+    ctx = build_report_context(report, overrides=overrides)
+
+    patient = ctx.get("patient")
+    patient_header = ctx.get("patient_header", {}) or {}
+
+    raw_overall_summary = ctx.get("overall_summary")
+    if isinstance(raw_overall_summary, dict):
+        overall_summary_payload = {
+            "clinical_snapshot": raw_overall_summary.get("clinical_snapshot", "") or raw_overall_summary.get("summary", ""),
+            "summary": raw_overall_summary.get("summary", "") or raw_overall_summary.get("clinical_snapshot", ""),
+        }
+    else:
+        overall_summary_payload = {
+            "clinical_snapshot": raw_overall_summary or "",
+            "summary": raw_overall_summary or "",
+        }
+
+    raw_full_marker_tables = _safe_list(ctx.get("full_marker_tables"))
+    enriched_full_marker_tables = []
+
+    for section in raw_full_marker_tables:
+        new_section = dict(section)
+        new_rows = []
+
+        for row in _safe_list(section.get("rows")):
+            new_row = dict(row)
+            new_row["what_it_means"] = row.get("what_it_means") or row.get("meaning") or ""
+            new_row["why_it_matters"] = row.get("why_it_matters") or ""
+            new_row["functional_significance"] = row.get("functional_significance") or ""
+            new_row["common_patterns"] = row.get("common_patterns") or ""
+            new_row["your_result_summary"] = row.get("patient_interpretation") or row.get("your_result_summary") or ""
+            new_rows.append(new_row)
+
+        new_section["rows"] = new_rows
+        enriched_full_marker_tables.append(new_section)
+
+    body_composition_block = _safe_dict(ctx.get("body_composition_block"))
+
+    return {
+        "tenant": {
+            "brand_name": ctx.get("clinic_name"),
+            "report_title": ctx.get("report_title"),
+            "subtitle": ctx.get("subtitle"),
+            "config": _safe_dict(ctx.get("config")),
+        },
+        "overview": {
+            "patient": {
+                "full_name": getattr(patient, "full_name", "") if patient else "",
+                "sex": getattr(patient, "sex", "") if patient else "",
+                "age": getattr(patient, "age", None) if patient else None,
+                "height_cm": getattr(patient, "height_cm", None) if patient else None,
+                "weight_kg": getattr(patient, "weight_kg", None) if patient else None,
+                "scan_date": getattr(patient, "scan_date", "") if patient else "",
+                "scan_time": getattr(patient, "scan_time", "") if patient else "",
+                "scan_datetime": patient_header.get("scan_datetime", ""),
+                "profile": ctx.get("report_profile"),
+            },
+            "overall_summary": overall_summary_payload,
+            "practitioner_summary": ctx.get("practitioner_summary"),
+            "primary_pattern": _safe_dict(ctx.get("primary_pattern")),
+            "contributing_patterns": _safe_list(ctx.get("contributing_patterns")),
+            "priority_actions": _safe_list(ctx.get("priority_actions")),
+            "key_patterns": _safe_list(ctx.get("key_patterns")),
+            "overall_scan_score": ctx.get("overall_scan_score"),
+            "overall_scan_band_label": polished_overall_band_label(ctx.get("overall_scan_score")),
+            "overall_scan_gauge_color": ctx.get("overall_scan_gauge_color"),
+        },
+        "systems": {
+            "system_score_cards": _safe_list(ctx.get("system_score_cards")),
+            "priority_overview": _safe_list(ctx.get("priority_overview")),
+            "priority_sections": _safe_list(ctx.get("priority_sections")),
+            "priority_section_intro": _safe_dict(ctx.get("priority_section_intro")),
+            "section_score_cards": _safe_list(ctx.get("section_score_cards")),
+            "body_system_cards": _safe_list(ctx.get("body_system_cards")),
+        },
+        "recommendations": {
+            "clinical_recommendations": _safe_list(ctx.get("clinical_recommendations")),
+            "protocol_plan": _safe_dict(ctx.get("protocol_plan")),
+            "complete_product_mapping": _safe_list(ctx.get("complete_product_mapping")),
+            "product_recommendations": _safe_list(ctx.get("product_recommendations")),
+        },
+        "detail": {
+            "section_blocks": _safe_list(ctx.get("section_blocks")),
+            "body_composition_block": body_composition_block,
+            "full_marker_tables": enriched_full_marker_tables,
+            "appendix_rows": _safe_list(ctx.get("appendix_rows")),
+            "category_completeness": _safe_dict(ctx.get("category_completeness")),
+            "patterns": _safe_list(ctx.get("patterns")),
+            "detected_patterns": _safe_list(ctx.get("detected_patterns")),
+        },
+    }
+
+
+
 
 def get_jinja_env():
     return Environment(
@@ -1574,8 +1713,11 @@ async def build_report(
     report_html = render_report_html(report, overrides=overrides)
     html_path = save_html(report_html, html_filename)
     pdf_path = await save_pdf(report_html, pdf_filename)
+    viewer_payload = build_viewer_payload(report, overrides=overrides)
+
     return {
         "html": report_html,
         "html_path": html_path,
         "pdf_path": pdf_path,
+        "viewer_payload": viewer_payload,
     }

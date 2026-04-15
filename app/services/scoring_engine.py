@@ -25,10 +25,10 @@ SEVERITY_BANDS = {
 }
 
 BAND_CONFIG = [
-    (85, "Very Good", "#2e7d32"),
-    (70, "General", "#1565c0"),
-    (55, "Relatively Poor", "#e0b71a"),
-    (0, "Very Bad", "#d6523c"),
+    (85, "Robust functional balance", "#2e7d32"),
+    (70, "Generally balanced", "#1565c0"),
+    (55, "Needs focused support", "#e0b71a"),
+    (0, "Priority review recommended", "#d6523c"),
 ]
 
 # -----------------------------------------
@@ -62,7 +62,7 @@ SECTION_WEIGHTS: Dict[str, float] = {
     # musculoskeletal / structural
     "bone disease": 1.25,
     "bone mineral density": 1.20,
-    "rheumatoid bone disease": 1.40,
+    "rheumatoid bone disease": 1.20,
     "bone growth index": 1.10,
     "channels and collaterals": 1.05,
 
@@ -89,9 +89,9 @@ SECTION_WEIGHTS: Dict[str, float] = {
     "lecithin": 1.00,
 
     # lower-priority appearance / surface domains
-    "skin": 0.55,
+    "skin": 0.30,
     "collagen": 0.55,
-    "eye": 0.80,
+    "eye": 0.55,
     "obesity": 1.20,
     "basic physical quality": 1.00,
     "human consciousness level": 1.20,
@@ -110,14 +110,14 @@ DEFAULT_SECTION_WEIGHT = 1.0
 MARKER_WEIGHTS: Dict[str, float] = {
     # cardiovascular / circulation
     "arteriosclerosis index": 1.45,
-    "blood viscosity": 1.35,
-    "myocardial blood supply": 1.35,
+    "blood viscosity": 1.30,
+    "myocardial blood supply": 1.30,
     "left ventricular ejection": 1.30,
-    "coronary artery elasticity": 1.35,
-    "cerebral blood supply": 1.35,
+    "coronary artery elasticity": 1.30,
+    "cerebral blood supply": 1.30,
 
     # metabolic
-    "insulin secretion": 1.35,
+    "insulin secretion": 1.40,
     "glucose tolerance": 1.40,
     "blood lipid metabolism": 1.30,
 
@@ -125,18 +125,18 @@ MARKER_WEIGHTS: Dict[str, float] = {
     "t3": 1.20,
     "t4": 1.20,
     "thyroxine": 1.20,
-    "thyroid hormone secretion": 1.30,
+    "thyroid hormone secretion": 1.40,
 
     # renal / detox / inflammatory
-    "glomerular filtration": 1.40,
+    "glomerular filtration": 1.50,
     "renal blood flow": 1.30,
     "heavy metal index": 1.30,
     "toxin metabolism": 1.25,
 
     # skin deliberately toned down
-    "skin moisture": 0.75,
-    "skin elasticity": 0.75,
-    "collagen loss": 0.80,
+    "skin moisture": 0.50,
+    "skin elasticity": 0.50,
+    "collagen loss": 0.50,
 }
 
 DEFAULT_MARKER_WEIGHT = 1.0

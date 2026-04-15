@@ -63,12 +63,15 @@ async def generate_report_version(db: Session, case: Case, user: User) -> Report
     html_path = _to_str_path(built.get("html_path"))
     pdf_path = _to_str_path(built.get("pdf_path"))
 
+    viewer_payload = built.get("viewer_payload") or {}
+
     report_json = {
         "case_id": str(case.id),
         "version_number": version_number,
         "recommendation_mode": case.recommendation_mode.value,
         "html_path": html_path,
         "pdf_path": pdf_path,
+        "viewer": viewer_payload,
     }
 
     report = ReportVersion(
