@@ -779,6 +779,10 @@ def compute_scan_scores(sections: List[Any]) -> Dict[str, Any]:
             "triggered_patterns": [],
         }
 
+    # Build body-system rollups first because these are the cards the user actually sees
+    body_system_cards = compute_body_system_scores(visible_sections)
+
+    # Keep section-level data for detail views and diagnostics
     raw_contributions: List[Tuple[Dict[str, Any], float]] = []
     for card in section_cards:
         contribution = card["total_count"] * card["section_weight"]
@@ -801,30 +805,40 @@ def compute_scan_scores(sections: List[Any]) -> Dict[str, Any]:
     total_moderate = sum(card["moderate_count"] for card in section_cards)
     total_severe = sum(card["severe_count"] for card in section_cards)
 
-    burden_penalty = (
-        total_mild * 0.04
-        + total_moderate * 0.12
-        + total_severe * 0.25
-    )
-
     pattern_multiplier, triggered_patterns = _pattern_multiplier(section_cards)
 
-    # Convert multiplier into additional downward risk pressure
-    pattern_penalty = (pattern_multiplier - 1.0) * 18.0
+    # --- NEW OVERALL SCORE MODEL ---
+    # Anchor overall score to the visible body-system cards instead of the hidden section model
+    if body_system_cards:
+        visible_system_average = sum(card["score"] for card in body_system_cards) / len(body_system_cards)
+        min_body_system_score = min(card["score"] for card in body_system_cards)
+    else:
+        visible_system_average = weighted_average
+        min_body_system_score = min(card["score"] for card in section_cards)
 
-    overall_score = round(_clamp(weighted_average - burden_penalty - pattern_penalty, 0, 100))
+    # Apply only a light penalty so the overall score remains interpretable relative to the visible cards
+    burden_penalty = (
+        total_mild * 0.02
+        + total_moderate * 0.08
+        + total_severe * 0.18
+    )
 
-    # Guardrail: overall should not collapse wildly below the displayed sections
-    min_section_score = min(card["score"] for card in section_cards)
-    lower_guardrail = max(0, min_section_score - 7)
+    # Convert pattern multiplier into a modest downward adjustment
+    pattern_penalty = (pattern_multiplier - 1.0) * 8.0
+
+    adjusted_score = visible_system_average - burden_penalty - pattern_penalty
+    overall_score = round(_clamp(adjusted_score, 0, 100))
+
+    # Guardrail: overall score should not drift too far below the lowest visible system card
+    lower_guardrail = max(0, min_body_system_score - 5)
     overall_score = max(overall_score, lower_guardrail)
 
     overall_band = score_to_band(overall_score)
-    body_system_cards = compute_body_system_scores(visible_sections)
 
     _log_debug(
         "[OVERALL SCORE] "
         f"visible_sections={len(section_cards)} "
+        f"visible_system_average={visible_system_average:.2f} "
         f"weighted_average={weighted_average:.2f} "
         f"burden_penalty={burden_penalty:.2f} "
         f"pattern_penalty={pattern_penalty:.2f} "

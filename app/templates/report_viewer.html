@@ -117,7 +117,7 @@
 
         .hero-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
+            grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 12px;
             margin-top: 18px;
         }
@@ -377,6 +377,24 @@
             transform: translateX(-50%);
         }
 
+        .score-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+            box-shadow: 0 12px 28px rgba(19, 31, 24, 0.12);
+        }
+
+        .score-card-number {
+            font-size: 34px;
+            font-weight: 700;
+            color: #374151; /* charcoal instead of black */
+        }
+
+
+        .score-number {
+            color: #0f172a; /* strong black */
+        }
+
+
+
         .pill {
             display: inline-block;
             padding: 6px 10px;
@@ -565,6 +583,12 @@
             font-size: 12px;
         }
 
+        .rec-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+        }
+
+
         .range-bar-wrap {
             margin-top: 10px;
         }
@@ -744,6 +768,19 @@
     {% set patient = ov.patient or {} %}
     {% set body = detail.body_composition_block or {} %}
 
+
+
+    {% macro section_slug(value) -%}
+        {{- (value or '')
+            | lower
+            | replace('&', 'and')
+            | replace('/', '-')
+            | replace(' ', '-')
+            | replace('--', '-')
+            | replace('--', '-')
+        -}}
+    {%- endmacro %}
+
     <div class="shell">
         <div class="topbar">
             <div class="hero">
@@ -762,8 +799,16 @@
 
                 <div class="hero-grid">
                     <div class="stat">
-                        <div class="stat-label">Patient</div>
+                        <div class="stat-label">Client</div>
                         <div class="stat-value">{{ patient.full_name or "—" }}</div>
+                    </div>
+                     <div class="stat">
+                        <div class="stat-label">Age</div>
+                        <div class="stat-value">{{ patient.age or "—" }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Gender</div>
+                        <div class="stat-value">{{ patient.sex or "—" }}</div>
                     </div>
                     <div class="stat">
                         <div class="stat-label">Scan time</div>
@@ -782,9 +827,16 @@
 
             <div class="actions">
                 <a class="btn primary" href="{{ report.pdf_url }}" target="_blank" rel="noopener noreferrer">Download PDF</a>
-                <a class="btn" href="{{ report.html_url }}" target="_blank" rel="noopener noreferrer">Open Raw HTML</a>
-                <a class="btn" href="{{ report.data_url }}" target="_blank" rel="noopener noreferrer">View JSON Data</a>
+
+                <details class="card" style="padding:10px 12px;">
+                    <summary style="cursor:pointer; font-weight:700;">Report tools</summary>
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                        <a class="btn" href="{{ report.html_url }}" target="_blank" rel="noopener noreferrer">Open Raw HTML</a>
+                        <a class="btn" href="{{ report.data_url }}" target="_blank" rel="noopener noreferrer">View JSON Data</a>
+                    </div>
+                </details>
             </div>
+
         </div>
 
         <div class="workspace">
@@ -821,7 +873,7 @@
                         <div class="summary-stack">
                             <div class="summary-card">
                                 <h3>Clinical snapshot</h3>
-                                <div>{{ ov.overall_summary.clinical_snapshot or ov.overall_summary.summary or "Not available yet." }}</div>
+                                <div>{{ ov.overall_summary.clinical_snapshot or ov.overall_summary.summary or ov.overall_summary or "Not available yet." }}</div>
                             </div>
 
                             <div class="summary-card">
@@ -927,7 +979,8 @@
                     <div class="grid-3" style="margin-top:18px;">
                         {% for card in systems.system_score_cards %}
                             {% set score = card.score or 0 %}
-                            <div class="score-card">
+                            {% set first_target = card.section_titles[0] if card.section_titles else card.title %}
+                        <div class="score-card" data-marker-target="marker-section-{{ section_slug(first_target) }}" style="cursor:pointer;">
                                 <div class="score-card-header">
                                     <h3 class="score-card-title">{{ card.title }}</h3>
                                     <div class="score-card-band">
@@ -977,7 +1030,7 @@
                         {% if recs.clinical_recommendations %}
                             <div class="grid-2">
                                 {% for rec in recs.clinical_recommendations %}
-                                    <div class="rec-card">
+                                    <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section) }}"style="cursor:pointer;">
                                         <h4>{{ rec.title }}</h4>
                                         <div>{{ rec.summary }}</div>
                                         {% if rec.rationale %}
@@ -1050,11 +1103,11 @@
 
                 {% if body %}
                 <section id="body-composition" class="panel card">
-                    <div class="marker-group" style="margin-top:0;">
+                    <div class="marker-group" id="body-composition-panel" style="margin-top:0;">
                         <div class="marker-group-header" onclick="toggleMarkerGroup('body-comp-group')">
                             <h3>Body composition &amp; metabolic profile</h3>
                             <div class="marker-group-meta">
-                                {{ body.status_label or "Within range" }}
+                                {{ body.status_label or "Various ranges" }}
                             </div>
                         </div>
 
@@ -1116,13 +1169,13 @@
                 {% endif %}
 
                 <section id="markers" class="panel card">
-                    <h2>Detailed markers</h2>
-                    <p class="subtle">Technical marker sections with visual cues preserved for fast review.</p>
+                    <h2>Marker detail</h2>
+                    <p class="subtle">Detailed marker explanations are best interpreted as part of a pattern rather than in isolation.</p>
 
                     {% if detail.full_marker_tables %}
                         {% for section in detail.full_marker_tables %}
                             {% set section_idx = loop.index0 %}
-                            <div class="marker-group">
+                            <div class="marker-group" id="marker-section-{{ section_slug(section.title) }}">
                                 <div class="marker-group-header" onclick="toggleMarkerGroup('group-{{ section_idx }}')">
                                     <h3>{{ section.title }}</h3>
                                     <div class="marker-group-meta">
@@ -1178,7 +1231,7 @@
 
                                             <div class="marker-detail" id="marker-{{ section_idx }}-{{ row_idx }}">
                                                 <div class="edu-block">
-                                                    <div class="edu-title">What this marker means</div>
+                                                    <div class="edu-title">What this means</div>
                                                     <div class="edu-body">{{ row.what_it_means or row.meaning or "Not available yet." }}</div>
                                                 </div>
 
@@ -1270,53 +1323,58 @@
         </div>
     </div>
 
-    <script>
+        <script>
         (function () {
-            const navLinks = document.querySelectorAll(".nav-list a");
+            const navLinks = document.querySelectorAll('.nav-list a');
             navLinks.forEach((link) => {
-                link.addEventListener("click", () => {
-                    navLinks.forEach((l) => l.classList.remove("active"));
-                    link.classList.add("active");
+                link.addEventListener('click', () => {
+                    navLinks.forEach((l) => l.classList.remove('active'));
+                    link.classList.add('active');
                 });
             });
 
-            const allTabButtons = document.querySelectorAll(".tab-btn");
-            const allTabPanels = document.querySelectorAll(".tab-panel");
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            tabButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const panelId = btn.dataset.tab;
+                    const relatedGroup = btn.closest('section, .card, .marker-group-body') || document;
+                    const localButtons = relatedGroup.querySelectorAll('.tab-btn');
+                    const localPanels = relatedGroup.querySelectorAll('.tab-panel');
+                    localButtons.forEach((b) => b.classList.remove('active'));
+                    localPanels.forEach((p) => p.classList.remove('active'));
+                    btn.classList.add('active');
+                    const panel = document.getElementById(panelId);
+                    if (panel) panel.classList.add('active');
+                });
+            });
 
-            allTabButtons.forEach((btn) => {
-                btn.addEventListener("click", () => {
-                    const tabName = btn.dataset.tab;
-                    if (!tabName) return;
+            const jumpCards = document.querySelectorAll('[data-marker-target]');
+            jumpCards.forEach((card) => {
+                card.addEventListener('click', () => {
+                    const targetId = card.getAttribute('data-marker-target');
+                    if (!targetId) return;
+                    const target = document.getElementById(targetId);
+                    if (!target) return;
 
-                    const isBodyTab = tabName.startsWith("body-tab-");
-
-                    if (isBodyTab) {
-                        document.querySelectorAll('.tab-btn[data-tab^="body-tab-"]').forEach((b) => b.classList.remove("active"));
-                        document.querySelectorAll('.tab-panel[id^="body-tab-"]').forEach((p) => p.classList.remove("active"));
-                    } else {
-                        document.querySelectorAll('.tab-btn[data-tab="clinical-tab"], .tab-btn[data-tab="plan-tab"], .tab-btn[data-tab="products-tab"]').forEach((b) => b.classList.remove("active"));
-                        document.querySelectorAll('#clinical-tab, #plan-tab, #products-tab').forEach((p) => p.classList.remove("active"));
+                    const body = target.querySelector('.marker-group-body');
+                    if (body && !body.classList.contains('open')) {
+                        body.classList.add('open');
                     }
 
-                    btn.classList.add("active");
-                    const panel = document.getElementById(tabName);
-                    if (panel) panel.classList.add("active");
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
                 });
             });
         })();
 
         function toggleMarkerGroup(id) {
             const el = document.getElementById(id);
-            if (el) {
-                el.classList.toggle("open");
-            }
+            if (el) el.classList.toggle('open');
         }
 
         function toggleMarkerDetail(id) {
             const el = document.getElementById(id);
-            if (el) {
-                el.classList.toggle("open");
-            }
+            if (el) el.classList.toggle('open');
         }
     </script>
 </body>

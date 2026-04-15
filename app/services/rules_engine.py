@@ -10,10 +10,10 @@ SEVERITY_SCORES = {
     "normal": 0,
     "low_mild": 1,
     "high_mild": 1,
-    "low_moderate": 2,
-    "high_moderate": 2,
-    "low_severe": 3,
-    "high_severe": 3,
+    "low_moderate": 3,
+    "high_moderate": 3,
+    "low_severe": 6,
+    "high_severe": 6,
     "unknown": 0,
 }
 
@@ -265,39 +265,93 @@ def apply_marker_definition(
     marker: ParameterResult,
     definition_index: dict,
 ) -> None:
+    """
+    Enrich a marker with educational / explanatory content from the
+    marker definition dataset.
+
+    Tolerates old/new field names from the marker definition source.
+    """
     definition = get_marker_definition(
         definition_index,
         section.display_title or section.source_title,
         marker.source_name,
     )
 
+    if not definition and getattr(marker, "display_label", None):
+        definition = get_marker_definition(
+            definition_index,
+            section.display_title or section.source_title,
+            marker.display_label,
+        )
+
+    if not definition and getattr(marker, "clinical_label", None):
+        definition = get_marker_definition(
+            definition_index,
+            section.display_title or section.source_title,
+            marker.clinical_label,
+        )
+
+    if not definition and getattr(marker, "original_report_category", None):
+        definition = get_marker_definition(
+            definition_index,
+            marker.original_report_category,
+            marker.source_name,
+        )
+
     if not definition:
         return
 
-    marker.what_it_means = definition.get("what_it_means") or marker.what_it_means
-    marker.why_it_matters = definition.get("why_it_matters") or marker.why_it_matters
-    marker.functional_significance = (
-        definition.get("functional_significance") or marker.functional_significance
+    marker.what_it_means = (
+        definition.get("what_it_means")
+        or definition.get("clinical_meaning")
+        or marker.what_it_means
     )
-    marker.common_patterns = definition.get("common_patterns") or marker.common_patterns
 
-    clinical_relevance = definition.get("clinical_relevance")
-    if clinical_relevance:
-        marker.recommendation_notes = clinical_relevance
+    marker.why_it_matters = (
+        definition.get("why_it_matters")
+        or marker.why_it_matters
+    )
+
+    marker.functional_significance = (
+        definition.get("functional_significance")
+        or marker.functional_significance
+    )
+
+    marker.common_patterns = (
+        definition.get("common_patterns")
+        or definition.get("pattern_links")
+        or marker.common_patterns
+    )
+
+    marker.recommendation_notes = (
+        definition.get("recommendation_notes")
+        or definition.get("recommendation_hint")
+        or marker.recommendation_notes
+    )
 
     severity = marker.severity or ""
+
     if severity.startswith("low"):
         marker.patient_interpretation = (
-            definition.get("interpretation_low") or marker.patient_interpretation
+            definition.get("interpretation_low")
+            or definition.get("low_interpretation")
+            or marker.patient_interpretation
         )
     elif severity.startswith("high"):
         marker.patient_interpretation = (
-            definition.get("interpretation_high") or marker.patient_interpretation
+            definition.get("interpretation_high")
+            or definition.get("high_interpretation")
+            or marker.patient_interpretation
+        )
+    else:
+        marker.patient_interpretation = (
+            definition.get("interpretation_normal")
+            or definition.get("normal_interpretation")
+            or marker.patient_interpretation
         )
 
     if not marker.marker_priority or marker.marker_priority == "normal":
         marker.marker_priority = assign_marker_priority(marker)
-
 
 def apply_insight_engine(report: ParsedReport) -> ParsedReport:
     definition_index = load_marker_definition_index()
