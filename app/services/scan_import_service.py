@@ -1,12 +1,15 @@
-# app/services/scan_import_service.py
-
 from __future__ import annotations
 
+import os
 import uuid
 from pathlib import Path
 
-TEMP_UPLOAD_DIR = Path("/tmp/qrma_imports")
+
+TEMP_UPLOAD_DIR = Path(os.getenv("TEMP_UPLOAD_DIR", "/tmp/qrma_imports"))
+CASE_STORAGE_ROOT = Path(os.getenv("CASE_STORAGE_ROOT", "/app/app/data/qrma_cases"))
+
 TEMP_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
+CASE_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
 
 
 def save_temp_html(file_bytes: bytes) -> tuple[str, str]:
@@ -23,10 +26,14 @@ def load_temp_html(temp_id: str) -> bytes:
 
 def save_case_html(case_id: str, user_id: str, file_bytes: bytes) -> str:
     """
-    Persist the uploaded QRMA HTML against the case.
+    Persist the uploaded QRMA HTML against the case using durable storage.
+
+    Path shape:
+      <CASE_STORAGE_ROOT>/<user_id>/<case_id>/raw_scan.html
     """
-    output_dir = Path("/tmp/qrma_cases") / str(user_id) / str(case_id)
+    output_dir = CASE_STORAGE_ROOT / str(user_id) / str(case_id)
     output_dir.mkdir(parents=True, exist_ok=True)
+
     path = output_dir / "raw_scan.html"
     path.write_bytes(file_bytes)
     return str(path)
@@ -144,5 +151,3 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             "scan_datetime": parsed_scan_datetime,
         },
     }
-
-

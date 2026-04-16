@@ -4,7 +4,7 @@ from dataclasses import dataclass, field
 from typing import Any, Dict, List, Optional, Literal
 
 from pydantic import BaseModel, Field
-
+from collections import defaultdict
 
 ConfidenceLevel = Literal["low", "medium", "high"]
 SeverityBand = Literal["low", "moderate", "high"]
@@ -1024,3 +1024,424 @@ __all__ = [
     "run_pattern_engine_v2",
     "attach_pattern_engine_v2_output",
 ]
+
+# ---------------------------------------------------------------------------
+# V3 PATTERN RANKING ENGINE
+# Stronger differentiation, explicit ranking, safer clinical prioritisation
+# ---------------------------------------------------------------------------
+
+
+
+
+V3_PRIMARY_PATTERN_LIMIT = 2
+V3_SECONDARY_PATTERN_LIMIT = 3
+
+V3_SUPPRESSION_THRESHOLD = 42.0
+V3_SECONDARY_THRESHOLD = 56.0
+V3_PRIMARY_THRESHOLD = 70.0
+
+V3_KIND_WEIGHT = {
+    "absorption_assimilation": 1.15,
+    "toxic_burden": 1.10,
+    "inflammatory_barrier": 1.05,
+    "neurocognitive_support": 1.00,
+    "mitochondrial_energy": 1.05,
+    "glycaemic_metabolic": 1.12,
+    "lipid_transport_membrane": 0.95,
+    "connective_tissue_repair": 0.92,
+}
+
+V3_MAX_EVIDENCE_ITEMS_PER_PATTERN = 8
+
+
+def _v3_report_profile(report: Any) -> str:
+    sex = (safe_get(safe_get(report, "patient", None), "sex", None) or "").strip().lower()
+    age = safe_get(safe_get(report, "patient", None), "age", None)
+
+    try:
+        age_num = int(age) if age is not None else None
+    except Exception:
+        age_num = None
+
+    if age_num is not None and age_num < 18:
+        return "child"
+    if sex == "male":
+        return "male"
+    if sex == "female":
+        return "female"
+    return "female"
+
+
+def _v3_visible_sections(report: Any) -> list[Any]:
+    sections = []
+    for section in safe_get(report, "sections", []) or []:
+        title = canonical_section_name(
+            safe_get(section, "display_title", None) or safe_get(section, "source_title", None)
+        )
+        if not title:
+            continue
+        if title.strip().lower() in EXCLUDED_SECTIONS:
+            continue
+        params = safe_get(section, "parameters", []) or []
+        if not params:
+            continue
+        sections.append(section)
+    return sections
+
+
+def _v3_section_lookup(report: Any) -> dict[str, Any]:
+    out = {}
+    for section in _v3_visible_sections(report):
+        title = canonical_section_name(
+            safe_get(section, "display_title", None) or safe_get(section, "source_title", None)
+        )
+        if title:
+            out[title] = section
+    return out
+
+
+def _v3_marker_matches(rule: PatternRule, marker_name: str) -> bool:
+    nm = normalise_marker_name(marker_name)
+    if not nm:
+        return False
+
+    for preferred in rule.preferred_markers:
+        if nm == normalise_marker_name(preferred):
+            return True
+
+        aliases = rule.marker_aliases.get(preferred, [])
+        for alias in aliases:
+            if nm == normalise_marker_name(alias):
+                return True
+
+    return False
+
+
+def _v3_collect_pattern_evidence(report: Any, rule: PatternRule) -> tuple[list[EvidenceItem], dict[str, Any]]:
+    section_map = _v3_section_lookup(report)
+    included_sections = set(rule.include_sections or [])
+
+    evidence: list[EvidenceItem] = []
+    matched_sections: set[str] = set()
+    preferred_marker_hits = 0
+    abnormal_hits = 0
+
+    for section_title in included_sections:
+        section = section_map.get(section_title)
+        if not section:
+            continue
+
+        section_hit = False
+        for marker in safe_get(section, "parameters", []) or []:
+            marker_name = (
+                safe_get(marker, "display_name", None)
+                or safe_get(marker, "source_name", None)
+                or safe_get(marker, "name", None)
+                or ""
+            ).strip()
+
+            severity = normalise_severity(safe_get(marker, "severity", None))
+            sev_mult = severity_multiplier(severity)
+
+            if sev_mult <= 0:
+                continue
+
+            section_hit = True
+            abnormal_hits += 1
+
+            weight = sev_mult
+            if _v3_marker_matches(rule, marker_name):
+                weight += rule.preferred_marker_bonus
+                preferred_marker_hits += 1
+
+            evidence.append(
+                EvidenceItem(
+                    section=section_title,
+                    marker=marker_name or None,
+                    severity=severity,
+                    value=safe_get(marker, "actual_value_text", None) or safe_get(marker, "actual_value_numeric", None),
+                    direction=infer_direction(severity),
+                    weight=round(weight, 3),
+                )
+            )
+
+        if section_hit:
+            matched_sections.add(section_title)
+
+    evidence.sort(
+        key=lambda x: (
+            x.weight,
+            1 if x.marker and _v3_marker_matches(rule, x.marker) else 0,
+            x.section,
+            x.marker or "",
+        ),
+        reverse=True,
+    )
+
+    evidence = evidence[:V3_MAX_EVIDENCE_ITEMS_PER_PATTERN]
+
+    stats = {
+        "matched_sections": sorted(matched_sections),
+        "cross_section_hits": len(matched_sections),
+        "preferred_marker_hits": preferred_marker_hits,
+        "abnormal_hits": abnormal_hits,
+    }
+    return evidence, stats
+
+
+def _v3_pattern_score(rule: PatternRule, evidence: list[EvidenceItem], stats: dict[str, Any], profile: str) -> float:
+    if not evidence:
+        return 0.0
+
+    evidence_weight = sum(item.weight for item in evidence)
+    cross_section_hits = stats.get("cross_section_hits", 0)
+    preferred_marker_hits = stats.get("preferred_marker_hits", 0)
+    abnormal_hits = stats.get("abnormal_hits", 0)
+
+    base = rule.base_score * 8.0
+    evidence_component = evidence_weight * 8.5
+    cross_section_component = max(0, cross_section_hits - 1) * (rule.section_bonus * 3.0)
+    preferred_component = preferred_marker_hits * 2.0
+
+    profile_multiplier = rule.profile_weighting.get(profile, 1.0)
+    kind_multiplier = V3_KIND_WEIGHT.get(rule.kind, 1.0)
+
+    raw = (base + evidence_component + cross_section_component + preferred_component)
+    raw *= profile_multiplier
+    raw *= kind_multiplier
+
+    # Small penalty for broad but weak evidence sets
+    if abnormal_hits >= 4 and evidence_weight / max(abnormal_hits, 1) < 1.2:
+        raw *= 0.92
+
+    # Small reward for compact, coherent evidence
+    if cross_section_hits >= rule.minimum_cross_section_hits and preferred_marker_hits >= 2:
+        raw *= 1.05
+
+    return round(min(raw, 100.0), 2)
+
+
+def _v3_pattern_confidence(score: float, stats: dict[str, Any]) -> ConfidenceLevel:
+    cross_section_hits = stats.get("cross_section_hits", 0)
+    preferred_marker_hits = stats.get("preferred_marker_hits", 0)
+
+    if score >= 74 and cross_section_hits >= 3 and preferred_marker_hits >= 2:
+        return "high"
+    if score >= 56 and cross_section_hits >= 2:
+        return "medium"
+    return "low"
+
+
+def _v3_pattern_severity(score: float) -> SeverityBand:
+    if score >= 70:
+        return "high"
+    if score >= 56:
+        return "moderate"
+    return "low"
+
+
+def _v3_supporting_marker_names(evidence: list[EvidenceItem], limit: int = 3) -> list[str]:
+    names = []
+    for item in evidence:
+        if item.marker and item.marker not in names:
+            names.append(item.marker)
+        if len(names) >= limit:
+            break
+    return names
+
+
+def _v3_build_pattern_summary(rule: PatternRule, evidence: list[EvidenceItem], stats: dict[str, Any]) -> str:
+    marker_names = _v3_supporting_marker_names(evidence, limit=3)
+    marker_text = ", ".join(marker_names) if marker_names else "multiple abnormal markers"
+
+    if stats.get("cross_section_hits", 0) >= 3:
+        return (
+            f"{rule.description} Driven across {stats['cross_section_hits']} related sections, "
+            f"led by {marker_text}."
+        )
+
+    return f"{rule.description} Led primarily by {marker_text}."
+
+
+def _v3_convert_evidence(evidence: list[EvidenceItem]) -> list[PatternEvidence]:
+    return [
+        PatternEvidence(
+            section=item.section,
+            marker=item.marker,
+            severity=item.severity,
+            value=str(item.value) if item.value is not None else None,
+            direction=item.direction,
+            weight=item.weight,
+            note=item.note,
+        )
+        for item in evidence
+    ]
+
+
+def _v3_evaluate_rule(report: Any, rule: PatternRule, profile: str) -> RootCausePattern | None:
+    evidence, stats = _v3_collect_pattern_evidence(report, rule)
+
+    if stats["abnormal_hits"] < rule.minimum_hits:
+        return None
+    if stats["cross_section_hits"] < rule.minimum_cross_section_hits:
+        return None
+
+    score = _v3_pattern_score(rule, evidence, stats, profile)
+    if score <= 0:
+        return None
+
+    confidence = _v3_pattern_confidence(score, stats)
+    severity = _v3_pattern_severity(score)
+    summary = _v3_build_pattern_summary(rule, evidence, stats)
+
+    return RootCausePattern(
+        key=rule.key,
+        label=rule.label,
+        kind=rule.kind,
+        summary=summary,
+        confidence=confidence,
+        severity=severity,
+        score=score,
+        evidence=_v3_convert_evidence(evidence),
+        upstream_factors=list(rule.upstream_factors or []),
+        downstream_impacts=list(rule.downstream_impacts or []),
+        suggested_focus_areas=list(rule.suggested_focus_areas or []),
+        metadata={
+            "matched_sections": stats["matched_sections"],
+            "cross_section_hits": stats["cross_section_hits"],
+            "preferred_marker_hits": stats["preferred_marker_hits"],
+            "abnormal_hits": stats["abnormal_hits"],
+        },
+    )
+
+
+def detect_root_cause_patterns_v3(report: Any) -> PatternEngineV2Result:
+    profile = _v3_report_profile(report)
+
+    rules: list[PatternRule] = [
+        ABSORPTION_ASSIMILATION_RULE,
+        TOXIC_BURDEN_RULE,
+        INFLAMMATORY_BARRIER_RULE,
+        NEUROCOGNITIVE_SUPPORT_RULE,
+        MITOCHONDRIAL_ENERGY_RULE,
+        GLYCAEMIC_METABOLIC_RULE,
+        LIPID_TRANSPORT_MEMBRANE_RULE,
+        CONNECTIVE_TISSUE_REPAIR_RULE,
+    ]
+
+    matches: list[RootCausePattern] = []
+    debug_rows: list[dict[str, Any]] = []
+
+    for rule in rules:
+        pattern = _v3_evaluate_rule(report, rule, profile)
+        if pattern is not None:
+            matches.append(pattern)
+            debug_rows.append({
+                "key": pattern.key,
+                "score": pattern.score,
+                "severity": pattern.severity,
+                "confidence": pattern.confidence,
+                "matched_sections": pattern.metadata.get("matched_sections", []),
+            })
+        else:
+            debug_rows.append({
+                "key": rule.key,
+                "score": 0,
+                "severity": None,
+                "confidence": None,
+                "matched_sections": [],
+            })
+
+    # Strong differentiation: highest score first, then confidence, then evidence breadth
+    matches.sort(
+        key=lambda p: (
+            p.score,
+            {"high": 3, "medium": 2, "low": 1}.get(p.confidence, 0),
+            len(p.metadata.get("matched_sections", [])),
+            len(p.evidence),
+        ),
+        reverse=True,
+    )
+
+    primary_patterns: list[RootCausePattern] = []
+    secondary_patterns: list[RootCausePattern] = []
+    suppressed_patterns: list[RootCausePattern] = []
+
+    for idx, pattern in enumerate(matches):
+        if pattern.score < V3_SUPPRESSION_THRESHOLD:
+            suppressed_patterns.append(pattern)
+            continue
+
+        if len(primary_patterns) < V3_PRIMARY_PATTERN_LIMIT and pattern.score >= V3_PRIMARY_THRESHOLD:
+            primary_patterns.append(pattern)
+            continue
+
+        if len(secondary_patterns) < V3_SECONDARY_PATTERN_LIMIT and pattern.score >= V3_SECONDARY_THRESHOLD:
+            secondary_patterns.append(pattern)
+            continue
+
+        suppressed_patterns.append(pattern)
+
+    # Safety rule: always surface at least one primary if anything meaningful was found
+    if not primary_patterns and matches:
+        top = matches[0]
+        if top.score >= V3_SECONDARY_THRESHOLD:
+            primary_patterns = [top]
+            secondary_patterns = [p for p in matches[1:] if p.score >= V3_SECONDARY_THRESHOLD][:V3_SECONDARY_PATTERN_LIMIT]
+            suppressed_patterns = [p for p in matches if p not in primary_patterns and p not in secondary_patterns]
+
+    return PatternEngineV2Result(
+        primary_patterns=primary_patterns,
+        secondary_patterns=secondary_patterns,
+        suppressed_patterns=suppressed_patterns,
+        debug={
+            "profile": profile,
+            "evaluated_rules": debug_rows,
+        },
+    )
+
+
+def _v3_pattern_to_legacy_dict(pattern: RootCausePattern) -> dict[str, Any]:
+    return {
+        "key": pattern.key,
+        "title": pattern.label,
+        "priority": "high" if pattern.severity == "high" else ("medium" if pattern.severity == "moderate" else "low"),
+        "confidence": pattern.confidence,
+        "clinical_summary": pattern.summary,
+        "patient_summary": pattern.summary,
+        "follow_up_focus": list(pattern.suggested_focus_areas or []),
+        "matched_systems": list(pattern.metadata.get("matched_sections", [])),
+        "driver_sections": list(pattern.metadata.get("matched_sections", [])),
+        "score": pattern.score,
+        "kind": pattern.kind,
+    }
+
+
+def attach_pattern_engine_v3_output(report: Any) -> Any:
+    """
+    Parallel V3 attach function.
+    Keeps report-builder integration easy and rollback-safe.
+    """
+    result = detect_root_cause_patterns_v3(report)
+
+    primary = result.primary_patterns
+    secondary = result.secondary_patterns
+    all_surfaceable = primary + secondary
+
+    # Backward-friendly fields
+    report.primary_patterns = primary
+    report.secondary_patterns = secondary
+    report.suppressed_patterns = result.suppressed_patterns
+
+    report.primary_pattern = primary[0] if primary else None
+    report.contributing_patterns = secondary[:3] if secondary else []
+
+    # For downstream template compatibility
+    report.detected_patterns = [_v3_pattern_to_legacy_dict(p) for p in all_surfaceable]
+
+    # Preserve `patterns` as a simple surfaceable list
+    report.patterns = all_surfaceable
+
+    report.pattern_engine_debug = result.debug
+
+    return report

@@ -4,12 +4,11 @@ from app.models.schema import ParsedReport, ReportOverrides, ParameterResult
 from app.services.config_service import load_practitioner_config
 from app.services.pdf_service import save_html, save_pdf
 from app.services.marker_definition_service import load_marker_definition_index, get_marker_definition
-from app.services.scoring_engine import compute_scan_scores
-from app.services.pattern_engine_v2 import attach_pattern_engine_v2_output
 from app.services.product_resolver import resolve_all_products
 from app.services.protocol_composer import compose_protocol
 from app.services.ai_narrative_engine_v2 import enrich_protocol_plan_with_narrative
 from app.services.product_mapping_builder import build_complete_product_mapping
+from app.services.scoring_engine import compute_scan_scores, compute_scan_scores_v3
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
@@ -22,8 +21,11 @@ from app.config.product_recommendation_settings import (
     normalize_recommendation_mode,
     products_enabled,
 )
-
-
+from app.services.pattern_engine_v2 import (
+    attach_pattern_engine_v2_output,
+    attach_pattern_engine_v3_output,
+)
+from app.services.clinical_summary_engine_v3 import build_clinical_summary_v3
 
 ROOT = Path(__file__).resolve().parents[2]
 TEMPLATES_DIR = ROOT / "app" / "templates"
@@ -31,6 +33,9 @@ TEMPLATES_DIR = ROOT / "app" / "templates"
 NON_DISPLAY_SECTIONS = {"expert analysis", "hand analysis"}
 EXCLUDED_PRIORITY_SECTIONS = {"element of human", "basic physical quality"}
 
+USE_V3_SCORING = True
+USE_V3_PATTERN_ENGINE = True
+USE_V3_CLINICAL_SUMMARY = True
 
 def is_hidden_section(title: str | None) -> bool:
     return (title or "").strip().lower() in NON_DISPLAY_SECTIONS
@@ -456,10 +461,12 @@ def _section_card_map(report: ParsedReport):
         and getattr(s, "parameters", None)
         and len(s.parameters) > 0
     ]
-    scan_scores = compute_scan_scores(all_non_body)
-
+    scan_scores = compute_scan_scores_v3(all_non_body) if USE_V3_SCORING else compute_scan_scores(all_non_body)
     # 🔥 ADD THIS LINE (Pattern Engine V2)
-    report = attach_pattern_engine_v2_output(report)
+    report = attach_pattern_engine_v3_output(report) if USE_V3_PATTERN_ENGINE else attach_pattern_engine_v2_output(report)
+
+    if USE_V3_CLINICAL_SUMMARY:
+        report = build_clinical_summary_v3(report)
 
   
 
@@ -500,9 +507,18 @@ def select_report_sections(report: ParsedReport, max_sections: int = 6):
 
 
 def select_priority_marker_cards(section, max_markers: int = 4):
-    candidates = [p for p in section.parameters if p.severity in {"high_moderate", "low_moderate", "high_severe", "low_severe"}]
+    section_title = section.display_title or section.source_title
+    candidates = [
+        p for p in section.parameters
+        if p.severity in {"high_moderate", "low_moderate", "high_severe", "low_severe"}
+        and not _should_skip_output_marker(p, section_title)
+    ]
     weights = {"high_severe": 6, "low_severe": 6, "high_moderate": 5, "low_moderate": 5}
-    return sorted(candidates, key=lambda p: (weights.get(p.severity or "unknown", 0), p.source_name.lower()), reverse=True)[:max_markers]
+    return sorted(
+        candidates,
+        key=lambda p: (weights.get(p.severity or "unknown", 0), (p.source_name or "").lower()),
+        reverse=True,
+    )[:max_markers]
 
 
 def build_priority_overview(report):
@@ -735,6 +751,83 @@ def _extract_numeric(value_text: str | None) -> float | None:
     except Exception:
         return None
 
+
+def _clean_marker_text(value: str | None) -> str:
+    return (value or "").strip()
+
+
+def _looks_like_metadata_marker(source_name: str | None, value_text: str | None) -> bool:
+    source = _clean_marker_text(source_name).lower()
+    value = _clean_marker_text(value_text).lower()
+    combined = f"{source} {value}".strip()
+
+    metadata_tokens = [
+        "name:",
+        "sex:",
+        "figure:",
+        "testing time:",
+        "test time:",
+        "report time:",
+        "age:",
+    ]
+
+    if any(token in combined for token in metadata_tokens):
+        return True
+
+    if source.startswith("name:") or source.startswith("figure:") or source.startswith("testing time:"):
+        return True
+
+    return False
+
+
+def _looks_like_non_marker_value(value_text: str | None) -> bool:
+    value = _clean_marker_text(value_text).lower()
+
+    if not value:
+        return True
+
+    junk_values = {
+        "sex: female",
+        "sex: male",
+        "no direction",
+        "+",
+        "-",
+    }
+
+    if value in junk_values:
+        return True
+
+    if "testing time:" in value or "figure:" in value or "name:" in value:
+        return True
+
+    return False
+
+
+def _should_skip_output_marker(param: ParameterResult, section_title: str | None = None) -> bool:
+    source_name = _clean_marker_text(getattr(param, "source_name", None))
+    value_text = _clean_marker_text(getattr(param, "actual_value_text", None))
+    range_text = _clean_marker_text(getattr(param, "normal_range_text", None))
+    section = _clean_marker_text(section_title).lower()
+
+    if not source_name:
+        return True
+
+    if _looks_like_metadata_marker(source_name, value_text):
+        return True
+
+    if not range_text and _looks_like_non_marker_value(value_text):
+        return True
+
+    # Bone Disease is where QRMA often leaks demographic/header rows into table parsing
+    if section == "bone disease":
+        if not range_text and (
+            "name:" in source_name.lower()
+            or "figure:" in source_name.lower()
+            or "testing time" in source_name.lower()
+        ):
+            return True
+
+    return False
 
 def _normalise_body_comp_value(label: str, value_text: str | None) -> str:
     if not value_text:
@@ -1005,11 +1098,16 @@ def build_full_marker_tables(report: ParsedReport):
         rows = []
         seen = set()
         for param in section.parameters:
+            if _should_skip_output_marker(param, section_title):
+                continue
+
             key = (param.source_name, param.actual_value_text)
             if key in seen:
                 continue
             seen.add(key)
+
             param = _overlay_definition(section_title, param)
+
             rows.append({
                 "marker": param.source_name,
                 "display_name": param.display_label or param.source_name,
@@ -1260,6 +1358,18 @@ def build_v2_practitioner_overview(report) -> str:
         f"that warrants targeted follow-up. Priority areas include {focus_text}."
     )
 
+def _priority_sort_key(section):
+    priority = section.get("priority", "normal")
+    score = section.get("score", 100)
+
+    priority_weight = {
+        "high": 3,
+        "medium": 2,
+        "low": 1,
+        "normal": 0,
+    }.get(priority, 0)
+
+    return (-priority_weight, score)
 
 def build_report_context(
     report: ParsedReport,
@@ -1277,10 +1387,12 @@ def build_report_context(
         and len(s.parameters) > 0
     ]
 
-    scan_scores = compute_scan_scores(all_non_body)
+    scan_scores = compute_scan_scores_v3(all_non_body) if USE_V3_SCORING else compute_scan_scores(all_non_body)
 
-    # 🔥 ADD THIS LINE (Pattern Engine V2)
-    report = attach_pattern_engine_v2_output(report)
+    report = attach_pattern_engine_v3_output(report) if USE_V3_PATTERN_ENGINE else attach_pattern_engine_v2_output(report)
+
+    if USE_V3_CLINICAL_SUMMARY:
+        report = build_clinical_summary_v3(report)
 
     section_card_map = {
         (card["title"] or "").strip().lower(): card
@@ -1299,7 +1411,9 @@ def build_report_context(
     full_marker_tables = build_full_marker_tables(report)
     patient_header = build_patient_header(report)
     body_composition_block = build_body_composition_block(report)
-    priority_sections = build_priority_sections_list(report)
+    priority_sections: list = []
+    priority_sections = priority_sections or []
+    priority_sections = sorted(priority_sections, key=_priority_sort_key)
     priority_section_intro = build_priority_category_review_intro(priority_sections)
 
     clinical_context = None
@@ -1387,11 +1501,16 @@ def build_report_context(
             section_title = section.display_title or section.source_title
             seen = set()
             for param in section.parameters:
+                if _should_skip_output_marker(param, section_title):
+                    continue
+
                 key = (param.source_name, param.actual_value_text)
                 if key in seen:
                     continue
                 seen.add(key)
+
                 param = _overlay_definition(section_title, param)
+
                 appendix_rows.append({
                     "section": normalise_display_term(section.display_title or section.source_title),
                     "marker": param.source_name,
@@ -1408,39 +1527,65 @@ def build_report_context(
     include_product_recommendations = config.get("include_product_recommendations", False)
 
 
-    overall_summary = normalise_recommendation_narrative(
-        normalise_narrative_text(getattr(report, "overall_summary", None))
-    )
-    practitioner_summary = normalise_recommendation_narrative(
-        normalise_narrative_text(getattr(report, "practitioner_summary", None))
-    )
-    key_patterns = [
-        normalise_recommendation_narrative(normalise_narrative_text(x))
-        for x in getattr(report, "key_patterns", [])
-    ]
-    priority_actions = [
-        normalise_recommendation_narrative(normalise_narrative_text(x))
-        for x in getattr(report, "priority_actions", [])
-    ]
+    clinical_summary_v3 = getattr(report, "clinical_summary_v3", {}) or {}
 
-    if getattr(report, "patterns", None):
+    overall_summary = normalise_recommendation_narrative(
+        normalise_narrative_text(
+            clinical_summary_v3.get("dominant_driver")
+            or getattr(report, "overall_summary", None)
+        )
+    )
+
+    practitioner_summary = normalise_recommendation_narrative(
+        normalise_narrative_text(
+            clinical_summary_v3.get("practitioner_summary")
+            or getattr(report, "practitioner_summary", None)
+        )
+    )
+
+    key_patterns = []
+    for text in [
+        clinical_summary_v3.get("dominant_driver"),
+        clinical_summary_v3.get("secondary_drivers"),
+        clinical_summary_v3.get("key_marker_evidence"),
+    ]:
+        if text:
+            key_patterns.append(
+                normalise_recommendation_narrative(normalise_narrative_text(text))
+            )
+
+    if not key_patterns and getattr(report, "patterns", None):
         key_patterns = [
             normalise_recommendation_narrative(normalise_narrative_text(x))
             for x in build_v2_key_patterns(report)
         ]
+
+    raw_actions = clinical_summary_v3.get("priority_actions")
+
+    if isinstance(raw_actions, list):
         priority_actions = [
             normalise_recommendation_narrative(normalise_narrative_text(x))
-            for x in build_v2_priority_actions(report)
+            for x in raw_actions
+        ]
+    elif isinstance(raw_actions, str):
+        priority_actions = [
+            normalise_recommendation_narrative(normalise_narrative_text(raw_actions))
         ]
     else:
-        key_patterns = [
-            normalise_recommendation_narrative(normalise_narrative_text(x))
-            for x in getattr(report, "key_patterns", [])
-        ]
-        priority_actions = [
-            normalise_recommendation_narrative(normalise_narrative_text(x))
-            for x in getattr(report, "priority_actions", [])
-        ]
+        priority_actions = []
+
+
+    if not priority_actions:
+        if getattr(report, "patterns", None):
+            priority_actions = [
+                normalise_recommendation_narrative(normalise_narrative_text(x))
+                for x in build_v2_priority_actions(report)
+            ]
+        else:
+            priority_actions = [
+                normalise_recommendation_narrative(normalise_narrative_text(x))
+                for x in getattr(report, "priority_actions", [])
+            ]
 
     clinical_recommendations = []
     for rec in rank_v2_clinical_recommendations(report):
@@ -1507,12 +1652,11 @@ def build_report_context(
 
     glance_narrative = rewrite_at_a_glance_v3(
         report,
-        build_v2_clinical_snapshot(report),
-        build_v2_practitioner_overview(report),
+        clinical_summary_v3.get("dominant_driver") or build_v2_clinical_snapshot(report),
+        clinical_summary_v3.get("practitioner_summary") or build_v2_practitioner_overview(report),
         primary_pattern_context,
         contributing_patterns_context,
     )
-
     overall_summary = glance_narrative["overall_summary"]
     practitioner_summary = glance_narrative["practitioner_summary"]
     primary_pattern_context = glance_narrative["primary_pattern"]
@@ -1545,6 +1689,7 @@ def build_report_context(
         "build_version": build_version,
         "recommendation_mode": recommendation_mode,
         "overall_summary": overall_summary,
+        "clinical_summary_v3": clinical_summary_v3,
         "priority_sections": priority_sections,
         "priority_overview": priority_overview,
         "section_blocks": section_blocks,
@@ -1555,7 +1700,6 @@ def build_report_context(
         "include_toc": config.get("include_toc", True),
         "toc_items": toc_items,
         "clinical_recommendations": clinical_recommendations,
-        "product_recommendations": getattr(report, "product_recommendations", []),
         "include_product_recommendations": include_product_recommendations,
         "practitioner_notes": overrides.practitioner_notes,
         "practitioner_summary": practitioner_summary,
@@ -1587,7 +1731,7 @@ def build_report_context(
         "category_completeness": getattr(report, "category_completeness", {}),
         "overall_scan_score": scan_scores["overall_score"],
         "overall_scan_band_label": scan_scores["overall_band_label"],
-        "overall_scan_gauge_color": scan_scores["overall_gauge_color"],
+        "overall_scan_gauge_color": scan_scores.get("overall_gauge_color") or scan_scores.get("overall_band_color"),
         "system_score_cards": system_score_cards,
         "section_score_cards": scan_scores.get("section_score_cards", []),
         "body_system_cards": scan_scores.get("body_system_cards", []),
@@ -1672,6 +1816,7 @@ def build_viewer_payload(
                 "profile": ctx.get("report_profile"),
             },
             "overall_summary": overall_summary_payload,
+            "clinical_summary_v3": _safe_dict(ctx.get("clinical_summary_v3")),
             "practitioner_summary": ctx.get("practitioner_summary"),
             "primary_pattern": _safe_dict(ctx.get("primary_pattern")),
             "contributing_patterns": _safe_list(ctx.get("contributing_patterns")),

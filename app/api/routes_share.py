@@ -4,7 +4,7 @@ from uuid import UUID
 import os
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -38,8 +38,6 @@ def _get_report_for_share_or_404(db: Session, link: ShareLink) -> ReportVersion:
     return report
 
 
-
-
 def _tenant_theme_from_report(report: ReportVersion) -> dict:
     """
     Temporary multi-tenant theme source.
@@ -48,7 +46,6 @@ def _tenant_theme_from_report(report: ReportVersion) -> dict:
     """
     report_json = report.report_json or {}
 
-    # Allow future override from stored report JSON if present
     stored_theme = report_json.get("tenant_theme", {}) if isinstance(report_json, dict) else {}
 
     return {
@@ -71,8 +68,6 @@ def _tenant_theme_from_report(report: ReportVersion) -> dict:
     }
 
 
-
-
 def _public_report_payload(report: ReportVersion, token: str) -> dict:
     report_json = report.report_json or {}
     viewer = report_json.get("viewer") or {}
@@ -88,12 +83,11 @@ def _public_report_payload(report: ReportVersion, token: str) -> dict:
             else str(report.recommendation_mode)
         ),
         "generated_at": report.generated_at.isoformat() if report.generated_at else None,
-        "pdf_url": f"/api/reports/{report.id}/pdf",
-        "html_url": f"/api/reports/{report.id}/html",
+        "pdf_url": f"/share/{token}/pdf",
+        "html_url": f"/share/{token}/html",
         "data_url": f"/share/{token}/data",
         "viewer": viewer,
     }
-
 
 
 @router.post("/api/reports/{report_version_id}/share-links", response_model=ShareLinkRead)
@@ -246,4 +240,40 @@ def get_shared_report_data(
             "tenant": tenant,
             "report": payload,
         }
+    )
+
+
+@router.get("/share/{token}/pdf")
+def get_shared_report_pdf(
+    token: str,
+    db: Session = Depends(get_db),
+):
+    link = _get_share_link_or_404(db, token)
+    report = _get_report_for_share_or_404(db, link)
+
+    if not report.pdf_path:
+        raise HTTPException(status_code=404, detail="PDF not found")
+
+    return FileResponse(
+        path=report.pdf_path,
+        media_type="application/pdf",
+        filename=f"report_{report.id}.pdf",
+    )
+
+
+@router.get("/share/{token}/html")
+def get_shared_report_html(
+    token: str,
+    db: Session = Depends(get_db),
+):
+    link = _get_share_link_or_404(db, token)
+    report = _get_report_for_share_or_404(db, link)
+
+    if not report.html_path:
+        raise HTTPException(status_code=404, detail="HTML not found")
+
+    return FileResponse(
+        path=report.html_path,
+        media_type="text/html",
+        filename=f"report_{report.id}.html",
     )
