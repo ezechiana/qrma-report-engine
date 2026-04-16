@@ -1,4 +1,5 @@
 #app/db/models.py
+from ast import Index
 import enum
 import uuid
 from datetime import date, datetime
@@ -19,19 +20,25 @@ from sqlalchemy import (
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
-
+from sqlalchemy import Index
 from app.db.base import Base
 
 
 class CaseStatus(str, enum.Enum):
     draft = "draft"
+    queued = "queued"
+    processing = "processing"
     generated = "generated"
     final = "final"
+    failed = "failed"
     archived = "archived"
 
 
 class ReportStatus(str, enum.Enum):
-    draft = "draft"
+    queued = "queued"
+    processing = "processing"
+    ready = "ready"
+    failed = "failed"
     final = "final"
 
 
@@ -58,6 +65,22 @@ class User(Base):
 
     patients: Mapped[list["Patient"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     cases: Mapped[list["Case"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+
+    recommendation_mode_default: Mapped[RecommendationMode] = mapped_column(
+        Enum(RecommendationMode),
+        default=RecommendationMode.natural_approaches_clinical,
+    )
+
+    logo_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    primary_color: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    accent_color: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    website_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+    timezone: Mapped[str] = mapped_column(String(100), default="Europe/London")
+    subscriptions: Mapped[list["Subscription"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    feedback_items: Mapped[list["FeedbackItem"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
 class Patient(Base):
@@ -117,21 +140,42 @@ class Case(Base):
 
 class ReportVersion(Base):
     __tablename__ = "report_versions"
-    __table_args__ = (
-        UniqueConstraint("case_id", "version_number", name="uq_case_version_number"),
-    )
 
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    case_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("cases.id", ondelete="CASCADE"), index=True)
-    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    case_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("cases.id", ondelete="CASCADE"),
+        index=True,
+    )
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
 
     version_number: Mapped[int] = mapped_column(Integer)
-    status: Mapped[ReportStatus] = mapped_column(Enum(ReportStatus), default=ReportStatus.draft)
-    report_json: Mapped[dict] = mapped_column(JSONB)
+
+    status: Mapped[ReportStatus] = mapped_column(
+        Enum(ReportStatus),
+        default=ReportStatus.queued,
+        index=True,
+    )
+
+    recommendation_mode: Mapped[RecommendationMode] = mapped_column(Enum(RecommendationMode))
+
+    # nullable until build completes
+    report_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     html_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     build_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
-    recommendation_mode: Mapped[RecommendationMode] = mapped_column(Enum(RecommendationMode))
+
+    # execution lifecycle
+    job_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    completed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    failed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     case: Mapped["Case"] = relationship(back_populates="report_versions")
@@ -140,8 +184,20 @@ class ReportVersion(Base):
         cascade="all, delete-orphan",
         uselist=False,
     )
-    share_links: Mapped[list["ShareLink"]] = relationship(back_populates="report_version", cascade="all, delete-orphan")
+    share_links: Mapped[list["ShareLink"]] = relationship(
+        back_populates="report_version",
+        cascade="all, delete-orphan",
+    )
+    feedback_items: Mapped[list["FeedbackItem"]] = relationship(
+        back_populates="report_version",
+        cascade="all, delete-orphan",
+    )
 
+    __table_args__ = (
+        UniqueConstraint("case_id", "version_number", name="uq_case_version_number"),
+        Index("ix_report_versions_status", "status"),
+        Index("ix_report_versions_generated_at", "generated_at"),
+    )
 
 class ReportOverride(Base):
     __tablename__ = "report_overrides"
@@ -182,6 +238,41 @@ class ShareLink(Base):
     report_version: Mapped["ReportVersion"] = relationship(back_populates="share_links")
 
 
+class SubscriptionStatus(str, enum.Enum):
+    trialing = "trialing"
+    active = "active"
+    past_due = "past_due"
+    canceled = "canceled"
+    incomplete = "incomplete"
+
+
+class Subscription(Base):
+    __tablename__ = "subscriptions"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
+    stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
+    plan_code: Mapped[str] = mapped_column(String(100))
+    status: Mapped[SubscriptionStatus] = mapped_column(
+        Enum(SubscriptionStatus),
+        default=SubscriptionStatus.incomplete,
+        index=True,
+    )
+    current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="subscriptions")
+
+
 class AuditLog(Base):
     __tablename__ = "audit_logs"
 
@@ -198,3 +289,37 @@ class AuditLog(Base):
     action: Mapped[str] = mapped_column(String(120), index=True)
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+class FeedbackSentiment(str, enum.Enum):
+    positive = "positive"
+    negative = "negative"
+    neutral = "neutral"
+
+
+    
+class FeedbackItem(Base):
+    __tablename__ = "feedback_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    report_version_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="CASCADE"),
+        index=True,
+    )
+
+    section_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    marker_key: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    sentiment: Mapped[FeedbackSentiment] = mapped_column(Enum(FeedbackSentiment), index=True)
+    comment: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="feedback_items")
+    report_version: Mapped["ReportVersion"] = relationship(back_populates="feedback_items")
+
+
