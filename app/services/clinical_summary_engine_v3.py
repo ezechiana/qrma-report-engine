@@ -108,13 +108,20 @@ def _driver_strength_phrase(pattern: Any) -> str:
 
 
 def _build_dominant_driver_text(primary_pattern: Any) -> str:
+    """
+    Role:
+    - high-level scan interpretation
+    - concise
+    - says WHAT the scan most suggests
+    - should avoid sounding like an action plan
+    """
     if not primary_pattern:
         return (
-            "The scan suggests a mixed functional picture without a single dominant driver clearly "
-            "outweighing the others."
+            "The scan suggests a mixed functional picture without a single dominant driver "
+            "clearly outweighing the others."
         )
 
-    label = _pattern_label(primary_pattern)
+    label = _pattern_label(primary_pattern).lower()
     sections = _top_sections_from_pattern(primary_pattern, limit=3)
     markers = _top_marker_names_from_pattern(primary_pattern, limit=4)
     strength_phrase = _driver_strength_phrase(primary_pattern)
@@ -124,49 +131,45 @@ def _build_dominant_driver_text(primary_pattern: Any) -> str:
 
     if section_text and marker_text:
         return (
-            f"The overall picture {strength_phrase} {label.lower()}, anchored mainly in "
-            f"{section_text}, with key signals including {marker_text}."
-        )
-
-    if marker_text:
-        return (
-            f"The dominant pattern {strength_phrase} {label.lower()}, with key signals including "
-            f"{marker_text}."
+            f"The overall scan pattern {strength_phrase} {label}, with the clearest clustering across "
+            f"{section_text}. Key supporting signals include {marker_text}."
         )
 
     if section_text:
         return (
-            f"The dominant pattern {strength_phrase} {label.lower()}, with the strongest clustering "
-            f"across {section_text}."
+            f"The overall scan pattern {strength_phrase} {label}, with the clearest clustering across "
+            f"{section_text}."
         )
 
-    return f"The dominant pattern {strength_phrase} {label.lower()}."
+    if marker_text:
+        return (
+            f"The overall scan pattern {strength_phrase} {label}, supported by key signals including "
+            f"{marker_text}."
+        )
+
+    return f"The overall scan pattern {strength_phrase} {label}."
 
 
 def _build_secondary_driver_text(secondary_patterns: list[Any]) -> str:
     if not secondary_patterns:
         return (
-            "No strong secondary driver clearly separates from the dominant pattern at this stage."
+            "No strong secondary drivers clearly separate from the dominant pattern at this stage."
         )
 
     snippets = []
     for pattern in secondary_patterns[:3]:
-        label = _pattern_label(pattern)
+        label = _pattern_label(pattern).lower()
         markers = _top_marker_names_from_pattern(pattern, limit=3)
-        sections = _top_sections_from_pattern(pattern, limit=2)
 
         if markers:
-            snippets.append(f"{label.lower()} ({_human_join(markers)})")
-        elif sections:
-            snippets.append(f"{label.lower()} ({_human_join(sections)})")
+            snippets.append(f"{label} (linked to { _human_join(markers) })")
         else:
-            snippets.append(label.lower())
+            snippets.append(label)
 
     return (
-        "Important contributing patterns include "
-        f"{_human_join(snippets)}, which likely add to the overall functional load."
+        f"Additional contributing patterns include { _human_join(snippets) }. "
+        f"These are likely reinforcing the primary imbalance rather than acting independently."
     )
-
 
 def _build_marker_evidence_text(primary_pattern: Any, secondary_patterns: list[Any]) -> str:
     marker_pool: list[str] = []
@@ -181,14 +184,89 @@ def _build_marker_evidence_text(primary_pattern: Any, secondary_patterns: list[A
 
     if not markers:
         return (
-            "The strongest evidence comes from clustered abnormalities across multiple sections "
-            "rather than from a single isolated marker."
+            "The interpretation is based on a consistent pattern of abnormalities across multiple "
+            "systems rather than any single isolated marker."
         )
 
     return (
-        "The most useful markers for anchoring interpretation in this scan are "
-        f"{_human_join(markers)}."
+        f"The strongest signals within this scan come from { _human_join(markers) }, "
+        f"which together help define the overall functional pattern."
     )
+
+
+def _pattern_kind(pattern: Any) -> str:
+    return str(_safe_get(pattern, "kind", "") or "").strip().lower()
+
+
+def _build_why_this_matters_text(primary_pattern: Any, secondary_patterns: list[Any]) -> str:
+    """
+    Role:
+    - consequence / downstream impact
+    - says WHY the dominant pattern matters
+    - should translate mechanism into practical clinical relevance
+    """
+    if not primary_pattern:
+        return (
+            "Because several systems may be contributing at the same time, the most useful next step "
+            "is to identify the dominant driver and address that first rather than trying to intervene "
+            "everywhere at once."
+        )
+
+    kind = _pattern_kind(primary_pattern)
+    secondary_labels = [_pattern_label(p).lower() for p in secondary_patterns[:2]]
+    secondary_text = _human_join(secondary_labels)
+
+    if kind == "absorption_assimilation":
+        base = (
+            "This matters because reduced digestive and absorptive efficiency can translate into poorer "
+            "nutrient availability, slower repair, reduced resilience, and a tendency for other systems "
+            "to become more reactive over time."
+        )
+    elif kind == "toxic_burden":
+        base = (
+            "This matters because a higher toxic-load pattern can increase the burden on clearance pathways, "
+            "amplify inflammatory pressure, and reduce overall physiological resilience."
+        )
+    elif kind == "inflammatory_barrier":
+        base = (
+            "This matters because barrier dysfunction and inflammatory stress can sustain irritation, "
+            "increase immune reactivity, and make recovery slower or less stable."
+        )
+    elif kind == "neurocognitive_support":
+        base = (
+            "This matters because reduced neurocognitive support can affect regulation, stress tolerance, "
+            "mental clarity, and day-to-day functional capacity."
+        )
+    elif kind == "mitochondrial_energy":
+        base = (
+            "This matters because reduced energy-production efficiency can contribute to fatigue, slower "
+            "recovery, lower metabolic resilience, and reduced reserve under stress."
+        )
+    elif kind == "glycaemic_metabolic":
+        base = (
+            "This matters because metabolic dysregulation can destabilise energy, reinforce inflammatory "
+            "load, and influence cardiovascular and hormonal balance over time."
+        )
+    elif kind == "lipid_transport_membrane":
+        base = (
+            "This matters because weaker membrane and lipid-transport support can affect signalling, "
+            "neurological resilience, inflammatory balance, and nutrient delivery."
+        )
+    elif kind == "connective_tissue_repair":
+        base = (
+            "This matters because reduced connective-tissue and repair support can slow recovery, reduce "
+            "structural resilience, and contribute to ongoing fragility or irritation."
+        )
+    else:
+        base = (
+            "This matters because the dominant imbalance is likely to have wider downstream effects beyond "
+            "the individual markers themselves."
+        )
+
+    if secondary_text:
+        return f"{base} It may also help explain the overlap with {secondary_text}."
+
+    return base
 
 
 def _build_priority_actions_text(primary_pattern: Any, secondary_patterns: list[Any]) -> str:
@@ -197,18 +275,24 @@ def _build_priority_actions_text(primary_pattern: Any, secondary_patterns: list[
 
     if not actions:
         return (
-            "Priority actions should focus on the dominant driver first, then address the most "
-            "consistent secondary burdens."
+            "Intervention should focus first on the dominant functional imbalance, with "
+            "secondary patterns addressed once initial response is established."
         )
 
     return (
-        "The most relevant immediate focus areas are "
-        f"{_human_join(actions)}."
+        f"From a clinical perspective, the most relevant next steps are to focus on "
+        f"{ _human_join(actions) }. Addressing these areas is likely to produce the "
+        f"greatest overall shift in the current pattern."
     )
 
-
 def _build_practitioner_summary(primary_pattern: Any, secondary_patterns: list[Any]) -> str:
-    primary_label = _pattern_label(primary_pattern) if primary_pattern else "mixed functional imbalance"
+    """
+    Role:
+    - clinical prioritisation
+    - says WHAT TO DO FIRST
+    - should sound like sequencing, not just interpretation
+    """
+    primary_label = _pattern_label(primary_pattern).lower() if primary_pattern else "a mixed functional imbalance"
     primary_markers = _top_marker_names_from_pattern(primary_pattern, limit=4) if primary_pattern else []
     secondary_labels = [_pattern_label(p).lower() for p in secondary_patterns[:3]]
 
@@ -217,39 +301,43 @@ def _build_practitioner_summary(primary_pattern: Any, secondary_patterns: list[A
 
     if primary_markers and secondary_labels:
         return (
-            f"Primary driver appears to be {primary_label.lower()}, supported by {marker_text}. "
-            f"Secondary contributions include {secondary_text}. Prioritise intervention around the "
-            f"dominant driver first, then reassess the secondary patterns as resilience improves."
+            f"Clinical priority should be given first to {primary_label}, particularly in light of "
+            f"{marker_text}. Secondary contributors such as {secondary_text} are likely to improve "
+            f"more effectively once the dominant driver is addressed."
         )
 
     if primary_markers:
         return (
-            f"Primary driver appears to be {primary_label.lower()}, supported by {marker_text}. "
-            f"Clinical sequencing should begin with this cluster."
+            f"Clinical priority should be given first to {primary_label}, particularly in light of "
+            f"{marker_text}. Sequencing should begin here before broadening to less dominant findings."
         )
 
     return (
-        f"Primary driver appears to be {primary_label.lower()}. Clinical sequencing should begin "
-        f"with the dominant cluster and then broaden only if follow-up findings justify it."
+        f"Clinical priority should be given first to {primary_label}. Sequencing should begin with "
+        f"the dominant driver before extending support more widely."
     )
 
-
 def _build_patient_summary(primary_pattern: Any, secondary_patterns: list[Any]) -> str:
+    """
+    Role:
+    - plain-language patient-facing explanation
+    - simpler than practitioner overview
+    - should explain why focus matters without sounding technical
+    """
     primary_label = _pattern_label(primary_pattern).lower() if primary_pattern else "a mixed functional imbalance"
     secondary_labels = [_pattern_label(p).lower() for p in secondary_patterns[:2]]
 
     if secondary_labels:
         return (
-            f"The scan points mainly toward {primary_label}, with additional contribution from "
-            f"{_human_join(secondary_labels)}. This means support is likely to work best when the "
-            f"main driver is addressed first rather than trying to target everything at once."
+            f"The scan points mainly toward {primary_label}, with some additional contribution from "
+            f"{_human_join(secondary_labels)}. In practical terms, this means support is likely to work "
+            f"best when the main imbalance is addressed first."
         )
 
     return (
-        f"The scan points mainly toward {primary_label}. This suggests the best next step is to "
-        f"focus on the dominant imbalance first and build from there."
+        f"The scan points mainly toward {primary_label}. In practical terms, this means the most useful "
+        f"next step is to focus on that main pattern first rather than trying to target everything at once."
     )
-
 
 def build_clinical_summary_v3(report: Any) -> Any:
     """
@@ -264,6 +352,7 @@ def build_clinical_summary_v3(report: Any) -> Any:
     dominant_driver = _build_dominant_driver_text(primary_pattern)
     secondary_driver = _build_secondary_driver_text(secondary_patterns)
     marker_evidence = _build_marker_evidence_text(primary_pattern, secondary_patterns)
+    why_this_matters = _build_why_this_matters_text(primary_pattern, secondary_patterns)
     priority_actions = _build_priority_actions_text(primary_pattern, secondary_patterns)
 
     practitioner_summary = _build_practitioner_summary(primary_pattern, secondary_patterns)
@@ -273,11 +362,11 @@ def build_clinical_summary_v3(report: Any) -> Any:
         "dominant_driver": dominant_driver,
         "secondary_drivers": secondary_driver,
         "key_marker_evidence": marker_evidence,
+        "why_this_matters": why_this_matters,
         "priority_actions": priority_actions,
         "practitioner_summary": practitioner_summary,
         "patient_summary": patient_summary,
     }
-
     # New V3 payload
     report.clinical_summary_v3 = summary_payload
 

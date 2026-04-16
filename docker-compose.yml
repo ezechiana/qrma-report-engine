@@ -33,6 +33,10 @@ services:
       REPORT_BUILD_VERSION: dev
       CASE_STORAGE_ROOT: /app/app/data/qrma_cases
       TEMP_UPLOAD_DIR: /tmp/qrma_imports
+      SHARE_COOKIE_SECRET: ${SHARE_COOKIE_SECRET}
+      SHARE_COOKIE_SECURE: "false"
+      SHARE_COOKIE_SAMESITE: "lax"
+      SHARE_ACCESS_COOKIE_MAX_AGE: "${SHARE_ACCESS_COOKIE_MAX_AGE}"
     ports:
       - "8000:8000"
     volumes:
@@ -42,3 +46,4 @@ services:
 
 volumes:
   postgres_data:
+

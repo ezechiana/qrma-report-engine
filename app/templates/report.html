@@ -794,10 +794,17 @@
       </div>
     {% endif %}
 
-    {% if practitioner_summary %}
+      {% if practitioner_summary %}
       <div class="panel">
         <h3>Practitioner overview</h3>
         <p>{{ practitioner_summary }}</p>
+      </div>
+    {% endif %}
+
+    {% if why_this_matters or clinical_summary_v3.why_this_matters %}
+      <div class="panel">
+        <h3>Why this matters</h3>
+        <p>{{ why_this_matters or clinical_summary_v3.why_this_matters }}</p>
       </div>
     {% endif %}
 
@@ -815,6 +822,7 @@
         {% endif %}
       </div>
     {% endif %}
+
 
     {% if contributing_patterns %}
       <div class="panel">
@@ -887,7 +895,7 @@
           {% for card in system_score_cards %}
             <div class="system-score-card">
               <div class="system-score-title">{{ card.title }}</div>
-              {{ render_ring_gauge(card.score, card.gauge_color, 98, 9) }}
+              {{ render_ring_gauge(card.score, card.gauge_color or card.band_color or '#1565c0', 98, 9) }}
               <div class="score-subtext">
                 {{ card.flagged_count }} flagged · {{ card.within_count }} within range
               </div>

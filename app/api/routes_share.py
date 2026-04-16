@@ -1,7 +1,12 @@
 # app/api/routes_share.py
 
-from uuid import UUID
+from __future__ import annotations
+
+import base64
+import hashlib
+import hmac
 import os
+from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
@@ -20,6 +25,12 @@ from app.services.share_link_service import (
 
 router = APIRouter(tags=["share"])
 templates = Jinja2Templates(directory="app/templates")
+
+SHARE_ACCESS_COOKIE_NAME = "qrma_share_access"
+SHARE_ACCESS_COOKIE_MAX_AGE = int(os.getenv("SHARE_ACCESS_COOKIE_MAX_AGE", "43200"))  # 12 hours
+SHARE_COOKIE_SECURE = os.getenv("SHARE_COOKIE_SECURE", "false").lower() == "true"
+SHARE_COOKIE_SAMESITE = os.getenv("SHARE_COOKIE_SAMESITE", "lax")
+SHARE_COOKIE_SECRET = os.getenv("SHARE_COOKIE_SECRET", os.getenv("OPENAI_API_KEY", "dev-share-secret"))
 
 
 def _get_share_link_or_404(db: Session, token: str) -> ShareLink:
@@ -45,7 +56,6 @@ def _tenant_theme_from_report(report: ReportVersion) -> dict:
     Later this should come from a tenant/clinic branding table.
     """
     report_json = report.report_json or {}
-
     stored_theme = report_json.get("tenant_theme", {}) if isinstance(report_json, dict) else {}
 
     return {
@@ -88,6 +98,69 @@ def _public_report_payload(report: ReportVersion, token: str) -> dict:
         "data_url": f"/share/{token}/data",
         "viewer": viewer,
     }
+
+
+def _cookie_signature(token: str) -> str:
+    return hmac.new(
+        SHARE_COOKIE_SECRET.encode("utf-8"),
+        msg=token.encode("utf-8"),
+        digestmod=hashlib.sha256,
+    ).hexdigest()
+
+
+def _cookie_value_for_token(token: str) -> str:
+    token_b64 = base64.urlsafe_b64encode(token.encode("utf-8")).decode("ascii")
+    sig = _cookie_signature(token)
+    return f"{token_b64}.{sig}"
+
+
+def _has_valid_share_cookie(request: Request, token: str) -> bool:
+    raw = request.cookies.get(SHARE_ACCESS_COOKIE_NAME)
+    if not raw:
+        return False
+
+    try:
+        token_b64, provided_sig = raw.split(".", 1)
+        cookie_token = base64.urlsafe_b64decode(token_b64.encode("ascii")).decode("utf-8")
+    except Exception:
+        return False
+
+    if cookie_token != token:
+        return False
+
+    expected_sig = _cookie_signature(token)
+    return hmac.compare_digest(provided_sig, expected_sig)
+
+
+def _set_share_cookie(response, token: str) -> None:
+    response.set_cookie(
+        key=SHARE_ACCESS_COOKIE_NAME,
+        value=_cookie_value_for_token(token),
+        max_age=SHARE_ACCESS_COOKIE_MAX_AGE,
+        httponly=True,
+        secure=SHARE_COOKIE_SECURE,
+        samesite=SHARE_COOKIE_SAMESITE,
+        path="/",
+    )
+
+
+def _clear_share_cookie(response) -> None:
+    response.delete_cookie(
+        key=SHARE_ACCESS_COOKIE_NAME,
+        path="/",
+    )
+
+
+def _enforce_password_gate(request: Request, link: ShareLink) -> None:
+    """
+    If a share link has a password, require a valid signed cookie issued after
+    successful password verification.
+    """
+    if not link.password_hash:
+        return
+
+    if not _has_valid_share_cookie(request, link.token):
+        raise HTTPException(status_code=401, detail="Password verification required")
 
 
 @router.post("/api/reports/{report_version_id}/share-links", response_model=ShareLinkRead)
@@ -153,8 +226,8 @@ def access_shared_report(
     link = _get_share_link_or_404(db, token)
     report = _get_report_for_share_or_404(db, link)
 
-    if link.password_hash:
-        return templates.TemplateResponse(
+    if link.password_hash and not _has_valid_share_cookie(request, token):
+        response = templates.TemplateResponse(
             request=request,
             name="password_required.html",
             context={
@@ -162,6 +235,8 @@ def access_shared_report(
                 "token": token,
             },
         )
+        _clear_share_cookie(response)
+        return response
 
     log_action(
         db,
@@ -195,6 +270,21 @@ def verify_share_password(
 ):
     link = _get_share_link_or_404(db, token)
 
+    if not link.password_hash:
+        report = _get_report_for_share_or_404(db, link)
+        payload = _public_report_payload(report, token)
+        tenant = _tenant_theme_from_report(report)
+        return templates.TemplateResponse(
+            request=request,
+            name="report_viewer.html",
+            context={
+                "request": request,
+                "report": payload,
+                "tenant": tenant,
+                "viewer_mode": "patient",
+            },
+        )
+
     if not validate_share_link_password(link, password):
         raise HTTPException(status_code=401, detail="Invalid password")
 
@@ -211,7 +301,7 @@ def verify_share_password(
     payload = _public_report_payload(report, token)
     tenant = _tenant_theme_from_report(report)
 
-    return templates.TemplateResponse(
+    response = templates.TemplateResponse(
         request=request,
         name="report_viewer.html",
         context={
@@ -221,16 +311,20 @@ def verify_share_password(
             "viewer_mode": "patient",
         },
     )
+    _set_share_cookie(response, token)
+    return response
 
 
 @router.get("/share/{token}/data")
 def get_shared_report_data(
     token: str,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     link = _get_share_link_or_404(db, token)
-    report = _get_report_for_share_or_404(db, link)
+    _enforce_password_gate(request, link)
 
+    report = _get_report_for_share_or_404(db, link)
     payload = _public_report_payload(report, token)
     tenant = _tenant_theme_from_report(report)
 
@@ -246,13 +340,24 @@ def get_shared_report_data(
 @router.get("/share/{token}/pdf")
 def get_shared_report_pdf(
     token: str,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     link = _get_share_link_or_404(db, token)
+    _enforce_password_gate(request, link)
+
     report = _get_report_for_share_or_404(db, link)
 
     if not report.pdf_path:
         raise HTTPException(status_code=404, detail="PDF not found")
+
+    log_action(
+        db,
+        "share_link_pdf_downloaded",
+        case_id=report.case_id,
+        report_version_id=report.id,
+        metadata_json={"token": token},
+    )
 
     return FileResponse(
         path=report.pdf_path,
@@ -264,13 +369,24 @@ def get_shared_report_pdf(
 @router.get("/share/{token}/html")
 def get_shared_report_html(
     token: str,
+    request: Request,
     db: Session = Depends(get_db),
 ):
     link = _get_share_link_or_404(db, token)
+    _enforce_password_gate(request, link)
+
     report = _get_report_for_share_or_404(db, link)
 
     if not report.html_path:
         raise HTTPException(status_code=404, detail="HTML not found")
+
+    log_action(
+        db,
+        "share_link_html_downloaded",
+        case_id=report.case_id,
+        report_version_id=report.id,
+        metadata_json={"token": token},
+    )
 
     return FileResponse(
         path=report.html_path,

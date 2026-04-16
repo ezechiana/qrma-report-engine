@@ -345,16 +345,265 @@ def enrich_protocol_plan_with_narrative_v3(report: Any, protocol_plan: Dict[str,
     return enriched
 
 
-def rewrite_clinical_recommendations_v3(clinical_recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+def _extract_related_markers_from_rationale(rationale: str | None) -> List[Dict[str, str]]:
+    text = _clean(rationale)
+    if not text or "led by" not in text.lower():
+        return []
+
+    lower = text.lower()
+    idx = lower.find("led by")
+    marker_text = text[idx + len("led by"):].strip()
+
+    if marker_text.endswith("."):
+        marker_text = marker_text[:-1]
+
+    raw_parts = [p.strip() for p in marker_text.split(",") if p.strip()]
+    return [{"name": part} for part in raw_parts[:4]]
+
+
+def _extract_related_section_from_rationale(rationale: str | None) -> str | None:
+    text = _clean(rationale)
+    if not text:
+        return None
+
+    if " contains " in text:
+        return text.split(" contains ", 1)[0].strip()
+
+    return None
+
+
+def _family_from_recommendation_title(title: str | None) -> str:
+    key = _clean(title).lower()
+    return {
+        "nutrient repletion": "nutrient_repletion",
+        "inflammation and barrier support": "barrier_inflammation",
+        "cardiovascular support": "cardiovascular",
+        "circulatory and microvascular support": "circulatory_microvascular",
+        "visual and microvascular support": "circulatory_microvascular",
+        "metabolic regulation and weight balance": "metabolic",
+        "connective tissue and structural support": "connective_tissue",
+        "cognitive function": "neurocognitive",
+        "growth and development": "growth_development",
+        "cell membrane integrity and lipid transport": "lipid_membrane",
+        "protein metabolism and neurotransmitter support": "nutrient_repletion",
+        "mineral balance and cofactor support": "nutrient_repletion",
+        "vitamin sufficiency and antioxidant support": "nutrient_repletion",
+        "essential fatty acid and membrane balance": "lipid_membrane",
+    }.get(key, key.replace(" ", "_"))
+
+
+def _recommendation_pattern_alignment(report: Any, family: str) -> str | None:
+    primary = getattr(report, "primary_pattern", None)
+    patterns = getattr(report, "patterns", []) or []
+
+    ranked_patterns = []
+    if primary:
+        ranked_patterns.append(primary)
+    ranked_patterns.extend([p for p in patterns if p is not primary])
+
+    for idx, pattern in enumerate(ranked_patterns[:4]):
+        key = _clean(getattr(pattern, "key", None))
+        if not key:
+            continue
+
+        boost_map = {
+            "absorption_assimilation": {
+                "nutrient_repletion": 3.0,
+                "barrier_inflammation": 1.0,
+                "lipid_membrane": 0.5,
+                "neurocognitive": 0.5,
+            },
+            "toxic_burden": {
+                "barrier_inflammation": 1.5,
+                "nutrient_repletion": 1.0,
+                "circulatory_microvascular": 0.5,
+            },
+            "inflammatory_barrier": {
+                "barrier_inflammation": 3.0,
+                "nutrient_repletion": 0.75,
+                "lipid_membrane": 1.0,
+            },
+            "neurocognitive_support": {
+                "neurocognitive": 3.0,
+                "nutrient_repletion": 1.0,
+                "lipid_membrane": 1.5,
+                "growth_development": 1.0,
+            },
+            "mitochondrial_energy": {
+                "nutrient_repletion": 2.0,
+                "metabolic": 1.5,
+                "neurocognitive": 0.5,
+            },
+            "glycaemic_metabolic": {
+                "metabolic": 4.0,
+                "cardiovascular": 1.5,
+                "nutrient_repletion": 1.0,
+            },
+            "lipid_transport_membrane": {
+                "lipid_membrane": 3.0,
+                "neurocognitive": 1.0,
+                "barrier_inflammation": 1.0,
+            },
+            "connective_tissue_repair": {
+                "connective_tissue": 3.0,
+                "nutrient_repletion": 1.0,
+                "barrier_inflammation": 0.5,
+            },
+        }.get(key, {})
+
+        if family in boost_map:
+            label = getattr(pattern, "label", None) or ""
+            return _rewrite_pattern_label(label)
+
+    return None
+
+
+def build_clinical_recommendation_summary_v3(
+    title: str,
+    summary: str,
+    rationale: str | None = None,
+    pattern_alignment: str | None = None,
+) -> str:
+    title_key = _clean(title).lower()
+    pattern_text = _clean(pattern_alignment)
+
+    custom_map = {
+        "nutrient repletion": (
+            "Given the dominant pattern, priority should be given to restoring nutrient sufficiency "
+            "and absorptive capacity."
+        ),
+        "inflammation and barrier support": (
+            "Given the broader scan picture, priority should be given to reducing inflammatory load "
+            "while strengthening barrier integrity."
+        ),
+        "cardiovascular support": (
+            "Support should focus on vascular resilience, circulation, and wider cardiovascular efficiency."
+        ),
+        "circulatory and microvascular support": (
+            "Support should focus on circulation and microvascular delivery."
+        ),
+        "cognitive function": (
+            "Support should focus on cognitive function and the broader drivers influencing it."
+        ),
+        "growth and development": (
+            "Support should focus on growth and developmental support in the context of the wider scan picture."
+        ),
+        "cell membrane integrity and lipid transport": (
+            "Support should focus on membrane integrity and lipid transport."
+        ),
+        "metabolic regulation and weight balance": (
+            "Support should focus on metabolic balance and weight regulation."
+        ),
+        "connective tissue and structural support": (
+            "Support should focus on connective-tissue integrity and structural resilience."
+        ),
+        "visual and microvascular support": (
+            "Support should focus on visual and microvascular function."
+        ),
+        "protein metabolism and neurotransmitter support": (
+            "Support should focus on protein metabolism, neurotransmitter building blocks, and wider nutrient resilience."
+        ),
+        "mineral balance and cofactor support": (
+            "Support should focus on mineral sufficiency and cofactor availability for wider metabolic and repair pathways."
+        ),
+        "vitamin sufficiency and antioxidant support": (
+            "Support should focus on vitamin sufficiency and antioxidant resilience."
+        ),
+        "essential fatty acid and membrane balance": (
+            "Support should focus on essential fatty acid balance and membrane support."
+        ),
+    }
+
+    if title_key in custom_map:
+        base = custom_map[title_key]
+    else:
+        base = _clean(summary)
+        base = _apply_phrase_rewrites(base)
+
+        replacements = {
+            "Address ": "Prioritise ",
+            "Provide targeted support for ": "Support ",
+            "Review ": "Review ",
+        }
+        for old, new in replacements.items():
+            if base.startswith(old):
+                base = new + base[len(old):]
+                break
+
+    if pattern_text and title_key in {"nutrient repletion", "inflammation and barrier support", "metabolic regulation and weight balance", "connective tissue and structural support"}:
+        base = f"{base[:-1] if base.endswith('.') else base}, particularly in the context of { _lower_first(pattern_text) }"
+
+    return _sentence(base)
+
+
+def build_clinical_recommendation_rationale_v3(
+    title: str,
+    rationale: str | None = None,
+    related_markers: List[Dict[str, str]] | None = None,
+    related_section: str | None = None,
+    pattern_alignment: str | None = None,
+) -> str:
+    markers = [m.get("name", "") for m in (related_markers or []) if m.get("name")]
+    marker_text = _compress_list(markers, limit=4)
+    section_text = _clean(related_section)
+    pattern_text = _clean(pattern_alignment)
+
+    if pattern_text and marker_text:
+        return _sentence(
+            f"Suggested because this aligns with {_lower_first(pattern_text)} and is supported by markers including {marker_text}"
+        )
+
+    if pattern_text and section_text:
+        return _sentence(
+            f"Suggested because this aligns with {_lower_first(pattern_text)} and is supported by findings in {section_text}"
+        )
+
+    if section_text and marker_text:
+        return _sentence(
+            f"Suggested because related findings appear in {section_text}, led by {marker_text}"
+        )
+
+    if marker_text:
+        return _sentence(
+            f"Suggested in view of markers including {marker_text}"
+        )
+
+    if rationale:
+        return _sentence(_apply_phrase_rewrites(rationale))
+
+    return _sentence("Suggested because it fits the strongest pattern emerging from the scan")
+
+
+def rewrite_clinical_recommendations_v3(report: Any, clinical_recommendations: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     out = []
 
     for rec in clinical_recommendations or []:
         item = dict(rec)
+
+        family = _family_from_recommendation_title(item.get("title", ""))
+        pattern_alignment = _recommendation_pattern_alignment(report, family)
+        related_markers = _extract_related_markers_from_rationale(item.get("rationale"))
+        related_section = _extract_related_section_from_rationale(item.get("rationale"))
+
+        item["pattern_alignment"] = pattern_alignment
+        item["related_markers"] = related_markers
+        item["related_section"] = related_section
+
         item["summary"] = build_clinical_recommendation_summary_v3(
             title=item.get("title", ""),
             summary=item.get("summary", ""),
             rationale=item.get("rationale"),
+            pattern_alignment=pattern_alignment,
         )
+
+        item["display_rationale"] = build_clinical_recommendation_rationale_v3(
+            title=item.get("title", ""),
+            rationale=item.get("rationale"),
+            related_markers=related_markers,
+            related_section=related_section,
+            pattern_alignment=pattern_alignment,
+        )
+
         out.append(item)
 
     return out

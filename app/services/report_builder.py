@@ -369,7 +369,13 @@ def priority_label(priority: str | None) -> str:
         "normal": "Within range",
     }.get(priority or "normal", "Within range")
 
-
+def activity_label(priority: str | None) -> str:
+    return {
+        "high": "Strong activity",
+        "medium": "Moderate activity",
+        "low": "Mild activity",
+        "normal": "Within expected variation",
+    }.get(priority or "normal", "Within expected variation")
 
 def polished_overall_band_label(score: float | int | None) -> str:
     if score is None:
@@ -555,13 +561,13 @@ def build_priority_overview(report):
             "title": normalise_display_term(section_title),
             "priority": priority,
             "priority_label": priority_label(priority),
+            "activity_label": activity_label(priority),
             "abnormal_count": flagged_count,
             "section_score": section_score,
             "flagged_count": flagged_count,
             "within_count": within_count,
             "total_count": total_parameters,
         })
-
     return out
 
 
@@ -1475,6 +1481,7 @@ def build_report_context(
             "display_title": normalise_display_term(section.display_title or section.source_title),
             "priority": derived_priority,
             "priority_label": priority_label(derived_priority),
+            "activity_label": activity_label(derived_priority),
             "summary": section.summary,
             "top_findings": section.top_findings,
             "abnormal_count": derived_flagged,
@@ -1486,7 +1493,6 @@ def build_report_context(
             "within_count": max(0, total - derived_flagged),
             "total_count": total,
         })
-
     appendix_rows = []
     if config.get("include_appendix", True):
         for section in dedupe_sections_by_title(report.sections):
@@ -1548,6 +1554,7 @@ def build_report_context(
         clinical_summary_v3.get("dominant_driver"),
         clinical_summary_v3.get("secondary_drivers"),
         clinical_summary_v3.get("key_marker_evidence"),
+        clinical_summary_v3.get("why_this_matters"),
     ]:
         if text:
             key_patterns.append(
@@ -1604,7 +1611,7 @@ def build_report_context(
             "rationale": rationale,
         })
 
-    clinical_recommendations = rewrite_clinical_recommendations_v3(clinical_recommendations)
+    clinical_recommendations = rewrite_clinical_recommendations_v3(report, clinical_recommendations)
     toc_items = build_toc_items(
             section_blocks=section_blocks,
             include_product_recommendations=include_product_recommendations,
@@ -1690,6 +1697,7 @@ def build_report_context(
         "recommendation_mode": recommendation_mode,
         "overall_summary": overall_summary,
         "clinical_summary_v3": clinical_summary_v3,
+        "why_this_matters": clinical_summary_v3.get("why_this_matters"),
         "priority_sections": priority_sections,
         "priority_overview": priority_overview,
         "section_blocks": section_blocks,
@@ -1817,6 +1825,7 @@ def build_viewer_payload(
             },
             "overall_summary": overall_summary_payload,
             "clinical_summary_v3": _safe_dict(ctx.get("clinical_summary_v3")),
+            "why_this_matters": ctx.get("why_this_matters"),
             "practitioner_summary": ctx.get("practitioner_summary"),
             "primary_pattern": _safe_dict(ctx.get("primary_pattern")),
             "contributing_patterns": _safe_list(ctx.get("contributing_patterns")),

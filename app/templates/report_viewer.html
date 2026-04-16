@@ -117,7 +117,7 @@
 
         .hero-grid {
             display: grid;
-            grid-template-columns: repeat(3, minmax(0, 1fr));
+            grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 12px;
             margin-top: 18px;
         }
@@ -292,6 +292,29 @@
             gap: 14px;
         }
 
+
+        .overview-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+            gap: 14px;
+            align-items: start;
+        }
+
+        .overview-sidebar {
+            position: sticky;
+            top: 0;
+        }
+
+        .compact-list {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .compact-list li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -324,6 +347,11 @@
             margin-bottom: 6px;
         }
 
+        .summary-card.insight-callout {
+            background: var(--surface-soft);
+            border-left: 4px solid var(--accent);
+        }
+                
         .summary-card ul,
         .mini-card ul {
             margin: 8px 0 0 18px;
@@ -442,6 +470,58 @@
             font-size: 16px;
         }
 
+       .recommendation-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            align-items: start;
+        }
+
+        .rec-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 220px;
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--surface);
+        }
+
+        .rec-card h4 {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.3;
+        }
+
+        .rec-summary {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .rec-meta {
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .rec-meta strong {
+            color: var(--text);
+        }
+
+        .rec-card-separator {
+            height: 1px;
+            background: var(--line);
+            margin: 2px 0 0;
+        }
+
+        .rec-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+        }
+
         .rec-rationale {
             margin-top: 8px;
             color: var(--muted);
@@ -514,17 +594,29 @@
 
         .score-card-includes {
             color: var(--muted);
-            font-size: 13px;
-            line-height: 1.5;
+            font-size: 12px;
+            line-height: 1.55;
+            margin-top: 2px;
         }
 
-        .section-link {
-        color: #2563eb;
-        text-decoration: none;
-        cursor: pointer;
+        .link-list,
+        .rec-link-list {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
         }
+
+        .inline-link,
+        .section-link {
+            color: #2563eb;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .inline-link:hover,
         .section-link:hover {
-        text-decoration: underline;
+            text-decoration: underline;
         }
 
         .marker-group {
@@ -735,7 +827,7 @@
         @media (max-width: 1100px) {
             .hero-grid,
             .grid-3 {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+                grid-template-columns: repeat(4, minmax(0, 1fr));
             }
 
             .workspace {
@@ -759,6 +851,9 @@
             .grid-2,
             .grid-3,
             .marker-row-top {
+                grid-template-columns: 1fr;
+            }
+            .overview-layout {
                 grid-template-columns: 1fr;
             }
             .hero h1 { font-size: 28px; }
@@ -823,14 +918,7 @@
                         <div class="stat-label">Scan time</div>
                         <div class="stat-value">{{ patient.scan_datetime or "—" }}</div>
                     </div>
-                    <div class="stat">
-                        <div class="stat-label">Health Index</div>
-                        <div class="stat-value">{{ ov.overall_scan_score or "—" }} / 100</div>
-                    </div>
-                    <div class="stat">
-                        <div class="stat-label">Index band</div>
-                        <div class="stat-value">{{ ov.overall_scan_band_label or "—" }}</div>
-                    </div>
+
                 </div>
             </div>
 
@@ -865,7 +953,7 @@
                     <div class="nav-group-title">Overview</div>
                     <ul class="nav-list">
                         <li><a href="#overview" class="active">At a glance</a></li>
-                        <li><a href="#systems-overview">Scan score overview</a></li>
+                        <li><a href="#systems-overview">System balance overview</a></li>
                         <li><a href="#body-composition">Body composition</a></li>
                         <li><a href="#recommendations">Recommendations</a></li>
                         <li><a href="#markers">Detailed markers</a></li>
@@ -878,110 +966,75 @@
                     <h2>At a glance</h2>
                     <p class="subtle">The core story of the scan, prioritised for fast understanding.</p>
 
-                    <div class="grid-2" style="margin-top:14px;">
-                        <div class="summary-stack">
-                            <div class="summary-card">
-                                <h3>Clinical snapshot</h3>
-                                <div>{{ ov.overall_summary.clinical_snapshot or ov.overall_summary.summary or ov.overall_summary or "Not available yet." }}</div>
-                            </div>
+                    <div class="overview-layout" style="margin-top:14px;">
+    <div class="summary-stack">
+        <div class="summary-card">
+            <h3>Clinical snapshot</h3>
+            <div>{{ ov.overall_summary.clinical_snapshot or ov.overall_summary.summary or ov.overall_summary or "Not available yet." }}</div>
+        </div>
 
-                            <div class="summary-card">
-                                <h3>Practitioner overview</h3>
-                                <div>{{ ov.practitioner_summary or "Not available yet." }}</div>
-                            </div>
+        <div class="summary-card">
+            <h3>Primary pattern</h3>
+            {% if ov.primary_pattern %}
+                <p><strong>{{ ov.primary_pattern.title }}</strong></p>
+                <p>{{ ov.primary_pattern.clinical_summary or ov.primary_pattern.summary or "" }}</p>
+                {% if ov.primary_pattern.follow_up_focus %}
+                    <p class="subtle">Focus: {{ ov.primary_pattern.follow_up_focus | join(", ") }}</p>
+                {% endif %}
+            {% else %}
+                <p>Not available yet.</p>
+            {% endif %}
+        </div>
 
-                            {% if ov.priority_actions %}
-                            <div class="summary-card">
-                                <h3>Immediate priorities for follow-up</h3>
-                                <ul>
-                                    {% for item in ov.priority_actions %}
-                                        <li>{{ item }}</li>
-                                    {% endfor %}
-                                </ul>
-                            </div>
-                            {% endif %}
-                        </div>
+        <div class="summary-card">
+            <h3>Practitioner overview</h3>
+            <div>{{ ov.practitioner_summary or "Not available yet." }}</div>
+        </div>
 
-                        <div class="summary-stack">
-                            <div class="summary-card">
-                                <h3>Primary pattern</h3>
-                                {% if ov.primary_pattern %}
-                                    <p><strong>{{ ov.primary_pattern.title }}</strong></p>
-                                    <p>{{ ov.primary_pattern.clinical_summary or ov.primary_pattern.summary or "" }}</p>
-                                    {% if ov.primary_pattern.follow_up_focus %}
-                                        <p class="subtle">Focus: {{ ov.primary_pattern.follow_up_focus | join(", ") }}</p>
-                                    {% endif %}
-                                {% else %}
-                                    <p>Not available yet.</p>
-                                {% endif %}
-                            </div>
+        {% if ov.why_this_matters or ov.clinical_summary_v3.why_this_matters %}
+        <div class="summary-card insight-callout">
+            <h3>Why this matters</h3>
+            <div>{{ ov.why_this_matters or ov.clinical_summary_v3.why_this_matters }}</div>
+        </div>
+        {% endif %}
 
-                            <div class="summary-card">
-                                <h3>Contributing patterns</h3>
-                                {% if ov.contributing_patterns %}
-                                    <ul>
-                                        {% for p in ov.contributing_patterns %}
-                                            <li>
-                                                <strong>{{ p.title }}</strong>
-                                                {% if p.clinical_summary %} — {{ p.clinical_summary }}{% endif %}
-                                            </li>
-                                        {% endfor %}
-                                    </ul>
-                                {% else %}
-                                    <p>Not available yet.</p>
-                                {% endif %}
-                            </div>
+        {% if ov.priority_actions %}
+        <div class="summary-card">
+            <h3>Immediate priorities for follow-up</h3>
+            <ul>
+                {% for item in ov.priority_actions %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
 
-                            <div class="summary-card">
-                                <h3>Priority systems</h3>
-                                {% if systems.priority_overview %}
-                                    <ul>
-                                        {% for item in systems.priority_overview[:4] %}
-                                            <li><strong>{{ item.title }}</strong> — {{ item.priority_label }}</li>
-                                        {% endfor %}
-                                    </ul>
-                                {% else %}
-                                    <p>Not available yet.</p>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
+    <div class="overview-sidebar">
+        <div class="summary-card">
+            <h3>Supporting patterns</h3>
+            {% if ov.contributing_patterns %}
+                <ul class="compact-list">
+                    {% for p in ov.contributing_patterns[:3] %}
+                        <li>
+                            <strong>{{ p.title }}</strong>
+                            {% if p.clinical_summary %}<br><span class="subtle">{{ p.clinical_summary }}</span>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Not available yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
                 </section>
 
                 <section id="systems-overview" class="panel card">
-                    <h2 style="font-size: 28px; margin-bottom: 6px;">Health Index overview</h2>
+                    <h2 style="font-size: 28px; margin-bottom: 6px;">System balance overview</h2>
                     <p class="subtle" style="font-size:15px; margin-bottom:18px;">
-                        A whole-scan index designed to summarise overall functional balance before deeper review.
+                        A system-level view showing where the main functional activity and clustering appear across the scan.
                     </p>
-
-                    <div class="grid-2" style="margin-top:14px; align-items:stretch;">
-                        <div class="summary-card" style="padding:20px;">
-                            <div class="score-topline" style="align-items:center;">
-                                <div class="score-number">{{ ov.overall_scan_score or "—" }}</div>
-                                <div class="score-band">{{ ov.overall_scan_band_label or "" }}</div>
-                            </div>
-
-                            {% set overall_score = ov.overall_scan_score or 0 %}
-                            <div class="score-bar" style="height:12px; margin:16px 0 14px;">
-                                <div class="score-indicator" style="left: {{ overall_score }}%;"></div>
-                            </div>
-
-                            <p class="subtle" style="margin-bottom:10px;">
-                                Lower index values suggest broader clustering or more active functional strain across systems and may warrant closer follow-up.
-                            </p>
-
-                            <div class="subtle" style="font-size:13px;">
-                                Bands: Robust functional balance (85–100) · Generally balanced (70–84) · Needs focused support (55–69) · Priority review recommended (0–54)
-                            </div>
-                        </div>
-
-                        <div class="summary-card" style="padding:20px;">
-                            <h3 style="margin-top:0;">How to read this</h3>
-                            <p class="subtle">
-                                The Health Index reflects whole-scan balance across systems, adjusted for clinical importance and clustering. It is designed to guide attention, not provide a diagnosis.
-                            </p>
-                        </div>
-                    </div>
 
                     {% if systems.system_score_cards %}
                     <div class="grid-3" style="margin-top:18px;">
@@ -1015,16 +1068,16 @@
                                 </div>
 
                                 {% if card.included_sections %}
-                                    <div class="score-card-includes">
+                                    <div class="score-card-includes link-list">
                                         Includes:
                                         {% for section in card.included_sections %}
-                                            <a href="#marker-section-{{ section_slug(section) }}" class="section-link">
+                                            <a href="#marker-section-{{ section_slug(section) }}" class="inline-link">
                                                 {{ section }}
                                             </a>{% if not loop.last %}, {% endif %}
                                         {% endfor %}
                                     </div>
                                 {% endif %}
-                                    </div>
+                              </div>
                         {% endfor %}
                     </div>
                     {% endif %}
@@ -1041,25 +1094,47 @@
 
                     <div id="clinical-tab" class="tab-panel active">
                         {% if recs.clinical_recommendations %}
-                            <div class="grid-2">
+                            <div class="recommendation-grid">
                                 {% for rec in recs.clinical_recommendations %}
-                                    <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section or rec.section) }}" style="cursor:pointer;">
+                                  <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section or rec.section) }}" style="cursor:pointer;">
                                         <h4>{{ rec.title }}</h4>
-                                        <div>{{ rec.summary }}</div>
-                                        {% if rec.rationale %}
-                                            <div class="rec-rationale">Why this was suggested:
-                                            {% if rec.related_markers %}
+
+                                        <div class="rec-summary">{{ rec.summary }}</div>
+
+                                        <div class="rec-card-separator"></div>
+
+                                        {% if rec.pattern_alignment %}
+                                            <div class="rec-meta">
+                                                <strong>Pattern alignment:</strong> {{ rec.pattern_alignment }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if rec.display_rationale %}
+                                            <div class="rec-meta">
+                                                <strong>Why this was suggested:</strong> {{ rec.display_rationale }}
+                                            </div>
+                                        {% elif rec.rationale %}
+                                            <div class="rec-meta">
+                                                <strong>Why this was suggested:</strong> {{ rec.rationale }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if rec.related_markers %}
+                                            <div class="rec-meta rec-link-list">
+                                                <strong>Key markers:</strong>
                                                 {% for m in rec.related_markers %}
-                                                <a href="#marker-section-{{ section_slug(m.section) }}" class="section-link">
-                                                    {{ m.name }}
-                                                </a>{% if not loop.last %}, {% endif %}
+                                                    {% if rec.related_section or rec.section %}
+                                                        <a href="#marker-section-{{ section_slug(rec.related_section or rec.section) }}" class="inline-link">
+                                                            {{ m.name }}
+                                                        </a>{% if not loop.last %}, {% endif %}
+                                                    {% else %}
+                                                        {{ m.name }}{% if not loop.last %}, {% endif %}
+                                                    {% endif %}
                                                 {% endfor %}
-                                            {% else %}
-                                                {{ rec.rationale }}
-                                            {% endif %}</div>
+                                            </div>
                                         {% endif %}
                                     </div>
-                                {% endfor %}
+                                                                                                            {% endfor %}
                             </div>
                         {% else %}
                             <p class="subtle">No clinical recommendations available.</p>
@@ -1306,42 +1381,41 @@
                 </div>
             </main>
 
-            <aside class="right-rail card">
-                <h2>Insight panel</h2>
-                <p class="hint">Quick summary of the key themes and priorities in this report.</p>
+<aside class="right-rail card">
+    <h2>Insight panel</h2>
+    <p class="hint">Quick reference to the overall scan balance, dominant pattern, and most active systems.</p>
 
-                <div class="right-card">
-                    <div class="right-card-title">Current mode</div>
-                    <div>{% if viewer_mode == "patient" %}Patient-facing{% else %}Practitioner-facing{% endif %}</div>
-                </div>
+    <div class="right-card">
+        <div class="right-card-title">Health Index</div>
+        <div class="score-topline" style="align-items:center; margin-bottom:8px;">
+            <div class="score-number" style="font-size:40px;">{{ ov.overall_scan_score or "—" }}</div>
+            <div class="score-band" style="font-size:14px;">{{ ov.overall_scan_band_label or "" }}</div>
+        </div>
 
-                <div class="right-card">
-                    <div class="right-card-title">Primary pattern</div>
-                    <div>{{ ov.primary_pattern.title or "—" }}</div>
-                </div>
+        {% set rail_score = ov.overall_scan_score or 0 %}
+        <div class="score-bar" style="height:10px; margin:10px 0 0;">
+            <div class="score-indicator" style="left: {{ rail_score }}%;"></div>
+        </div>
+    </div>
 
-                {% if ov.priority_actions %}
-                <div class="right-card">
-                    <div class="right-card-title">Top follow-up focus</div>
-                    <ul style="margin:0 0 0 18px; padding:0;">
-                        {% for item in ov.priority_actions[:4] %}
-                            <li style="margin-bottom:6px;">{{ item }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
+    <div class="right-card">
+        <div class="right-card-title">Primary pattern</div>
+        <div>{{ ov.primary_pattern.title or "—" }}</div>
+    </div>
 
-                {% if systems.priority_overview %}
-                <div class="right-card">
-                    <div class="right-card-title">Most active sections</div>
-                    <ul style="margin:0 0 0 18px; padding:0;">
-                        {% for item in systems.priority_overview[:4] %}
-                            <li style="margin-bottom:6px;">{{ item.title }} — {{ item.priority_label }}</li>
-                        {% endfor %}
-                    </ul>
-                </div>
-                {% endif %}
-            </aside>
+    {% if systems.priority_overview %}
+    <div class="right-card">
+        <div class="right-card-title">Most active systems</div>
+        <ul style="margin:0 0 0 18px; padding:0;">
+            {% for item in systems.priority_overview[:3] %}
+                <li style="margin-bottom:6px;">
+                    {{ item.title }} — {{ item.activity_label or item.priority_label }}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</aside>
         </div>
     </div>
 
