@@ -1,10 +1,17 @@
-#app/api/deps.py
+from __future__ import annotations
+
+from typing import Annotated
 
 from fastapi import Depends, HTTPException, status
+from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
-from app.db.session import SessionLocal
 from app.db.models import User
+from app.db.session import SessionLocal
+from app.services.auth_service import get_current_user_from_token
+
+
+bearer_scheme = HTTPBearer(auto_error=False)
 
 
 def get_db():
@@ -15,23 +22,41 @@ def get_db():
         db.close()
 
 
-# MVP placeholder
-def get_current_user(db: Session = Depends(get_db)):
-    from app.db.models import User
+CurrentDB = Annotated[Session, Depends(get_db)]
 
-    user = db.query(User).first()
 
-    if not user:
-        # Auto-create a default user for MVP
-        user = User(
-            email="test@local",
-            password_hash="dev",
-            full_name="Test User",
-            clinic_name="Test Clinic",
-            is_active=True,
+def get_current_user(
+    db: CurrentDB,
+    credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
+) -> User:
+    """
+    Resolve current user from Bearer access token.
+
+    Expected header:
+        Authorization: Bearer <access_token>
+    """
+    if credentials is None or not credentials.credentials:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated.",
+            headers={"WWW-Authenticate": "Bearer"},
         )
-        db.add(user)
-        db.commit()
-        db.refresh(user)
 
+    token = credentials.credentials
+    user = get_current_user_from_token(db, token)
     return user
+
+
+CurrentUser = Annotated[User, Depends(get_current_user)]
+
+
+def get_current_active_user(current_user: CurrentUser) -> User:
+    if not current_user.is_active:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="User account is inactive.",
+        )
+    return current_user
+
+
+CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]

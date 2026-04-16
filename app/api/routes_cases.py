@@ -1,6 +1,3 @@
-# app/api/routes_cases.py
-
-from unittest import case
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
@@ -30,6 +27,7 @@ from app.services.scan_import_service import (
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
+
 def make_json_safe(obj):
     from datetime import date, datetime
 
@@ -41,6 +39,30 @@ def make_json_safe(obj):
         return obj.isoformat()
     else:
         return obj
+
+
+def _get_owned_case(
+    db: Session,
+    current_user: User,
+    case_id: UUID,
+) -> Case | None:
+    return (
+        db.query(Case)
+        .filter(Case.id == case_id, Case.user_id == current_user.id)
+        .first()
+    )
+
+
+def _get_owned_patient(
+    db: Session,
+    current_user: User,
+    patient_id: UUID,
+) -> Patient | None:
+    return (
+        db.query(Patient)
+        .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
+        .first()
+    )
 
 
 @router.get("", response_model=list[CaseRead])
@@ -56,20 +78,31 @@ def list_cases(
     )
 
 
+@router.get("/patient/{patient_id}", response_model=list[CaseRead])
+def list_patient_cases(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    patient = _get_owned_patient(db, current_user, patient_id)
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    return (
+        db.query(Case)
+        .filter(Case.patient_id == patient.id, Case.user_id == current_user.id)
+        .order_by(Case.created_at.desc())
+        .all()
+    )
+
+
 @router.post("", response_model=CaseRead)
 def create_case_endpoint(
     payload: CaseCreate,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    patient = (
-        db.query(Patient)
-        .filter(
-            Patient.id == payload.patient_id,
-            Patient.user_id == current_user.id,
-        )
-        .first()
-    )
+    patient = _get_owned_patient(db, current_user, payload.patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
@@ -84,14 +117,42 @@ def get_case(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    case = (
-        db.query(Case)
-        .filter(Case.id == case_id, Case.user_id == current_user.id)
-        .first()
-    )
+    case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     return case
+
+
+@router.get("/{case_id}/status")
+def get_case_status(
+    case_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    case = _get_owned_case(db, current_user, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    latest_report = (
+        db.query(Case)
+        .filter(Case.id == case.id)
+        .first()
+    )
+
+    return {
+        "case_id": str(case.id),
+        "patient_id": str(case.patient_id),
+        "title": case.title,
+        "status": case.status.value if hasattr(case.status, "value") else str(case.status),
+        "recommendation_mode": (
+            case.recommendation_mode.value
+            if hasattr(case.recommendation_mode, "value")
+            else str(case.recommendation_mode)
+        ),
+        "has_source_html": bool(case.raw_scan_html_path),
+        "scan_datetime": case.scan_datetime,
+        "updated_at": case.updated_at,
+    }
 
 
 @router.patch("/{case_id}", response_model=CaseRead)
@@ -101,11 +162,7 @@ def update_case_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    case = (
-        db.query(Case)
-        .filter(Case.id == case_id, Case.user_id == current_user.id)
-        .first()
-    )
+    case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
     return update_case(db, case, payload)
@@ -186,23 +243,22 @@ async def generate_report(
 ):
     """
     Generate a new report version for a case by loading the stored QRMA HTML,
-    running the legacy parse/enrich pipeline, and building HTML/PDF output.
+    running the SaaS lifecycle-aware report pipeline, and building HTML/PDF output.
     """
-    case = (
-        db.query(Case)
-        .filter(Case.id == case_id, Case.user_id == current_user.id)
-        .first()
-    )
+    case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
     if not case.raw_scan_html_path:
-        raise HTTPException(status_code=400, detail="Case has no uploaded QRMA HTML file")
+        raise HTTPException(
+            status_code=400,
+            detail="Case has no uploaded QRMA HTML file",
+        )
 
     report = await generate_report_version(db, case, current_user)
 
     return {
         "report_version_id": report.id,
         "version_number": report.version_number,
-        "status": report.status.value,
+        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
     }

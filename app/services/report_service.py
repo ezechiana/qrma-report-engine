@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import os
 from pathlib import Path
+from typing import Optional
+
 from sqlalchemy import func
 from sqlalchemy.orm import Session
 
-from app.db.models import Case, ReportStatus, ReportVersion, User
+from app.db.models import Case, CaseStatus, ReportStatus, ReportVersion, User
 from app.services.audit_service import log_action
 from app.services.report_builder import build_report
 from app.services.scan_import_service import load_case_html
@@ -47,63 +49,173 @@ def parse_and_enrich_case_html(case: Case):
     return enriched
 
 
-async def generate_report_version(db: Session, case: Case, user: User) -> ReportVersion:
+def create_report_version(
+    db: Session,
+    case: Case,
+    user: User,
+    job_id: Optional[str] = None,
+) -> ReportVersion:
+    """
+    Create a queued report version row before generation starts.
+    This is the SaaS-safe lifecycle entry point.
+    """
     version_number = get_next_version_number(db, case.id)
-    html_filename, pdf_filename = _build_case_filenames(case, version_number)
-
-    enriched_report = parse_and_enrich_case_html(case)
-
-    recommendation_mode = (
-        case.recommendation_mode.value
-        if hasattr(case.recommendation_mode, "value")
-        else str(case.recommendation_mode)
-    )
-
-    built = await build_report(
-        enriched_report,
-        overrides=None,
-        html_filename=html_filename,
-        pdf_filename=pdf_filename,
-        recommendation_mode=recommendation_mode,
-    )
-
-    html_path = _to_str_path(built.get("html_path"))
-    pdf_path = _to_str_path(built.get("pdf_path"))
-
-    viewer_payload = built.get("viewer_payload") or {}
-
-    report_json = {
-        "case_id": str(case.id),
-        "version_number": version_number,
-        "recommendation_mode": recommendation_mode,
-        "html_path": html_path,
-        "pdf_path": pdf_path,
-        "viewer": viewer_payload,
-    }
 
     report = ReportVersion(
         case_id=case.id,
         created_by_user_id=user.id,
         version_number=version_number,
-        status=ReportStatus.draft,
-        report_json=report_json,
-        html_path=html_path,
-        pdf_path=pdf_path,
+        status=ReportStatus.queued,
+        report_json=None,
+        html_path=None,
+        pdf_path=None,
         build_version=os.getenv("REPORT_BUILD_VERSION", "dev"),
         recommendation_mode=case.recommendation_mode,
+        job_id=job_id,
+        started_at=None,
+        completed_at=None,
+        failed_at=None,
+        error_message=None,
     )
     db.add(report)
-    case.status = "generated"
+
+    case.status = CaseStatus.queued
     db.commit()
     db.refresh(report)
 
     log_action(
         db,
-        action="report_generated",
+        action="report_queued",
         user_id=user.id,
         case_id=case.id,
         report_version_id=report.id,
-        metadata_json={"version_number": version_number},
+        metadata_json={
+            "version_number": version_number,
+            "job_id": job_id,
+        },
     )
+
     return report
 
+
+async def build_report_version(
+    db: Session,
+    report: ReportVersion,
+    case: Case,
+    user: User,
+) -> ReportVersion:
+    """
+    Process a queued report version into a ready or failed report.
+    Safe to call immediately after create_report_version() in a synchronous MVP,
+    and later reusable inside a background worker.
+    """
+    try:
+        report.status = ReportStatus.processing
+        if hasattr(report, "started_at"):
+            report.started_at = func.now()
+
+        case.status = CaseStatus.processing
+        db.commit()
+        db.refresh(report)
+
+        version_number = report.version_number
+        html_filename, pdf_filename = _build_case_filenames(case, version_number)
+
+        enriched_report = parse_and_enrich_case_html(case)
+
+        recommendation_mode = (
+            case.recommendation_mode.value
+            if hasattr(case.recommendation_mode, "value")
+            else str(case.recommendation_mode)
+        )
+
+        built = await build_report(
+            enriched_report,
+            overrides=None,
+            html_filename=html_filename,
+            pdf_filename=pdf_filename,
+            recommendation_mode=recommendation_mode,
+        )
+
+        html_path = _to_str_path(built.get("html_path"))
+        pdf_path = _to_str_path(built.get("pdf_path"))
+        viewer_payload = built.get("viewer_payload") or {}
+
+        report_json = {
+            "case_id": str(case.id),
+            "version_number": version_number,
+            "recommendation_mode": recommendation_mode,
+            "html_path": html_path,
+            "pdf_path": pdf_path,
+            "viewer": viewer_payload,
+        }
+
+        report.report_json = report_json
+        report.html_path = html_path
+        report.pdf_path = pdf_path
+        report.status = ReportStatus.ready
+        report.error_message = None
+
+        if hasattr(report, "completed_at"):
+            report.completed_at = func.now()
+        if hasattr(report, "failed_at"):
+            report.failed_at = None
+
+        case.status = CaseStatus.generated
+
+        db.commit()
+        db.refresh(report)
+
+        log_action(
+            db,
+            action="report_generated",
+            user_id=user.id,
+            case_id=case.id,
+            report_version_id=report.id,
+            metadata_json={"version_number": version_number},
+        )
+
+        return report
+
+    except Exception as exc:
+        report.status = ReportStatus.failed
+        report.error_message = str(exc)
+
+        if hasattr(report, "failed_at"):
+            report.failed_at = func.now()
+
+        case.status = CaseStatus.failed
+
+        db.commit()
+        db.refresh(report)
+
+        log_action(
+            db,
+            action="report_generation_failed",
+            user_id=user.id,
+            case_id=case.id,
+            report_version_id=report.id,
+            metadata_json={"error": str(exc)},
+        )
+
+        raise
+
+
+async def generate_report_version(
+    db: Session,
+    case: Case,
+    user: User,
+    job_id: Optional[str] = None,
+) -> ReportVersion:
+    """
+    Backward-compatible convenience wrapper.
+
+    Current callers can keep using:
+        await generate_report_version(db, case, current_user)
+
+    Internally it now follows the SaaS lifecycle:
+    queued -> processing -> ready/failed
+    """
+    report = create_report_version(db=db, case=case, user=user, job_id=job_id)
+    report = await build_report_version(db=db, report=report, case=case, user=user)
+    return report

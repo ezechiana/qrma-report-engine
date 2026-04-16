@@ -7,6 +7,7 @@ from typing import Optional
 
 from sqlalchemy import (
     Boolean,
+    Column,
     Date,
     DateTime,
     Enum,
@@ -192,12 +193,7 @@ class ReportVersion(Base):
         back_populates="report_version",
         cascade="all, delete-orphan",
     )
-
-    __table_args__ = (
-        UniqueConstraint("case_id", "version_number", name="uq_case_version_number"),
-        Index("ix_report_versions_status", "status"),
-        Index("ix_report_versions_generated_at", "generated_at"),
-    )
+    status = Column(String, index=True)
 
 class ReportOverride(Base):
     __tablename__ = "report_overrides"
