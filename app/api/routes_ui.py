@@ -95,6 +95,13 @@ def report_detail_page(report_id: str, request: Request):
         },
     )
 
+@router.get("/app/settings")
+def settings_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="settings.html",
+        context={"request": request, "title": "Settings"},
+    )
 
 
 @router.get("/app/billing")

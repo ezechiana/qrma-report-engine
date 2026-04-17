@@ -68,6 +68,8 @@
             box-shadow: var(--shadow);
             padding: 22px;
             min-width: 0;
+            background-size: cover;
+            background-position: center;
         }
 
         .brand-row {
@@ -887,7 +889,7 @@
 
     <div class="shell">
         <div class="topbar">
-            <div class="hero">
+            <div class="hero"{% if tenant.cover_image_url %} style="background-image: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(249,251,248,0.92)), url('{{ tenant.cover_image_url }}');"{% endif %}>
                 <div class="brand-row">
                     {% if tenant.logo_url %}
                         <img class="brand-logo" src="{{ tenant.logo_url }}" alt="{{ tenant.tenant_name }} logo" />

@@ -1,0 +1,161 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="error-box" class="error" style="display:none;"></div>
+<div id="success-box" class="success" style="display:none;"></div>
+
+<div class="card">
+    <h2>Settings</h2>
+    <p class="muted">Branding and report defaults used across the practitioner workspace and shared reports.</p>
+</div>
+
+<div class="card">
+    <h3>Branding</h3>
+
+    <div class="grid-2">
+        <div class="field">
+            <label>Clinic name</label>
+            <input id="clinic_name">
+        </div>
+
+        <div class="field">
+            <label>Accent colour</label>
+            <input id="accent_color" placeholder="#2f6fed">
+        </div>
+
+        <div class="field">
+            <label>Logo URL</label>
+            <input id="logo_url">
+        </div>
+
+        <div class="field">
+            <label>Cover image URL</label>
+            <input id="cover_image_url">
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Report defaults</h3>
+
+    <div class="grid-2">
+        <div class="field">
+            <label>Report title</label>
+            <input id="report_title">
+        </div>
+
+        <div class="field">
+            <label>Recommendation mode</label>
+            <select id="recommendation_mode_default">
+                <option value="natural_approaches_clinical">natural_approaches_clinical</option>
+                <option value="mixed_clinical">mixed_clinical</option>
+                <option value="vitalhealth_clinical_optimised">vitalhealth_clinical_optimised</option>
+                <option value="affiliate_vitalhealth">affiliate_vitalhealth</option>
+                <option value="recommendations_off">recommendations_off</option>
+            </select>
+        </div>
+
+        <div class="field" style="grid-column: 1 / -1;">
+            <label>Report subtitle</label>
+            <input id="report_subtitle">
+        </div>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Contact details</h3>
+
+    <div class="grid-2">
+        <div class="field">
+            <label>Support email</label>
+            <input id="support_email" type="email">
+        </div>
+
+        <div class="field">
+            <label>Website URL</label>
+            <input id="website_url">
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <button id="save-settings-btn" type="button">Save settings</button>
+    </div>
+</div>
+
+<script>
+    function setError(msg) {
+        const box = document.getElementById("error-box");
+        box.style.display = "block";
+        box.textContent = msg;
+    }
+
+    function clearError() {
+        const box = document.getElementById("error-box");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function setSuccess(msg) {
+        const box = document.getElementById("success-box");
+        box.style.display = "block";
+        box.textContent = msg;
+    }
+
+    async function loadSettings() {
+        clearError();
+        if (!requireAuthOrRedirect()) return;
+
+        const res = await apiFetch("/api/settings");
+        const data = await res.json();
+
+        if (!res.ok) {
+            setError(data.detail || "Could not load settings.");
+            return;
+        }
+
+        document.getElementById("clinic_name").value = data.clinic_name || "";
+        document.getElementById("accent_color").value = data.accent_color || "";
+        document.getElementById("logo_url").value = data.logo_url || "";
+        document.getElementById("cover_image_url").value = data.cover_image_url || "";
+        document.getElementById("report_title").value = data.report_title || "";
+        document.getElementById("report_subtitle").value = data.report_subtitle || "";
+        document.getElementById("support_email").value = data.support_email || "";
+        document.getElementById("website_url").value = data.website_url || "";
+        document.getElementById("recommendation_mode_default").value =
+            data.recommendation_mode_default || "natural_approaches_clinical";
+    }
+
+    async function saveSettings() {
+        clearError();
+
+        const payload = {
+            clinic_name: document.getElementById("clinic_name").value.trim(),
+            accent_color: document.getElementById("accent_color").value.trim(),
+            logo_url: document.getElementById("logo_url").value.trim(),
+            cover_image_url: document.getElementById("cover_image_url").value.trim(),
+            report_title: document.getElementById("report_title").value.trim(),
+            report_subtitle: document.getElementById("report_subtitle").value.trim(),
+            support_email: document.getElementById("support_email").value.trim(),
+            website_url: document.getElementById("website_url").value.trim(),
+            recommendation_mode_default: document.getElementById("recommendation_mode_default").value,
+        };
+
+        const res = await apiFetch("/api/settings", {
+            method: "PUT",
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json();
+
+        if (!res.ok) {
+            setError(data.detail || "Could not save settings.");
+            return;
+        }
+
+        setSuccess("Settings saved.");
+    }
+
+    document.getElementById("save-settings-btn").addEventListener("click", saveSettings);
+    loadSettings();
+</script>
+{% endblock %}

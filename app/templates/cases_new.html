@@ -163,6 +163,18 @@
             return;
         }
 
+
+        let recommendationMode = "natural_approaches_clinical";
+
+        try {
+            const settingsResponse = await apiFetch("/api/settings");
+            if (settingsResponse.ok) {
+                const settings = await settingsResponse.json();
+                recommendationMode = settings.recommendation_mode_default || recommendationMode;
+            }
+        } catch (e) {
+            // keep default
+        }
         const payload = {
             temporary_upload_id: temporaryUploadId,
             patient: {
@@ -176,7 +188,7 @@
             },
             case: {
                 title: document.getElementById("case_title").value || "QRMA scan case",
-                recommendation_mode: "natural_approaches_clinical",
+                recommendation_mode: recommendationMode,
                 clinical_context_json: null
             }
         };

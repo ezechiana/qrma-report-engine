@@ -14,7 +14,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, ReportVersion, ShareLink, User
+from app.db.models import Case, PractitionerSettings, ReportVersion, ShareLink, User
 from app.schemas.share import ShareLinkCreate, ShareLinkRead
 from app.services.audit_service import log_action
 from app.services.share_link_service import (
@@ -48,39 +48,80 @@ def _get_report_for_share_or_404(db: Session, link: ShareLink) -> ReportVersion:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
 
+def _get_practitioner_settings_for_report(db: Session, report: ReportVersion) -> PractitionerSettings | None:
+    return (
+        db.query(PractitionerSettings)
+        .filter(PractitionerSettings.user_id == report.created_by_user_id)
+        .first()
+    )
 
-def _tenant_theme_from_report(report: ReportVersion) -> dict:
-    """
-    Temporary multi-tenant theme source.
-    For now this is driven by environment variables with sensible fallbacks.
-    Later this should come from a tenant/clinic branding table.
-    """
+def _tenant_theme_from_report(db: Session, report: ReportVersion) -> dict:
     report_json = report.report_json or {}
     stored_theme = report_json.get("tenant_theme", {}) if isinstance(report_json, dict) else {}
+    settings = _get_practitioner_settings_for_report(db, report)
 
     return {
-        "tenant_name": stored_theme.get("tenant_name") or os.getenv("VIEWER_TENANT_NAME", "Health Portal"),
-        "tagline": stored_theme.get("tagline") or os.getenv(
-            "VIEWER_TAGLINE",
-            "Secure wellness report viewer"
+        "tenant_name": (
+            stored_theme.get("tenant_name")
+            or (settings.clinic_name if settings and settings.clinic_name else None)
+            or os.getenv("VIEWER_TENANT_NAME", "Health Portal")
         ),
-        "logo_url": stored_theme.get("logo_url") or os.getenv("VIEWER_LOGO_URL", ""),
-        "primary_color": stored_theme.get("primary_color") or os.getenv("VIEWER_PRIMARY_COLOR", "#2f4f2f"),
-        "accent_color": stored_theme.get("accent_color") or os.getenv("VIEWER_ACCENT_COLOR", "#d97706"),
+        "tagline": (
+            stored_theme.get("tagline")
+            or (settings.report_subtitle if settings and settings.report_subtitle else None)
+            or os.getenv("VIEWER_TAGLINE", "Secure wellness report viewer")
+        ),
+        "logo_url": (
+            stored_theme.get("logo_url")
+            or (settings.logo_url if settings and settings.logo_url else None)
+            or os.getenv("VIEWER_LOGO_URL", "")
+        ),
+        "cover_image_url": (
+            stored_theme.get("cover_image_url")
+            or (settings.cover_image_url if settings and settings.cover_image_url else None)
+            or ""
+        ),
+        "primary_color": (
+            stored_theme.get("primary_color")
+            or (settings.accent_color if settings and settings.accent_color else None)
+            or os.getenv("VIEWER_PRIMARY_COLOR", "#2f4f2f")
+        ),
+        "accent_color": (
+            stored_theme.get("accent_color")
+            or (settings.accent_color if settings and settings.accent_color else None)
+            or os.getenv("VIEWER_ACCENT_COLOR", "#d97706")
+        ),
         "text_color": stored_theme.get("text_color") or os.getenv("VIEWER_TEXT_COLOR", "#183028"),
         "background_color": stored_theme.get("background_color") or os.getenv("VIEWER_BACKGROUND_COLOR", "#f6f8f5"),
         "surface_color": stored_theme.get("surface_color") or os.getenv("VIEWER_SURFACE_COLOR", "#ffffff"),
         "surface_soft_color": stored_theme.get("surface_soft_color") or os.getenv("VIEWER_SURFACE_SOFT_COLOR", "#f9fbf8"),
         "border_color": stored_theme.get("border_color") or os.getenv("VIEWER_BORDER_COLOR", "#dfe7e1"),
         "muted_color": stored_theme.get("muted_color") or os.getenv("VIEWER_MUTED_COLOR", "#5f7269"),
-        "support_email": stored_theme.get("support_email") or os.getenv("VIEWER_SUPPORT_EMAIL", ""),
-        "website_url": stored_theme.get("website_url") or os.getenv("VIEWER_WEBSITE_URL", ""),
+        "support_email": (
+            stored_theme.get("support_email")
+            or (settings.support_email if settings and settings.support_email else None)
+            or os.getenv("VIEWER_SUPPORT_EMAIL", "")
+        ),
+        "website_url": (
+            stored_theme.get("website_url")
+            or (settings.website_url if settings and settings.website_url else None)
+            or os.getenv("VIEWER_WEBSITE_URL", "")
+        ),
     }
 
-
-def _public_report_payload(report: ReportVersion, token: str) -> dict:
+def _public_report_payload(db: Session, report: ReportVersion, token: str) -> dict:
     report_json = report.report_json or {}
-    viewer = report_json.get("viewer") or {}
+    viewer = dict(report_json.get("viewer") or {})
+    viewer_tenant = dict(viewer.get("tenant") or {})
+    settings = _get_practitioner_settings_for_report(db, report)
+
+    if settings:
+        if settings.report_title:
+            viewer_tenant["report_title"] = settings.report_title
+        if settings.report_subtitle:
+            viewer_tenant["subtitle"] = settings.report_subtitle
+
+    viewer["tenant"] = viewer_tenant
 
     return {
         "id": str(report.id),
@@ -246,8 +287,8 @@ def access_shared_report(
         metadata_json={"token": token},
     )
 
-    payload = _public_report_payload(report, token)
-    tenant = _tenant_theme_from_report(report)
+    payload = _public_report_payload(db, report, token)
+    tenant = _tenant_theme_from_report(db, report)
 
     return templates.TemplateResponse(
         request=request,

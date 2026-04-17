@@ -50,7 +50,39 @@ class RecommendationMode(str, enum.Enum):
     natural_approaches_clinical = "natural_approaches_clinical"
     mixed_clinical = "mixed_clinical"
 
+class PractitionerSettings(Base):
+    __tablename__ = "practitioner_settings"
 
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        unique=True,
+        index=True,
+    )
+
+    clinic_name: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    report_title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    report_subtitle: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    logo_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    cover_image_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    accent_color: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
+
+    support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    website_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
+
+    recommendation_mode_default: Mapped[RecommendationMode] = mapped_column(
+        Enum(RecommendationMode),
+        default=RecommendationMode.natural_approaches_clinical,
+    )
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    user: Mapped["User"] = relationship(back_populates="settings")
+
+    
 class User(Base):
     __tablename__ = "users"
 
@@ -66,6 +98,11 @@ class User(Base):
 
     patients: Mapped[list["Patient"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     cases: Mapped[list["Case"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    settings: Mapped[Optional["PractitionerSettings"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        uselist=False,
+    )
     email_verified_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     last_login_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 

@@ -15,7 +15,7 @@ from app.api.routes_share import router as share_router
 from app.db.base import Base
 from app.db.session import engine
 from app.api.routes_ui import router as ui_router
-
+from app.api.routes_settings import router as settings_router
 
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
@@ -66,6 +66,7 @@ def create_app() -> FastAPI:
     app.include_router(cases_router)
     app.include_router(reports_router)
     app.include_router(share_router)
+    app.include_router(settings_router)
     app.include_router(ui_router)
 
     # Legacy engine/debug routes

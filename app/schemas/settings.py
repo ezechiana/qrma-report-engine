@@ -1,0 +1,41 @@
+from __future__ import annotations
+
+from datetime import datetime
+from typing import Optional
+
+from pydantic import BaseModel, ConfigDict
+
+
+class PractitionerSettingsRead(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    clinic_name: Optional[str] = None
+    report_title: Optional[str] = None
+    report_subtitle: Optional[str] = None
+
+    logo_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    accent_color: Optional[str] = None
+
+    support_email: Optional[str] = None
+    website_url: Optional[str] = None
+
+    recommendation_mode_default: str = "natural_approaches_clinical"
+
+    created_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class PractitionerSettingsUpdate(BaseModel):
+    clinic_name: Optional[str] = None
+    report_title: Optional[str] = None
+    report_subtitle: Optional[str] = None
+
+    logo_url: Optional[str] = None
+    cover_image_url: Optional[str] = None
+    accent_color: Optional[str] = None
+
+    support_email: Optional[str] = None
+    website_url: Optional[str] = None
+
+    recommendation_mode_default: Optional[str] = None

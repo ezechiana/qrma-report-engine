@@ -35,10 +35,7 @@
             color: var(--text);
         }
 
-        a {
-            color: inherit;
-            text-decoration: none;
-        }
+        a { color: inherit; text-decoration: none; }
 
         .app {
             display: grid;
@@ -52,10 +49,7 @@
             padding: 20px;
         }
 
-        .sidebar h2 {
-            margin: 0 0 6px;
-            font-size: 20px;
-        }
+        .sidebar h2 { margin: 0 0 6px; font-size: 20px; }
 
         .sidebar .subtle {
             color: var(--sidebar-muted);
@@ -130,9 +124,7 @@
             border: 1px solid #bfdbfe;
         }
 
-        .content {
-            padding: 24px;
-        }
+        .content { padding: 24px; }
 
         .card {
             background: var(--surface);
@@ -181,9 +173,7 @@
             font-size: 14px;
         }
 
-        .btn:hover {
-            background: var(--brand-dark);
-        }
+        .btn:hover { background: var(--brand-dark); }
 
         .btn.secondary {
             background: white;
@@ -197,9 +187,7 @@
             flex-wrap: wrap;
         }
 
-        .field {
-            margin-bottom: 12px;
-        }
+        .field { margin-bottom: 12px; }
 
         .field label {
             display: block;
@@ -238,13 +226,9 @@
             font-weight: 700;
         }
 
-        .muted {
-            color: var(--muted);
-        }
+        .muted { color: var(--muted); }
 
-        .notice,
-        .success,
-        .error {
+        .notice, .success, .error {
             padding: 12px 14px;
             border-radius: 10px;
             margin-bottom: 16px;
@@ -274,34 +258,26 @@
             text-decoration: none;
         }
 
-        .link:hover {
-            text-decoration: underline;
+        .link:hover { text-decoration: underline; }
+
+        iframe.report-frame {
+            width: 100%;
+            min-height: 82vh;
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            background: white;
         }
 
         @media (max-width: 960px) {
-            .app {
-                grid-template-columns: 1fr;
-            }
-
-            .sidebar {
-                display: none;
-            }
-
-            .grid-3,
-            .grid-2 {
-                grid-template-columns: 1fr;
-            }
+            .app { grid-template-columns: 1fr; }
+            .sidebar { display: none; }
+            .grid-3, .grid-2 { grid-template-columns: 1fr; }
         }
     </style>
 
     <script>
-        function getAccessToken() {
-            return localStorage.getItem("access_token");
-        }
-
-        function getRefreshToken() {
-            return localStorage.getItem("refresh_token");
-        }
+        function getAccessToken() { return localStorage.getItem("access_token"); }
+        function getRefreshToken() { return localStorage.getItem("refresh_token"); }
 
         function getCurrentUser() {
             const raw = localStorage.getItem("current_user");
@@ -325,18 +301,12 @@
             const token = getAccessToken();
             const headers = new Headers(options.headers || {});
 
-            if (token) {
-                headers.set("Authorization", `Bearer ${token}`);
-            }
-
+            if (token) headers.set("Authorization", `Bearer ${token}`);
             if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
                 headers.set("Content-Type", "application/json");
             }
 
-            const response = await fetch(url, {
-                ...options,
-                headers,
-            });
+            const response = await fetch(url, { ...options, headers });
 
             if (response.status === 401) {
                 clearAuthSession();
@@ -364,11 +334,7 @@
 
         function formatDate(value) {
             if (!value) return "—";
-            try {
-                return new Date(value).toLocaleString();
-            } catch {
-                return value;
-            }
+            try { return new Date(value).toLocaleString(); } catch { return value; }
         }
 
         function safeText(value, fallback = "—") {
@@ -384,14 +350,13 @@
         <h2>Health Portal</h2>
         <div class="subtle">Practitioner workspace</div>
 
-        
         <nav>
             <a href="/app" id="nav-dashboard">Dashboard</a>
             <a href="/app/cases/new" id="nav-new-case">New case</a>
             <a href="/app/reports" id="nav-reports">Reports</a>
+            <a href="/app/settings" id="nav-settings">Settings</a>
             <a href="/app/billing" id="nav-billing">Billing</a>
         </nav>
-
 
         <div class="sidebar-footer">
             <div id="sidebar-user-email">Not signed in</div>
@@ -424,14 +389,8 @@
         if (user) {
             const emailEl = document.getElementById("sidebar-user-email");
             const planEl = document.getElementById("plan-badge");
-
-            if (emailEl) {
-                emailEl.textContent = user.email || user.full_name || "Signed in";
-            }
-
-            if (planEl) {
-                planEl.textContent = user.recommendation_mode_default || "Practitioner";
-            }
+            if (emailEl) emailEl.textContent = user.email || user.full_name || "Signed in";
+            if (planEl) planEl.textContent = user.recommendation_mode_default || "Practitioner";
         }
 
         const path = window.location.pathname;
@@ -441,10 +400,11 @@
             document.getElementById("nav-new-case")?.classList.add("active");
         } else if (path.startsWith("/app/reports")) {
             document.getElementById("nav-reports")?.classList.add("active");
+        } else if (path.startsWith("/app/settings")) {
+            document.getElementById("nav-settings")?.classList.add("active");
         } else if (path.startsWith("/app/billing")) {
             document.getElementById("nav-billing")?.classList.add("active");
         }
-
     })();
 </script>
 </body>

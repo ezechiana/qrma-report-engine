@@ -12,12 +12,17 @@
 <div class="card">
     <h3>Actions</h3>
     <div class="btn-row">
-        <button id="open-full-report-btn" type="button">Open full report</button>
-        <button class="btn secondary" id="open-html-btn" type="button">Open HTML</button>
-        <button class="btn secondary" id="download-pdf-btn" type="button">Download PDF</button>
-        <button class="btn secondary" id="open-json-btn" type="button">View JSON</button>
+        <button id="open-inline-btn" type="button">Load report viewer</button>
+        <a class="btn secondary" id="download-pdf-btn" href="#" target="_blank">Download PDF</a>
+        <a class="btn secondary" id="open-html-btn" href="#" target="_blank">Open HTML</a>
+        <a class="btn secondary" id="open-json-btn" href="#" target="_blank">View JSON</a>
         <button id="refresh-report-btn" type="button">Refresh report</button>
     </div>
+</div>
+
+<div class="card">
+    <h3>Full report viewer</h3>
+    <iframe id="report-frame" class="report-frame"></iframe>
 </div>
 
 <div class="card">
@@ -63,8 +68,6 @@
     async function loadReport() {
         clearError();
 
-        if (!requireAuthOrRedirect()) return;
-
         const response = await apiFetch(`/api/reports/${reportId}`);
         const data = await response.json();
 
@@ -80,17 +83,17 @@
             Case ID: ${safeText(data.case_id)}
         `;
 
-        document.getElementById("open-html-btn").href = `/api/reports/${reportId}/html`;
         document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
+        document.getElementById("open-html-btn").href = `/api/reports/${reportId}/html`;
         document.getElementById("open-json-btn").href = `/api/reports/${reportId}/json`;
     }
 
-    async function createShareLink(openAfterCreate = false, passwordValue = null) {
+    async function createShareLink(openInline = false) {
         clearError();
         clearSuccess();
 
         const payload = {
-            password: passwordValue !== null ? passwordValue : (document.getElementById("share-password").value || null),
+            password: document.getElementById("share-password").value || null,
             expires_at: null
         };
 
@@ -107,63 +110,30 @@
         }
 
         latestShareUrl = data.share_url;
-
         document.getElementById("share-result").innerHTML = `
             <strong>Share link:</strong><br>
             <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
         `;
-
         setSuccess("Share link created.");
 
-        if (openAfterCreate && data.share_url) {
-            window.open(data.share_url, "_blank", "noopener,noreferrer");
+        if (openInline) {
+            document.getElementById("report-frame").src = data.share_url;
         }
 
         return data.share_url;
     }
 
-    async function openViaShare(type) {
-        clearError();
-
-        let url = latestShareUrl;
-
-        if (!url) {
-            const share = await createShareLink(false, null);
-            if (!share) return;
-            url = share;
-        }
-
-        if (type === "html") {
-            window.open(url, "_blank");
-        } else if (type === "pdf") {
-            window.open(url + "?format=pdf", "_blank");
-        } else if (type === "json") {
-            window.open(url + "?format=json", "_blank");
-        }
-    }
-
-
-    document.getElementById("open-html-btn").addEventListener("click", () => openViaShare("html"));
-    document.getElementById("download-pdf-btn").addEventListener("click", () => openViaShare("pdf"));
-    document.getElementById("open-json-btn").addEventListener("click", () => openViaShare("json"));
-
-
-    async function openFullReport() {
-        clearError();
-        clearSuccess();
-
+    async function loadInlineViewer() {
         if (latestShareUrl) {
-            window.open(latestShareUrl, "_blank", "noopener,noreferrer");
+            document.getElementById("report-frame").src = latestShareUrl;
             return;
         }
-
-        // Practitioner preview: create a passwordless share link and open it
-        await createShareLink(true, null);
+        await createShareLink(true);
     }
 
     document.getElementById("refresh-report-btn").addEventListener("click", loadReport);
     document.getElementById("create-share-link-btn").addEventListener("click", () => createShareLink(false));
-    document.getElementById("open-full-report-btn").addEventListener("click", openFullReport);
+    document.getElementById("open-inline-btn").addEventListener("click", loadInlineViewer);
 
     loadReport();
 </script>
