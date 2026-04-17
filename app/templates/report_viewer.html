@@ -1039,9 +1039,9 @@
                     {% if systems.system_score_cards %}
                     <div class="grid-3" style="margin-top:18px;">
                         {% for card in systems.system_score_cards %}
-                            {% set score = card.score or 0 %}
-                            {% set first_target = card.section_titles[0] if card.section_titles else card.title %}
-                        <div class="score-card" data-marker-target="marker-section-{{ section_slug(first_target) }}" style="cursor:pointer;">
+                           {% set score = card.score or 0 %}
+                            {% set first_target = card.included_sections[0] if card.included_sections else card.title %}
+                            <div class="score-card" data-marker-target="marker-section-{{ section_slug(first_target) }}" style="cursor:pointer;">
                                 <div class="score-card-header">
                                     <h3 class="score-card-title">{{ card.title }}</h3>
                                     <div class="score-card-band">
@@ -1204,7 +1204,7 @@
                         <div class="marker-group-header" onclick="toggleMarkerGroup('body-comp-group')">
                             <h3>Body composition &amp; metabolic profile</h3>
                             <div class="marker-group-meta">
-                                {{ body.status_label or "Various ranges" }}
+                                {{ body.display_band or body.status_label or "Various ranges" }}
                             </div>
                         </div>
 
@@ -1473,15 +1473,6 @@
             if (el) el.classList.toggle('open');
         }
 
-        document.querySelectorAll("[data-marker-target]").forEach((el) => {
-            el.addEventListener("click", () => {
-                const target = el.getAttribute("data-marker-target");
-                const section = document.getElementById(target);
-                if (section) {
-                    section.scrollIntoView({ behavior: "smooth", block: "start" });
-                }
-            });
-        });
 
     </script>
 </body>

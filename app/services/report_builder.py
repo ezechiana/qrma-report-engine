@@ -1081,12 +1081,13 @@ def build_body_composition_block(report: ParsedReport):
         "source_subtitle": "QRMA category: Element of Human",
         "priority": target.priority or "normal",
         "priority_label": priority_label(target.priority),
-        "status_label": priority_label(target.priority),
+        #"status_label": priority_label(target.priority),
         "abnormal_count": target.abnormal_count,
         "normal_count": target.normal_count,
         "summary": _body_comp_summary_text(report.patient, metric_map),
         "interpretation_lines": _body_comp_interpretation_lines(report.patient, metric_map),
         "groups": [{"title": k, "rows": v} for k, v in grouped.items() if v],
+        "display_band": "Profile summary",
     }
 
 def build_full_marker_tables(report: ParsedReport):
