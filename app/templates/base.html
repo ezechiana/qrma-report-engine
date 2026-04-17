@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>{{ title or "Health Portal" }}</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        :root {
+            --bg: #f3f4f6;
+            --surface: #ffffff;
+            --line: #e5e7eb;
+            --text: #111827;
+            --muted: #6b7280;
+            --brand: #1d4ed8;
+            --brand-dark: #1e40af;
+            --sidebar: #111827;
+            --sidebar-muted: #9ca3af;
+            --radius: 12px;
+            --success-bg: #ecfdf5;
+            --success-line: #a7f3d0;
+            --success-text: #065f46;
+            --error-bg: #fef2f2;
+            --error-line: #fecaca;
+            --error-text: #991b1b;
+            --warn-bg: #fff7ed;
+            --warn-line: #fdba74;
+            --warn-text: #9a3412;
+        }
+
+        * { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .app {
+            display: grid;
+            grid-template-columns: 240px 1fr;
+            min-height: 100vh;
+        }
+
+        .sidebar {
+            background: var(--sidebar);
+            color: white;
+            padding: 20px;
+        }
+
+        .sidebar h2 {
+            margin: 0 0 6px;
+            font-size: 20px;
+        }
+
+        .sidebar .subtle {
+            color: var(--sidebar-muted);
+            font-size: 13px;
+            margin-bottom: 18px;
+            line-height: 1.45;
+        }
+
+        .sidebar nav a {
+            display: block;
+            color: var(--sidebar-muted);
+            padding: 10px 12px;
+            border-radius: 10px;
+            margin-bottom: 6px;
+        }
+
+        .sidebar nav a:hover,
+        .sidebar nav a.active {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
+        .sidebar-footer {
+            margin-top: 24px;
+            padding-top: 16px;
+            border-top: 1px solid rgba(255,255,255,0.12);
+            color: var(--sidebar-muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .sidebar-footer a {
+            color: white;
+            display: inline-block;
+            margin-top: 10px;
+        }
+
+        .main {
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        .topbar {
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            padding: 16px 24px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .topbar-title {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .topbar-right {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .plan-badge {
+            padding: 8px 12px;
+            border-radius: 999px;
+            background: #eff6ff;
+            color: #1d4ed8;
+            font-size: 12px;
+            font-weight: 700;
+            border: 1px solid #bfdbfe;
+        }
+
+        .content {
+            padding: 24px;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            padding: 16px;
+            margin-bottom: 16px;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            color: var(--muted);
+            margin-bottom: 6px;
+            letter-spacing: .04em;
+        }
+
+        .stat-value {
+            font-size: 22px;
+            font-weight: 700;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            padding: 10px 16px;
+            border-radius: 10px;
+            border: none;
+            background: var(--brand);
+            color: white;
+            cursor: pointer;
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .btn:hover {
+            background: var(--brand-dark);
+        }
+
+        .btn.secondary {
+            background: white;
+            color: var(--text);
+            border: 1px solid var(--line);
+        }
+
+        .btn-row {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        .field label {
+            display: block;
+            font-size: 13px;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .field input,
+        .field select,
+        .field textarea {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid var(--line);
+            border-radius: 10px;
+            font-size: 14px;
+            font-family: inherit;
+        }
+
+        .table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .table th,
+        .table td {
+            text-align: left;
+            padding: 12px 10px;
+            border-bottom: 1px solid var(--line);
+            vertical-align: top;
+        }
+
+        .table th {
+            font-size: 13px;
+            color: var(--muted);
+            font-weight: 700;
+        }
+
+        .muted {
+            color: var(--muted);
+        }
+
+        .notice,
+        .success,
+        .error {
+            padding: 12px 14px;
+            border-radius: 10px;
+            margin-bottom: 16px;
+            line-height: 1.5;
+        }
+
+        .notice {
+            background: var(--warn-bg);
+            border: 1px solid var(--warn-line);
+            color: var(--warn-text);
+        }
+
+        .success {
+            background: var(--success-bg);
+            border: 1px solid var(--success-line);
+            color: var(--success-text);
+        }
+
+        .error {
+            background: var(--error-bg);
+            border: 1px solid var(--error-line);
+            color: var(--error-text);
+        }
+
+        .link {
+            color: var(--brand);
+            text-decoration: none;
+        }
+
+        .link:hover {
+            text-decoration: underline;
+        }
+
+        @media (max-width: 960px) {
+            .app {
+                grid-template-columns: 1fr;
+            }
+
+            .sidebar {
+                display: none;
+            }
+
+            .grid-3,
+            .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        function getAccessToken() {
+            return localStorage.getItem("access_token");
+        }
+
+        function getRefreshToken() {
+            return localStorage.getItem("refresh_token");
+        }
+
+        function getCurrentUser() {
+            const raw = localStorage.getItem("current_user");
+            if (!raw) return null;
+            try { return JSON.parse(raw); } catch { return null; }
+        }
+
+        function setAuthSession(payload) {
+            localStorage.setItem("access_token", payload.access_token || "");
+            localStorage.setItem("refresh_token", payload.refresh_token || "");
+            localStorage.setItem("current_user", JSON.stringify(payload.user || null));
+        }
+
+        function clearAuthSession() {
+            localStorage.removeItem("access_token");
+            localStorage.removeItem("refresh_token");
+            localStorage.removeItem("current_user");
+        }
+
+        async function apiFetch(url, options = {}) {
+            const token = getAccessToken();
+            const headers = new Headers(options.headers || {});
+
+            if (token) {
+                headers.set("Authorization", `Bearer ${token}`);
+            }
+
+            if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
+                headers.set("Content-Type", "application/json");
+            }
+
+            const response = await fetch(url, {
+                ...options,
+                headers,
+            });
+
+            if (response.status === 401) {
+                clearAuthSession();
+                if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
+                    window.location.href = "/login";
+                }
+            }
+
+            return response;
+        }
+
+        function requireAuthOrRedirect() {
+            const token = getAccessToken();
+            if (!token) {
+                window.location.href = "/login";
+                return false;
+            }
+            return true;
+        }
+
+        function logoutNow() {
+            clearAuthSession();
+            window.location.href = "/login";
+        }
+
+        function formatDate(value) {
+            if (!value) return "—";
+            try {
+                return new Date(value).toLocaleString();
+            } catch {
+                return value;
+            }
+        }
+
+        function safeText(value, fallback = "—") {
+            if (value === null || value === undefined || value === "") return fallback;
+            return String(value);
+        }
+    </script>
+</head>
+
+<body>
+<div class="app">
+    <aside class="sidebar">
+        <h2>Health Portal</h2>
+        <div class="subtle">Practitioner workspace</div>
+
+        
+        <nav>
+            <a href="/app" id="nav-dashboard">Dashboard</a>
+            <a href="/app/cases/new" id="nav-new-case">New case</a>
+            <a href="/app/reports" id="nav-reports">Reports</a>
+            <a href="/app/billing" id="nav-billing">Billing</a>
+        </nav>
+
+
+        <div class="sidebar-footer">
+            <div id="sidebar-user-email">Not signed in</div>
+            <a href="#" onclick="logoutNow(); return false;">Logout</a>
+        </div>
+    </aside>
+
+    <main class="main">
+        <div class="topbar">
+            <div class="topbar-title">{{ title or "App" }}</div>
+            <div class="topbar-right">
+                <div class="plan-badge" id="plan-badge">Practitioner</div>
+            </div>
+        </div>
+
+        <div class="content">
+            {% block content %}{% endblock %}
+        </div>
+    </main>
+</div>
+
+<script>
+    (function hydrateShell() {
+        const user = getCurrentUser();
+
+        if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
+            requireAuthOrRedirect();
+        }
+
+        if (user) {
+            const emailEl = document.getElementById("sidebar-user-email");
+            const planEl = document.getElementById("plan-badge");
+
+            if (emailEl) {
+                emailEl.textContent = user.email || user.full_name || "Signed in";
+            }
+
+            if (planEl) {
+                planEl.textContent = user.recommendation_mode_default || "Practitioner";
+            }
+        }
+
+        const path = window.location.pathname;
+        if (path === "/app") {
+            document.getElementById("nav-dashboard")?.classList.add("active");
+        } else if (path.startsWith("/app/cases/new")) {
+            document.getElementById("nav-new-case")?.classList.add("active");
+        } else if (path.startsWith("/app/reports")) {
+            document.getElementById("nav-reports")?.classList.add("active");
+        } else if (path.startsWith("/app/billing")) {
+            document.getElementById("nav-billing")?.classList.add("active");
+        }
+
+    })();
+</script>
+</body>
+</html>

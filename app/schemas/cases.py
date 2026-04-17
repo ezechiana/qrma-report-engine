@@ -24,6 +24,11 @@ class CaseCreate(BaseModel):
     recommendation_mode: str = "natural_approaches_clinical"
     clinical_context_json: Optional[ClinicalContext] = None
 
+class CaseCreateFromImport(BaseModel):
+    title: str
+    recommendation_mode: str = "natural_approaches_clinical"
+    clinical_context_json: Optional[ClinicalContext] = None
+
 
 class CaseUpdate(BaseModel):
     title: Optional[str] = None
@@ -74,7 +79,7 @@ class ImportFromHtmlResponse(BaseModel):
 class CreateFromImportRequest(BaseModel):
     temporary_upload_id: str
     patient: ParsedSourcePatientData
-    case: CaseCreate
+    case: CaseCreateFromImport
 
 
 #app/schemas/reports.py

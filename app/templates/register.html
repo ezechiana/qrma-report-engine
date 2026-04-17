@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Register</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            background: #f3f4f6;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+        }
+
+        .auth-card {
+            width: 100%;
+            max-width: 420px;
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 14px;
+            padding: 24px;
+        }
+
+        h1 {
+            margin-top: 0;
+            font-size: 28px;
+        }
+
+        .muted {
+            color: #6b7280;
+            margin-bottom: 18px;
+        }
+
+        .field {
+            margin-bottom: 12px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 6px;
+            font-size: 13px;
+            color: #6b7280;
+        }
+
+        input {
+            width: 100%;
+            padding: 10px 12px;
+            border: 1px solid #d1d5db;
+            border-radius: 10px;
+            font-size: 14px;
+        }
+
+        button {
+            width: 100%;
+            border: none;
+            background: #1d4ed8;
+            color: white;
+            padding: 12px 16px;
+            border-radius: 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        button:hover {
+            background: #1e40af;
+        }
+
+        .error {
+            display: none;
+            margin-bottom: 14px;
+            padding: 10px 12px;
+            border-radius: 10px;
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+        }
+
+        .footer-link {
+            margin-top: 14px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+<div class="auth-card">
+    <h1>Create account</h1>
+    <div class="muted">Set up your practitioner workspace.</div>
+
+    <div id="error-box" class="error"></div>
+
+    <form id="register-form">
+        <div class="field">
+            <label>Full name</label>
+            <input id="full_name" required />
+        </div>
+
+        <div class="field">
+            <label>Clinic name</label>
+            <input id="clinic_name" required />
+        </div>
+
+        <div class="field">
+            <label>Email</label>
+            <input id="email" type="email" required />
+        </div>
+
+        <div class="field">
+            <label>Password</label>
+            <input id="password" type="password" required />
+        </div>
+
+        <div class="field">
+            <label>Phone</label>
+            <input id="phone" />
+        </div>
+
+        <button type="submit">Create account</button>
+    </form>
+
+    <div class="footer-link">
+        Already have an account? <a href="/login">Sign in</a>
+    </div>
+</div>
+
+<script>
+    function setAuthSession(payload) {
+        localStorage.setItem("access_token", payload.access_token || "");
+        localStorage.setItem("refresh_token", payload.refresh_token || "");
+        localStorage.setItem("current_user", JSON.stringify(payload.user || null));
+    }
+
+    document.getElementById("register-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const errorBox = document.getElementById("error-box");
+        errorBox.style.display = "none";
+        errorBox.textContent = "";
+
+        const payload = {
+            email: document.getElementById("email").value.trim(),
+            password: document.getElementById("password").value,
+            full_name: document.getElementById("full_name").value.trim(),
+            clinic_name: document.getElementById("clinic_name").value.trim(),
+            phone: document.getElementById("phone").value.trim(),
+        };
+
+        const response = await fetch("/auth/register", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            errorBox.textContent = data.detail || "Registration failed.";
+            errorBox.style.display = "block";
+            return;
+        }
+
+        setAuthSession(data);
+        window.location.href = "/app";
+    });
+</script>
+</body>
+</html>

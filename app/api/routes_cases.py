@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, Patient, User
+from app.db.models import Case, Patient, ReportVersion, User
 from app.schemas.cases import (
     CaseCreate,
     CaseRead,
@@ -133,12 +133,6 @@ def get_case_status(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    latest_report = (
-        db.query(Case)
-        .filter(Case.id == case.id)
-        .first()
-    )
-
     return {
         "case_id": str(case.id),
         "patient_id": str(case.patient_id),
@@ -153,6 +147,54 @@ def get_case_status(
         "scan_datetime": case.scan_datetime,
         "updated_at": case.updated_at,
     }
+
+
+@router.get("/{case_id}/latest-report")
+def get_latest_report_for_case(
+    case_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """
+    Return the latest report version for a case owned by the current user.
+    This is intended for practitioner UI convenience and avoids the UI having
+    to infer latest report state client-side.
+    """
+    case = (
+        db.query(Case)
+        .filter(Case.id == case_id, Case.user_id == current_user.id)
+        .first()
+    )
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+
+    report = (
+        db.query(ReportVersion)
+        .filter(ReportVersion.case_id == case.id)
+        .order_by(ReportVersion.version_number.desc(), ReportVersion.generated_at.desc())
+        .first()
+    )
+
+    if not report:
+        raise HTTPException(status_code=404, detail="No report found for this case")
+
+    return {
+        "id": report.id,
+        "report_version_id": report.id,
+        "case_id": report.case_id,
+        "version_number": report.version_number,
+        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+        "generated_at": report.generated_at.isoformat() if report.generated_at else None,
+        "html_path": report.html_path,
+        "pdf_path": report.pdf_path,
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
+    }
+
+
 
 
 @router.patch("/{case_id}", response_model=CaseRead)

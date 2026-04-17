@@ -1,0 +1,140 @@
+
+
+{% extends "base.html" %}
+
+{% block content %}
+<div id="auth-warning" class="error" style="display:none;"></div>
+
+<div class="grid-3">
+    <div class="card">
+        <div class="stat-label">Plan</div>
+        <div class="stat-value" id="plan-name">—</div>
+    </div>
+
+    <div class="card">
+        <div class="stat-label">Recent cases</div>
+        <div class="stat-value" id="case-count">—</div>
+    </div>
+
+    <div class="card">
+        <div class="stat-label">Actions</div>
+        <div class="btn-row">
+            <a class="btn" href="/app/cases/new">Upload scan</a>
+            <a class="btn secondary" href="/app/reports">Reports</a>
+        </div>
+    </div>
+</div>
+
+<div class="grid-2">
+    <div class="card">
+        <h2>Recent cases</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Case</th>
+                    <th>Status</th>
+                    <th>Created</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="cases-body">
+                <tr><td colspan="4" class="muted">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="card">
+        <h2>Recent reports</h2>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Version</th>
+                    <th>Status</th>
+                    <th>Generated</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="reports-body">
+                <tr><td colspan="4" class="muted">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+    async function loadDashboard() {
+        if (!requireAuthOrRedirect()) return;
+
+        const user = getCurrentUser();
+        if (user) {
+            document.getElementById("plan-name").textContent =
+                user.recommendation_mode_default || "Practitioner";
+        }
+
+        const casesResponse = await apiFetch("/api/cases");
+        if (!casesResponse.ok) {
+            document.getElementById("auth-warning").style.display = "block";
+            document.getElementById("auth-warning").textContent = "Could not load dashboard data.";
+            return;
+        }
+
+        const cases = await casesResponse.json();
+        document.getElementById("case-count").textContent = String(cases.length);
+
+        const casesBody = document.getElementById("cases-body");
+        if (!cases.length) {
+            casesBody.innerHTML = `<tr><td colspan="4" class="muted">No cases yet.</td></tr>`;
+        } else {
+            casesBody.innerHTML = cases.slice(0, 8).map(item => {
+                const patientName =
+                    item.patient?.full_name ||
+                    [item.patient?.first_name, item.patient?.last_name].filter(Boolean).join(" ") ||
+                    item.title ||
+                    "Untitled case";
+
+                return `
+                    <tr>
+                        <td>${patientName}</td>
+                        <td>${safeText(item.status)}</td>
+                        <td>${formatDate(item.created_at)}</td>
+                        <td><a class="link" href="/app/cases/${item.id}">Open</a></td>
+                    </tr>
+                `;
+            }).join("");
+        }
+
+        const reportsBody = document.getElementById("reports-body");
+        const reportRows = [];
+
+        for (const item of cases.slice(0, 12)) {
+            try {
+                const latestResponse = await apiFetch(`/api/cases/${item.id}/latest-report`);
+                if (!latestResponse.ok) continue;
+
+                const latest = await latestResponse.json();
+                reportRows.push(latest);
+            } catch (e) {
+                // ignore per-case latest report errors
+            }
+        }
+
+        if (!reportRows.length) {
+            reportsBody.innerHTML = `<tr><td colspan="4" class="muted">No reports yet.</td></tr>`;
+        } else {
+            reportsBody.innerHTML = reportRows
+                .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
+                .slice(0, 8)
+                .map(item => `
+                    <tr>
+                        <td>v${safeText(item.version_number)}</td>
+                        <td>${safeText(item.status)}</td>
+                        <td>${formatDate(item.generated_at)}</td>
+                        <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
+                    </tr>
+                `).join("");
+        }
+    }
+
+    loadDashboard();
+</script>
+{% endblock %}

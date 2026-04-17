@@ -1,0 +1,170 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="error-box" class="error" style="display:none;"></div>
+<div id="success-box" class="success" style="display:none;"></div>
+
+<div class="card">
+    <h2>Report detail</h2>
+    <div id="report-summary" class="muted">Loading report…</div>
+</div>
+
+<div class="card">
+    <h3>Actions</h3>
+    <div class="btn-row">
+        <button id="open-full-report-btn" type="button">Open full report</button>
+        <button class="btn secondary" id="open-html-btn" type="button">Open HTML</button>
+        <button class="btn secondary" id="download-pdf-btn" type="button">Download PDF</button>
+        <button class="btn secondary" id="open-json-btn" type="button">View JSON</button>
+        <button id="refresh-report-btn" type="button">Refresh report</button>
+    </div>
+</div>
+
+<div class="card">
+    <h3>Share report</h3>
+    <div class="field">
+        <label>Optional password</label>
+        <input id="share-password" placeholder="Leave blank for no password" />
+    </div>
+    <div class="btn-row">
+        <button id="create-share-link-btn" type="button">Create share link</button>
+    </div>
+    <div id="share-result" class="muted" style="margin-top:12px;"></div>
+</div>
+
+<script>
+    const reportId = "{{ report_id }}";
+    let latestShareUrl = null;
+
+    function setError(msg) {
+        const box = document.getElementById("error-box");
+        box.style.display = "block";
+        box.textContent = msg;
+    }
+
+    function clearError() {
+        const box = document.getElementById("error-box");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function setSuccess(msg) {
+        const box = document.getElementById("success-box");
+        box.style.display = "block";
+        box.textContent = msg;
+    }
+
+    function clearSuccess() {
+        const box = document.getElementById("success-box");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    async function loadReport() {
+        clearError();
+
+        if (!requireAuthOrRedirect()) return;
+
+        const response = await apiFetch(`/api/reports/${reportId}`);
+        const data = await response.json();
+
+        if (!response.ok) {
+            setError(data.detail || "Could not load report.");
+            return;
+        }
+
+        document.getElementById("report-summary").innerHTML = `
+            <strong>Version ${safeText(data.version_number)}</strong><br>
+            Status: ${safeText(data.status)}<br>
+            Generated: ${formatDate(data.generated_at)}<br>
+            Case ID: ${safeText(data.case_id)}
+        `;
+
+        document.getElementById("open-html-btn").href = `/api/reports/${reportId}/html`;
+        document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
+        document.getElementById("open-json-btn").href = `/api/reports/${reportId}/json`;
+    }
+
+    async function createShareLink(openAfterCreate = false, passwordValue = null) {
+        clearError();
+        clearSuccess();
+
+        const payload = {
+            password: passwordValue !== null ? passwordValue : (document.getElementById("share-password").value || null),
+            expires_at: null
+        };
+
+        const response = await apiFetch(`/api/reports/${reportId}/share-links`, {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            setError(data.detail || "Could not create share link.");
+            return null;
+        }
+
+        latestShareUrl = data.share_url;
+
+        document.getElementById("share-result").innerHTML = `
+            <strong>Share link:</strong><br>
+            <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
+        `;
+
+        setSuccess("Share link created.");
+
+        if (openAfterCreate && data.share_url) {
+            window.open(data.share_url, "_blank", "noopener,noreferrer");
+        }
+
+        return data.share_url;
+    }
+
+    async function openViaShare(type) {
+        clearError();
+
+        let url = latestShareUrl;
+
+        if (!url) {
+            const share = await createShareLink(false, null);
+            if (!share) return;
+            url = share;
+        }
+
+        if (type === "html") {
+            window.open(url, "_blank");
+        } else if (type === "pdf") {
+            window.open(url + "?format=pdf", "_blank");
+        } else if (type === "json") {
+            window.open(url + "?format=json", "_blank");
+        }
+    }
+
+
+    document.getElementById("open-html-btn").addEventListener("click", () => openViaShare("html"));
+    document.getElementById("download-pdf-btn").addEventListener("click", () => openViaShare("pdf"));
+    document.getElementById("open-json-btn").addEventListener("click", () => openViaShare("json"));
+
+
+    async function openFullReport() {
+        clearError();
+        clearSuccess();
+
+        if (latestShareUrl) {
+            window.open(latestShareUrl, "_blank", "noopener,noreferrer");
+            return;
+        }
+
+        // Practitioner preview: create a passwordless share link and open it
+        await createShareLink(true, null);
+    }
+
+    document.getElementById("refresh-report-btn").addEventListener("click", loadReport);
+    document.getElementById("create-share-link-btn").addEventListener("click", () => createShareLink(false));
+    document.getElementById("open-full-report-btn").addEventListener("click", openFullReport);
+
+    loadReport();
+</script>
+{% endblock %}

@@ -1,0 +1,227 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+<div id="error-box" class="error" style="display:none;"></div>
+<div id="success-box" class="success" style="display:none;"></div>
+
+<div class="card">
+    <h2>Upload QRMA HTML</h2>
+    <p class="muted">Upload the original scan HTML to extract patient details and create a new case.</p>
+
+    <form id="upload-form">
+        <div class="field">
+            <label>QRMA HTML file</label>
+            <input id="scan-file" type="file" accept=".html,.htm" required />
+        </div>
+
+        <button type="submit">Upload and parse</button>
+    </form>
+</div>
+
+<div class="card" id="confirm-card" style="display:none;">
+    <h2>Confirm patient details</h2>
+
+    <form id="confirm-form">
+        <div class="grid-2">
+            <div class="field">
+                <label>First name</label>
+                <input id="first_name" />
+            </div>
+
+            <div class="field">
+                <label>Last name</label>
+                <input id="last_name" />
+            </div>
+
+            <div class="field">
+                <label>Date of birth</label>
+                <input id="date_of_birth" />
+            </div>
+
+            <div class="field">
+                <label>Age</label>
+                <input id="age" />
+            </div>
+
+            <div class="field">
+                <label>Sex</label>
+                <input id="sex" />
+            </div>
+
+            <div class="field">
+                <label>Height (cm)</label>
+                <input id="height_cm" />
+            </div>
+
+            <div class="field">
+                <label>Weight (kg)</label>
+                <input id="weight_kg" />
+            </div>
+
+            <div class="field">
+                <label>Case title</label>
+                <input id="case_title" placeholder="QRMA scan case" />
+            </div>
+        </div>
+
+        <div class="btn-row">
+            <button type="submit">Create case</button>
+            <button type="button" class="btn secondary" id="create-and-generate">Create and generate report</button>
+        </div>
+    </form>
+</div>
+
+<script>
+    let temporaryUploadId = null;
+
+    function showError(msg) {
+        const box = document.getElementById("error-box");
+        box.style.display = "block";
+
+        if (Array.isArray(msg)) {
+            box.innerHTML = msg.map(item => {
+                const loc = Array.isArray(item.loc) ? item.loc.join(" → ") : "";
+                const text = item.msg || JSON.stringify(item);
+                return `<div>${loc ? `<strong>${loc}:</strong> ` : ""}${text}</div>`;
+            }).join("");
+            return;
+        }
+
+        if (typeof msg === "object" && msg !== null) {
+            box.textContent = JSON.stringify(msg, null, 2);
+            return;
+        }
+
+        box.textContent = msg;
+    }
+
+    function clearError() {
+        const box = document.getElementById("error-box");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function showSuccess(msg) {
+        const box = document.getElementById("success-box");
+        box.style.display = "block";
+        box.textContent = msg;
+    }
+
+    document.getElementById("upload-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        clearError();
+
+        if (!requireAuthOrRedirect()) return;
+
+        const fileInput = document.getElementById("scan-file");
+        if (!fileInput.files.length) {
+            showError("Please choose a file.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        const response = await fetch("/api/cases/import-from-html", {
+            method: "POST",
+            headers: {
+                "Authorization": `Bearer ${getAccessToken()}`
+            },
+            body: formData,
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showError(data.detail || "Could not parse the HTML file.");
+            return;
+        }
+
+        temporaryUploadId = data.temporary_upload_id;
+
+        const p = data.source_patient_data || {};
+        document.getElementById("first_name").value = p.first_name || "";
+        document.getElementById("last_name").value = p.last_name || "";
+        document.getElementById("date_of_birth").value = p.date_of_birth || "";
+        document.getElementById("age").value = p.age || "";
+        document.getElementById("sex").value = p.sex || "";
+        document.getElementById("height_cm").value = p.height_cm || "";
+        document.getElementById("weight_kg").value = p.weight_kg || "";
+        document.getElementById("case_title").value =
+            (p.full_name ? `${p.full_name} QRMA scan` : "QRMA scan case");
+
+        document.getElementById("confirm-card").style.display = "block";
+        showSuccess("Scan parsed successfully. Please confirm the patient details.");
+    });
+
+    async function createCase(generateAfter = false) {
+        clearError();
+
+        if (!temporaryUploadId) {
+            showError("Please upload and parse a scan first.");
+            return;
+        }
+
+        const payload = {
+            temporary_upload_id: temporaryUploadId,
+            patient: {
+                first_name: document.getElementById("first_name").value || "",
+                last_name: document.getElementById("last_name").value || "",
+                date_of_birth: document.getElementById("date_of_birth").value || null,
+                age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
+                sex: document.getElementById("sex").value || null,
+                height_cm: document.getElementById("height_cm").value ? Number(document.getElementById("height_cm").value) : null,
+                weight_kg: document.getElementById("weight_kg").value ? Number(document.getElementById("weight_kg").value) : null
+            },
+            case: {
+                title: document.getElementById("case_title").value || "QRMA scan case",
+                recommendation_mode: "natural_approaches_clinical",
+                clinical_context_json: null
+            }
+        };
+
+        const response = await apiFetch("/api/cases/create-from-import", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            showError(data.detail || data || "Could not create case.");
+            return;
+        }
+
+        const caseId = data.case_id;
+
+        if (!generateAfter) {
+            window.location.href = `/app/cases/${caseId}`;
+            return;
+        }
+
+        const genResponse = await apiFetch(`/api/cases/${caseId}/generate-report`, {
+            method: "POST"
+        });
+
+        const genData = await genResponse.json();
+
+        if (!genResponse.ok) {
+            showError(genData.detail || "Case created, but report generation failed.");
+            window.location.href = `/app/cases/${caseId}`;
+            return;
+        }
+
+        window.location.href = `/app/cases/${caseId}`;
+    }
+
+    document.getElementById("confirm-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        await createCase(false);
+    });
+
+    document.getElementById("create-and-generate").addEventListener("click", async () => {
+        await createCase(true);
+    });
+</script>
+{% endblock %}
