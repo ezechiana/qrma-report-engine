@@ -5,6 +5,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 
 from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router
@@ -71,6 +72,7 @@ def create_app() -> FastAPI:
 
     # Legacy engine/debug routes
     app.include_router(engine_router)
+    app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     @app.get("/")
     def root():

@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import Annotated
+from typing import Annotated, Optional
 
-from fastapi import Depends, HTTPException, status
+from fastapi import Depends, HTTPException, status, Request
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 from sqlalchemy.orm import Session
 
@@ -25,26 +25,39 @@ def get_db():
 CurrentDB = Annotated[Session, Depends(get_db)]
 
 
+
 def get_current_user(
+    request: Request,
     db: CurrentDB,
     credentials: HTTPAuthorizationCredentials | None = Depends(bearer_scheme),
 ) -> User:
     """
-    Resolve current user from Bearer access token.
-
-    Expected header:
-        Authorization: Bearer <access_token>
+    Resolve current user from:
+    1. Bearer token (Authorization header)
+    2. OR access_token cookie
     """
-    if credentials is None or not credentials.credentials:
+
+    token = None
+
+    # 1️⃣ Try header first (existing behaviour)
+    if credentials and credentials.credentials:
+        token = credentials.credentials
+
+    # 2️⃣ Fallback to cookie (NEW)
+    if not token:
+        token = request.cookies.get("access_token")
+
+    if not token:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Not authenticated.",
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    token = credentials.credentials
     user = get_current_user_from_token(db, token)
     return user
+
+
 
 
 CurrentUser = Annotated[User, Depends(get_current_user)]

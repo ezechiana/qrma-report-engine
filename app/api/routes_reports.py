@@ -1,15 +1,75 @@
 from uuid import UUID
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, ReportOverride, ReportStatus, ReportVersion, User
+from app.db.models import Case, ReportOverride, ReportStatus, ReportVersion, User, PractitionerSettings
 from app.schemas.reports import ReportOverrideUpdate, ReportVersionRead
 from app.services.audit_service import log_action
 
+templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
+    report_json = report.report_json or {}
+    stored_theme = report_json.get("tenant_theme", {}) if isinstance(report_json, dict) else {}
+
+    settings = None
+    if getattr(report, "created_by_user_id", None):
+        settings = getattr(report, "_practitioner_settings", None)
+
+    return {
+        "tenant_name": stored_theme.get("tenant_name") or (settings.clinic_name if settings and settings.clinic_name else "Health Portal"),
+        "tagline": stored_theme.get("tagline") or (settings.report_subtitle if settings and settings.report_subtitle else "Secure wellness report viewer"),
+        "logo_url": stored_theme.get("logo_url") or (settings.logo_url if settings and settings.logo_url else ""),
+        "cover_image_url": stored_theme.get("cover_image_url") or (settings.cover_image_url if settings and settings.cover_image_url else ""),
+        "primary_color": stored_theme.get("primary_color") or (settings.accent_color if settings and settings.accent_color else "#2f4f2f"),
+        "accent_color": stored_theme.get("accent_color") or (settings.accent_color if settings and settings.accent_color else "#d97706"),
+        "text_color": stored_theme.get("text_color") or "#183028",
+        "background_color": stored_theme.get("background_color") or "#f6f8f5",
+        "surface_color": stored_theme.get("surface_color") or "#ffffff",
+        "surface_soft_color": stored_theme.get("surface_soft_color") or "#f9fbf8",
+        "border_color": stored_theme.get("border_color") or "#dfe7e1",
+        "muted_color": stored_theme.get("muted_color") or "#5f7269",
+        "support_email": stored_theme.get("support_email") or (settings.support_email if settings and settings.support_email else ""),
+        "website_url": stored_theme.get("website_url") or (settings.website_url if settings and settings.website_url else ""),
+    }
+
+
+def _get_viewer_payload_for_report(report: ReportVersion) -> dict:
+    report_json = report.report_json or {}
+    viewer = dict(report_json.get("viewer") or {})
+    tenant = dict(viewer.get("tenant") or {})
+
+    settings = getattr(report, "_practitioner_settings", None)
+    if settings:
+        if settings.report_title:
+            tenant["report_title"] = settings.report_title
+        if settings.report_subtitle:
+            tenant["subtitle"] = settings.report_subtitle
+
+    viewer["tenant"] = tenant
+
+    return {
+        "id": str(report.id),
+        "case_id": str(report.case_id),
+        "version_number": report.version_number,
+        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
+        "generated_at": report.generated_at.isoformat() if report.generated_at else None,
+        "pdf_url": f"/api/reports/{report.id}/pdf",
+        "html_url": f"/api/reports/{report.id}/html",
+        "data_url": f"/api/reports/{report.id}/json",
+        "viewer": viewer,
+    }
+
 
 
 def _get_owned_report(
@@ -74,6 +134,43 @@ def get_report_metadata(
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
+
+@router.get("/{report_version_id}/viewer", response_class=HTMLResponse)
+def get_report_viewer(
+    report_version_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = (
+        db.query(ReportVersion)
+        .join(Case, Case.id == ReportVersion.case_id)
+        .filter(ReportVersion.id == report_version_id, Case.user_id == current_user.id)
+        .first()
+    )
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    settings = (
+        db.query(PractitionerSettings)
+        .filter(PractitionerSettings.user_id == current_user.id)
+        .first()
+    )
+    report._practitioner_settings = settings
+
+    payload = _get_viewer_payload_for_report(report)
+    tenant = _get_tenant_theme_for_report(report)
+
+    return templates.TemplateResponse(
+        request=request,
+        name="report_viewer.html",
+        context={
+            "request": request,
+            "report": payload,
+            "tenant": tenant,
+            "viewer_mode": "practitioner",
+        },
+    )
 
 
 @router.get("/{report_version_id}/status")

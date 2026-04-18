@@ -1,0 +1,50 @@
+
+{% extends "base.html" %}
+
+{% block content %}
+{% include "report_viewer_styles.html" %}
+
+<section class="report-workspace-shell">
+    {% include "report_viewer_partial.html" %}
+</section>
+
+<style>
+.report-workspace-shell {
+    margin: -6px 0 0;
+}
+
+.report-workspace-shell .shell {
+    max-width: none;
+    margin: 0;
+    padding: 0;
+}
+
+.report-workspace-shell .topbar {
+    margin-bottom: 18px;
+}
+
+.report-workspace-shell .left-rail,
+.report-workspace-shell .right-rail {
+    top: 12px;
+    max-height: calc(100vh - 24px);
+}
+
+.report-workspace-shell .card,
+.report-workspace-shell .panel,
+.report-workspace-shell .hero {
+    box-shadow: 0 10px 28px rgba(19, 31, 24, 0.06);
+}
+
+.report-workspace-shell .hero {
+    border-radius: 18px;
+}
+
+@media (max-width: 960px) {
+    .report-workspace-shell .shell {
+        padding: 0;
+    }
+}
+</style>
+
+{% include "report_viewer_scripts.html" %}
+{% endblock %}

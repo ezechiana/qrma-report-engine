@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Response
 
 from app.api.deps import CurrentActiveUser, CurrentDB
 from app.schemas.auth import (
@@ -27,16 +27,62 @@ router = APIRouter(prefix="/auth", tags=["auth"])
 def register(
     payload: AuthRegisterRequest,
     db: CurrentDB,
+    response: Response,
 ):
-    return register_and_login_user(db, payload)
+    auth = register_and_login_user(db, payload)
+
+    response.set_cookie(
+        key="access_token",
+        value=auth["access_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60,
+        path="/",
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=auth["refresh_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
+    return auth
 
 
 @router.post("/login", response_model=AuthResponse)
 def login(
     payload: AuthLoginRequest,
     db: CurrentDB,
+    response: Response,
 ):
-    return login_user(db, payload)
+    auth = login_user(db, payload)
+
+    response.set_cookie(
+        key="access_token",
+        value=auth["access_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60,
+        path="/",
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=auth["refresh_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
+    return auth
 
 
 @router.post("/refresh", response_model=TokenPairResponse)
@@ -75,11 +121,7 @@ def update_password(
 
 
 @router.post("/logout", response_model=AuthMessageResponse)
-def logout():
-    """
-    Stateless JWT logout placeholder.
-
-    For v1, logout is handled client-side by discarding tokens.
-    Later, this can be upgraded with token blacklisting / revocation.
-    """
+def logout(response: Response):
+    response.delete_cookie("access_token", path="/")
+    response.delete_cookie("refresh_token", path="/")
     return AuthMessageResponse(message="Logged out successfully.")

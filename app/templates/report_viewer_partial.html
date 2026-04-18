@@ -1,0 +1,558 @@
+{% set viewer = report.viewer or {} %}
+{% set ov = viewer.overview or {} %}
+{% set systems = viewer.systems or {} %}
+{% set recs = viewer.recommendations or {} %}
+{% set detail = viewer.detail or {} %}
+{% set patient = ov.patient or {} %}
+{% set body = detail.body_composition_block or {} %}
+
+{% macro section_slug(value) -%}
+    {{- (value or '')
+        | lower
+        | replace('&', 'and')
+        | replace('/', '-')
+        | replace(' ', '-')
+        | replace('--', '-')
+        | replace('--', '-')
+    -}}
+{%- endmacro %}
+
+
+<div class="shell">
+    <div class="report-command-header">
+        <div class="report-command-main"{% if tenant.cover_image_url %} style="background-image: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(249,251,248,0.97)), url('{{ tenant.cover_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
+            <div class="report-command-topline">
+                <a href="/app/reports/{{ report.id }}" class="report-backlink">← Back to report workspace</a>
+
+                {% if tenant.logo_url %}
+                    <div class="report-brand-mini">
+                        <img class="brand-logo" src="{{ tenant.logo_url }}" alt="{{ tenant.tenant_name }} logo" />
+                        <div class="report-brand-mini-text">{{ tenant.tenant_name }}</div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="report-command-grid">
+                <div class="report-command-copy">
+                    <div class="report-patient-name">{{ patient.full_name or "Unnamed patient" }}</div>
+
+                    <div class="report-patient-meta">
+                        <span>{{ patient.sex or "—" }}</span>
+                        <span>•</span>
+                        <span>{{ patient.age or "—" }}</span>
+                        <span>•</span>
+                        <span>{{ patient.scan_datetime or "—" }}</span>
+                    </div>
+
+                    <h1 class="report-command-title">{{ viewer.tenant.report_title or "Personalised Wellness Scan Report" }}</h1>
+
+                    <p class="report-command-subtitle">
+                        {{ viewer.tenant.subtitle or "Structured practitioner view of system balance, dominant patterns, recommendations, and marker detail." }}
+                    </p>
+                </div>
+
+                <div class="report-command-side">
+                    <div class="report-health-index-card">
+                        <div class="report-health-index-label">Health Index</div>
+                        <div class="report-health-index-main">
+                            <div class="report-health-index-score">{{ ov.overall_scan_score or "—" }}</div>
+                            <div class="report-health-index-band">{{ ov.overall_scan_band_label or "Not available" }}</div>
+                        </div>
+
+                        {% set header_score = ov.overall_scan_score or 0 %}
+                        <div class="score-bar report-health-index-bar">
+                            <div class="score-indicator" style="left: {{ header_score }}%;"></div>
+                        </div>
+                    </div>
+
+                    <div class="report-command-actions">
+                        <a class="btn primary" href="{{ report.pdf_url }}" target="_blank" rel="noopener noreferrer">Download PDF</a>
+
+                        <details class="card report-tools-card">
+                            <summary style="cursor:pointer; font-weight:700;">Report tools</summary>
+                            <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                                <a class="btn" href="{{ report.html_url }}" target="_blank" rel="noopener noreferrer">Open Raw HTML</a>
+                                <a class="btn" href="{{ report.data_url }}" target="_blank" rel="noopener noreferrer">View JSON Data</a>
+                            </div>
+                        </details>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+
+
+    <div class="workspace">
+        <aside class="left-rail card">
+            <div class="mode-badge">
+                {% if viewer_mode == "patient" %}
+                    Patient view
+                {% else %}
+                    Practitioner view
+                {% endif %}
+            </div>
+
+            <h2>Navigation</h2>
+            <p class="hint">A structured clinical report view built from the generated report data.</p>
+
+            <div class="nav-group">
+                <div class="nav-group-title">Overview</div>
+                    <ul class="nav-list">
+                        <li><a href="#overview" class="active">At a glance</a></li>
+                        <li><a href="#systems-overview">System balance overview</a></li>
+                        {% if body %}
+                            <li><a href="#body-composition">Body composition</a></li>
+                        {% endif %}
+                        <li><a href="#recommendations">Recommendations</a></li>
+                        <li><a href="#markers">Detailed markers</a></li>
+                    </ul>
+
+            </div>
+        </aside>
+
+        <main class="content">
+            <section id="overview" class="panel card">
+                <h2>At a glance</h2>
+                <p class="subtle">The core story of the scan, prioritised for fast understanding.</p>
+
+                <div class="overview-layout" style="margin-top:14px;">
+                    <div class="summary-stack">
+                        <div class="summary-card">
+                            <h3>Clinical snapshot</h3>
+                            <div>{{ ov.overall_summary.clinical_snapshot or ov.overall_summary.summary or ov.overall_summary or "Not available yet." }}</div>
+                        </div>
+
+                        <div class="summary-card">
+                            <h3>Primary pattern</h3>
+                            {% if ov.primary_pattern %}
+                                <p><strong>{{ ov.primary_pattern.title }}</strong></p>
+                                <p>{{ ov.primary_pattern.clinical_summary or ov.primary_pattern.summary or "" }}</p>
+                                {% if ov.primary_pattern.follow_up_focus %}
+                                    <p class="subtle">Focus: {{ ov.primary_pattern.follow_up_focus | join(", ") }}</p>
+                                {% endif %}
+                            {% else %}
+                                <p>Not available yet.</p>
+                            {% endif %}
+                        </div>
+
+                        <div class="summary-card">
+                            <h3>Practitioner overview</h3>
+                            <div>{{ ov.practitioner_summary or "Not available yet." }}</div>
+                        </div>
+
+                        {% if ov.why_this_matters or ov.clinical_summary_v3.why_this_matters %}
+                        <div class="summary-card insight-callout">
+                            <h3>Why this matters</h3>
+                            <div>{{ ov.why_this_matters or ov.clinical_summary_v3.why_this_matters }}</div>
+                        </div>
+                        {% endif %}
+
+                        {% if ov.priority_actions %}
+                        <div class="summary-card">
+                            <h3>Immediate priorities for follow-up</h3>
+                            <ul>
+                                {% for item in ov.priority_actions %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="overview-sidebar">
+                        <div class="summary-card">
+                            <h3>Supporting patterns</h3>
+                            {% if ov.contributing_patterns %}
+                                <ul class="compact-list">
+                                    {% for p in ov.contributing_patterns[:3] %}
+                                        <li>
+                                            <strong>{{ p.title }}</strong>
+                                            {% if p.clinical_summary %}<br><span class="subtle">{{ p.clinical_summary }}</span>{% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            {% else %}
+                                <p>Not available yet.</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section id="systems-overview" class="panel card">
+                <h2 style="font-size: 28px; margin-bottom: 6px;">System balance overview</h2>
+                <p class="subtle" style="font-size:15px; margin-bottom:18px;">
+                    A system-level view showing where the main functional activity and clustering appear across the scan.
+                </p>
+
+                {% if systems.system_score_cards %}
+                <div class="grid-3" style="margin-top:18px;">
+                    {% for card in systems.system_score_cards %}
+                        {% set score = card.score or 0 %}
+                        {% set first_target = card.included_sections[0] if card.included_sections else card.title %}
+                        <div class="score-card" data-marker-target="marker-section-{{ section_slug(first_target) }}" style="cursor:pointer;">
+                            <div class="score-card-header">
+                                <h3 class="score-card-title">{{ card.title }}</h3>
+                                <div class="score-card-band">
+                                    {% if score >= 85 %}Robust functional balance
+                                    {% elif score >= 70 %}Generally balanced
+                                    {% elif score >= 55 %}Needs focused support
+                                    {% else %}Priority review recommended
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            <div class="score-card-main">
+                                <div class="score-card-number">{{ score }}</div>
+                                <div class="score-card-bar-wrap">
+                                    <div class="score-bar">
+                                        <div class="score-indicator" style="left: {{ score }}%;"></div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="score-card-stats">
+                                <div class="score-card-stat">{{ card.flagged_count }} flagged</div>
+                                <div class="score-card-stat">{{ card.within_count }} within range</div>
+                            </div>
+
+                            {% if card.included_sections %}
+                                <div class="score-card-includes link-list">
+                                    Includes:
+                                    {% for section in card.included_sections %}
+                                        <a href="#marker-section-{{ section_slug(section) }}" class="inline-link">
+                                            {{ section }}
+                                        </a>{% if not loop.last %}, {% endif %}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </section>
+
+            <section id="recommendations" class="panel card">
+                <h2>Recommendations</h2>
+
+                <div class="tabs">
+                    <button class="tab-btn active" data-tab="clinical-tab">Clinical</button>
+                    <button class="tab-btn" data-tab="plan-tab">Support plan</button>
+                    <button class="tab-btn" data-tab="products-tab">Products</button>
+                </div>
+
+                <div id="clinical-tab" class="tab-panel active">
+                    {% if recs.clinical_recommendations %}
+                        <div class="recommendation-grid">
+                            {% for rec in recs.clinical_recommendations %}
+                                <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section or rec.section) }}" style="cursor:pointer;">
+                                    <h4>{{ rec.title }}</h4>
+
+                                    <div class="rec-summary">{{ rec.summary }}</div>
+
+                                    <div class="rec-card-separator"></div>
+
+                                    {% if rec.pattern_alignment %}
+                                        <div class="rec-meta">
+                                            <strong>Pattern alignment:</strong> {{ rec.pattern_alignment }}
+                                        </div>
+                                    {% endif %}
+
+                                    {% if rec.display_rationale %}
+                                        <div class="rec-meta">
+                                            <strong>Why this was suggested:</strong> {{ rec.display_rationale }}
+                                        </div>
+                                    {% elif rec.rationale %}
+                                        <div class="rec-meta">
+                                            <strong>Why this was suggested:</strong> {{ rec.rationale }}
+                                        </div>
+                                    {% endif %}
+
+                                    {% if rec.related_markers %}
+                                        <div class="rec-meta rec-link-list">
+                                            <strong>Key markers:</strong>
+                                            {% for m in rec.related_markers %}
+                                                {% if rec.related_section or rec.section %}
+                                                    <a href="#marker-section-{{ section_slug(rec.related_section or rec.section) }}" class="inline-link">
+                                                        {{ m.name }}
+                                                    </a>{% if not loop.last %}, {% endif %}
+                                                {% else %}
+                                                    {{ m.name }}{% if not loop.last %}, {% endif %}
+                                                {% endif %}
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="subtle">No clinical recommendations available.</p>
+                    {% endif %}
+                </div>
+
+                <div id="plan-tab" class="tab-panel">
+                    {% if recs.protocol_plan %}
+                        <div class="mini-card">
+                            <div class="mini-card-title">{{ recs.protocol_plan.title }}</div>
+                            <p>{{ recs.protocol_plan.summary }}</p>
+                            {% if recs.protocol_plan.section_intro %}
+                                <p class="subtle">{{ recs.protocol_plan.section_intro }}</p>
+                            {% endif %}
+                        </div>
+
+                        {% if recs.protocol_plan.phases %}
+                            <div class="grid-2" style="margin-top:14px;">
+                                {% for phase in recs.protocol_plan.phases %}
+                                    <div class="mini-card">
+                                        <div class="mini-card-title">{{ phase.title }}</div>
+                                        {% if phase.summary %}<p>{{ phase.summary }}</p>{% endif %}
+                                        {% if phase.products %}
+                                            <ul>
+                                                {% for product in phase.products %}
+                                                    <li>
+                                                        <strong>{{ product.name or product.title }}</strong>
+                                                        {% if product.display_rationale %}
+                                                            — {{ product.display_rationale }}
+                                                        {% endif %}
+                                                    </li>
+                                                {% endfor %}
+                                            </ul>
+                                        {% endif %}
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    {% else %}
+                        <p class="subtle">No support plan available.</p>
+                    {% endif %}
+                </div>
+
+                <div id="products-tab" class="tab-panel">
+                    {% if recs.complete_product_mapping %}
+                        <div class="mini-card">
+                            <div class="mini-card-title">Product mapping</div>
+                            <ul>
+                                {% for item in recs.complete_product_mapping %}
+                                    <li>
+                                        <strong>{{ item.name or item.product_name or "—" }}</strong>
+                                        {% if item.focus_area or item.focus %} — {{ item.focus_area or item.focus }}{% endif %}
+                                        {% if item.display_rationale or item.rationale %} — {{ item.display_rationale or item.rationale }}{% endif %}
+                                    </li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                    {% else %}
+                        <p class="subtle">No product mapping available.</p>
+                    {% endif %}
+                </div>
+            </section>
+
+            {% if body %}
+            <section id="body-composition" class="panel card">
+                <div class="marker-group" id="body-composition-panel" style="margin-top:0;">
+                    <div class="marker-group-header" onclick="toggleMarkerGroup('body-comp-group')">
+                        <h3>Body composition &amp; metabolic profile</h3>
+                        <div class="marker-group-meta">
+                            {{ body.display_band or body.status_label or "Various ranges" }}
+                        </div>
+                    </div>
+
+                    <div class="marker-group-body" id="body-comp-group">
+                        <p class="subtle" style="margin-top:0;">
+                            Dedicated summary of QRMA-derived body composition, hydration, and metabolic indicators.
+                        </p>
+
+                        <div class="grid-2" style="margin-top:14px;">
+                            <div class="summary-card">
+                                <h3>{{ body.title or "Body composition analysis" }}</h3>
+                                {% if body.summary %}
+                                    <p>{{ body.summary }}</p>
+                                {% endif %}
+                                {% if body.source_subtitle %}
+                                    <p class="subtle" style="margin-top:10px;">{{ body.source_subtitle }}</p>
+                                {% endif %}
+                            </div>
+
+                            <div class="summary-card">
+                                <h3>Section interpretation</h3>
+                                {% if body.interpretation_lines %}
+                                    <ul>
+                                        {% for item in body.interpretation_lines %}
+                                            <li>{{ item }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                {% else %}
+                                    <p class="subtle">No interpretation available yet.</p>
+                                {% endif %}
+                            </div>
+                        </div>
+
+                        {% if body.groups %}
+                        <div class="tabs" style="margin-top:16px;">
+                            {% for group in body.groups %}
+                                <button class="tab-btn {% if loop.first %}active{% endif %}" data-tab="body-tab-{{ loop.index0 }}">
+                                    {{ group.title }}
+                                </button>
+                            {% endfor %}
+                        </div>
+
+                        {% for group in body.groups %}
+                            <div id="body-tab-{{ loop.index0 }}" class="tab-panel {% if loop.first %}active{% endif %}">
+                                <div class="mini-card">
+                                    <div class="mini-card-title">{{ group.title }}</div>
+                                    <ul>
+                                        {% for row in group.rows %}
+                                            <li><strong>{{ row.display_name or row.marker }}:</strong> {{ row.value }}</li>
+                                        {% endfor %}
+                                    </ul>
+                                </div>
+                            </div>
+                        {% endfor %}
+                        {% endif %}
+                    </div>
+                </div>
+            </section>
+            {% endif %}
+
+            <section id="markers" class="panel card">
+                <h2>Marker detail</h2>
+                <p class="subtle">Detailed marker explanations are best interpreted as part of a pattern rather than in isolation.</p>
+
+                {% if detail.full_marker_tables %}
+                    {% for section in detail.full_marker_tables %}
+                        {% set section_idx = loop.index0 %}
+                        <div class="marker-group" id="marker-section-{{ section_slug(section.title) }}">
+                            <div class="marker-group-header" onclick="toggleMarkerGroup('group-{{ section_idx }}')">
+                                <h3>{{ section.title }}</h3>
+                                <div class="marker-group-meta">
+                                    {% if section.priority_label %}{{ section.priority_label }} · {% endif %}
+                                    {{ section.abnormal_count }} flagged · {{ section.normal_count }} within range
+                                </div>
+                            </div>
+
+                            <div class="marker-group-body" id="group-{{ section_idx }}">
+                                {% for row in section.rows %}
+                                    {% set row_idx = loop.index0 %}
+                                    {% set sev_key = row.severity_class | replace('sev-', '') %}
+                                    {% set pos = row.status_pointer_position or '50%' %}
+
+                                    <div class="marker-row">
+                                        <div class="marker-row-top">
+                                            <div>
+                                                <div class="marker-name">{{ row.display_name or row.marker }}</div>
+                                                <div class="marker-subtle">{{ section.title }}</div>
+                                            </div>
+                                            <div>
+                                                <div class="marker-subtle">Reference range</div>
+                                                <div>{{ row.range or "—" }}</div>
+                                            </div>
+                                            <div>
+                                                <div class="marker-subtle">Value</div>
+                                                <div>{{ row.value or "—" }}</div>
+                                            </div>
+                                            <div>
+                                                <div class="marker-subtle">Status</div>
+                                                <div><span class="pill pill-{{ sev_key }}">{{ row.severity or "Unclear" }}</span></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="range-bar-wrap">
+                                            <div class="range-bar-labels">
+                                                <span>Low</span>
+                                                <span>Optimal</span>
+                                                <span>High</span>
+                                            </div>
+                                            <div class="range-bar">
+                                                <div class="range-indicator" style="left: {{ pos }};"></div>
+                                            </div>
+                                        </div>
+
+                                        <div class="marker-explanation">
+                                            {{ row.meaning or "No interpretation text available yet." }}
+                                        </div>
+
+                                        <button class="marker-toggle" onclick="toggleMarkerDetail('marker-{{ section_idx }}-{{ row_idx }}')">
+                                            View full explanation
+                                        </button>
+
+                                        <div class="marker-detail" id="marker-{{ section_idx }}-{{ row_idx }}">
+                                            <div class="edu-block">
+                                                <div class="edu-title">What this means</div>
+                                                <div class="edu-body">{{ row.what_it_means or row.meaning or "Not available yet." }}</div>
+                                            </div>
+
+                                            <div class="edu-block">
+                                                <div class="edu-title">Why it matters</div>
+                                                <div class="edu-body">{{ row.why_it_matters or "Not available yet." }}</div>
+                                            </div>
+
+                                            <div class="edu-block">
+                                                <div class="edu-title">Functional significance</div>
+                                                <div class="edu-body">{{ row.functional_significance or "Not available yet." }}</div>
+                                            </div>
+
+                                            <div class="edu-block">
+                                                <div class="edu-title">Common patterns</div>
+                                                <div class="edu-body">{{ row.common_patterns or "Not available yet." }}</div>
+                                            </div>
+
+                                            <div class="edu-block">
+                                                <div class="edu-title">Your result in this scan</div>
+                                                <div class="edu-body">{{ row.your_result_summary or "Not available yet." }}</div>
+                                            </div>
+
+                                            <div class="tech-meta">
+                                                <div><strong>Marker:</strong> {{ row.marker or "—" }}</div>
+                                                <div><strong>Displayed as:</strong> {{ row.display_name or "—" }}</div>
+                                                <div><strong>Severity class:</strong> {{ row.severity_class or "—" }}</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                {% else %}
+                    <p class="subtle">No marker tables available.</p>
+                {% endif %}
+            </section>
+
+            <div class="tenant-footer">
+                {% if tenant.support_email %}
+                    <div>Support: <a href="mailto:{{ tenant.support_email }}">{{ tenant.support_email }}</a></div>
+                {% endif %}
+                {% if tenant.website_url %}
+                    <div>Website: <a href="{{ tenant.website_url }}" target="_blank" rel="noopener noreferrer">{{ tenant.website_url }}</a></div>
+                {% endif %}
+                {% if report.generated_at %}
+                    <div>Generated: {{ report.generated_at }}</div>
+                {% endif %}
+            </div>
+        </main>
+
+        <aside class="right-rail card">
+            <h2>Insight panel</h2>
+            <p class="hint">Quick reference to the overall scan balance, dominant pattern, and most active systems.</p>
+
+
+            <div class="right-card">
+                <div class="right-card-title">Primary pattern</div>
+                <div>{{ ov.primary_pattern.title or "—" }}</div>
+            </div>
+
+            {% if systems.priority_overview %}
+            <div class="right-card">
+                <div class="right-card-title">Most active systems</div>
+                <ul style="margin:0 0 0 18px; padding:0;">
+                    {% for item in systems.priority_overview[:3] %}
+                        <li style="margin-bottom:6px;">
+                            {{ item.title }} — {{ item.activity_label or item.priority_label }}
+                        </li>
+                    {% endfor %}
+                </ul>
+            </div>
+            {% endif %}
+        </aside>
+    </div>
+</div>

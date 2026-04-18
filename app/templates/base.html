@@ -2,6 +2,7 @@
 <html>
 <head>
     <title>{{ title or "Health Portal" }}</title>
+   
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         :root {
@@ -47,7 +48,12 @@
             background: var(--sidebar);
             color: white;
             padding: 20px;
+            position: sticky;
+            top: 0;
+            height: 100vh;
+            overflow-y: auto;
         }
+
 
         .sidebar h2 { margin: 0 0 6px; font-size: 20px; }
 
@@ -298,15 +304,17 @@
         }
 
         async function apiFetch(url, options = {}) {
-            const token = getAccessToken();
             const headers = new Headers(options.headers || {});
 
-            if (token) headers.set("Authorization", `Bearer ${token}`);
             if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
                 headers.set("Content-Type", "application/json");
             }
 
-            const response = await fetch(url, { ...options, headers });
+            const response = await fetch(url, {
+                ...options,
+                headers,
+                credentials: "same-origin",
+            });
 
             if (response.status === 401) {
                 clearAuthSession();
@@ -318,16 +326,22 @@
             return response;
         }
 
+
         function requireAuthOrRedirect() {
-            const token = getAccessToken();
-            if (!token) {
-                window.location.href = "/login";
-                return false;
-            }
             return true;
         }
 
-        function logoutNow() {
+
+        async function logoutNow() {
+            try {
+                await fetch("/auth/logout", {
+                    method: "POST",
+                    credentials: "same-origin",
+                });
+            } catch (e) {
+                // ignore
+            }
+
             clearAuthSession();
             window.location.href = "/login";
         }
@@ -343,6 +357,7 @@
         }
     </script>
 </head>
+
 
 <body>
 <div class="app">
@@ -365,12 +380,15 @@
     </aside>
 
     <main class="main">
-        <div class="topbar">
-            <div class="topbar-title">{{ title or "App" }}</div>
-            <div class="topbar-right">
-                <div class="plan-badge" id="plan-badge">Practitioner</div>
+            {% if title is not none and title != "" %}
+            <div class="topbar">
+                <div class="topbar-title">{{ title }}</div>
+                <div class="topbar-right">
+                    <div class="plan-badge" id="plan-badge">Practitioner</div>
+                </div>
             </div>
-        </div>
+            {% endif %}
+
 
         <div class="content">
             {% block content %}{% endblock %}

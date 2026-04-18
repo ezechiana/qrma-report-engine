@@ -5,24 +5,19 @@
 <div id="success-box" class="success" style="display:none;"></div>
 
 <div class="card">
-    <h2>Report detail</h2>
+    <h2 id="report-page-title">Report detail</h2>
     <div id="report-summary" class="muted">Loading report…</div>
 </div>
 
 <div class="card">
     <h3>Actions</h3>
     <div class="btn-row">
-        <button id="open-inline-btn" type="button">Load report viewer</button>
+        <a class="btn" id="open-full-report-btn" href="#">Open full report</a>
         <a class="btn secondary" id="download-pdf-btn" href="#" target="_blank">Download PDF</a>
         <a class="btn secondary" id="open-html-btn" href="#" target="_blank">Open HTML</a>
         <a class="btn secondary" id="open-json-btn" href="#" target="_blank">View JSON</a>
         <button id="refresh-report-btn" type="button">Refresh report</button>
     </div>
-</div>
-
-<div class="card">
-    <h3>Full report viewer</h3>
-    <iframe id="report-frame" class="report-frame"></iframe>
 </div>
 
 <div class="card">
@@ -39,7 +34,6 @@
 
 <script>
     const reportId = "{{ report_id }}";
-    let latestShareUrl = null;
 
     function setError(msg) {
         const box = document.getElementById("error-box");
@@ -83,12 +77,24 @@
             Case ID: ${safeText(data.case_id)}
         `;
 
+        document.getElementById("open-full-report-btn").href = `/app/reports/${reportId}/view`;
         document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
         document.getElementById("open-html-btn").href = `/api/reports/${reportId}/html`;
         document.getElementById("open-json-btn").href = `/api/reports/${reportId}/json`;
+
+        try {
+            const settingsRes = await apiFetch("/api/settings");
+            if (settingsRes.ok) {
+                const settings = await settingsRes.json();
+                document.getElementById("report-page-title").textContent =
+                    settings.report_title || "Report detail";
+            }
+        } catch (e) {
+            // non-blocking
+        }
     }
 
-    async function createShareLink(openInline = false) {
+    async function createShareLink() {
         clearError();
         clearSuccess();
 
@@ -106,35 +112,21 @@
 
         if (!response.ok) {
             setError(data.detail || "Could not create share link.");
-            return null;
+            return;
         }
 
-        latestShareUrl = data.share_url;
         document.getElementById("share-result").innerHTML = `
             <strong>Share link:</strong><br>
             <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
         `;
+
         setSuccess("Share link created.");
-
-        if (openInline) {
-            document.getElementById("report-frame").src = data.share_url;
-        }
-
-        return data.share_url;
-    }
-
-    async function loadInlineViewer() {
-        if (latestShareUrl) {
-            document.getElementById("report-frame").src = latestShareUrl;
-            return;
-        }
-        await createShareLink(true);
     }
 
     document.getElementById("refresh-report-btn").addEventListener("click", loadReport);
-    document.getElementById("create-share-link-btn").addEventListener("click", () => createShareLink(false));
-    document.getElementById("open-inline-btn").addEventListener("click", loadInlineViewer);
+    document.getElementById("create-share-link-btn").addEventListener("click", createShareLink);
 
     loadReport();
 </script>
 {% endblock %}
+

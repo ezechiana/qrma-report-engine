@@ -48,12 +48,14 @@ def _get_report_for_share_or_404(db: Session, link: ShareLink) -> ReportVersion:
         raise HTTPException(status_code=404, detail="Report not found")
     return report
 
+
 def _get_practitioner_settings_for_report(db: Session, report: ReportVersion) -> PractitionerSettings | None:
     return (
         db.query(PractitionerSettings)
         .filter(PractitionerSettings.user_id == report.created_by_user_id)
         .first()
     )
+
 
 def _tenant_theme_from_report(db: Session, report: ReportVersion) -> dict:
     report_json = report.report_json or {}
@@ -108,6 +110,7 @@ def _tenant_theme_from_report(db: Session, report: ReportVersion) -> dict:
             or os.getenv("VIEWER_WEBSITE_URL", "")
         ),
     }
+
 
 def _public_report_payload(db: Session, report: ReportVersion, token: str) -> dict:
     report_json = report.report_json or {}
@@ -313,8 +316,8 @@ def verify_share_password(
 
     if not link.password_hash:
         report = _get_report_for_share_or_404(db, link)
-        payload = _public_report_payload(report, token)
-        tenant = _tenant_theme_from_report(report)
+        payload = _public_report_payload(db, report, token)
+        tenant = _tenant_theme_from_report(db, report)
         return templates.TemplateResponse(
             request=request,
             name="report_viewer.html",
@@ -339,8 +342,8 @@ def verify_share_password(
         metadata_json={"token": token, "password_verified": True},
     )
 
-    payload = _public_report_payload(report, token)
-    tenant = _tenant_theme_from_report(report)
+    payload = _public_report_payload(db, report, token)
+    tenant = _tenant_theme_from_report(db, report)
 
     response = templates.TemplateResponse(
         request=request,
@@ -366,8 +369,8 @@ def get_shared_report_data(
     _enforce_password_gate(request, link)
 
     report = _get_report_for_share_or_404(db, link)
-    payload = _public_report_payload(report, token)
-    tenant = _tenant_theme_from_report(report)
+    payload = _public_report_payload(db, report, token)
+    tenant = _tenant_theme_from_report(db, report)
 
     return JSONResponse(
         {

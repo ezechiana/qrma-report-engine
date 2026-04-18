@@ -1,0 +1,1481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ tenant.tenant_name or report.viewer.tenant.brand_name or "Report Viewer" }}</title>
+
+    <style>
+        :root {
+            --bg: {{ tenant.background_color }};
+            --surface: {{ tenant.surface_color }};
+            --surface-soft: {{ tenant.surface_soft_color }};
+            --text: {{ tenant.text_color }};
+            --muted: {{ tenant.muted_color }};
+            --line: {{ tenant.border_color }};
+            --brand: {{ tenant.primary_color }};
+            --accent: {{ tenant.accent_color }};
+
+            --success: #2e7d32;
+            --success-soft: #eef8f0;
+            --info: #1e63d6;
+            --info-soft: #eef4ff;
+            --warning: #b7791f;
+            --warning-soft: #fff7e8;
+            --danger: #c53030;
+            --danger-soft: #fff1f1;
+
+            --brand-soft: color-mix(in srgb, var(--brand) 10%, white);
+            --shadow: 0 10px 28px rgba(19, 31, 24, 0.08);
+            --radius: 16px;
+            --content-width: 1540px;
+            --left-width: 240px;
+            --right-width: 280px;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background: var(--bg);
+        }
+
+        a {
+            color: inherit;
+            text-decoration: none;
+        }
+
+        .shell {
+            max-width: var(--content-width);
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .topbar {
+            display: grid;
+            grid-template-columns: minmax(0, 1fr) 240px;
+            gap: 16px;
+            margin-bottom: 18px;
+        }
+
+        .hero {
+            background: linear-gradient(180deg, var(--surface), var(--surface-soft));
+            border: 1px solid var(--line);
+            border-radius: 20px;
+            box-shadow: var(--shadow);
+            padding: 22px;
+            min-width: 0;
+            background-size: cover;
+            background-position: center;
+        }
+
+        .brand-row {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            margin-bottom: 14px;
+        }
+
+        .brand-logo {
+            width: 52px;
+            height: 52px;
+            border-radius: 14px;
+            object-fit: contain;
+            background: #fff;
+            border: 1px solid var(--line);
+            padding: 6px;
+            flex-shrink: 0;
+        }
+
+        .brand-name {
+            font-size: 15px;
+            font-weight: 700;
+            color: var(--brand);
+            margin-bottom: 4px;
+        }
+
+        .brand-tagline {
+            margin: 0;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .hero h1 {
+            margin: 0 0 8px;
+            font-size: 34px;
+            line-height: 1.08;
+        }
+
+        .hero .lead {
+            margin: 0;
+            color: var(--muted);
+            font-size: 15px;
+            line-height: 1.6;
+        }
+
+        .hero-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 12px;
+            margin-top: 18px;
+        }
+
+        .stat {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            padding: 14px;
+            min-width: 0;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .04em;
+            color: var(--muted);
+            margin-bottom: 6px;
+        }
+
+        .stat-value {
+            font-size: 15px;
+            font-weight: 700;
+            word-break: break-word;
+        }
+
+        .actions {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 46px;
+            padding: 12px 16px;
+            border-radius: 12px;
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--text);
+            font-weight: 700;
+            box-shadow: var(--shadow);
+            text-align: center;
+            cursor: pointer;
+        }
+
+        .btn.primary {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: white;
+        }
+
+        .workspace {
+            display: grid;
+            grid-template-columns: var(--left-width) minmax(0, 1fr) var(--right-width);
+            gap: 18px;
+            align-items: start;
+        }
+
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--line);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow);
+        }
+
+        .left-rail,
+        .right-rail {
+            position: sticky;
+            top: 20px;
+            max-height: calc(100vh - 40px);
+            overflow: auto;
+            padding: 16px;
+        }
+
+        .left-rail h2,
+        .right-rail h2 {
+            margin: 0 0 12px;
+            font-size: 18px;
+        }
+
+        .hint {
+            margin: 0 0 14px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .mode-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 7px 10px;
+            border-radius: 999px;
+            background: var(--brand-soft);
+            color: var(--brand);
+            border: 1px solid color-mix(in srgb, var(--brand) 25%, white);
+            font-size: 12px;
+            font-weight: 700;
+            margin-bottom: 14px;
+        }
+
+        .nav-group {
+            margin-top: 14px;
+        }
+
+        .nav-group-title {
+            font-size: 12px;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+            color: var(--muted);
+            margin-bottom: 8px;
+        }
+
+        .nav-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+        }
+
+        .nav-list li + li {
+            margin-top: 8px;
+        }
+
+        .nav-list a {
+            display: block;
+            padding: 10px 12px;
+            border-radius: 10px;
+            border: 1px solid transparent;
+            font-size: 14px;
+            line-height: 1.35;
+        }
+
+        .nav-list a:hover,
+        .nav-list a.active {
+            background: var(--brand-soft);
+            border-color: color-mix(in srgb, var(--brand) 20%, white);
+        }
+
+        .content {
+            display: flex;
+            flex-direction: column;
+            gap: 18px;
+            min-width: 0;
+        }
+
+        .panel {
+            padding: 18px;
+        }
+
+        .panel h2 {
+            margin: 0 0 10px;
+            font-size: 24px;
+        }
+
+        .panel h3 {
+            margin: 0 0 10px;
+            font-size: 18px;
+        }
+
+        .subtle {
+            color: var(--muted);
+            font-size: 14px;
+            line-height: 1.55;
+        }
+
+        .grid-2 {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+
+        .overview-layout {
+            display: grid;
+            grid-template-columns: minmax(0, 1.25fr) minmax(320px, 0.85fr);
+            gap: 14px;
+            align-items: start;
+        }
+
+        .overview-sidebar {
+            position: sticky;
+            top: 0;
+        }
+
+        .compact-list {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .compact-list li {
+            margin-bottom: 10px;
+            line-height: 1.5;
+        }
+
+        .grid-3 {
+            display: grid;
+            grid-template-columns: repeat(3, minmax(0, 1fr));
+            gap: 14px;
+        }
+
+        .mini-card,
+        .score-card,
+        .rec-card,
+        .summary-card {
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--surface);
+            padding: 14px;
+            min-width: 0;
+        }
+
+        .summary-stack {
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        .mini-card-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .summary-card h3 {
+            margin-bottom: 6px;
+        }
+
+        .summary-card.insight-callout {
+            background: var(--surface-soft);
+            border-left: 4px solid var(--accent);
+        }
+                
+        .summary-card ul,
+        .mini-card ul {
+            margin: 8px 0 0 18px;
+            padding: 0;
+        }
+
+        .summary-card li,
+        .mini-card li {
+            margin-bottom: 6px;
+            line-height: 1.45;
+        }
+
+        .score-topline {
+            display: flex;
+            align-items: baseline;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 10px;
+        }
+
+        .score-number {
+            font-size: 42px;
+            font-weight: 700;
+        }
+
+        .score-band {
+            font-size: 16px;
+            color: var(--muted);
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .score-bar {
+            width: 100%;
+            height: 8px;
+            border-radius: 999px;
+            overflow: hidden;
+            background: linear-gradient(90deg, #d7d7d7 0%, #b8b8b8 50%, #919191 100%);
+            position: relative;
+            margin: 8px 0 0;
+        }
+
+        .score-indicator {
+            position: absolute;
+            top: -4px;
+            width: 14px;
+            height: 14px;
+            border-radius: 999px;
+            background: white;
+            border: 2px solid #4a4a4a;
+            transform: translateX(-50%);
+        }
+
+        .score-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+            box-shadow: 0 12px 28px rgba(19, 31, 24, 0.12);
+        }
+
+        .score-card-number {
+            font-size: 34px;
+            font-weight: 700;
+            color: #414347; /* charcoal instead of black */
+        }
+
+
+        .score-number {
+            color: #0f172a; /* strong black */
+        }
+
+
+
+        .pill {
+            display: inline-block;
+            padding: 6px 10px;
+            border-radius: 999px;
+            font-size: 12px;
+            font-weight: 700;
+        }
+
+        .pill-normal { background: var(--success-soft); color: var(--success); }
+        .pill-low,
+        .pill-mild { background: var(--info-soft); color: var(--info); }
+        .pill-medium,
+        .pill-moderate { background: var(--warning-soft); color: var(--warning); }
+        .pill-high,
+        .pill-severe { background: var(--danger-soft); color: var(--danger); }
+
+        .tabs {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-bottom: 16px;
+        }
+
+        .tab-btn {
+            border: 1px solid var(--line);
+            background: var(--surface);
+            color: var(--text);
+            border-radius: 999px;
+            padding: 8px 12px;
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        .tab-btn.active {
+            background: var(--brand);
+            border-color: var(--brand);
+            color: white;
+        }
+
+        .tab-panel { display: none; }
+        .tab-panel.active { display: block; }
+
+        .rec-card h4 {
+            margin: 0 0 8px;
+            font-size: 16px;
+        }
+
+       .recommendation-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 16px;
+            align-items: start;
+        }
+
+        .rec-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 220px;
+            padding: 16px;
+            border: 1px solid var(--line);
+            border-radius: 16px;
+            background: var(--surface);
+        }
+
+        .rec-card h4 {
+            margin: 0;
+            font-size: 18px;
+            line-height: 1.3;
+        }
+
+        .rec-summary {
+            font-size: 15px;
+            line-height: 1.6;
+            color: var(--text);
+        }
+
+        .rec-meta {
+            font-size: 13px;
+            line-height: 1.55;
+            color: var(--muted);
+            margin-top: 2px;
+        }
+
+        .rec-meta strong {
+            color: var(--text);
+        }
+
+        .rec-card-separator {
+            height: 1px;
+            background: var(--line);
+            margin: 2px 0 0;
+        }
+
+        .rec-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+        }
+
+        .rec-rationale {
+            margin-top: 8px;
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.45;
+        }
+
+        .score-card {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            min-height: 220px;
+        }
+
+        .score-card-header {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 10px;
+        }
+
+        .score-card-title {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.25;
+            margin: 0;
+            flex: 1;
+        }
+
+        .score-card-band {
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--muted);
+            text-align: right;
+            max-width: 120px;
+            line-height: 1.25;
+        }
+
+        .score-card-main {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .score-card-number {
+            font-size: 34px;
+            font-weight: 700;
+            line-height: 1;
+            min-width: 48px;
+        }
+
+        .score-card-bar-wrap {
+            flex: 1;
+        }
+
+        .score-card-stats {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            font-size: 14px;
+        }
+
+        .score-card-stat {
+            padding: 4px 8px;
+            border-radius: 999px;
+            background: var(--surface-soft);
+            border: 1px solid var(--line);
+            font-weight: 700;
+        }
+
+        .score-card-includes {
+            color: var(--muted);
+            font-size: 12px;
+            line-height: 1.55;
+            margin-top: 2px;
+        }
+
+        .link-list,
+        .rec-link-list {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.55;
+        }
+
+        .inline-link,
+        .section-link {
+            color: #2563eb;
+            text-decoration: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+
+        .inline-link:hover,
+        .section-link:hover {
+            text-decoration: underline;
+        }
+
+        .marker-group {
+            margin-top: 14px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            overflow: hidden;
+            background: var(--surface);
+        }
+
+        .marker-group-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--surface-soft);
+            cursor: pointer;
+        }
+
+        .marker-group-header h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+        .marker-group-meta {
+            color: var(--muted);
+            font-size: 13px;
+            font-weight: 700;
+            text-align: right;
+        }
+
+        .marker-group-body {
+            display: none;
+            padding: 14px;
+            border-top: 1px solid var(--line);
+        }
+
+        .marker-group-body.open {
+            display: block;
+        }
+
+        .marker-row {
+            border: 1px solid var(--line);
+            border-radius: 12px;
+            padding: 12px;
+            margin-top: 10px;
+            background: var(--surface);
+        }
+
+        .marker-row-top {
+            display: grid;
+            grid-template-columns: minmax(0, 1.5fr) minmax(120px, .7fr) minmax(120px, .7fr) minmax(140px, .7fr);
+            gap: 12px;
+            align-items: start;
+        }
+
+        .marker-name {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .marker-subtle {
+            color: var(--muted);
+            font-size: 12px;
+        }
+
+        .rec-card:hover {
+            border-color: color-mix(in srgb, var(--brand) 25%, var(--line));
+            box-shadow: 0 10px 24px rgba(0,0,0,0.08);
+        }
+
+
+        .range-bar-wrap {
+            margin-top: 10px;
+        }
+
+        .range-bar-labels {
+            display: flex;
+            justify-content: space-between;
+            font-size: 11px;
+            color: var(--muted);
+            margin-bottom: 4px;
+        }
+
+        .range-bar {
+            position: relative;
+            width: 100%;
+            height: 10px;
+            border-radius: 999px;
+            overflow: hidden;
+            background:
+                linear-gradient(90deg,
+                    #d94a4a 0%,
+                    #d94a4a 14.285%,
+                    #e2bc2e 14.285%,
+                    #e2bc2e 28.57%,
+                    #3a7ce0 28.57%,
+                    #3a7ce0 42.855%,
+                    #48a44b 42.855%,
+                    #48a44b 57.14%,
+                    #3a7ce0 57.14%,
+                    #3a7ce0 71.425%,
+                    #e2bc2e 71.425%,
+                    #e2bc2e 85.71%,
+                    #d94a4a 85.71%,
+                    #d94a4a 100%);
+        }
+
+        .range-indicator {
+            position: absolute;
+            top: -3px;
+            width: 16px;
+            height: 16px;
+            border-radius: 999px;
+            background: white;
+            border: 2px solid var(--text);
+            transform: translateX(-50%);
+        }
+
+        .marker-explanation {
+            margin-top: 10px;
+            color: var(--text);
+            font-size: 14px;
+            line-height: 1.5;
+        }
+
+        .marker-toggle {
+            margin-top: 10px;
+            border: 1px solid var(--line);
+            background: var(--surface-soft);
+            border-radius: 10px;
+            padding: 8px 10px;
+            font-weight: 700;
+            cursor: pointer;
+        }
+
+        .marker-detail {
+            display: none;
+            margin-top: 12px;
+            padding-top: 12px;
+            border-top: 1px dashed var(--line);
+        }
+
+        .marker-detail.open {
+            display: block;
+        }
+
+        .edu-block + .edu-block {
+            margin-top: 12px;
+        }
+
+        .edu-title {
+            font-weight: 700;
+            margin-bottom: 4px;
+        }
+
+        .edu-body {
+            color: var(--text);
+            line-height: 1.55;
+        }
+
+        .tech-meta {
+            margin-top: 12px;
+            padding-top: 10px;
+            border-top: 1px dashed var(--line);
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.5;
+        }
+
+        .right-card {
+            margin-bottom: 14px;
+            padding: 14px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: var(--surface);
+        }
+
+        .right-card-title {
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .tenant-footer {
+            margin-top: 8px;
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px 18px;
+            color: var(--muted);
+            font-size: 13px;
+        }
+
+        .tenant-footer a {
+            color: var(--brand);
+        }
+
+        @media (max-width: 1320px) {
+            .workspace {
+                grid-template-columns: var(--left-width) minmax(0, 1fr);
+            }
+
+            .right-rail {
+                display: none;
+            }
+        }
+
+        @media (max-width: 1100px) {
+            .hero-grid,
+            .grid-3 {
+                grid-template-columns: repeat(4, minmax(0, 1fr));
+            }
+
+            .workspace {
+                grid-template-columns: 1fr;
+            }
+
+            .left-rail {
+                position: static;
+                max-height: none;
+            }
+
+            .marker-row-top {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .shell { padding: 14px; }
+            .topbar { grid-template-columns: 1fr; }
+            .hero-grid,
+            .grid-2,
+            .grid-3,
+            .marker-row-top {
+                grid-template-columns: 1fr;
+            }
+            .overview-layout {
+                grid-template-columns: 1fr;
+            }
+            .hero h1 { font-size: 28px; }
+            .score-card {
+                min-height: auto;
+            }
+        }
+    </style>
+</head>
+<body>
+    {% set viewer = report.viewer or {} %}
+    {% set ov = viewer.overview or {} %}
+    {% set systems = viewer.systems or {} %}
+    {% set recs = viewer.recommendations or {} %}
+    {% set detail = viewer.detail or {} %}
+    {% set patient = ov.patient or {} %}
+    {% set body = detail.body_composition_block or {} %}
+
+
+
+    {% macro section_slug(value) -%}
+        {{- (value or '')
+            | lower
+            | replace('&', 'and')
+            | replace('/', '-')
+            | replace(' ', '-')
+            | replace('--', '-')
+            | replace('--', '-')
+        -}}
+    {%- endmacro %}
+
+    <div class="shell">
+        <div class="topbar">
+            <div class="hero"{% if tenant.cover_image_url %} style="background-image: linear-gradient(180deg, rgba(255,255,255,0.90), rgba(249,251,248,0.92)), url('{{ tenant.cover_image_url }}');"{% endif %}>
+                <div class="brand-row">
+                    {% if tenant.logo_url %}
+                        <img class="brand-logo" src="{{ tenant.logo_url }}" alt="{{ tenant.tenant_name }} logo" />
+                    {% endif %}
+                    <div>
+                        <div class="brand-name">{{ tenant.tenant_name }}</div>
+                        <p class="brand-tagline">{{ tenant.tagline }}</p>
+                    </div>
+                </div>
+
+                <h1>{{ viewer.tenant.report_title or "Wellness Report Viewer" }}</h1>
+                <p class="lead">{{ viewer.tenant.subtitle or "A structured web experience for shared wellness scan reports." }}</p>
+
+                <div class="hero-grid">
+                    <div class="stat">
+                        <div class="stat-label">Client</div>
+                        <div class="stat-value">{{ patient.full_name or "—" }}</div>
+                    </div>
+                     <div class="stat">
+                        <div class="stat-label">Age</div>
+                        <div class="stat-value">{{ patient.age or "—" }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Gender</div>
+                        <div class="stat-value">{{ patient.sex or "—" }}</div>
+                    </div>
+                    <div class="stat">
+                        <div class="stat-label">Scan time</div>
+                        <div class="stat-value">{{ patient.scan_datetime or "—" }}</div>
+                    </div>
+
+                </div>
+            </div>
+
+            <div class="actions">
+                <a class="btn primary" href="{{ report.pdf_url }}" target="_blank" rel="noopener noreferrer">Download PDF</a>
+
+                <details class="card" style="padding:10px 12px;">
+                    <summary style="cursor:pointer; font-weight:700;">Report tools</summary>
+                    <div style="display:flex; flex-direction:column; gap:10px; margin-top:10px;">
+                        <a class="btn" href="{{ report.html_url }}" target="_blank" rel="noopener noreferrer">Open Raw HTML</a>
+                        <a class="btn" href="{{ report.data_url }}" target="_blank" rel="noopener noreferrer">View JSON Data</a>
+                    </div>
+                </details>
+            </div>
+
+        </div>
+
+        <div class="workspace">
+            <aside class="left-rail card">
+                <div class="mode-badge">
+                    {% if viewer_mode == "patient" %}
+                        Patient view
+                    {% else %}
+                        Practitioner view
+                    {% endif %}
+                </div>
+
+                <h2>Navigation</h2>
+                <p class="hint">A structured clinical report view built from the generated report data.</p>
+
+                <div class="nav-group">
+                    <div class="nav-group-title">Overview</div>
+                    <ul class="nav-list">
+                        <li><a href="#overview" class="active">At a glance</a></li>
+                        <li><a href="#systems-overview">System balance overview</a></li>
+                        <li><a href="#body-composition">Body composition</a></li>
+                        <li><a href="#recommendations">Recommendations</a></li>
+                        <li><a href="#markers">Detailed markers</a></li>
+                    </ul>
+                </div>
+            </aside>
+
+            <main class="content">
+                <section id="overview" class="panel card">
+                    <h2>At a glance</h2>
+                    <p class="subtle">The core story of the scan, prioritised for fast understanding.</p>
+
+                    <div class="overview-layout" style="margin-top:14px;">
+    <div class="summary-stack">
+        <div class="summary-card">
+            <h3>Clinical snapshot</h3>
+            <div>{{ ov.overall_summary.clinical_snapshot or ov.overall_summary.summary or ov.overall_summary or "Not available yet." }}</div>
+        </div>
+
+        <div class="summary-card">
+            <h3>Primary pattern</h3>
+            {% if ov.primary_pattern %}
+                <p><strong>{{ ov.primary_pattern.title }}</strong></p>
+                <p>{{ ov.primary_pattern.clinical_summary or ov.primary_pattern.summary or "" }}</p>
+                {% if ov.primary_pattern.follow_up_focus %}
+                    <p class="subtle">Focus: {{ ov.primary_pattern.follow_up_focus | join(", ") }}</p>
+                {% endif %}
+            {% else %}
+                <p>Not available yet.</p>
+            {% endif %}
+        </div>
+
+        <div class="summary-card">
+            <h3>Practitioner overview</h3>
+            <div>{{ ov.practitioner_summary or "Not available yet." }}</div>
+        </div>
+
+        {% if ov.why_this_matters or ov.clinical_summary_v3.why_this_matters %}
+        <div class="summary-card insight-callout">
+            <h3>Why this matters</h3>
+            <div>{{ ov.why_this_matters or ov.clinical_summary_v3.why_this_matters }}</div>
+        </div>
+        {% endif %}
+
+        {% if ov.priority_actions %}
+        <div class="summary-card">
+            <h3>Immediate priorities for follow-up</h3>
+            <ul>
+                {% for item in ov.priority_actions %}
+                    <li>{{ item }}</li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="overview-sidebar">
+        <div class="summary-card">
+            <h3>Supporting patterns</h3>
+            {% if ov.contributing_patterns %}
+                <ul class="compact-list">
+                    {% for p in ov.contributing_patterns[:3] %}
+                        <li>
+                            <strong>{{ p.title }}</strong>
+                            {% if p.clinical_summary %}<br><span class="subtle">{{ p.clinical_summary }}</span>{% endif %}
+                        </li>
+                    {% endfor %}
+                </ul>
+            {% else %}
+                <p>Not available yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+                </section>
+
+                <section id="systems-overview" class="panel card">
+                    <h2 style="font-size: 28px; margin-bottom: 6px;">System balance overview</h2>
+                    <p class="subtle" style="font-size:15px; margin-bottom:18px;">
+                        A system-level view showing where the main functional activity and clustering appear across the scan.
+                    </p>
+
+                    {% if systems.system_score_cards %}
+                    <div class="grid-3" style="margin-top:18px;">
+                        {% for card in systems.system_score_cards %}
+                           {% set score = card.score or 0 %}
+                            {% set first_target = card.included_sections[0] if card.included_sections else card.title %}
+                            <div class="score-card" data-marker-target="marker-section-{{ section_slug(first_target) }}" style="cursor:pointer;">
+                                <div class="score-card-header">
+                                    <h3 class="score-card-title">{{ card.title }}</h3>
+                                    <div class="score-card-band">
+                                        {% if score >= 85 %}Robust functional balance
+                                        {% elif score >= 70 %}Generally balanced
+                                        {% elif score >= 55 %}Needs focused support
+                                        {% else %}Priority review recommended
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="score-card-main">
+                                    <div class="score-card-number">{{ score }}</div>
+                                    <div class="score-card-bar-wrap">
+                                        <div class="score-bar">
+                                            <div class="score-indicator" style="left: {{ score }}%;"></div>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <div class="score-card-stats">
+                                    <div class="score-card-stat">{{ card.flagged_count }} flagged</div>
+                                    <div class="score-card-stat">{{ card.within_count }} within range</div>
+                                </div>
+
+                                {% if card.included_sections %}
+                                    <div class="score-card-includes link-list">
+                                        Includes:
+                                        {% for section in card.included_sections %}
+                                            <a href="#marker-section-{{ section_slug(section) }}" class="inline-link">
+                                                {{ section }}
+                                            </a>{% if not loop.last %}, {% endif %}
+                                        {% endfor %}
+                                    </div>
+                                {% endif %}
+                              </div>
+                        {% endfor %}
+                    </div>
+                    {% endif %}
+                </section>
+
+                <section id="recommendations" class="panel card">
+                    <h2>Recommendations</h2>
+
+                    <div class="tabs">
+                        <button class="tab-btn active" data-tab="clinical-tab">Clinical</button>
+                        <button class="tab-btn" data-tab="plan-tab">Support plan</button>
+                        <button class="tab-btn" data-tab="products-tab">Products</button>
+                    </div>
+
+                    <div id="clinical-tab" class="tab-panel active">
+                        {% if recs.clinical_recommendations %}
+                            <div class="recommendation-grid">
+                                {% for rec in recs.clinical_recommendations %}
+                                  <div class="rec-card" data-marker-target="marker-section-{{ section_slug(rec.related_section or rec.section) }}" style="cursor:pointer;">
+                                        <h4>{{ rec.title }}</h4>
+
+                                        <div class="rec-summary">{{ rec.summary }}</div>
+
+                                        <div class="rec-card-separator"></div>
+
+                                        {% if rec.pattern_alignment %}
+                                            <div class="rec-meta">
+                                                <strong>Pattern alignment:</strong> {{ rec.pattern_alignment }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if rec.display_rationale %}
+                                            <div class="rec-meta">
+                                                <strong>Why this was suggested:</strong> {{ rec.display_rationale }}
+                                            </div>
+                                        {% elif rec.rationale %}
+                                            <div class="rec-meta">
+                                                <strong>Why this was suggested:</strong> {{ rec.rationale }}
+                                            </div>
+                                        {% endif %}
+
+                                        {% if rec.related_markers %}
+                                            <div class="rec-meta rec-link-list">
+                                                <strong>Key markers:</strong>
+                                                {% for m in rec.related_markers %}
+                                                    {% if rec.related_section or rec.section %}
+                                                        <a href="#marker-section-{{ section_slug(rec.related_section or rec.section) }}" class="inline-link">
+                                                            {{ m.name }}
+                                                        </a>{% if not loop.last %}, {% endif %}
+                                                    {% else %}
+                                                        {{ m.name }}{% if not loop.last %}, {% endif %}
+                                                    {% endif %}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                                                                                            {% endfor %}
+                            </div>
+                        {% else %}
+                            <p class="subtle">No clinical recommendations available.</p>
+                        {% endif %}
+                    </div>
+
+                    <div id="plan-tab" class="tab-panel">
+                        {% if recs.protocol_plan %}
+                            <div class="mini-card">
+                                <div class="mini-card-title">{{ recs.protocol_plan.title }}</div>
+                                <p>{{ recs.protocol_plan.summary }}</p>
+                                {% if recs.protocol_plan.section_intro %}
+                                    <p class="subtle">{{ recs.protocol_plan.section_intro }}</p>
+                                {% endif %}
+                            </div>
+
+                            {% if recs.protocol_plan.phases %}
+                                <div class="grid-2" style="margin-top:14px;">
+                                    {% for phase in recs.protocol_plan.phases %}
+                                        <div class="mini-card">
+                                            <div class="mini-card-title">{{ phase.title }}</div>
+                                            {% if phase.summary %}<p>{{ phase.summary }}</p>{% endif %}
+                                            {% if phase.products %}
+                                                <ul>
+                                                    {% for product in phase.products %}
+                                                        <li>
+                                                            <strong>{{ product.name or product.title }}</strong>
+                                                            {% if product.display_rationale %}
+                                                                — {{ product.display_rationale }}
+                                                            {% endif %}
+                                                        </li>
+                                                    {% endfor %}
+                                                </ul>
+                                            {% endif %}
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        {% else %}
+                            <p class="subtle">No support plan available.</p>
+                        {% endif %}
+                    </div>
+
+                    <div id="products-tab" class="tab-panel">
+                        {% if recs.complete_product_mapping %}
+                            <div class="mini-card">
+                                <div class="mini-card-title">Product mapping</div>
+                                <ul>
+                                    {% for item in recs.complete_product_mapping %}
+                                        <li>
+                                            <strong>{{ item.name or item.product_name or "—" }}</strong>
+                                            {% if item.focus_area or item.focus %} — {{ item.focus_area or item.focus }}{% endif %}
+                                            {% if item.display_rationale or item.rationale %} — {{ item.display_rationale or item.rationale }}{% endif %}
+                                        </li>
+                                    {% endfor %}
+                                </ul>
+                            </div>
+                        {% else %}
+                            <p class="subtle">No product mapping available.</p>
+                        {% endif %}
+                    </div>
+                </section>
+
+                {% if body %}
+                <section id="body-composition" class="panel card">
+                    <div class="marker-group" id="body-composition-panel" style="margin-top:0;">
+                        <div class="marker-group-header" onclick="toggleMarkerGroup('body-comp-group')">
+                            <h3>Body composition &amp; metabolic profile</h3>
+                            <div class="marker-group-meta">
+                                {{ body.display_band or body.status_label or "Various ranges" }}
+                            </div>
+                        </div>
+
+                        <div class="marker-group-body" id="body-comp-group">
+                            <p class="subtle" style="margin-top:0;">
+                                Dedicated summary of QRMA-derived body composition, hydration, and metabolic indicators.
+                            </p>
+
+                            <div class="grid-2" style="margin-top:14px;">
+                                <div class="summary-card">
+                                    <h3>{{ body.title or "Body composition analysis" }}</h3>
+                                    {% if body.summary %}
+                                        <p>{{ body.summary }}</p>
+                                    {% endif %}
+                                    {% if body.source_subtitle %}
+                                        <p class="subtle" style="margin-top:10px;">{{ body.source_subtitle }}</p>
+                                    {% endif %}
+                                </div>
+
+                                <div class="summary-card">
+                                    <h3>Section interpretation</h3>
+                                    {% if body.interpretation_lines %}
+                                        <ul>
+                                            {% for item in body.interpretation_lines %}
+                                                <li>{{ item }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    {% else %}
+                                        <p class="subtle">No interpretation available yet.</p>
+                                    {% endif %}
+                                </div>
+                            </div>
+
+                            {% if body.groups %}
+                            <div class="tabs" style="margin-top:16px;">
+                                {% for group in body.groups %}
+                                    <button class="tab-btn {% if loop.first %}active{% endif %}" data-tab="body-tab-{{ loop.index0 }}">
+                                        {{ group.title }}
+                                    </button>
+                                {% endfor %}
+                            </div>
+
+                            {% for group in body.groups %}
+                                <div id="body-tab-{{ loop.index0 }}" class="tab-panel {% if loop.first %}active{% endif %}">
+                                    <div class="mini-card">
+                                        <div class="mini-card-title">{{ group.title }}</div>
+                                        <ul>
+                                            {% for row in group.rows %}
+                                                <li><strong>{{ row.display_name or row.marker }}:</strong> {{ row.value }}</li>
+                                            {% endfor %}
+                                        </ul>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                            {% endif %}
+                        </div>
+                    </div>
+                </section>
+                {% endif %}
+
+                <section id="markers" class="panel card">
+                    <h2>Marker detail</h2>
+                    <p class="subtle">Detailed marker explanations are best interpreted as part of a pattern rather than in isolation.</p>
+
+                    {% if detail.full_marker_tables %}
+                        {% for section in detail.full_marker_tables %}
+                            {% set section_idx = loop.index0 %}
+                            <div class="marker-group" id="marker-section-{{ section_slug(section.title) }}">
+                                <div class="marker-group-header" onclick="toggleMarkerGroup('group-{{ section_idx }}')">
+                                    <h3>{{ section.title }}</h3>
+                                    <div class="marker-group-meta">
+                                        {% if section.priority_label %}{{ section.priority_label }} · {% endif %}
+                                        {{ section.abnormal_count }} flagged · {{ section.normal_count }} within range
+                                    </div>
+                                </div>
+
+                                <div class="marker-group-body" id="group-{{ section_idx }}">
+                                    {% for row in section.rows %}
+                                        {% set row_idx = loop.index0 %}
+                                        {% set sev_key = row.severity_class | replace('sev-', '') %}
+                                        {% set pos = row.status_pointer_position or '50%' %}
+
+                                        <div class="marker-row">
+                                            <div class="marker-row-top">
+                                                <div>
+                                                    <div class="marker-name">{{ row.display_name or row.marker }}</div>
+                                                    <div class="marker-subtle">{{ section.title }}</div>
+                                                </div>
+                                                <div>
+                                                    <div class="marker-subtle">Reference range</div>
+                                                    <div>{{ row.range or "—" }}</div>
+                                                </div>
+                                                <div>
+                                                    <div class="marker-subtle">Value</div>
+                                                    <div>{{ row.value or "—" }}</div>
+                                                </div>
+                                                <div>
+                                                    <div class="marker-subtle">Status</div>
+                                                    <div><span class="pill pill-{{ sev_key }}">{{ row.severity or "Unclear" }}</span></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="range-bar-wrap">
+                                                <div class="range-bar-labels">
+                                                    <span>Low</span>
+                                                    <span>Optimal</span>
+                                                    <span>High</span>
+                                                </div>
+                                                <div class="range-bar">
+                                                    <div class="range-indicator" style="left: {{ pos }};"></div>
+                                                </div>
+                                            </div>
+
+                                            <div class="marker-explanation">
+                                                {{ row.meaning or "No interpretation text available yet." }}
+                                            </div>
+
+                                            <button class="marker-toggle" onclick="toggleMarkerDetail('marker-{{ section_idx }}-{{ row_idx }}')">
+                                                View full explanation
+                                            </button>
+
+                                            <div class="marker-detail" id="marker-{{ section_idx }}-{{ row_idx }}">
+                                                <div class="edu-block">
+                                                    <div class="edu-title">What this means</div>
+                                                    <div class="edu-body">{{ row.what_it_means or row.meaning or "Not available yet." }}</div>
+                                                </div>
+
+                                                <div class="edu-block">
+                                                    <div class="edu-title">Why it matters</div>
+                                                    <div class="edu-body">{{ row.why_it_matters or "Not available yet." }}</div>
+                                                </div>
+
+                                                <div class="edu-block">
+                                                    <div class="edu-title">Functional significance</div>
+                                                    <div class="edu-body">{{ row.functional_significance or "Not available yet." }}</div>
+                                                </div>
+
+                                                <div class="edu-block">
+                                                    <div class="edu-title">Common patterns</div>
+                                                    <div class="edu-body">{{ row.common_patterns or "Not available yet." }}</div>
+                                                </div>
+
+                                                <div class="edu-block">
+                                                    <div class="edu-title">Your result in this scan</div>
+                                                    <div class="edu-body">{{ row.your_result_summary or "Not available yet." }}</div>
+                                                </div>
+
+                                                <div class="tech-meta">
+                                                    <div><strong>Marker:</strong> {{ row.marker or "—" }}</div>
+                                                    <div><strong>Displayed as:</strong> {{ row.display_name or "—" }}</div>
+                                                    <div><strong>Severity class:</strong> {{ row.severity_class or "—" }}</div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endfor %}
+                    {% else %}
+                        <p class="subtle">No marker tables available.</p>
+                    {% endif %}
+                </section>
+
+                <div class="tenant-footer">
+                    {% if tenant.support_email %}
+                        <div>Support: <a href="mailto:{{ tenant.support_email }}">{{ tenant.support_email }}</a></div>
+                    {% endif %}
+                    {% if tenant.website_url %}
+                        <div>Website: <a href="{{ tenant.website_url }}" target="_blank" rel="noopener noreferrer">{{ tenant.website_url }}</a></div>
+                    {% endif %}
+                    {% if report.generated_at %}
+                        <div>Generated: {{ report.generated_at }}</div>
+                    {% endif %}
+                </div>
+            </main>
+
+<aside class="right-rail card">
+    <h2>Insight panel</h2>
+    <p class="hint">Quick reference to the overall scan balance, dominant pattern, and most active systems.</p>
+
+    <div class="right-card">
+        <div class="right-card-title">Health Index</div>
+        <div class="score-topline" style="align-items:center; margin-bottom:8px;">
+            <div class="score-number" style="font-size:40px;">{{ ov.overall_scan_score or "—" }}</div>
+            <div class="score-band" style="font-size:14px;">{{ ov.overall_scan_band_label or "" }}</div>
+        </div>
+
+        {% set rail_score = ov.overall_scan_score or 0 %}
+        <div class="score-bar" style="height:10px; margin:10px 0 0;">
+            <div class="score-indicator" style="left: {{ rail_score }}%;"></div>
+        </div>
+    </div>
+
+    <div class="right-card">
+        <div class="right-card-title">Primary pattern</div>
+        <div>{{ ov.primary_pattern.title or "—" }}</div>
+    </div>
+
+    {% if systems.priority_overview %}
+    <div class="right-card">
+        <div class="right-card-title">Most active systems</div>
+        <ul style="margin:0 0 0 18px; padding:0;">
+            {% for item in systems.priority_overview[:3] %}
+                <li style="margin-bottom:6px;">
+                    {{ item.title }} — {{ item.activity_label or item.priority_label }}
+                </li>
+            {% endfor %}
+        </ul>
+    </div>
+    {% endif %}
+</aside>
+        </div>
+    </div>
+
+        <script>
+        (function () {
+            const navLinks = document.querySelectorAll('.nav-list a');
+            navLinks.forEach((link) => {
+                link.addEventListener('click', () => {
+                    navLinks.forEach((l) => l.classList.remove('active'));
+                    link.classList.add('active');
+                });
+            });
+
+            const tabButtons = document.querySelectorAll('.tab-btn');
+            const tabPanels = document.querySelectorAll('.tab-panel');
+            tabButtons.forEach((btn) => {
+                btn.addEventListener('click', () => {
+                    const panelId = btn.dataset.tab;
+                    const relatedGroup = btn.closest('section, .card, .marker-group-body') || document;
+                    const localButtons = relatedGroup.querySelectorAll('.tab-btn');
+                    const localPanels = relatedGroup.querySelectorAll('.tab-panel');
+                    localButtons.forEach((b) => b.classList.remove('active'));
+                    localPanels.forEach((p) => p.classList.remove('active'));
+                    btn.classList.add('active');
+                    const panel = document.getElementById(panelId);
+                    if (panel) panel.classList.add('active');
+                });
+            });
+
+            const jumpCards = document.querySelectorAll('[data-marker-target]');
+            jumpCards.forEach((card) => {
+                card.addEventListener('click', () => {
+                    const targetId = card.getAttribute('data-marker-target');
+                    if (!targetId) return;
+                    const target = document.getElementById(targetId);
+                    if (!target) return;
+
+                    const body = target.querySelector('.marker-group-body');
+                    if (body && !body.classList.contains('open')) {
+                        body.classList.add('open');
+                    }
+
+                    target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            });
+        })();
+
+        function toggleMarkerGroup(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('open');
+        }
+
+        function toggleMarkerDetail(id) {
+            const el = document.getElementById(id);
+            if (el) el.classList.toggle('open');
+        }
+
+
+    </script>
+</body>
+</html>
