@@ -24,7 +24,13 @@ def get_next_version_number(db: Session, case_id):
 
 def _build_case_filenames(case: Case, version_number: int) -> tuple[str, str]:
     base = f"case_{case.id}_v{version_number}"
-    return f"{base}.html", f"{base}.pdf"
+    user_id = str(case.user_id)
+    case_id = str(case.id)
+
+    html_key = f"reports/{user_id}/{case_id}/{base}.html"
+    pdf_key = f"reports/{user_id}/{case_id}/{base}.pdf"
+    return html_key, pdf_key
+
 
 
 def _to_str_path(value):

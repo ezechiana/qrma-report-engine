@@ -1,19 +1,19 @@
-# app/services/pdf_service.py
+from __future__ import annotations
 
+import tempfile
 from pathlib import Path
+
 from playwright.async_api import async_playwright
 
 from app.services.config_service import load_practitioner_config
-
-ROOT = Path(__file__).resolve().parents[2]
-GENERATED_DIR = ROOT / "app" / "generated"
+from app.services.storage_service import upload_text, upload_bytes
 
 
-def save_html(html_content: str, filename: str) -> Path:
-    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = GENERATED_DIR / filename
-    output_path.write_text(html_content, encoding="utf-8")
-    return output_path
+def save_html(html_content: str, filename: str) -> str:
+    """
+    `filename` is now treated as the final S3 object key.
+    """
+    return upload_text(filename, html_content, "text/html; charset=utf-8")
 
 
 def build_header_template(config: dict) -> str:
@@ -67,34 +67,38 @@ def build_footer_template(config: dict) -> str:
     """
 
 
-async def save_pdf(html_content: str, filename: str) -> Path:
-    GENERATED_DIR.mkdir(parents=True, exist_ok=True)
-    output_path = GENERATED_DIR / filename
+async def save_pdf(html_content: str, filename: str) -> str:
+    """
+    Render to a temporary local file, then upload to S3.
+    `filename` is the final S3 object key.
+    """
     config = load_practitioner_config()
 
-    async with async_playwright() as p:
-        browser = await p.chromium.launch(headless=True)
+    with tempfile.TemporaryDirectory() as tmpdir:
+        temp_pdf_path = Path(tmpdir) / "report.pdf"
 
-        page = await browser.new_page()
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=True)
+            page = await browser.new_page()
 
-        # IMPORTANT: ensures CSS + layout fully render before PDF
-        await page.set_content(html_content, wait_until="networkidle")
+            await page.set_content(html_content, wait_until="networkidle")
 
-        await page.pdf(
-            path=str(output_path),
-            format="A4",
-            print_background=True,
-            display_header_footer=True,
-            header_template=build_header_template(config),
-            footer_template=build_footer_template(config),
-            margin={
-                "top": "18mm",
-                "right": "12mm",
-                "bottom": "18mm",
-                "left": "12mm",
-            },
-        )
+            await page.pdf(
+                path=str(temp_pdf_path),
+                format="A4",
+                print_background=True,
+                display_header_footer=True,
+                header_template=build_header_template(config),
+                footer_template=build_footer_template(config),
+                margin={
+                    "top": "18mm",
+                    "right": "12mm",
+                    "bottom": "18mm",
+                    "left": "12mm",
+                },
+            )
 
-        await browser.close()
+            await browser.close()
 
-    return output_path
+        pdf_bytes = temp_pdf_path.read_bytes()
+        return upload_bytes(filename, pdf_bytes, "application/pdf")

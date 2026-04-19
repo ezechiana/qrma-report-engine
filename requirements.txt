@@ -17,3 +17,4 @@ pytest-cov
 passlib
 python-jose[cryptography]
 pydantic[email]
+boto3

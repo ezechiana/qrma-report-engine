@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse
+from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -9,6 +9,8 @@ from app.api.deps import get_current_user, get_db
 from app.db.models import Case, ReportOverride, ReportStatus, ReportVersion, User, PractitionerSettings
 from app.schemas.reports import ReportOverrideUpdate, ReportVersionRead
 from app.services.audit_service import log_action
+from app.services.storage_service import object_exists, generate_presigned_url
+
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/api/reports", tags=["reports"])
@@ -269,11 +271,14 @@ def get_report_pdf(
             detail=f"PDF is not available yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}",
         )
 
-    return FileResponse(
-        report.pdf_path,
-        media_type="application/pdf",
-        filename=f"report_{report.id}.pdf",
-    )
+    if not object_exists(report.pdf_path):
+        raise HTTPException(
+            status_code=404,
+            detail="PDF file not found. Please regenerate the report.",
+        )
+
+    signed_url = generate_presigned_url(report.pdf_path)
+    return RedirectResponse(url=signed_url, status_code=302)
 
 
 @router.get("/{report_version_id}/html")
@@ -292,11 +297,15 @@ def get_report_html(
             detail=f"HTML is not available yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}",
         )
 
-    return FileResponse(
-        path=report.html_path,
-        media_type="text/html",
-        filename=f"report_{report.id}.html",
-    )
+    if not object_exists(report.html_path):
+        raise HTTPException(
+            status_code=404,
+            detail="HTML file not found. Please regenerate the report.",
+        )
+
+    signed_url = generate_presigned_url(report.html_path)
+    return RedirectResponse(url=signed_url, status_code=302)
+
 
 
 @router.patch("/{report_version_id}/overrides")

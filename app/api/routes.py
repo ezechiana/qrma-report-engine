@@ -1,7 +1,7 @@
 # app/api/routes.py
 
 from fastapi import APIRouter, UploadFile, File, Body
-from fastapi.responses import HTMLResponse, FileResponse
+from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
 
 from app.models.schema import ReportBuildRequest, NarrativeBlock
 from app.parser.html_parser import parse_html_report
@@ -13,6 +13,7 @@ from app.services.final_enrichment_pipeline import apply_final_report_enrichment
 from app.services.overrides_service import apply_report_overrides
 from app.services.report_builder import render_report_html
 from app.services.pdf_service import save_html, save_pdf
+from app.services.storage_service import generate_presigned_url
 
 router = APIRouter()
 
@@ -68,13 +69,8 @@ async def build_report_pdf(file: UploadFile = File(...)):
     html = decode_uploaded_file(content)
     enriched = process_uploaded_html(html)
     report_html = render_report_html(enriched)
-    pdf_path = await save_pdf(report_html, "wellness_report.pdf")
-    return FileResponse(
-        path=pdf_path,
-        media_type="application/pdf",
-        filename="wellness_report.pdf",
-    )
-
+    pdf_key = await save_pdf(report_html, "debug/wellness_report.pdf")
+    return RedirectResponse(url=generate_presigned_url(pdf_key), status_code=302)
 
 @router.get("/config")
 async def get_config():
@@ -86,16 +82,17 @@ async def update_config(payload: dict = Body(...)):
     return save_practitioner_config(payload)
 
 
-@router.post("/preview-custom-report", response_class=HTMLResponse)
-async def preview_custom_report(payload: ReportBuildRequest):
+@router.post("/build-custom-report-pdf")
+async def build_custom_report_pdf(payload: ReportBuildRequest):
     overridden_report = apply_report_overrides(payload.report_data, payload.overrides)
 
     if isinstance(getattr(overridden_report, "narrative", None), dict):
         overridden_report.narrative = NarrativeBlock(**overridden_report.narrative)
 
     report_html = render_report_html(overridden_report, overrides=payload.overrides)
-    save_html(report_html, "custom_report_preview.html")
-    return report_html
+    pdf_key = await save_pdf(report_html, "debug/custom_wellness_report.pdf")
+    return RedirectResponse(url=generate_presigned_url(pdf_key), status_code=302)
+
 
 
 @router.post("/build-custom-report-pdf")

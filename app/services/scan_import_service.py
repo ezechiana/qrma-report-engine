@@ -6,10 +6,9 @@ from pathlib import Path
 
 
 TEMP_UPLOAD_DIR = Path(os.getenv("TEMP_UPLOAD_DIR", "/tmp/qrma_imports"))
-CASE_STORAGE_ROOT = Path(os.getenv("CASE_STORAGE_ROOT", "/app/app/data/qrma_cases"))
-
 TEMP_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
-CASE_STORAGE_ROOT.mkdir(parents=True, exist_ok=True)
+
+from app.services.storage_service import upload_bytes, download_bytes
 
 
 def save_temp_html(file_bytes: bytes) -> tuple[str, str]:
@@ -26,21 +25,20 @@ def load_temp_html(temp_id: str) -> bytes:
 
 def save_case_html(case_id: str, user_id: str, file_bytes: bytes) -> str:
     """
-    Persist the uploaded QRMA HTML against the case using durable storage.
+    Persist the uploaded QRMA HTML against the case using S3 storage.
 
-    Path shape:
-      <CASE_STORAGE_ROOT>/<user_id>/<case_id>/raw_scan.html
+    Key shape:
+      cases/<user_id>/<case_id>/raw_scan.html
     """
-    output_dir = CASE_STORAGE_ROOT / str(user_id) / str(case_id)
-    output_dir.mkdir(parents=True, exist_ok=True)
-
-    path = output_dir / "raw_scan.html"
-    path.write_bytes(file_bytes)
-    return str(path)
+    key = f"cases/{user_id}/{case_id}/raw_scan.html"
+    return upload_bytes(key, file_bytes, "text/html; charset=utf-8")
 
 
 def load_case_html(path: str) -> bytes:
-    return Path(path).read_bytes()
+    """
+    `path` is now the S3 object key stored in the DB.
+    """
+    return download_bytes(path)
 
 
 def parse_qrma_html(file_bytes: bytes) -> dict:
@@ -151,3 +149,6 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             "scan_datetime": parsed_scan_datetime,
         },
     }
+
+
+

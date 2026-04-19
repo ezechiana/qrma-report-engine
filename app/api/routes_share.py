@@ -9,13 +9,15 @@ import os
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request, Form
-from fastapi.responses import HTMLResponse, JSONResponse, FileResponse
+from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import Case, PractitionerSettings, ReportVersion, ShareLink, User
 from app.schemas.share import ShareLinkCreate, ShareLinkRead
+from app.services.storage_service import object_exists, generate_presigned_url
 from app.services.audit_service import log_action
 from app.services.share_link_service import (
     create_share_link,
@@ -395,6 +397,9 @@ def get_shared_report_pdf(
     if not report.pdf_path:
         raise HTTPException(status_code=404, detail="PDF not found")
 
+    if not object_exists(report.pdf_path):
+        raise HTTPException(status_code=404, detail="PDF file not found")
+
     log_action(
         db,
         "share_link_pdf_downloaded",
@@ -403,11 +408,8 @@ def get_shared_report_pdf(
         metadata_json={"token": token},
     )
 
-    return FileResponse(
-        path=report.pdf_path,
-        media_type="application/pdf",
-        filename=f"report_{report.id}.pdf",
-    )
+    signed_url = generate_presigned_url(report.pdf_path)
+    return RedirectResponse(url=signed_url, status_code=302)
 
 
 @router.get("/share/{token}/html")
@@ -424,6 +426,9 @@ def get_shared_report_html(
     if not report.html_path:
         raise HTTPException(status_code=404, detail="HTML not found")
 
+    if not object_exists(report.html_path):
+        raise HTTPException(status_code=404, detail="HTML file not found")
+
     log_action(
         db,
         "share_link_html_downloaded",
@@ -432,8 +437,5 @@ def get_shared_report_html(
         metadata_json={"token": token},
     )
 
-    return FileResponse(
-        path=report.html_path,
-        media_type="text/html",
-        filename=f"report_{report.id}.html",
-    )
+    signed_url = generate_presigned_url(report.html_path)
+    return RedirectResponse(url=signed_url, status_code=302)
