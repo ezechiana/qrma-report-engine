@@ -1,9 +1,9 @@
 # app/db/session.py
 
 import os
-from sqlalchemy import create_engine
-from sqlalchemy.orm import sessionmaker
-from sqlalchemy.engine import url as sa_url
+from sqlalchemy import create_engine  # type: ignore[import]
+from sqlalchemy.orm import sessionmaker  # type: ignore[import]
+from sqlalchemy.engine import url as sa_url  # type: ignore[import]
 
 # --- Get DATABASE_URL from Railway environment ---
 DATABASE_URL = os.getenv("DATABASE_URL")
