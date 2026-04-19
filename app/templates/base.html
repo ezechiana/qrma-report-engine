@@ -273,11 +273,100 @@
             border-radius: 12px;
             background: white;
         }
+        .mobile-topbar {
+            display: none;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: var(--surface);
+            border-bottom: 1px solid var(--line);
+            position: sticky;
+            top: 0;
+            z-index: 45;
+        }
 
-        @media (max-width: 960px) {
+        .mobile-menu-btn,
+        .mobile-close-btn {
+            border: 1px solid var(--line);
+            background: white;
+            border-radius: 10px;
+            width: 42px;
+            height: 42px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 22px;
+            cursor: pointer;
+            color: var(--text);
+        }
+
+        .mobile-topbar-title {
+            font-size: 18px;
+            font-weight: 700;
+            line-height: 1.2;
+        }
+
+        .sidebar-backdrop {
+            display: none;
+        }
+
+                @media (max-width: 960px) {
             .app { grid-template-columns: 1fr; }
-            .sidebar { display: none; }
-            .grid-3, .grid-2 { grid-template-columns: 1fr; }
+
+            .sidebar {
+                display: block;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 280px;
+                max-width: 86vw;
+                height: 100vh;
+                transform: translateX(-100%);
+                transition: transform .22s ease;
+                z-index: 50;
+                box-shadow: 0 20px 40px rgba(0,0,0,0.25);
+            }
+
+            .sidebar.open {
+                transform: translateX(0);
+            }
+
+            .sidebar-backdrop {
+                position: fixed;
+                inset: 0;
+                background: rgba(17, 24, 39, 0.45);
+                z-index: 49;
+            }
+
+            .sidebar-backdrop.open {
+                display: block;
+            }
+
+            .mobile-topbar {
+                display: flex;
+            }
+
+            .topbar {
+                padding: 14px 16px;
+            }
+
+            .content {
+                padding: 14px 12px 20px;
+            }
+
+            .grid-3, .grid-2 {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .topbar {
+                display: none;
+            }
+
+            .content {
+                padding: 12px 10px 18px;
+            }
         }
     </style>
 
@@ -361,9 +450,14 @@
 
 <body>
 <div class="app">
-    <aside class="sidebar">
-        <h2>Health Portal</h2>
-        <div class="subtle">Practitioner workspace</div>
+    <aside class="sidebar" id="app-sidebar">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
+            <div>
+                <h2>Health Portal</h2>
+                <div class="subtle">Practitioner workspace</div>
+            </div>
+            <button class="mobile-close-btn" id="mobile-close-btn" aria-label="Close menu" style="display:none;">×</button>
+        </div>
 
         <nav>
             <a href="/app" id="nav-dashboard">Dashboard</a>
@@ -379,7 +473,14 @@
         </div>
     </aside>
 
+    <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
+
     <main class="main">
+            <div class="mobile-topbar">
+                <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
+                <div class="mobile-topbar-title">{{ title if title else "Health Portal" }}</div>
+            </div>
+
             {% if title is not none and title != "" %}
             <div class="topbar">
                 <div class="topbar-title">{{ title }}</div>
@@ -423,6 +524,48 @@
         } else if (path.startsWith("/app/billing")) {
             document.getElementById("nav-billing")?.classList.add("active");
         }
+
+        const sidebar = document.getElementById("app-sidebar");
+        const backdrop = document.getElementById("sidebar-backdrop");
+        const openBtn = document.getElementById("mobile-menu-btn");
+        const closeBtn = document.getElementById("mobile-close-btn");
+
+        function isMobile() {
+            return window.innerWidth <= 960;
+        }
+
+        function openSidebar() {
+            if (!isMobile() || !sidebar || !backdrop) return;
+            sidebar.classList.add("open");
+            backdrop.classList.add("open");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeSidebar() {
+            if (sidebar) sidebar.classList.remove("open");
+            if (backdrop) backdrop.classList.remove("open");
+            document.body.style.overflow = "";
+        }
+
+        function syncMobileShell() {
+            if (closeBtn) {
+                closeBtn.style.display = isMobile() ? "inline-flex" : "none";
+            }
+            if (!isMobile()) {
+                closeSidebar();
+            }
+        }
+
+        if (openBtn) openBtn.addEventListener("click", openSidebar);
+        if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
+        if (backdrop) backdrop.addEventListener("click", closeSidebar);
+
+        document.addEventListener("keydown", function (e) {
+            if (e.key === "Escape") closeSidebar();
+        });
+
+        window.addEventListener("resize", syncMobileShell);
+        syncMobileShell();
     })();
 </script>
 </body>

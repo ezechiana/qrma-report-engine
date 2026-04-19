@@ -5,8 +5,20 @@
 <div id="success-box" class="success" style="display:none;"></div>
 
 <div class="card">
-    <h2 id="report-page-title">Report detail</h2>
-    <div id="report-summary" class="muted">Loading report…</div>
+    <div style="margin-bottom:10px;">
+        <div style="font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; margin-bottom:8px;">
+            Generated report
+        </div>
+        <h2 id="report-page-title" style="margin:0 0 8px; font-size:28px; line-height:1.15;">Personalised Wellness Scan Report</h2>
+        <div class="muted" style="font-size:15px; line-height:1.6;">
+            Open the full report, download the PDF, or create a secure share link for the client.
+        </div>
+    </div>
+
+    <details style="border-top:1px solid var(--line); padding-top:12px;">
+        <summary style="cursor:pointer; font-weight:700;">Report metadata</summary>
+        <div id="report-summary" class="muted" style="margin-top:12px;">Loading report…</div>
+    </details>
 </div>
 
 <div class="card">
@@ -14,9 +26,7 @@
     <div class="btn-row">
         <a class="btn" id="open-full-report-btn" href="#">Open full report</a>
         <a class="btn secondary" id="download-pdf-btn" href="#" target="_blank">Download PDF</a>
-        <a class="btn secondary" id="open-html-btn" href="#" target="_blank">Open HTML</a>
-        <a class="btn secondary" id="open-json-btn" href="#" target="_blank">View JSON</a>
-        <button id="refresh-report-btn" type="button">Refresh report</button>
+        <button class="btn secondary" id="refresh-report-btn" type="button">Refresh report</button>
     </div>
 </div>
 
@@ -27,7 +37,7 @@
         <input id="share-password" placeholder="Leave blank for no password" />
     </div>
     <div class="btn-row">
-        <button id="create-share-link-btn" type="button">Create share link</button>
+        <button class="btn" id="create-share-link-btn" type="button">Create share link</button>
     </div>
     <div id="share-result" class="muted" style="margin-top:12px;"></div>
 </div>
@@ -79,15 +89,13 @@
 
         document.getElementById("open-full-report-btn").href = `/app/reports/${reportId}/view`;
         document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
-        document.getElementById("open-html-btn").href = `/api/reports/${reportId}/html`;
-        document.getElementById("open-json-btn").href = `/api/reports/${reportId}/json`;
 
         try {
             const settingsRes = await apiFetch("/api/settings");
             if (settingsRes.ok) {
                 const settings = await settingsRes.json();
                 document.getElementById("report-page-title").textContent =
-                    settings.report_title || "Report detail";
+                    settings.report_title || "Personalised Wellness Scan Report";
             }
         } catch (e) {
             // non-blocking
@@ -129,4 +137,3 @@
     loadReport();
 </script>
 {% endblock %}
-
