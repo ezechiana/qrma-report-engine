@@ -13,10 +13,10 @@ from app.api.routes_cases import router as cases_router
 from app.api.routes_patients import router as patients_router
 from app.api.routes_reports import router as reports_router
 from app.api.routes_share import router as share_router
-from app.db.base import Base
-from app.db.session import engine
 from app.api.routes_ui import router as ui_router
 from app.api.routes_settings import router as settings_router
+from app.db.base import Base
+from app.db.session import engine
 
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
@@ -26,7 +26,8 @@ CORS_ALLOW_ORIGINS = os.getenv("CORS_ALLOW_ORIGINS", "*")
 
 
 def _parse_cors_origins(value: str) -> list[str]:
-    if value.strip() == "*":
+    value = (value or "").strip()
+    if value == "*" or value == "":
         return ["*"]
     return [origin.strip() for origin in value.split(",") if origin.strip()]
 
@@ -36,12 +37,21 @@ async def lifespan(app: FastAPI):
     """
     App startup/shutdown lifecycle.
 
-    For local MVP/dev we allow automatic table creation.
-    In production, prefer Alembic migrations and set:
-        AUTO_CREATE_TABLES=false
+    Railway-ready behaviour:
+    - allows startup even if DB is temporarily unavailable during first boot
+    - optionally auto-creates tables when AUTO_CREATE_TABLES=true
     """
     if AUTO_CREATE_TABLES:
-        Base.metadata.create_all(bind=engine)
+        try:
+            Base.metadata.create_all(bind=engine)
+            print("✅ Database connected and tables ensured.")
+        except Exception as exc:
+            print(f"⚠️ Database startup check failed: {exc}")
+            if APP_ENV != "production":
+                raise
+            # In production on Railway, allow app boot so deploy/debug is easier.
+            # You can tighten this later once infra is stable.
+
     yield
 
 
@@ -51,10 +61,12 @@ def create_app() -> FastAPI:
         lifespan=lifespan,
     )
 
+    cors_origins = _parse_cors_origins(CORS_ALLOW_ORIGINS)
+
     app.add_middleware(
         CORSMiddleware,
-        allow_origins=_parse_cors_origins(CORS_ALLOW_ORIGINS),
-        allow_credentials=True,
+        allow_origins=cors_origins,
+        allow_credentials=("*" not in cors_origins),
         allow_methods=["*"],
         allow_headers=["*"],
     )
@@ -72,6 +84,7 @@ def create_app() -> FastAPI:
 
     # Legacy engine/debug routes
     app.include_router(engine_router)
+
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
     @app.get("/")
