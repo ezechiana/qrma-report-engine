@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -21,6 +20,27 @@
 
 <div class="card" id="confirm-card" style="display:none;">
     <h2>Confirm patient details</h2>
+
+    <div class="field">
+        <label>Patient handling</label>
+        <select id="patient-mode">
+            <option value="new">Create new patient</option>
+            <option value="existing">Link to existing patient</option>
+        </select>
+    </div>
+
+    <div id="existing-patient-block" style="display:none;">
+        <div class="field">
+            <label>Search existing patient</label>
+            <input id="patient-search" placeholder="Type patient name" />
+        </div>
+        <div class="field">
+            <label>Select patient</label>
+            <select id="existing-patient-select">
+                <option value="">Choose patient…</option>
+            </select>
+        </div>
+    </div>
 
     <form id="confirm-form">
         <div class="grid-2">
@@ -74,6 +94,8 @@
 
 <script>
     let temporaryUploadId = null;
+    let parsedScanMetadata = null;
+    let allPatients = [];
 
     function showError(msg) {
         const box = document.getElementById("error-box");
@@ -108,11 +130,50 @@
         box.textContent = msg;
     }
 
+    function patientName(p) {
+        return (
+            p.full_name ||
+            [p.first_name, p.last_name].filter(Boolean).join(" ") ||
+            "Unnamed patient"
+        );
+    }
+
+    function renderExistingPatients() {
+        const select = document.getElementById("existing-patient-select");
+        const query = (document.getElementById("patient-search").value || "").trim().toLowerCase();
+
+        const filtered = allPatients.filter(p => patientName(p).toLowerCase().includes(query));
+
+        select.innerHTML = `<option value="">Choose patient…</option>` + filtered.map(p => `
+            <option value="${p.id}">${patientName(p)}</option>
+        `).join("");
+    }
+
+    async function loadPatientsForLinking() {
+        try {
+            const res = await apiFetch("/api/patients");
+            if (!res.ok) return;
+            const data = await res.json();
+            allPatients = Array.isArray(data) ? data : (data.items || []);
+            renderExistingPatients();
+        } catch (e) {
+            console.warn("Could not load patients for linking", e);
+        }
+    }
+
+    document.getElementById("patient-mode").addEventListener("change", () => {
+        const mode = document.getElementById("patient-mode").value;
+        document.getElementById("existing-patient-block").style.display =
+            mode === "existing" ? "block" : "none";
+    });
+
+    document.getElementById("patient-search").addEventListener("input", renderExistingPatients);
+
     document.getElementById("upload-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         clearError();
 
-        if (!requireAuthOrRedirect()) return;
+        if (!await requireAuthOrRedirect()) return;
 
         const fileInput = document.getElementById("scan-file");
         if (!fileInput.files.length) {
@@ -123,11 +184,9 @@
         const formData = new FormData();
         formData.append("file", fileInput.files[0]);
 
-        const response = await fetch("/api/cases/import-from-html", {
+        const response = await apiFetch("/api/cases/import-from-html", {
             method: "POST",
-            headers: {
-                "Authorization": `Bearer ${getAccessToken()}`
-            },
+            headers: {},
             body: formData,
         });
 
@@ -139,6 +198,7 @@
         }
 
         temporaryUploadId = data.temporary_upload_id;
+        parsedScanMetadata = data.scan_metadata || null;
 
         const p = data.source_patient_data || {};
         document.getElementById("first_name").value = p.first_name || "";
@@ -152,6 +212,7 @@
             (p.full_name ? `${p.full_name} QRMA scan` : "QRMA scan case");
 
         document.getElementById("confirm-card").style.display = "block";
+        await loadPatientsForLinking();
         showSuccess("Scan parsed successfully. Please confirm the patient details.");
     });
 
@@ -163,7 +224,6 @@
             return;
         }
 
-
         let recommendationMode = "natural_approaches_clinical";
 
         try {
@@ -172,33 +232,66 @@
                 const settings = await settingsResponse.json();
                 recommendationMode = settings.recommendation_mode_default || recommendationMode;
             }
-        } catch (e) {
-            // keep default
-        }
-        const payload = {
-            temporary_upload_id: temporaryUploadId,
-            patient: {
-                first_name: document.getElementById("first_name").value || "",
-                last_name: document.getElementById("last_name").value || "",
-                date_of_birth: document.getElementById("date_of_birth").value || null,
-                age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
-                sex: document.getElementById("sex").value || null,
-                height_cm: document.getElementById("height_cm").value ? Number(document.getElementById("height_cm").value) : null,
-                weight_kg: document.getElementById("weight_kg").value ? Number(document.getElementById("weight_kg").value) : null
-            },
-            case: {
-                title: document.getElementById("case_title").value || "QRMA scan case",
-                recommendation_mode: recommendationMode,
-                clinical_context_json: null
+        } catch (e) {}
+
+        const patientMode = document.getElementById("patient-mode").value;
+
+        let response;
+        let data;
+
+        if (patientMode === "existing") {
+            const existingPatientId = document.getElementById("existing-patient-select").value;
+            if (!existingPatientId) {
+                showError("Please select an existing patient.");
+                return;
             }
-        };
 
-        const response = await apiFetch("/api/cases/create-from-import", {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
+            response = await apiFetch("/api/cases/from-existing-patient-import", {
+                method: "POST",
+                body: JSON.stringify({
+                    temporary_upload_id: temporaryUploadId,
+                    patient_id: existingPatientId,
+                    scan_metadata: parsedScanMetadata,
+                    case: {
+                        title: document.getElementById("case_title").value || "QRMA scan case",
+                        recommendation_mode: recommendationMode,
+                        clinical_context_json: null
+                    }
+                }),
+            });
 
-        const data = await response.json();
+            data = await response.json();
+        } else {
+            const payload = {
+                temporary_upload_id: temporaryUploadId,
+                patient: {
+                    first_name: document.getElementById("first_name").value || "",
+                    last_name: document.getElementById("last_name").value || "",
+                    date_of_birth: document.getElementById("date_of_birth").value || null,
+                    age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
+                    sex: document.getElementById("sex").value || null,
+                    height_cm: document.getElementById("height_cm").value ? Number(document.getElementById("height_cm").value) : null,
+                    weight_kg: document.getElementById("weight_kg").value ? Number(document.getElementById("weight_kg").value) : null,
+                    full_name: [
+                        document.getElementById("first_name").value || "",
+                        document.getElementById("last_name").value || ""
+                    ].join(" ").trim() || null
+                },
+                scan_metadata: parsedScanMetadata,
+                case: {
+                    title: document.getElementById("case_title").value || "QRMA scan case",
+                    recommendation_mode: recommendationMode,
+                    clinical_context_json: null
+                }
+            };
+
+            response = await apiFetch("/api/cases/create-from-import", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+
+            data = await response.json();
+        }
 
         if (!response.ok) {
             showError(data.detail || data || "Could not create case.");

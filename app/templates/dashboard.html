@@ -1,5 +1,3 @@
-
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -43,6 +41,8 @@
     justify-content: space-between;
     align-items: center;
     margin-bottom: 14px;
+    gap: 12px;
+    flex-wrap: wrap;
 }
 
 .secondary-btn {
@@ -122,12 +122,13 @@
                 <tr>
                     <th>Patient / Case</th>
                     <th>Version</th>
+                    <th>Scan date</th>
                     <th>Generated</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="reports-table-body">
-                <tr><td colspan="4">Loading…</td></tr>
+                <tr><td colspan="5">Loading…</td></tr>
             </tbody>
         </table>
     </div>
@@ -148,30 +149,17 @@
         box.style.display = "none";
     }
 
-    function getDisplayNameFromReport(report) {
-        const viewerPatient = report.viewer?.patient || {};
-        const tenantPatient = report.viewer?.patient_header || {};
-        return (
-            viewerPatient.full_name ||
-            [viewerPatient.first_name, viewerPatient.last_name].filter(Boolean).join(" ") ||
-            tenantPatient.full_name ||
-            report.case_title ||
-            report.case_name ||
-            `Case ${safeText(report.case_id)}`
-        );
-    }
-
     function renderDashboardRows() {
         const tbody = document.getElementById("reports-table-body");
         const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
 
         const filtered = dashboardRows.filter(item => {
-            const hay = `${item.display_name} ${item.generated_at || ""}`.toLowerCase();
+            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""} ${item.scan_datetime || ""}`.toLowerCase();
             return !query || hay.includes(query);
         });
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="4">No matching reports.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5">No matching reports.</td></tr>`;
             return;
         }
 
@@ -179,6 +167,7 @@
             <tr>
                 <td>${safeText(item.display_name)}</td>
                 <td>v${safeText(item.version_number)}</td>
+                <td>${formatDate(item.scan_datetime)}</td>
                 <td>${formatDate(item.generated_at)}</td>
                 <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
             </tr>
@@ -192,25 +181,39 @@
         if (!authed) return;
 
         try {
-            const res = await apiFetch("/api/reports");
-            if (!res.ok) {
-                const errorData = await res.json().catch(() => ({}));
+            const [reportsRes, casesRes] = await Promise.all([
+                apiFetch("/api/reports"),
+                apiFetch("/api/cases"),
+            ]);
+
+            if (!reportsRes.ok) {
+                const errorData = await reportsRes.json().catch(() => ({}));
                 showDashboardError(errorData.detail || "Could not load dashboard data.");
                 document.getElementById("reports-table-body").innerHTML =
-                    `<tr><td colspan="4">Could not load reports.</td></tr>`;
+                    `<tr><td colspan="5">Could not load reports.</td></tr>`;
                 return;
             }
 
-            const reports = await res.json();
+            const reports = await reportsRes.json();
             const reportList = Array.isArray(reports) ? reports : (reports.items || []);
+
+            const cases = casesRes.ok ? await casesRes.json() : [];
+            const caseList = Array.isArray(cases) ? cases : (cases.items || []);
+            const caseMap = {};
+            caseList.forEach(c => { caseMap[String(c.id)] = c; });
 
             dashboardRows = reportList
                 .slice()
                 .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
-                .map(r => ({
-                    ...r,
-                    display_name: getDisplayNameFromReport(r),
-                }));
+                .map(r => {
+                    const linkedCase = caseMap[String(r.case_id)] || {};
+                    return {
+                        ...r,
+                        display_name: r.display_name || linkedCase.display_name || linkedCase.title || `Case ${safeText(r.case_id)}`,
+                        patient_display_name: r.patient_display_name || linkedCase.patient_display_name || "",
+                        scan_datetime: r.scan_datetime || linkedCase.scan_datetime || null,
+                    };
+                });
 
             document.getElementById("total-reports").textContent = dashboardRows.length;
 
@@ -227,7 +230,7 @@
             console.error(err);
             showDashboardError("Unexpected error while loading dashboard.");
             document.getElementById("reports-table-body").innerHTML =
-                `<tr><td colspan="4">Unexpected error.</td></tr>`;
+                `<tr><td colspan="5">Unexpected error.</td></tr>`;
         }
     }
 
@@ -237,6 +240,3 @@
     loadDashboard();
 </script>
 {% endblock %}
-
-
-

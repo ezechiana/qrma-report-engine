@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -9,7 +10,7 @@
         <div style="font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; margin-bottom:8px;">
             Generated report
         </div>
-        <h2 id="report-page-title" style="margin:0 0 8px; font-size:28px; line-height:1.15;">Personalised Wellness Scan Report</h2>
+        <h2 id="report-page-title" style="margin:0 0 8px; font-size:28px; line-height:1.15;">Loading report…</h2>
         <div class="muted" style="font-size:15px; line-height:1.6;">
             Open the full report, download the PDF, or create a secure share link for the client.
         </div>
@@ -84,26 +85,19 @@
                 return;
             }
 
+            document.getElementById("report-page-title").textContent =
+                data.display_name || "Personalised Wellness Scan Report";
+
             document.getElementById("report-summary").innerHTML = `
-                <strong>Version ${safeText(data.version_number)}</strong><br>
-                Status: ${safeText(data.status)}<br>
-                Generated: ${formatDate(data.generated_at)}<br>
-                Case ID: ${safeText(data.case_id)}
+                <strong>${safeText(data.display_name)}</strong><br>
+                Patient: ${safeText(data.patient_display_name)}<br>
+                Version: v${safeText(data.version_number)}<br>
+                Scan date: ${formatDate(data.scan_datetime)}<br>
+                Generated: ${formatDate(data.generated_at)}
             `;
 
             document.getElementById("open-full-report-btn").href = `/app/reports/${reportId}/view`;
             document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
-
-            try {
-                const settingsRes = await apiFetch("/api/settings");
-                if (settingsRes.ok) {
-                    const settings = await settingsRes.json();
-                    document.getElementById("report-page-title").textContent =
-                        settings.report_title || "Personalised Wellness Scan Report";
-                }
-            } catch (e) {
-                console.warn("Could not load settings for report title", e);
-            }
         } catch (err) {
             console.error(err);
             setError("Unexpected error while loading report.");

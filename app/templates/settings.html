@@ -1,4 +1,5 @@
 
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -66,6 +67,8 @@
     margin-top: 8px;
     font-size: 12px;
     color: #64748b;
+    line-height: 1.5;
+    word-break: break-word;
 }
 
 .section-title {
@@ -120,7 +123,7 @@
                     <input id="logo_file" type="file" accept="image/*">
                     <button type="button" class="btn secondary" id="upload-logo-btn">Upload logo</button>
                 </div>
-                <div class="help-text">Use a clean PNG or SVG-style image on a transparent or white background. Best for report branding and viewer header.</div>
+                <div class="help-text">Use a clean PNG, JPG, WEBP, GIF or SVG-style image on a transparent or white background. Best for report branding and the report viewer header.</div>
                 <img id="logo_preview" class="asset-preview" alt="Logo preview">
                 <div id="logo_meta" class="asset-meta"></div>
             </div>
@@ -134,7 +137,7 @@
                     <input id="cover_file" type="file" accept="image/*">
                     <button type="button" class="btn secondary" id="upload-cover-btn">Upload cover image</button>
                 </div>
-                <div class="help-text">Used mainly for the PDF/report cover at present. Choose a wide landscape image for best results.</div>
+                <div class="help-text">Used mainly for PDF generation at present. Choose a wide landscape image for best results.</div>
                 <img id="cover_preview" class="asset-preview" alt="Cover preview">
                 <div id="cover_meta" class="asset-meta"></div>
             </div>
@@ -222,19 +225,19 @@
         });
     }
 
-    function updatePreview(imgId, metaId, url) {
+    function updatePreview(imgId, metaId, previewUrl, storedValue) {
         const img = document.getElementById(imgId);
         const meta = document.getElementById(metaId);
 
-        if (url) {
-            img.src = url;
+        if (previewUrl) {
+            img.src = previewUrl;
             img.style.display = "block";
-            meta.textContent = url;
         } else {
             img.removeAttribute("src");
             img.style.display = "none";
-            meta.textContent = "";
         }
+
+        meta.textContent = storedValue || "";
     }
 
     async function loadSettings() {
@@ -264,8 +267,8 @@
             data.recommendation_mode_default || "natural_approaches_clinical";
 
         setSwatchActive(data.accent_color || "#2f6fed");
-        updatePreview("logo_preview", "logo_meta", data.logo_url || "");
-        updatePreview("cover_preview", "cover_meta", data.cover_image_url || "");
+        updatePreview("logo_preview", "logo_meta", data.logo_preview_url || data.logo_url || "", data.logo_url || "");
+        updatePreview("cover_preview", "cover_meta", data.cover_image_preview_url || data.cover_image_url || "", data.cover_image_url || "");
     }
 
     async function saveSettings() {
@@ -297,6 +300,7 @@
         }
 
         setSuccess("Settings saved.");
+        await loadSettings();
     }
 
     async function uploadBrandAsset(fileInputId, endpoint, hiddenInputId, previewImgId, previewMetaId) {
@@ -328,9 +332,8 @@
             return;
         }
 
-        const url = data.url || "";
-        document.getElementById(hiddenInputId).value = url;
-        updatePreview(previewImgId, previewMetaId, url);
+        document.getElementById(hiddenInputId).value = data.storage_key || "";
+        updatePreview(previewImgId, previewMetaId, data.url || "", data.storage_key || "");
         setSuccess("File uploaded successfully. Click Save settings to persist it.");
     }
 

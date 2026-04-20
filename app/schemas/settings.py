@@ -22,6 +22,9 @@ class PractitionerSettingsRead(BaseModel):
 
     recommendation_mode_default: str = "natural_approaches_clinical"
 
+    logo_preview_url: Optional[str] = None
+    cover_image_preview_url: Optional[str] = None
+
     created_at: Optional[datetime] = None
     updated_at: Optional[datetime] = None
 
@@ -39,3 +42,10 @@ class PractitionerSettingsUpdate(BaseModel):
     website_url: Optional[str] = None
 
     recommendation_mode_default: Optional[str] = None
+
+
+class BrandAssetUploadResponse(BaseModel):
+    storage_key: str
+    url: str
+    content_type: str
+    size_bytes: int

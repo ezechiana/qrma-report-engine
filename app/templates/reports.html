@@ -1,20 +1,44 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.reports-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.reports-search {
+    max-width: 320px;
+}
+
+.reports-sort {
+    max-width: 180px;
+}
+</style>
+
 <div id="auth-warning" class="error" style="display:none;"></div>
 
-<div class="card">
-    <h2>Reports</h2>
-    <p class="muted">Recent report versions generated from your cases.</p>
-</div>
+<p class="muted" style="margin-bottom:20px;">Recent report versions generated from your cases.</p>
 
 <div class="card">
+    <div class="reports-toolbar">
+        <input id="reports-search" class="reports-search" placeholder="Search patient or case name" />
+        <select id="reports-sort" class="reports-sort">
+            <option value="newest">Newest first</option>
+            <option value="oldest">Oldest first</option>
+        </select>
+    </div>
+
     <table class="table">
         <thead>
             <tr>
-                <th>Case</th>
+                <th>Patient / Case</th>
                 <th>Version</th>
-                <th>Status</th>
+                <th>Scan date</th>
                 <th>Generated</th>
                 <th></th>
             </tr>
@@ -26,21 +50,44 @@
 </div>
 
 <script>
+    let allReports = [];
+
     function showReportsError(message) {
         const box = document.getElementById("auth-warning");
         box.style.display = "block";
         box.textContent = message;
     }
 
-    function getCaseDisplayName(item) {
-        return (
-            item.patient_name ||
-            item.title ||
-            item.patient?.full_name ||
-            [item.patient?.first_name, item.patient?.last_name].filter(Boolean).join(" ") ||
-            item.source_patient_data_json?.full_name ||
-            "Untitled case"
-        );
+    function renderReports() {
+        const tbody = document.getElementById("reports-body");
+        const query = (document.getElementById("reports-search").value || "").trim().toLowerCase();
+        const sort = document.getElementById("reports-sort").value;
+
+        const filtered = allReports
+            .filter(item => {
+                const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""} ${item.scan_datetime || ""}`.toLowerCase();
+                return !query || hay.includes(query);
+            })
+            .sort((a, b) => {
+                const ad = new Date(a.generated_at || 0).getTime();
+                const bd = new Date(b.generated_at || 0).getTime();
+                return sort === "oldest" ? ad - bd : bd - ad;
+            });
+
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="5" class="muted">No reports found.</td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filtered.map(item => `
+            <tr>
+                <td>${safeText(item.display_name)}</td>
+                <td>v${safeText(item.version_number)}</td>
+                <td>${formatDate(item.scan_datetime)}</td>
+                <td>${formatDate(item.generated_at)}</td>
+                <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
+            </tr>
+        `).join("");
     }
 
     async function loadReportsPage() {
@@ -48,56 +95,26 @@
         if (!authed) return;
 
         try {
-            const casesResponse = await apiFetch("/api/cases");
-            if (!casesResponse.ok) {
-                const err = await casesResponse.json().catch(() => ({}));
+            const response = await apiFetch("/api/reports");
+
+            if (!response.ok) {
+                const err = await response.json().catch(() => ({}));
                 showReportsError(err.detail || "Could not load reports.");
                 return;
             }
 
-            const cases = await casesResponse.json();
-            const caseList = Array.isArray(cases) ? cases : (cases.items || []);
-            const reportRows = [];
+            const reports = await response.json();
+            allReports = Array.isArray(reports) ? reports : (reports.items || []);
 
-            for (const item of caseList) {
-                try {
-                    const latestResponse = await apiFetch(`/api/cases/${item.id}/latest-report`);
-                    if (!latestResponse.ok) continue;
-
-                    const latest = await latestResponse.json();
-
-                    reportRows.push({
-                        ...latest,
-                        patient_name: getCaseDisplayName(item),
-                    });
-                } catch (e) {
-                    console.warn("Skipping latest-report lookup for case", item.id, e);
-                }
-            }
-
-            const tbody = document.getElementById("reports-body");
-
-            if (!reportRows.length) {
-                tbody.innerHTML = `<tr><td colspan="5" class="muted">No reports yet.</td></tr>`;
-                return;
-            }
-
-            tbody.innerHTML = reportRows
-                .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
-                .map(item => `
-                    <tr>
-                        <td>${safeText(item.patient_name)}</td>
-                        <td>v${safeText(item.version_number)}</td>
-                        <td>${safeText(item.status)}</td>
-                        <td>${formatDate(item.generated_at)}</td>
-                        <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
-                    </tr>
-                `).join("");
+            renderReports();
         } catch (err) {
             console.error(err);
             showReportsError("Unexpected error while loading reports.");
         }
     }
+
+    document.getElementById("reports-search").addEventListener("input", renderReports);
+    document.getElementById("reports-sort").addEventListener("change", renderReports);
 
     loadReportsPage();
 </script>

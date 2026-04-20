@@ -1,5 +1,6 @@
 import re
 from bs4 import BeautifulSoup
+from datetime import datetime
 
 from app.models.schema import ParsedReport, Patient, ReportSection, ParameterResult
 from app.services.category_completeness_validator import attach_category_completeness

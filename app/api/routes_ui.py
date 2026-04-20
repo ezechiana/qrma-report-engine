@@ -140,6 +140,28 @@ def case_detail_page(case_id: str, request: Request):
         },
     )
 
+@router.get("/app/patients")
+def patients_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="patients.html",
+        context={
+            "request": request,
+            "title": "Patients",
+        },
+    )
+@router.get("/app/patients/{patient_id}")
+def patient_detail_page(patient_id: str, request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="patient_detail.html",
+        context={
+            "request": request,
+            "title": "Patient Detail",
+            "patient_id": patient_id,
+        },
+    )
+
 @router.get("/app/reports/{report_id}/view")
 def report_full_page(
     report_id: str,

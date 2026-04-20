@@ -1,4 +1,3 @@
-
 from datetime import datetime
 from typing import Optional, Any
 from uuid import UUID
@@ -22,6 +21,11 @@ class ReportVersionRead(BaseModel):
     build_version: Optional[str] = None
     recommendation_mode: str
     generated_at: datetime
+
+    display_name: Optional[str] = None
+    patient_display_name: Optional[str] = None
+    case_title: Optional[str] = None
+    scan_datetime: Optional[datetime] = None
 
 
 class ReportOverrideUpdate(BaseModel):

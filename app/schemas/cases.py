@@ -1,5 +1,3 @@
-#app/schemas/cases.py
-
 from datetime import datetime, date
 from typing import Optional, Any
 from uuid import UUID
@@ -24,6 +22,7 @@ class CaseCreate(BaseModel):
     recommendation_mode: str = "natural_approaches_clinical"
     clinical_context_json: Optional[ClinicalContext] = None
 
+
 class CaseCreateFromImport(BaseModel):
     title: str
     recommendation_mode: str = "natural_approaches_clinical"
@@ -43,6 +42,8 @@ class CaseRead(BaseModel):
     id: UUID
     patient_id: UUID
     title: str
+    display_name: Optional[str] = None
+    patient_display_name: Optional[str] = None
     status: str
     recommendation_mode: str
     clinical_context_json: Optional[dict] = None
@@ -82,7 +83,7 @@ class CreateFromImportRequest(BaseModel):
     case: CaseCreateFromImport
 
 
-#app/schemas/reports.py
+
 
 from datetime import datetime
 from typing import Optional, Any
@@ -107,6 +108,11 @@ class ReportVersionRead(BaseModel):
     build_version: Optional[str] = None
     recommendation_mode: str
     generated_at: datetime
+
+    display_name: Optional[str] = None
+    patient_display_name: Optional[str] = None
+    case_title: Optional[str] = None
+    scan_datetime: Optional[datetime] = None
 
 
 class ReportOverrideUpdate(BaseModel):

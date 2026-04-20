@@ -1,7 +1,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException, Request
-from fastapi.responses import FileResponse, JSONResponse, HTMLResponse, RedirectResponse
+from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
 
@@ -14,6 +14,75 @@ from app.services.storage_service import object_exists, generate_presigned_url
 
 templates = Jinja2Templates(directory="app/templates")
 router = APIRouter(prefix="/api/reports", tags=["reports"])
+
+
+def _patient_display_name_from_case(case: Case | None) -> str | None:
+    if not case:
+        return None
+
+    patient = getattr(case, "patient", None)
+    if patient:
+        full_name = getattr(patient, "full_name", None)
+        if full_name:
+            return full_name
+
+        first_name = getattr(patient, "first_name", None)
+        last_name = getattr(patient, "last_name", None)
+        joined = " ".join(part for part in [first_name, last_name] if part)
+        if joined:
+            return joined
+
+    source_data = case.source_patient_data_json or {}
+    full_name = source_data.get("full_name")
+    if full_name:
+        return full_name
+
+    first_name = source_data.get("first_name")
+    last_name = source_data.get("last_name")
+    joined = " ".join(part for part in [first_name, last_name] if part)
+    return joined or None
+
+
+def _case_display_name(case: Case | None) -> str | None:
+    if not case:
+        return None
+
+    patient_name = _patient_display_name_from_case(case)
+    if case.scan_datetime:
+        date_text = case.scan_datetime.strftime("%d %b %Y")
+    else:
+        date_text = case.created_at.strftime("%d %b %Y") if case.created_at else None
+
+    if patient_name and date_text:
+        return f"{patient_name} — {date_text}"
+    if patient_name:
+        return patient_name
+    if case.title:
+        return case.title
+    return f"Case {str(case.id)[:8]}"
+
+
+def _serialise_report(report: ReportVersion) -> dict:
+    case = getattr(report, "case", None)
+
+    return {
+        "id": report.id,
+        "case_id": report.case_id,
+        "version_number": report.version_number,
+        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+        "build_version": getattr(report, "build_version", None),
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
+        "generated_at": report.generated_at,
+        "display_name": _case_display_name(case),
+        "patient_display_name": _patient_display_name_from_case(case),
+        "case_title": case.title if case else None,
+        "scan_datetime": case.scan_datetime if case else None,
+    }
+
 
 def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}
@@ -73,7 +142,6 @@ def _get_viewer_payload_for_report(report: ReportVersion) -> dict:
     }
 
 
-
 def _get_owned_report(
     db: Session,
     current_user: User,
@@ -95,13 +163,14 @@ def list_reports(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
+    reports = (
         db.query(ReportVersion)
         .join(Case, Case.id == ReportVersion.case_id)
         .filter(Case.user_id == current_user.id)
         .order_by(ReportVersion.generated_at.desc())
         .all()
     )
+    return [_serialise_report(report) for report in reports]
 
 
 @router.get("/case/{case_id}", response_model=list[ReportVersionRead])
@@ -118,12 +187,13 @@ def list_case_reports(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    return (
+    reports = (
         db.query(ReportVersion)
         .filter(ReportVersion.case_id == case.id)
         .order_by(ReportVersion.version_number.desc())
         .all()
     )
+    return [_serialise_report(report) for report in reports]
 
 
 @router.get("/{report_version_id}", response_model=ReportVersionRead)
@@ -135,7 +205,8 @@ def get_report_metadata(
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    return report
+    return _serialise_report(report)
+
 
 @router.get("/{report_version_id}/viewer", response_class=HTMLResponse)
 def get_report_viewer(
@@ -188,6 +259,7 @@ def get_report_status(
     return {
         "report_version_id": str(report.id),
         "case_id": str(report.case_id),
+        "display_name": _case_display_name(getattr(report, "case", None)),
         "version_number": report.version_number,
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
         "recommendation_mode": (
@@ -243,6 +315,7 @@ def get_report_viewer_payload(
     return {
         "report_version_id": str(report.id),
         "case_id": str(report.case_id),
+        "display_name": _case_display_name(getattr(report, "case", None)),
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
         "recommendation_mode": (
             report.recommendation_mode.value
@@ -305,7 +378,6 @@ def get_report_html(
 
     signed_url = generate_presigned_url(report.html_path)
     return RedirectResponse(url=signed_url, status_code=302)
-
 
 
 @router.patch("/{report_version_id}/overrides")

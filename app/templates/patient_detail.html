@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div id="patient-error" class="error" style="display:none;"></div>
+
+<div class="card">
+    <h2 id="patient-name">Loading patient…</h2>
+    <div id="patient-summary" class="muted">Please wait…</div>
+</div>
+
+<div class="card">
+    <h3>Cases</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Case</th>
+                <th>Status</th>
+                <th>Scan date</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="patient-cases-body">
+            <tr><td colspan="5" class="muted">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<div class="card">
+    <h3>Reports</h3>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Report</th>
+                <th>Version</th>
+                <th>Generated</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="patient-reports-body">
+            <tr><td colspan="4" class="muted">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    const patientId = "{{ patient_id }}";
+
+    function showPatientError(message) {
+        const box = document.getElementById("patient-error");
+        box.style.display = "block";
+        box.textContent = message;
+    }
+
+    function patientName(patient) {
+        return (
+            patient.full_name ||
+            [patient.first_name, patient.last_name].filter(Boolean).join(" ") ||
+            "Unnamed patient"
+        );
+    }
+
+    async function loadPatientDetail() {
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
+
+        try {
+            const [patientRes, casesRes, reportsRes] = await Promise.all([
+                apiFetch(`/api/patients/${patientId}`),
+                apiFetch(`/api/patients/${patientId}/cases`),
+                apiFetch(`/api/patients/${patientId}/reports`)
+            ]);
+
+            const patientData = await patientRes.json().catch(() => ({}));
+            const casesData = await casesRes.json().catch(() => ([]));
+            const reportsData = await reportsRes.json().catch(() => ([]));
+
+            if (!patientRes.ok) {
+                showPatientError(patientData.detail || "Could not load patient.");
+                return;
+            }
+
+            document.getElementById("patient-name").textContent = patientName(patientData);
+            document.getElementById("patient-summary").innerHTML = `
+                Sex: ${safeText(patientData.sex)}<br>
+                Age: ${safeText(patientData.age)}<br>
+                Date of birth: ${safeText(patientData.date_of_birth)}
+            `;
+
+            const casesBody = document.getElementById("patient-cases-body");
+            const caseRows = Array.isArray(casesData) ? casesData : (casesData.items || []);
+            casesBody.innerHTML = caseRows.length ? caseRows.map(item => `
+                <tr>
+                    <td>${safeText(item.display_name || item.title)}</td>
+                    <td>${safeText(item.status)}</td>
+                    <td>${formatDate(item.scan_datetime)}</td>
+                    <td>${formatDate(item.created_at)}</td>
+                    <td><a class="link" href="/app/cases/${item.id}">Open</a></td>
+                </tr>
+            `).join("") : `<tr><td colspan="5" class="muted">No cases yet.</td></tr>`;
+
+            const reportsBody = document.getElementById("patient-reports-body");
+            const reportRows = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
+            reportsBody.innerHTML = reportRows.length ? reportRows.map(item => `
+                <tr>
+                    <td>${safeText(item.display_name || item.case_title)}</td>
+                    <td>v${safeText(item.version_number)}</td>
+                    <td>${formatDate(item.generated_at)}</td>
+                    <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
+                </tr>
+            `).join("") : `<tr><td colspan="4" class="muted">No reports yet.</td></tr>`;
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while loading patient detail.");
+        }
+    }
+
+    loadPatientDetail();
+</script>
+{% endblock %}

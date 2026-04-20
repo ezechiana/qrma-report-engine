@@ -65,17 +65,88 @@ def _get_owned_patient(
     )
 
 
+def _patient_display_name(patient: Patient | None, source_patient_data_json: dict | None = None) -> str | None:
+    if patient:
+        full_name = getattr(patient, "full_name", None)
+        if full_name:
+            return full_name
+
+        first_name = getattr(patient, "first_name", None)
+        last_name = getattr(patient, "last_name", None)
+        joined = " ".join(part for part in [first_name, last_name] if part)
+        if joined:
+            return joined
+
+    source_patient_data_json = source_patient_data_json or {}
+    full_name = source_patient_data_json.get("full_name")
+    if full_name:
+        return full_name
+
+    first_name = source_patient_data_json.get("first_name")
+    last_name = source_patient_data_json.get("last_name")
+    joined = " ".join(part for part in [first_name, last_name] if part)
+    return joined or None
+
+
+def _case_display_name(case: Case) -> str:
+    patient_name = _patient_display_name(
+        getattr(case, "patient", None),
+        case.source_patient_data_json or {},
+    )
+
+    if case.scan_datetime:
+        date_text = case.scan_datetime.strftime("%d %b %Y")
+    else:
+        date_text = case.created_at.strftime("%d %b %Y") if case.created_at else None
+
+    if patient_name and date_text:
+        return f"{patient_name} — {date_text}"
+    if patient_name:
+        return patient_name
+    if case.title:
+        return case.title
+    return f"Case {str(case.id)[:8]}"
+
+
+def _serialize_case(case: Case) -> dict:
+    patient_name = _patient_display_name(
+        getattr(case, "patient", None),
+        case.source_patient_data_json or {},
+    )
+
+    return {
+        "id": case.id,
+        "patient_id": case.patient_id,
+        "title": case.title,
+        "display_name": _case_display_name(case),
+        "patient_display_name": patient_name,
+        "status": case.status.value if hasattr(case.status, "value") else str(case.status),
+        "recommendation_mode": (
+            case.recommendation_mode.value
+            if hasattr(case.recommendation_mode, "value")
+            else str(case.recommendation_mode)
+        ),
+        "clinical_context_json": case.clinical_context_json,
+        "source_patient_data_json": case.source_patient_data_json,
+        "raw_scan_html_path": case.raw_scan_html_path,
+        "scan_datetime": case.scan_datetime,
+        "created_at": case.created_at,
+        "updated_at": case.updated_at,
+    }
+
+
 @router.get("", response_model=list[CaseRead])
 def list_cases(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return (
+    cases = (
         db.query(Case)
         .filter(Case.user_id == current_user.id)
         .order_by(Case.created_at.desc())
         .all()
     )
+    return [_serialize_case(case) for case in cases]
 
 
 @router.get("/patient/{patient_id}", response_model=list[CaseRead])
@@ -88,12 +159,13 @@ def list_patient_cases(
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    return (
+    cases = (
         db.query(Case)
         .filter(Case.patient_id == patient.id, Case.user_id == current_user.id)
         .order_by(Case.created_at.desc())
         .all()
     )
+    return [_serialize_case(case) for case in cases]
 
 
 @router.post("", response_model=CaseRead)
@@ -108,7 +180,7 @@ def create_case_endpoint(
 
     case = create_case(db, current_user, patient, payload)
     log_action(db, "case_created", user_id=current_user.id, case_id=case.id)
-    return case
+    return _serialize_case(case)
 
 
 @router.get("/{case_id}", response_model=CaseRead)
@@ -120,7 +192,7 @@ def get_case(
     case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-    return case
+    return _serialize_case(case)
 
 
 @router.get("/{case_id}/status")
@@ -137,6 +209,7 @@ def get_case_status(
         "case_id": str(case.id),
         "patient_id": str(case.patient_id),
         "title": case.title,
+        "display_name": _case_display_name(case),
         "status": case.status.value if hasattr(case.status, "value") else str(case.status),
         "recommendation_mode": (
             case.recommendation_mode.value
@@ -155,11 +228,6 @@ def get_latest_report_for_case(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Return the latest report version for a case owned by the current user.
-    This is intended for practitioner UI convenience and avoids the UI having
-    to infer latest report state client-side.
-    """
     case = (
         db.query(Case)
         .filter(Case.id == case_id, Case.user_id == current_user.id)
@@ -192,9 +260,13 @@ def get_latest_report_for_case(
             if hasattr(report.recommendation_mode, "value")
             else str(report.recommendation_mode)
         ),
+        "display_name": _case_display_name(case),
+        "patient_display_name": _patient_display_name(
+            getattr(case, "patient", None),
+            case.source_patient_data_json or {},
+        ),
+        "scan_datetime": case.scan_datetime.isoformat() if case.scan_datetime else None,
     }
-
-
 
 
 @router.patch("/{case_id}", response_model=CaseRead)
@@ -207,17 +279,14 @@ def update_case_endpoint(
     case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-    return update_case(db, case, payload)
+    updated = update_case(db, case, payload)
+    return _serialize_case(updated)
 
 
 @router.post("/import-from-html", response_model=ImportFromHtmlResponse)
 async def import_from_html(
     file: UploadFile = File(...),
 ):
-    """
-    Upload QRMA HTML, save it temporarily, and return parsed patient/scan metadata
-    for practitioner confirmation before creating the patient/case.
-    """
     content = await file.read()
     temp_id, _ = save_temp_html(content)
     parsed = parse_qrma_html(content)
@@ -235,10 +304,6 @@ def create_from_import(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Create patient + case from a previously uploaded QRMA HTML temp file,
-    then persist the HTML into case storage for later report generation.
-    """
     patient_payload = PatientCreate(
         first_name=payload.patient.first_name or "",
         last_name=payload.patient.last_name or "",
@@ -260,6 +325,10 @@ def create_from_import(
 
     case.source_patient_data_json = make_json_safe(payload.patient.model_dump())
     case.raw_scan_html_path = raw_scan_html_path
+
+    scan_metadata = getattr(payload, "scan_metadata", None)
+    if scan_metadata and getattr(scan_metadata, "scan_datetime", None):
+        case.scan_datetime = scan_metadata.scan_datetime
     db.commit()
     db.refresh(case)
 
@@ -283,10 +352,6 @@ async def generate_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """
-    Generate a new report version for a case by loading the stored QRMA HTML,
-    running the SaaS lifecycle-aware report pipeline, and building HTML/PDF output.
-    """
     case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
@@ -303,4 +368,59 @@ async def generate_report(
         "report_version_id": report.id,
         "version_number": report.version_number,
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+    }
+
+
+@router.post("/from-existing-patient-import")
+def create_from_existing_patient_import(
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    from app.services.case_service import create_case
+    from app.services.scan_import_service import load_temp_html, save_case_html
+    from app.schemas.cases import CaseCreateFromImport
+
+    patient_id = payload.get("patient_id")
+    temporary_upload_id = payload.get("temporary_upload_id")
+    case_payload = payload.get("case", {})
+    scan_metadata = payload.get("scan_metadata")
+
+    if not patient_id:
+        raise HTTPException(status_code=400, detail="Missing patient_id")
+
+    patient = db.query(Patient).filter(
+        Patient.id == patient_id,
+        Patient.user_id == current_user.id
+    ).first()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    case = create_case(
+        db,
+        current_user,
+        patient,
+        CaseCreateFromImport(**case_payload)
+    )
+
+    # Attach HTML
+    html_bytes = load_temp_html(temporary_upload_id)
+    path = save_case_html(
+        case_id=str(case.id),
+        user_id=str(current_user.id),
+        file_bytes=html_bytes,
+    )
+
+    case.raw_scan_html_path = path
+
+    # Persist scan datetime if available
+    if scan_metadata and scan_metadata.get("scan_datetime"):
+        case.scan_datetime = scan_metadata.get("scan_datetime")
+
+    db.commit()
+    db.refresh(case)
+
+    return {
+        "case_id": case.id
     }

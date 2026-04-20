@@ -5,7 +5,7 @@
 <div id="success-box" class="success" style="display:none;"></div>
 
 <div class="card">
-    <h2>Case detail</h2>
+    <h2 id="case-page-title">Case detail</h2>
     <div id="case-summary" class="muted">Loading case…</div>
 </div>
 
@@ -62,17 +62,6 @@
         box.textContent = "";
     }
 
-    function getCaseDisplayName(caseData) {
-        return (
-            caseData.patient?.full_name ||
-            caseData.patient_name ||
-            [caseData.patient?.first_name, caseData.patient?.last_name].filter(Boolean).join(" ") ||
-            caseData.source_patient_data_json?.full_name ||
-            caseData.title ||
-            "Unnamed case"
-        );
-    }
-
     async function loadCase() {
         clearError();
 
@@ -88,10 +77,12 @@
                 return;
             }
 
-            const patient = getCaseDisplayName(caseData);
+            document.getElementById("case-page-title").textContent = caseData.display_name || "Case detail";
 
             document.getElementById("case-summary").innerHTML = `
-                <strong>${patient}</strong><br>
+                <strong>${safeText(caseData.display_name)}</strong><br>
+                Patient: ${safeText(caseData.patient_display_name)}<br>
+                Scan date: ${formatDate(caseData.scan_datetime)}<br>
                 Status: ${safeText(caseData.status)}<br>
                 Created: ${formatDate(caseData.created_at)}
             `;
@@ -100,11 +91,11 @@
             if (latestReportResponse.ok) {
                 const latest = await latestReportResponse.json();
                 latestReportId = latest?.id || latest?.report_version_id || null;
+                renderLatestReport(latest);
             } else {
                 latestReportId = null;
+                renderLatestReport(null);
             }
-
-            renderLatestReport();
         } catch (err) {
             console.error(err);
             setError("Unexpected error while loading case.");
@@ -128,14 +119,14 @@
 
             latestReportId = data.report_version_id;
             setSuccess(`Report generated successfully${data.version_number ? ` (v${data.version_number})` : ""}.`);
-            renderLatestReport();
+            await loadCase();
         } catch (err) {
             console.error(err);
             setError("Unexpected error while generating report.");
         }
     }
 
-    function renderLatestReport() {
+    function renderLatestReport(latest) {
         const block = document.getElementById("latest-report-block");
 
         if (!latestReportId) {
@@ -144,7 +135,12 @@
         }
 
         block.innerHTML = `
-            <div><strong>Report ready</strong></div>
+            <div><strong>${safeText(latest?.display_name || "Report ready")}</strong></div>
+            <div class="muted" style="margin-top:6px;">
+                Version: v${safeText(latest?.version_number)}<br>
+                Scan date: ${formatDate(latest?.scan_datetime)}<br>
+                Generated: ${formatDate(latest?.generated_at)}
+            </div>
             <div class="btn-row" style="margin-top:10px;">
                 <a class="btn" href="/app/reports/${latestReportId}">Open report workspace</a>
                 <a class="btn secondary" href="/app/reports/${latestReportId}/view">Open full report</a>

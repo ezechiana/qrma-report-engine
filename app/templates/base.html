@@ -466,6 +466,7 @@
         <nav>
             <a href="/app" id="nav-dashboard">Dashboard</a>
             <a href="/app/cases/new" id="nav-new-case">New case</a>
+            <a href="/app/patients" id="nav-patients">Patients</a>
             <a href="/app/reports" id="nav-reports">Reports</a>
             <a href="/app/settings" id="nav-settings">Settings</a>
             <a href="/app/billing" id="nav-billing">Billing</a>
@@ -522,8 +523,10 @@
             document.getElementById("nav-settings")?.classList.add("active");
         } else if (path.startsWith("/app/billing")) {
             document.getElementById("nav-billing")?.classList.add("active");
-        }
+        } else if (path.startsWith("/app/patients")) {
+            document.getElementById("nav-patients")?.classList.add("active");
 
+            
         const sidebar = document.getElementById("app-sidebar");
         const backdrop = document.getElementById("sidebar-backdrop");
         const openBtn = document.getElementById("mobile-menu-btn");

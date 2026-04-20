@@ -4,9 +4,8 @@ from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
-
 from app.api.deps import get_current_user, get_db
-from app.db.models import Patient, User
+from app.db.models import Patient, User, Case, ReportVersion
 from app.schemas.patients import PatientCreate, PatientRead, PatientUpdate
 from app.services.patient_service import create_patient, update_patient
 
@@ -47,3 +46,59 @@ def update_patient_endpoint(
         raise HTTPException(status_code=404, detail="Patient not found")
     return update_patient(db, patient, payload)
 
+
+
+
+@router.get("/{patient_id}/cases")
+def get_patient_cases(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    patient = db.query(Patient).filter(
+        Patient.id == patient_id,
+        Patient.user_id == current_user.id
+    ).first()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    cases = (
+        db.query(Case)
+        .filter(
+            Case.patient_id == patient.id,
+            Case.user_id == current_user.id
+        )
+        .order_by(Case.created_at.desc())
+        .all()
+    )
+
+    return cases
+
+
+@router.get("/{patient_id}/reports")
+def get_patient_reports(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    patient = db.query(Patient).filter(
+        Patient.id == patient_id,
+        Patient.user_id == current_user.id
+    ).first()
+
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    reports = (
+        db.query(ReportVersion)
+        .join(Case, ReportVersion.case_id == Case.id)
+        .filter(
+            Case.patient_id == patient.id,
+            Case.user_id == current_user.id
+        )
+        .order_by(ReportVersion.generated_at.desc())
+        .all()
+    )
+
+    return reports

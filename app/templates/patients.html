@@ -1,0 +1,144 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.patients-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.patients-search {
+    max-width: 320px;
+}
+
+.patients-sort {
+    max-width: 200px;
+}
+
+.empty-state {
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+}
+</style>
+
+<div id="patients-error" class="error" style="display:none;"></div>
+
+<p class="muted" style="margin-bottom:20px;">Search and manage patients across all imported scan cases.</p>
+
+<div class="card">
+    <div class="patients-toolbar">
+        <input id="patients-search" class="patients-search" placeholder="Search patient name" />
+        <select id="patients-sort" class="patients-sort">
+            <option value="recent">Recent activity</option>
+            <option value="name_asc">Name A–Z</option>
+            <option value="name_desc">Name Z–A</option>
+        </select>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Patient</th>
+                <th>Sex</th>
+                <th>Age</th>
+                <th>Last activity</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="patients-body">
+            <tr><td colspan="5" class="muted">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let allPatients = [];
+
+    function showPatientsError(message) {
+        const box = document.getElementById("patients-error");
+        box.style.display = "block";
+        box.textContent = message;
+    }
+
+    function clearPatientsError() {
+        const box = document.getElementById("patients-error");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function patientName(patient) {
+        return (
+            patient.full_name ||
+            [patient.first_name, patient.last_name].filter(Boolean).join(" ") ||
+            "Unnamed patient"
+        );
+    }
+
+    function renderPatients() {
+        const tbody = document.getElementById("patients-body");
+        const query = (document.getElementById("patients-search").value || "").trim().toLowerCase();
+        const sort = document.getElementById("patients-sort").value;
+
+        let rows = allPatients.filter(item => {
+            const hay = `${patientName(item)} ${item.sex || ""} ${item.age || ""}`.toLowerCase();
+            return !query || hay.includes(query);
+        });
+
+        if (sort === "name_asc") {
+            rows.sort((a, b) => patientName(a).localeCompare(patientName(b)));
+        } else if (sort === "name_desc") {
+            rows.sort((a, b) => patientName(b).localeCompare(patientName(a)));
+        } else {
+            rows.sort((a, b) => new Date(b.last_activity_at || 0) - new Date(a.last_activity_at || 0));
+        }
+
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="5"><div class="empty-state">No patients found.</div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rows.map(item => `
+            <tr>
+                <td>${safeText(patientName(item))}</td>
+                <td>${safeText(item.sex)}</td>
+                <td>${safeText(item.age)}</td>
+                <td>${formatDate(item.last_activity_at)}</td>
+                <td><a class="link" href="/app/patients/${item.id}">Open</a></td>
+            </tr>
+        `).join("");
+    }
+
+    async function loadPatients() {
+        clearPatientsError();
+
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
+
+        try {
+            const response = await apiFetch("/api/patients");
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showPatientsError(data.detail || "Could not load patients.");
+                return;
+            }
+
+            allPatients = Array.isArray(data) ? data : (data.items || []);
+            renderPatients();
+        } catch (err) {
+            console.error(err);
+            showPatientsError("Unexpected error while loading patients.");
+        }
+    }
+
+    document.getElementById("patients-search").addEventListener("input", renderPatients);
+    document.getElementById("patients-sort").addEventListener("change", renderPatients);
+
+    loadPatients();
+</script>
+{% endblock %}
