@@ -6,7 +6,7 @@ from uuid import UUID
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
-from app.db.models import User
+from app.db.models import RecommendationMode, User
 from app.schemas.auth import (
     AuthLoginRequest,
     AuthRegisterRequest,
@@ -26,6 +26,32 @@ def utcnow() -> datetime:
     return datetime.now(timezone.utc)
 
 
+def _validate_password_strength(password: str) -> None:
+    if len(password) < 10:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must be at least 10 characters.",
+        )
+
+    if not any(ch.isupper() for ch in password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one uppercase letter.",
+        )
+
+    if not any(ch.islower() for ch in password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one lowercase letter.",
+        )
+
+    if not any(ch.isdigit() for ch in password):
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Password must contain at least one number.",
+        )
+
+
 def get_user_by_email(db: Session, email: str) -> User | None:
     return db.query(User).filter(User.email == email.lower().strip()).first()
 
@@ -42,6 +68,8 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
             detail="An account with this email already exists.",
         )
 
+    _validate_password_strength(payload.password)
+
     user = User(
         email=payload.email.lower().strip(),
         password_hash=hash_password(payload.password),
@@ -51,7 +79,7 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
         is_active=True,
         email_verified_at=None,
         last_login_at=None,
-        recommendation_mode_default="natural_approaches_clinical",
+        recommendation_mode_default=RecommendationMode.natural_approaches_clinical,
         logo_url=None,
         primary_color=None,
         accent_color=None,
@@ -186,6 +214,8 @@ def change_password(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="Current password is incorrect.",
         )
+
+    _validate_password_strength(new_password)
 
     user.password_hash = hash_password(new_password)
     db.commit()

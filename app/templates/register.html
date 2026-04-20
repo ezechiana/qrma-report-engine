@@ -1,127 +1,761 @@
+
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Register</title>
+    <title>Create account · go360</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
-        body {
+        :root {
+            --bg: #eef3ef;
+            --panel: #ffffff;
+            --panel-soft: rgba(255,255,255,0.88);
+            --text: #10201b;
+            --muted: #5f6f68;
+            --line: #d9e4dd;
+            --green: #1ea672;
+            --green-dark: #17865c;
+            --green-soft: #e9f7f0;
+            --gold: #d2b03f;
+            --danger: #b42318;
+            --danger-bg: #fef3f2;
+            --shadow: 0 20px 50px rgba(16, 32, 27, 0.10);
+        }
+
+        * { box-sizing: border-box; }
+
+        html, body {
             margin: 0;
+            min-height: 100%;
             font-family: Arial, sans-serif;
-            background: #f3f4f6;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            color: var(--text);
+            background:
+                radial-gradient(circle at top left, rgba(210,176,63,0.18), transparent 26%),
+                radial-gradient(circle at bottom right, rgba(30,166,114,0.18), transparent 25%),
+                linear-gradient(180deg, #f7faf8 0%, #eef3ef 100%);
+        }
+
+        body {
             min-height: 100vh;
         }
 
-        .auth-card {
-            width: 100%;
-            max-width: 420px;
-            background: white;
-            border: 1px solid #e5e7eb;
-            border-radius: 14px;
-            padding: 24px;
+        .auth-shell {
+            min-height: 100vh;
+            display: grid;
+            grid-template-columns: 1.02fr 0.98fr;
         }
 
-        h1 {
-            margin-top: 0;
-            font-size: 28px;
+        .brand-panel {
+            position: relative;
+            overflow: hidden;
+            padding: 40px 42px;
+            background:
+                linear-gradient(180deg, rgba(250,252,251,0.72) 0%, rgba(240,247,243,0.45) 36%, rgba(27,76,60,0.38) 100%),
+                radial-gradient(circle at 12% 25%, rgba(255,226,120,0.9) 0%, rgba(255,226,120,0.15) 18%, transparent 32%),
+                radial-gradient(circle at 80% 20%, rgba(30,166,114,0.22) 0%, transparent 30%),
+                linear-gradient(135deg, #eff6f1 0%, #dceee2 48%, #2e6a58 100%);
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .brand-panel::before {
+            content: "";
+            position: absolute;
+            inset: auto -10% -8% -10%;
+            height: 52%;
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(19,66,51,0.0) 0%, rgba(19,66,51,0.0) 36%, rgba(14,45,35,0.16) 70%, rgba(10,31,24,0.28) 100%),
+                linear-gradient(180deg, rgba(16,64,50,0) 0%, rgba(16,64,50,0.1) 20%, rgba(16,64,50,0.28) 100%);
+            clip-path: ellipse(74% 76% at 50% 100%);
+            pointer-events: none;
+        }
+
+        .brand-panel::after {
+            content: "";
+            position: absolute;
+            right: -60px;
+            bottom: 54px;
+            width: 360px;
+            height: 360px;
+            background:
+                radial-gradient(circle at 50% 50%, rgba(255,255,255,0.17) 0%, rgba(255,255,255,0.06) 44%, transparent 72%);
+            filter: blur(8px);
+            pointer-events: none;
+        }
+
+        .brand-top,
+        .brand-bottom,
+        .brand-middle {
+            position: relative;
+            z-index: 1;
+        }
+
+        .logo-wordmark {
+            display: inline-flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 72px;
+            line-height: 0.9;
+            font-weight: 400;
+            letter-spacing: -0.06em;
+            color: #2a2a2a;
+        }
+
+        .logo-go {
+            color: #15b400;
+        }
+
+        .logo-o-wrap {
+            display: inline-flex;
+            width: 0.88em;
+            height: 0.88em;
+            border-radius: 999px;
+            align-items: center;
+            justify-content: center;
+            background: #15b400;
+            position: relative;
+            top: 0.02em;
+        }
+
+        .logo-o-inner {
+            width: 62%;
+            height: 62%;
+            border-radius: 999px;
+            background: var(--gold);
+            border: 6px solid #111111;
+            display: block;
+        }
+
+        .badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(231, 247, 238, 0.95);
+            color: #1f7f5c;
+            border: 1px solid rgba(31, 127, 92, 0.10);
+            border-radius: 999px;
+            padding: 8px 14px;
+            font-size: 13px;
+            font-weight: 700;
+            letter-spacing: 0.02em;
+            margin: 18px 0 18px;
+        }
+
+        .headline {
+            margin: 0 0 16px;
+            max-width: 560px;
+            font-size: 68px;
+            line-height: 0.96;
+            letter-spacing: -0.05em;
+            font-weight: 800;
+            color: #122132;
+        }
+
+        .headline .accent {
+            color: var(--green);
+        }
+
+        .brand-copy {
+            max-width: 560px;
+            margin: 0 0 28px;
+            font-size: 18px;
+            line-height: 1.7;
+            color: #334a41;
+        }
+
+        .feature-list {
+            display: grid;
+            gap: 16px;
+            max-width: 520px;
+        }
+
+        .feature-item {
+            display: grid;
+            grid-template-columns: 56px 1fr;
+            gap: 14px;
+            align-items: start;
+        }
+
+        .feature-icon {
+            width: 56px;
+            height: 56px;
+            border-radius: 999px;
+            background: rgba(234, 247, 239, 0.94);
+            border: 1px solid rgba(30,166,114,0.08);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: var(--green);
+            font-size: 24px;
+            font-weight: 700;
+        }
+
+        .feature-title {
+            font-size: 18px;
+            font-weight: 800;
+            margin: 3px 0 4px;
+            color: #142934;
+        }
+
+        .feature-text {
+            color: #425b52;
+            line-height: 1.55;
+            font-size: 15px;
+        }
+
+        .testimonial {
+            max-width: 430px;
+            margin-top: 28px;
+            padding: 24px 24px 20px;
+            border-radius: 24px;
+            color: #f6fcf8;
+            background: rgba(14, 42, 33, 0.52);
+            backdrop-filter: blur(12px);
+            box-shadow: 0 18px 36px rgba(8, 28, 21, 0.16);
+        }
+
+        .testimonial-quote {
+            margin: 0 0 18px;
+            font-size: 16px;
+            line-height: 1.7;
+        }
+
+        .testimonial-name {
+            font-weight: 800;
+            font-size: 15px;
+        }
+
+        .testimonial-role {
+            color: rgba(246,252,248,0.82);
+            font-size: 14px;
+            margin-top: 4px;
+        }
+
+        .brand-foot {
+            margin-top: 18px;
+            display: flex;
+            gap: 18px;
+            flex-wrap: wrap;
+            color: #eef8f2;
+            font-size: 14px;
+            font-weight: 700;
+        }
+
+        .brand-foot span {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .form-panel {
+            padding: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .form-wrap {
+            width: 100%;
+            max-width: 720px;
+        }
+
+        .form-toplink {
+            display: flex;
+            justify-content: flex-end;
+            gap: 8px;
+            align-items: center;
+            color: var(--muted);
+            font-size: 15px;
+            margin-bottom: 24px;
+        }
+
+        .form-toplink a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 800;
+        }
+
+        .auth-card {
+            background: var(--panel-soft);
+            border: 1px solid rgba(217,228,221,0.92);
+            border-radius: 30px;
+            box-shadow: 0 20px 50px rgba(16, 32, 27, 0.10);
+            padding: 38px;
+        }
+
+        .auth-card h1 {
+            margin: 0 0 12px;
+            font-size: 56px;
+            line-height: 0.98;
+            letter-spacing: -0.05em;
+            font-weight: 800;
+            color: #122132;
+        }
+
+        .auth-card h1 .accent {
+            color: var(--green);
         }
 
         .muted {
-            color: #6b7280;
-            margin-bottom: 18px;
-        }
-
-        .field {
-            margin-bottom: 12px;
-        }
-
-        .field label {
-            display: block;
-            margin-bottom: 6px;
-            font-size: 13px;
-            color: #6b7280;
-        }
-
-        input {
-            width: 100%;
-            padding: 10px 12px;
-            border: 1px solid #d1d5db;
-            border-radius: 10px;
-            font-size: 14px;
-        }
-
-        button {
-            width: 100%;
-            border: none;
-            background: #1d4ed8;
-            color: white;
-            padding: 12px 16px;
-            border-radius: 10px;
-            font-weight: 700;
-            cursor: pointer;
-        }
-
-        button:hover {
-            background: #1e40af;
+            color: var(--muted);
+            margin-bottom: 28px;
+            font-size: 18px;
+            line-height: 1.6;
         }
 
         .error {
             display: none;
-            margin-bottom: 14px;
-            padding: 10px 12px;
-            border-radius: 10px;
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-            color: #991b1b;
+            margin-bottom: 18px;
+            padding: 14px 16px;
+            border-radius: 16px;
+            background: var(--danger-bg);
+            border: 1px solid #fecdca;
+            color: var(--danger);
+            font-size: 14px;
+            line-height: 1.5;
         }
 
-        .footer-link {
-            margin-top: 14px;
+        .grid-2 {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 16px;
+        }
+
+        .field {
+            margin-bottom: 18px;
+        }
+
+        .field label {
+            display: block;
+            margin-bottom: 8px;
             font-size: 14px;
+            color: #1d2b26;
+            font-weight: 700;
+        }
+
+        .input-wrap {
+            position: relative;
+        }
+
+        .input-wrap input {
+            width: 100%;
+            height: 60px;
+            padding: 0 52px 0 18px;
+            border: 1px solid #cfe0d6;
+            border-radius: 18px;
+            font-size: 16px;
+            color: var(--text);
+            background: rgba(255,255,255,0.95);
+            outline: none;
+            transition: border-color .18s ease, box-shadow .18s ease, background .18s ease;
+        }
+
+        .input-wrap input:focus {
+            border-color: rgba(30,166,114,0.85);
+            box-shadow: 0 0 0 4px rgba(30,166,114,0.10);
+            background: #ffffff;
+        }
+
+        .password-toggle {
+            position: absolute;
+            right: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            border: none;
+            background: transparent;
+            color: #62746c;
+            cursor: pointer;
+            font-size: 18px;
+            padding: 6px;
+        }
+
+        .password-panel {
+            margin: 6px 0 18px;
+            border: 1px solid #dbece2;
+            background: #f7fcf9;
+            border-radius: 18px;
+            padding: 18px 18px 14px;
+        }
+
+        .password-panel-title {
+            font-size: 14px;
+            font-weight: 800;
+            color: #225741;
+            margin-bottom: 10px;
+        }
+
+        .password-grid {
+            display: grid;
+            grid-template-columns: 1fr auto;
+            gap: 18px;
+            align-items: start;
+        }
+
+        .requirement-list {
+            display: grid;
+            gap: 10px;
+        }
+
+        .requirement {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            color: #5a6d64;
+            font-size: 14px;
+        }
+
+        .requirement .dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #c7d9cf;
+            color: transparent;
+            background: white;
+            font-size: 12px;
+            flex: 0 0 18px;
+        }
+
+        .requirement.valid {
+            color: #1f7f5c;
+        }
+
+        .requirement.valid .dot {
+            background: #e5f7ee;
+            border-color: #8bd4b3;
+            color: #1f7f5c;
+        }
+
+        .strength-wrap {
+            min-width: 170px;
+        }
+
+        .strength-label {
+            font-size: 13px;
+            font-weight: 800;
+            color: #3f5f54;
+            margin-bottom: 8px;
+        }
+
+        .strength-bars {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+
+        .strength-bars span {
+            height: 8px;
+            border-radius: 999px;
+            background: #d8e7df;
+        }
+
+        .strength-bars span.active {
+            background: var(--green);
+        }
+
+        .match-row {
+            margin-top: 10px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            font-size: 14px;
+            color: #5f6f68;
+        }
+
+        .match-row .dot {
+            width: 18px;
+            height: 18px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            border: 1px solid #c7d9cf;
+            color: transparent;
+            background: white;
+            font-size: 12px;
+        }
+
+        .match-row.valid {
+            color: #1f7f5c;
+        }
+
+        .match-row.valid .dot {
+            background: #e5f7ee;
+            border-color: #8bd4b3;
+            color: #1f7f5c;
+        }
+
+        .primary-btn {
+            width: 100%;
+            height: 62px;
+            border: none;
+            border-radius: 18px;
+            background: var(--green);
+            color: white;
+            font-size: 21px;
+            font-weight: 800;
+            cursor: pointer;
+            transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
+            box-shadow: 0 12px 24px rgba(30,166,114,0.20);
+        }
+
+        .primary-btn:hover {
+            background: var(--green-dark);
+            transform: translateY(-1px);
+        }
+
+        .legal {
+            margin-top: 22px;
+            font-size: 14px;
+            line-height: 1.7;
+            color: var(--muted);
+        }
+
+        .legal a {
+            color: var(--green);
+            text-decoration: none;
+            font-weight: 700;
+        }
+
+        @media (max-width: 1160px) {
+            .auth-shell {
+                grid-template-columns: 1fr;
+            }
+
+            .brand-panel {
+                min-height: 520px;
+            }
+
+            .headline {
+                font-size: 56px;
+            }
+
+            .auth-card h1 {
+                font-size: 48px;
+            }
+        }
+
+        @media (max-width: 760px) {
+            .brand-panel {
+                padding: 28px 22px;
+                min-height: 460px;
+            }
+
+            .headline {
+                font-size: 42px;
+            }
+
+            .brand-copy {
+                font-size: 16px;
+            }
+
+            .form-panel {
+                padding: 18px 14px 24px;
+            }
+
+            .form-toplink {
+                justify-content: flex-start;
+                margin-bottom: 14px;
+                font-size: 14px;
+            }
+
+            .auth-card {
+                padding: 26px 18px;
+                border-radius: 24px;
+            }
+
+            .auth-card h1 {
+                font-size: 40px;
+            }
+
+            .muted {
+                font-size: 16px;
+                margin-bottom: 22px;
+            }
+
+            .grid-2 {
+                grid-template-columns: 1fr;
+                gap: 0;
+            }
+
+            .password-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .primary-btn {
+                height: 58px;
+                font-size: 19px;
+            }
         }
     </style>
 </head>
 <body>
-<div class="auth-card">
-    <h1>Create account</h1>
-    <div class="muted">Set up your practitioner workspace.</div>
-
-    <div id="error-box" class="error"></div>
-
-    <form id="register-form">
-        <div class="field">
-            <label>Full name</label>
-            <input id="full_name" required />
+<div class="auth-shell">
+    <section class="brand-panel">
+        <div class="brand-top">
+            <div class="logo-wordmark" aria-label="go360 logo">
+                <span class="logo-go">g</span><span class="logo-o-wrap"><span class="logo-o-inner"></span></span><span>360</span>
+            </div>
         </div>
 
-        <div class="field">
-            <label>Clinic name</label>
-            <input id="clinic_name" required />
+        <div class="brand-middle">
+            <div class="badge">🛡 Trusted by practitioners</div>
+            <h2 class="headline">Turn scan data into <span class="accent">clarity.</span></h2>
+            <p class="brand-copy">
+                go360 helps you turn scan output into polished, practitioner-friendly reports
+                that improve communication, save time, and support better outcomes.
+            </p>
+
+            <div class="feature-list">
+                <div class="feature-item">
+                    <div class="feature-icon">⚡</div>
+                    <div>
+                        <div class="feature-title">Save hours</div>
+                        <div class="feature-text">Automate analysis and reporting while keeping professional oversight.</div>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">🛡</div>
+                    <div>
+                        <div class="feature-title">Practice confidently</div>
+                        <div class="feature-text">Present structured reports that are easier to review, explain, and share.</div>
+                    </div>
+                </div>
+
+                <div class="feature-item">
+                    <div class="feature-icon">❤</div>
+                    <div>
+                        <div class="feature-title">Empower patients</div>
+                        <div class="feature-text">Deliver clearer reports that encourage understanding and action.</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="testimonial">
+                <p class="testimonial-quote">
+                    “go360 has transformed how I work. I spend less time analysing and more time supporting my patients.”
+                </p>
+                <div class="testimonial-name">Pilot practitioner</div>
+                <div class="testimonial-role">Clinical wellness practice</div>
+            </div>
         </div>
 
-        <div class="field">
-            <label>Email</label>
-            <input id="email" type="email" required />
+        <div class="brand-bottom">
+            <div class="brand-foot">
+                <span>🔒 Your data is secure</span>
+                <span>●</span>
+                <span>Built with sensitive health workflows in mind</span>
+            </div>
         </div>
+    </section>
 
-        <div class="field">
-            <label>Password</label>
-            <input id="password" type="password" required />
+    <section class="form-panel">
+        <div class="form-wrap">
+            <div class="form-toplink">
+                <span>Already have an account?</span>
+                <a href="/login">Sign in</a>
+            </div>
+
+            <div class="auth-card">
+                <h1><span class="accent">Create</span> your account</h1>
+                <div class="muted">Set up your practitioner workspace in minutes.</div>
+
+                <div id="error-box" class="error"></div>
+
+                <form id="register-form">
+                    <div class="grid-2">
+                        <div class="field">
+                            <label>First name</label>
+                            <div class="input-wrap">
+                                <input id="first_name" autocomplete="given-name" required />
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label>Last name</label>
+                            <div class="input-wrap">
+                                <input id="last_name" autocomplete="family-name" required />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Clinic name</label>
+                        <div class="input-wrap">
+                            <input id="clinic_name" autocomplete="organization" required />
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Email address</label>
+                        <div class="input-wrap">
+                            <input id="email" type="email" autocomplete="email" required />
+                        </div>
+                    </div>
+
+                    <div class="grid-2">
+                        <div class="field">
+                            <label>Password</label>
+                            <div class="input-wrap">
+                                <input id="password" type="password" autocomplete="new-password" required />
+                                <button class="password-toggle" type="button" id="toggle-password" aria-label="Show password">👁</button>
+                            </div>
+                        </div>
+
+                        <div class="field">
+                            <label>Confirm password</label>
+                            <div class="input-wrap">
+                                <input id="confirm_password" type="password" autocomplete="new-password" required />
+                                <button class="password-toggle" type="button" id="toggle-confirm-password" aria-label="Show password">👁</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="password-panel">
+                        <div class="password-grid">
+                            <div>
+                                <div class="password-panel-title">Password must include:</div>
+                                <div class="requirement-list">
+                                    <div class="requirement" id="rule-length"><span class="dot">✓</span><span>At least 10 characters</span></div>
+                                    <div class="requirement" id="rule-upper"><span class="dot">✓</span><span>One uppercase letter (A–Z)</span></div>
+                                    <div class="requirement" id="rule-lower"><span class="dot">✓</span><span>One lowercase letter (a–z)</span></div>
+                                    <div class="requirement" id="rule-number"><span class="dot">✓</span><span>One number (0–9)</span></div>
+                                </div>
+                            </div>
+
+                            <div class="strength-wrap">
+                                <div class="strength-label" id="strength-label">Password strength</div>
+                                <div class="strength-bars" id="strength-bars">
+                                    <span></span><span></span><span></span><span></span><span></span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="match-row" id="match-row">
+                            <span class="dot">✓</span>
+                            <span id="match-text">Passwords must match</span>
+                        </div>
+                    </div>
+
+                    <div class="field">
+                        <label>Phone</label>
+                        <div class="input-wrap">
+                            <input id="phone" type="tel" autocomplete="tel" />
+                        </div>
+                    </div>
+
+                    <button class="primary-btn" type="submit">Create account →</button>
+                </form>
+
+                <div class="legal">
+                    By creating an account, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+                </div>
+            </div>
         </div>
-
-        <div class="field">
-            <label>Phone</label>
-            <input id="phone" />
-        </div>
-
-        <button type="submit">Create account</button>
-    </form>
-
-    <div class="footer-link">
-        Already have an account? <a href="/login">Sign in</a>
-    </div>
+    </section>
 </div>
 
 <script>
@@ -131,6 +765,66 @@
         localStorage.setItem("current_user", JSON.stringify(payload.user || null));
     }
 
+    function togglePasswordInput(inputId) {
+        const input = document.getElementById(inputId);
+        input.type = input.type === "password" ? "text" : "password";
+    }
+
+    document.getElementById("toggle-password").addEventListener("click", () => togglePasswordInput("password"));
+    document.getElementById("toggle-confirm-password").addEventListener("click", () => togglePasswordInput("confirm_password"));
+
+    const passwordInput = document.getElementById("password");
+    const confirmInput = document.getElementById("confirm_password");
+    const strengthBars = Array.from(document.querySelectorAll("#strength-bars span"));
+    const strengthLabel = document.getElementById("strength-label");
+    const matchRow = document.getElementById("match-row");
+    const matchText = document.getElementById("match-text");
+
+    function evaluatePassword() {
+        const value = passwordInput.value;
+
+        const rules = {
+            length: value.length >= 10,
+            upper: /[A-Z]/.test(value),
+            lower: /[a-z]/.test(value),
+            number: /\d/.test(value),
+        };
+
+        document.getElementById("rule-length").classList.toggle("valid", rules.length);
+        document.getElementById("rule-upper").classList.toggle("valid", rules.upper);
+        document.getElementById("rule-lower").classList.toggle("valid", rules.lower);
+        document.getElementById("rule-number").classList.toggle("valid", rules.number);
+
+        const passed = Object.values(rules).filter(Boolean).length;
+        strengthBars.forEach((bar, idx) => {
+            bar.classList.toggle("active", idx < passed);
+        });
+
+        const labels = {
+            0: "Password strength",
+            1: "Very weak",
+            2: "Weak",
+            3: "Fair",
+            4: "Strong",
+        };
+
+        strengthLabel.textContent = labels[passed] || "Strong";
+        evaluateMatch();
+        return rules;
+    }
+
+    function evaluateMatch() {
+        const password = passwordInput.value;
+        const confirm = confirmInput.value;
+        const match = !!password && !!confirm && password === confirm;
+        matchRow.classList.toggle("valid", match);
+        matchText.textContent = match ? "Passwords match" : "Passwords must match";
+        return match;
+    }
+
+    passwordInput.addEventListener("input", evaluatePassword);
+    confirmInput.addEventListener("input", evaluateMatch);
+
     document.getElementById("register-form").addEventListener("submit", async (e) => {
         e.preventDefault();
 
@@ -138,12 +832,42 @@
         errorBox.style.display = "none";
         errorBox.textContent = "";
 
+        const firstName = document.getElementById("first_name").value.trim();
+        const lastName = document.getElementById("last_name").value.trim();
+        const password = passwordInput.value;
+        const confirmPassword = confirmInput.value;
+        const clinicName = document.getElementById("clinic_name").value.trim();
+        const email = document.getElementById("email").value.trim();
+        const phone = document.getElementById("phone").value.trim();
+
+        if (!firstName || !lastName) {
+            errorBox.textContent = "First name and last name are required.";
+            errorBox.style.display = "block";
+            return;
+        }
+
+        const rules = evaluatePassword();
+        if (!rules.length || !rules.upper || !rules.lower || !rules.number) {
+            errorBox.textContent = "Please choose a stronger password that meets all requirements.";
+            errorBox.style.display = "block";
+            return;
+        }
+
+        if (password !== confirmPassword) {
+            errorBox.textContent = "Passwords do not match.";
+            errorBox.style.display = "block";
+            return;
+        }
+
         const payload = {
-            email: document.getElementById("email").value.trim(),
-            password: document.getElementById("password").value,
-            full_name: document.getElementById("full_name").value.trim(),
-            clinic_name: document.getElementById("clinic_name").value.trim(),
-            phone: document.getElementById("phone").value.trim(),
+            email: email,
+            password: password,
+            confirm_password: confirmPassword,
+            first_name: firstName,
+            last_name: lastName,
+            full_name: `${firstName} ${lastName}`.trim(),
+            clinic_name: clinicName,
+            phone: phone,
         };
 
         const response = await fetch("/auth/register", {
@@ -160,9 +884,16 @@
             return;
         }
 
-        setAuthSession(data);
-        window.location.href = "/app";
+        if (data && (data.access_token || data.refresh_token || data.user)) {
+            setAuthSession(data);
+            window.location.href = "/app";
+            return;
+        }
+
+        window.location.href = "/login";
     });
+
+    evaluatePassword();
 </script>
 </body>
 </html>

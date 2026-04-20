@@ -72,33 +72,41 @@
     async function loadReport() {
         clearError();
 
-        const response = await apiFetch(`/api/reports/${reportId}`);
-        const data = await response.json();
-
-        if (!response.ok) {
-            setError(data.detail || "Could not load report.");
-            return;
-        }
-
-        document.getElementById("report-summary").innerHTML = `
-            <strong>Version ${safeText(data.version_number)}</strong><br>
-            Status: ${safeText(data.status)}<br>
-            Generated: ${formatDate(data.generated_at)}<br>
-            Case ID: ${safeText(data.case_id)}
-        `;
-
-        document.getElementById("open-full-report-btn").href = `/app/reports/${reportId}/view`;
-        document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
 
         try {
-            const settingsRes = await apiFetch("/api/settings");
-            if (settingsRes.ok) {
-                const settings = await settingsRes.json();
-                document.getElementById("report-page-title").textContent =
-                    settings.report_title || "Personalised Wellness Scan Report";
+            const response = await apiFetch(`/api/reports/${reportId}`);
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                setError(data.detail || "Could not load report.");
+                return;
             }
-        } catch (e) {
-            // non-blocking
+
+            document.getElementById("report-summary").innerHTML = `
+                <strong>Version ${safeText(data.version_number)}</strong><br>
+                Status: ${safeText(data.status)}<br>
+                Generated: ${formatDate(data.generated_at)}<br>
+                Case ID: ${safeText(data.case_id)}
+            `;
+
+            document.getElementById("open-full-report-btn").href = `/app/reports/${reportId}/view`;
+            document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
+
+            try {
+                const settingsRes = await apiFetch("/api/settings");
+                if (settingsRes.ok) {
+                    const settings = await settingsRes.json();
+                    document.getElementById("report-page-title").textContent =
+                        settings.report_title || "Personalised Wellness Scan Report";
+                }
+            } catch (e) {
+                console.warn("Could not load settings for report title", e);
+            }
+        } catch (err) {
+            console.error(err);
+            setError("Unexpected error while loading report.");
         }
     }
 
@@ -106,29 +114,34 @@
         clearError();
         clearSuccess();
 
-        const payload = {
-            password: document.getElementById("share-password").value || null,
-            expires_at: null
-        };
+        try {
+            const payload = {
+                password: document.getElementById("share-password").value || null,
+                expires_at: null
+            };
 
-        const response = await apiFetch(`/api/reports/${reportId}/share-links`, {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
+            const response = await apiFetch(`/api/reports/${reportId}/share-links`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
 
-        const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
-            setError(data.detail || "Could not create share link.");
-            return;
+            if (!response.ok) {
+                setError(data.detail || "Could not create share link.");
+                return;
+            }
+
+            document.getElementById("share-result").innerHTML = `
+                <strong>Share link:</strong><br>
+                <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
+            `;
+
+            setSuccess("Share link created.");
+        } catch (err) {
+            console.error(err);
+            setError("Unexpected error while creating share link.");
         }
-
-        document.getElementById("share-result").innerHTML = `
-            <strong>Share link:</strong><br>
-            <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
-        `;
-
-        setSuccess("Share link created.");
     }
 
     document.getElementById("refresh-report-btn").addEventListener("click", loadReport);

@@ -3,138 +3,240 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div id="auth-warning" class="error" style="display:none;"></div>
+<style>
+.dashboard-subtitle {
+    color: #64748b;
+    margin-bottom: 24px;
+}
 
-<div class="grid-3">
-    <div class="card">
-        <div class="stat-label">Plan</div>
-        <div class="stat-value" id="plan-name">—</div>
+.dashboard-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 18px;
+    margin-bottom: 28px;
+}
+
+.dashboard-card {
+    background: white;
+    border-radius: 18px;
+    padding: 20px;
+    border: 1px solid #e2e8f0;
+}
+
+.card-title {
+    font-size: 14px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.card-value {
+    font-size: 26px;
+    font-weight: 700;
+}
+
+.dashboard-section {
+    margin-top: 20px;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 14px;
+}
+
+.secondary-btn {
+    border: 1px solid #d1d5db;
+    background: white;
+    padding: 8px 14px;
+    border-radius: 10px;
+    cursor: pointer;
+    font-weight: 600;
+}
+
+.reports-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+
+.reports-table th {
+    text-align: left;
+    font-size: 13px;
+    color: #64748b;
+    padding: 10px;
+}
+
+.reports-table td {
+    padding: 12px 10px;
+    border-top: 1px solid #f1f5f9;
+    vertical-align: top;
+}
+
+.reports-table tr:hover {
+    background: #f8fafc;
+}
+
+.dashboard-error {
+    display: none;
+    margin-bottom: 16px;
+}
+
+.search-input {
+    max-width: 320px;
+}
+</style>
+
+<div id="dashboard-error" class="error dashboard-error"></div>
+
+<p class="dashboard-subtitle">Overview of your recent activity</p>
+
+<div class="dashboard-grid">
+    <div class="dashboard-card">
+        <div class="card-title">Total Reports</div>
+        <div class="card-value" id="total-reports">—</div>
     </div>
 
-    <div class="card">
-        <div class="stat-label">Recent cases</div>
-        <div class="stat-value" id="case-count">—</div>
+    <div class="dashboard-card">
+        <div class="card-title">Recent Cases</div>
+        <div class="card-value" id="total-cases">—</div>
     </div>
 
-    <div class="card">
-        <div class="stat-label">Actions</div>
-        <div class="btn-row">
-            <a class="btn" href="/app/cases/new">Upload scan</a>
-            <a class="btn secondary" href="/app/reports">Reports</a>
-        </div>
+    <div class="dashboard-card">
+        <div class="card-title">Last Activity</div>
+        <div class="card-value" id="last-activity">—</div>
     </div>
 </div>
 
-<div class="grid-2">
-    <div class="card">
-        <h2>Recent cases</h2>
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Case</th>
-                    <th>Status</th>
-                    <th>Created</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="cases-body">
-                <tr><td colspan="4" class="muted">Loading…</td></tr>
-            </tbody>
-        </table>
+<div class="dashboard-section">
+    <div class="section-header">
+        <h2>Recent Reports</h2>
+        <div class="btn-row">
+            <input class="search-input" id="dashboard-search" placeholder="Search patient or case name" />
+            <button class="secondary-btn" type="button" id="refresh-dashboard-btn">Refresh</button>
+        </div>
     </div>
 
     <div class="card">
-        <h2>Recent reports</h2>
-        <table class="table">
+        <table class="reports-table">
             <thead>
                 <tr>
+                    <th>Patient / Case</th>
                     <th>Version</th>
-                    <th>Status</th>
                     <th>Generated</th>
                     <th></th>
                 </tr>
             </thead>
-            <tbody id="reports-body">
-                <tr><td colspan="4" class="muted">Loading…</td></tr>
+            <tbody id="reports-table-body">
+                <tr><td colspan="4">Loading…</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    async function loadDashboard() {
-        if (!requireAuthOrRedirect()) return;
+    let dashboardRows = [];
 
-        const user = getCurrentUser();
-        if (user) {
-            document.getElementById("plan-name").textContent =
-                user.recommendation_mode_default || "Practitioner";
-        }
+    function showDashboardError(message) {
+        const box = document.getElementById("dashboard-error");
+        box.textContent = message;
+        box.style.display = "block";
+    }
 
-        const casesResponse = await apiFetch("/api/cases");
-        if (!casesResponse.ok) {
-            document.getElementById("auth-warning").style.display = "block";
-            document.getElementById("auth-warning").textContent = "Could not load dashboard data.";
+    function clearDashboardError() {
+        const box = document.getElementById("dashboard-error");
+        box.textContent = "";
+        box.style.display = "none";
+    }
+
+    function getDisplayNameFromReport(report) {
+        const viewerPatient = report.viewer?.patient || {};
+        const tenantPatient = report.viewer?.patient_header || {};
+        return (
+            viewerPatient.full_name ||
+            [viewerPatient.first_name, viewerPatient.last_name].filter(Boolean).join(" ") ||
+            tenantPatient.full_name ||
+            report.case_title ||
+            report.case_name ||
+            `Case ${safeText(report.case_id)}`
+        );
+    }
+
+    function renderDashboardRows() {
+        const tbody = document.getElementById("reports-table-body");
+        const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
+
+        const filtered = dashboardRows.filter(item => {
+            const hay = `${item.display_name} ${item.generated_at || ""}`.toLowerCase();
+            return !query || hay.includes(query);
+        });
+
+        if (!filtered.length) {
+            tbody.innerHTML = `<tr><td colspan="4">No matching reports.</td></tr>`;
             return;
         }
 
-        const cases = await casesResponse.json();
-        document.getElementById("case-count").textContent = String(cases.length);
+        tbody.innerHTML = filtered.map(item => `
+            <tr>
+                <td>${safeText(item.display_name)}</td>
+                <td>v${safeText(item.version_number)}</td>
+                <td>${formatDate(item.generated_at)}</td>
+                <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
+            </tr>
+        `).join("");
+    }
 
-        const casesBody = document.getElementById("cases-body");
-        if (!cases.length) {
-            casesBody.innerHTML = `<tr><td colspan="4" class="muted">No cases yet.</td></tr>`;
-        } else {
-            casesBody.innerHTML = cases.slice(0, 8).map(item => {
-                const patientName =
-                    item.patient?.full_name ||
-                    [item.patient?.first_name, item.patient?.last_name].filter(Boolean).join(" ") ||
-                    item.title ||
-                    "Untitled case";
+    async function loadDashboard() {
+        clearDashboardError();
 
-                return `
-                    <tr>
-                        <td>${patientName}</td>
-                        <td>${safeText(item.status)}</td>
-                        <td>${formatDate(item.created_at)}</td>
-                        <td><a class="link" href="/app/cases/${item.id}">Open</a></td>
-                    </tr>
-                `;
-            }).join("");
-        }
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
 
-        const reportsBody = document.getElementById("reports-body");
-        const reportRows = [];
-
-        for (const item of cases.slice(0, 12)) {
-            try {
-                const latestResponse = await apiFetch(`/api/cases/${item.id}/latest-report`);
-                if (!latestResponse.ok) continue;
-
-                const latest = await latestResponse.json();
-                reportRows.push(latest);
-            } catch (e) {
-                // ignore per-case latest report errors
+        try {
+            const res = await apiFetch("/api/reports");
+            if (!res.ok) {
+                const errorData = await res.json().catch(() => ({}));
+                showDashboardError(errorData.detail || "Could not load dashboard data.");
+                document.getElementById("reports-table-body").innerHTML =
+                    `<tr><td colspan="4">Could not load reports.</td></tr>`;
+                return;
             }
-        }
 
-        if (!reportRows.length) {
-            reportsBody.innerHTML = `<tr><td colspan="4" class="muted">No reports yet.</td></tr>`;
-        } else {
-            reportsBody.innerHTML = reportRows
+            const reports = await res.json();
+            const reportList = Array.isArray(reports) ? reports : (reports.items || []);
+
+            dashboardRows = reportList
+                .slice()
                 .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
-                .slice(0, 8)
-                .map(item => `
-                    <tr>
-                        <td>v${safeText(item.version_number)}</td>
-                        <td>${safeText(item.status)}</td>
-                        <td>${formatDate(item.generated_at)}</td>
-                        <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
-                    </tr>
-                `).join("");
+                .map(r => ({
+                    ...r,
+                    display_name: getDisplayNameFromReport(r),
+                }));
+
+            document.getElementById("total-reports").textContent = dashboardRows.length;
+
+            const caseIds = new Set(dashboardRows.map(r => r.case_id).filter(Boolean));
+            document.getElementById("total-cases").textContent = caseIds.size;
+
+            document.getElementById("last-activity").textContent =
+                dashboardRows.length && dashboardRows[0].generated_at
+                    ? formatDate(dashboardRows[0].generated_at)
+                    : "—";
+
+            renderDashboardRows();
+        } catch (err) {
+            console.error(err);
+            showDashboardError("Unexpected error while loading dashboard.");
+            document.getElementById("reports-table-body").innerHTML =
+                `<tr><td colspan="4">Unexpected error.</td></tr>`;
         }
     }
+
+    document.getElementById("refresh-dashboard-btn").addEventListener("click", loadDashboard);
+    document.getElementById("dashboard-search").addEventListener("input", renderDashboardRows);
 
     loadDashboard();
 </script>
 {% endblock %}
+
+
+

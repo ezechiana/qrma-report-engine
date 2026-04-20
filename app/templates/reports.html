@@ -1,4 +1,3 @@
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -27,57 +26,77 @@
 </div>
 
 <script>
+    function showReportsError(message) {
+        const box = document.getElementById("auth-warning");
+        box.style.display = "block";
+        box.textContent = message;
+    }
+
+    function getCaseDisplayName(item) {
+        return (
+            item.patient_name ||
+            item.title ||
+            item.patient?.full_name ||
+            [item.patient?.first_name, item.patient?.last_name].filter(Boolean).join(" ") ||
+            item.source_patient_data_json?.full_name ||
+            "Untitled case"
+        );
+    }
+
     async function loadReportsPage() {
-        if (!requireAuthOrRedirect()) return;
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
 
-        const casesResponse = await apiFetch("/api/cases");
-        if (!casesResponse.ok) {
-            document.getElementById("auth-warning").style.display = "block";
-            document.getElementById("auth-warning").textContent = "Could not load reports.";
-            return;
-        }
-
-        const cases = await casesResponse.json();
-        const reportRows = [];
-
-        for (const item of cases) {
-            try {
-                const latestResponse = await apiFetch(`/api/cases/${item.id}/latest-report`);
-                if (!latestResponse.ok) continue;
-
-                const latest = await latestResponse.json();
-                const patientName =
-                    item.patient?.full_name ||
-                    [item.patient?.first_name, item.patient?.last_name].filter(Boolean).join(" ") ||
-                    item.title ||
-                    "Untitled case";
-
-                reportRows.push({
-                    ...latest,
-                    patient_name: patientName,
-                });
-            } catch (e) {
-                // ignore latest-report failures
+        try {
+            const casesResponse = await apiFetch("/api/cases");
+            if (!casesResponse.ok) {
+                const err = await casesResponse.json().catch(() => ({}));
+                showReportsError(err.detail || "Could not load reports.");
+                return;
             }
-        }
 
-        const tbody = document.getElementById("reports-body");
-        if (!reportRows.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="muted">No reports yet.</td></tr>`;
-            return;
-        }
+            const cases = await casesResponse.json();
+            const caseList = Array.isArray(cases) ? cases : (cases.items || []);
+            const reportRows = [];
 
-        tbody.innerHTML = reportRows
-            .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
-            .map(item => `
-                <tr>
-                    <td>${safeText(item.patient_name)}</td>
-                    <td>v${safeText(item.version_number)}</td>
-                    <td>${safeText(item.status)}</td>
-                    <td>${formatDate(item.generated_at)}</td>
-                    <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
-                </tr>
-            `).join("");
+            for (const item of caseList) {
+                try {
+                    const latestResponse = await apiFetch(`/api/cases/${item.id}/latest-report`);
+                    if (!latestResponse.ok) continue;
+
+                    const latest = await latestResponse.json();
+
+                    reportRows.push({
+                        ...latest,
+                        patient_name: getCaseDisplayName(item),
+                    });
+                } catch (e) {
+                    console.warn("Skipping latest-report lookup for case", item.id, e);
+                }
+            }
+
+            const tbody = document.getElementById("reports-body");
+
+            if (!reportRows.length) {
+                tbody.innerHTML = `<tr><td colspan="5" class="muted">No reports yet.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = reportRows
+                .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
+                .map(item => `
+                    <tr>
+                        <td>${safeText(item.patient_name)}</td>
+                        <td>v${safeText(item.version_number)}</td>
+                        <td>${safeText(item.status)}</td>
+                        <td>${formatDate(item.generated_at)}</td>
+                        <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
+                    </tr>
+                `).join("");
+        } catch (err) {
+            console.error(err);
+            showReportsError("Unexpected error while loading reports.");
+        }
     }
 
     loadReportsPage();

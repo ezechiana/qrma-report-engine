@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, Response
+from fastapi import APIRouter, Response
 
 from app.api.deps import CurrentActiveUser, CurrentDB
 from app.schemas.auth import (
@@ -125,3 +125,5 @@ def logout(response: Response):
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
     return AuthMessageResponse(message="Logged out successfully.")
+
+

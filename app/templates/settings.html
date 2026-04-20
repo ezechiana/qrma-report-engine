@@ -1,16 +1,93 @@
+
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.settings-intro {
+    color: #64748b;
+    margin-bottom: 24px;
+}
+
+.swatch-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 12px;
+    margin-top: 8px;
+}
+
+.swatch-btn {
+    width: 34px;
+    height: 34px;
+    border-radius: 999px;
+    border: 2px solid transparent;
+    cursor: pointer;
+    box-shadow: inset 0 0 0 1px rgba(0,0,0,0.08);
+}
+
+.swatch-btn.active {
+    border-color: #111827;
+    box-shadow: 0 0 0 3px rgba(17,24,39,0.08);
+}
+
+.help-text {
+    margin-top: 6px;
+    font-size: 12px;
+    color: #6b7280;
+    line-height: 1.5;
+}
+
+.asset-box {
+    border: 1px dashed #cbd5e1;
+    border-radius: 12px;
+    padding: 14px;
+    background: #f8fafc;
+}
+
+.asset-row {
+    display: flex;
+    gap: 12px;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.asset-preview {
+    margin-top: 10px;
+    max-width: 220px;
+    max-height: 120px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    background: white;
+    object-fit: contain;
+    padding: 6px;
+    display: none;
+}
+
+.asset-meta {
+    margin-top: 8px;
+    font-size: 12px;
+    color: #64748b;
+}
+
+.section-title {
+    margin-top: 0;
+}
+
+.compact-input {
+    max-width: 160px;
+}
+
+.hidden-url {
+    display: none;
+}
+</style>
+
 <div id="error-box" class="error" style="display:none;"></div>
 <div id="success-box" class="success" style="display:none;"></div>
 
-<div class="card">
-    <h2>Settings</h2>
-    <p class="muted">Branding and report defaults used across the practitioner workspace and shared reports.</p>
-</div>
+<p class="settings-intro">Branding and report defaults used across the practitioner workspace and shared reports.</p>
 
 <div class="card">
-    <h3>Branding</h3>
+    <h3 class="section-title">Branding</h3>
 
     <div class="grid-2">
         <div class="field">
@@ -20,23 +97,54 @@
 
         <div class="field">
             <label>Accent colour</label>
-            <input id="accent_color" placeholder="#2f6fed">
+            <input id="accent_color" class="compact-input" readonly>
+            <div class="swatch-grid" id="accent-swatch-grid">
+                <button type="button" class="swatch-btn" data-color="#1d4ed8" style="background:#1d4ed8;"></button>
+                <button type="button" class="swatch-btn" data-color="#2f6fed" style="background:#2f6fed;"></button>
+                <button type="button" class="swatch-btn" data-color="#0f766e" style="background:#0f766e;"></button>
+                <button type="button" class="swatch-btn" data-color="#15803d" style="background:#15803d;"></button>
+                <button type="button" class="swatch-btn" data-color="#065f46" style="background:#065f46;"></button>
+                <button type="button" class="swatch-btn" data-color="#7c3aed" style="background:#7c3aed;"></button>
+                <button type="button" class="swatch-btn" data-color="#be185d" style="background:#be185d;"></button>
+                <button type="button" class="swatch-btn" data-color="#c2410c" style="background:#c2410c;"></button>
+                <button type="button" class="swatch-btn" data-color="#d97706" style="background:#d97706;"></button>
+                <button type="button" class="swatch-btn" data-color="#334155" style="background:#334155;"></button>
+            </div>
+            <div class="help-text">Choose the main accent colour used across the practitioner workspace and report styling.</div>
         </div>
 
         <div class="field">
-            <label>Logo URL</label>
-            <input id="logo_url">
+            <label>Logo</label>
+            <div class="asset-box">
+                <div class="asset-row">
+                    <input id="logo_file" type="file" accept="image/*">
+                    <button type="button" class="btn secondary" id="upload-logo-btn">Upload logo</button>
+                </div>
+                <div class="help-text">Use a clean PNG or SVG-style image on a transparent or white background. Best for report branding and viewer header.</div>
+                <img id="logo_preview" class="asset-preview" alt="Logo preview">
+                <div id="logo_meta" class="asset-meta"></div>
+            </div>
+            <input id="logo_url" class="hidden-url">
         </div>
 
         <div class="field">
-            <label>Cover image URL</label>
-            <input id="cover_image_url">
+            <label>Cover image</label>
+            <div class="asset-box">
+                <div class="asset-row">
+                    <input id="cover_file" type="file" accept="image/*">
+                    <button type="button" class="btn secondary" id="upload-cover-btn">Upload cover image</button>
+                </div>
+                <div class="help-text">Used mainly for the PDF/report cover at present. Choose a wide landscape image for best results.</div>
+                <img id="cover_preview" class="asset-preview" alt="Cover preview">
+                <div id="cover_meta" class="asset-meta"></div>
+            </div>
+            <input id="cover_image_url" class="hidden-url">
         </div>
     </div>
 </div>
 
 <div class="card">
-    <h3>Report defaults</h3>
+    <h3 class="section-title">Report defaults</h3>
 
     <div class="grid-2">
         <div class="field">
@@ -63,7 +171,7 @@
 </div>
 
 <div class="card">
-    <h3>Contact details</h3>
+    <h3 class="section-title">Contact details</h3>
 
     <div class="grid-2">
         <div class="field">
@@ -78,7 +186,7 @@
     </div>
 
     <div class="btn-row">
-        <button id="save-settings-btn" type="button">Save settings</button>
+        <button id="save-settings-btn" class="btn" type="button">Save settings</button>
     </div>
 </div>
 
@@ -101,9 +209,40 @@
         box.textContent = msg;
     }
 
+    function clearSuccess() {
+        const box = document.getElementById("success-box");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function setSwatchActive(color) {
+        document.getElementById("accent_color").value = color || "";
+        document.querySelectorAll(".swatch-btn").forEach(btn => {
+            btn.classList.toggle("active", btn.dataset.color.toLowerCase() === String(color || "").toLowerCase());
+        });
+    }
+
+    function updatePreview(imgId, metaId, url) {
+        const img = document.getElementById(imgId);
+        const meta = document.getElementById(metaId);
+
+        if (url) {
+            img.src = url;
+            img.style.display = "block";
+            meta.textContent = url;
+        } else {
+            img.removeAttribute("src");
+            img.style.display = "none";
+            meta.textContent = "";
+        }
+    }
+
     async function loadSettings() {
         clearError();
-        if (!requireAuthOrRedirect()) return;
+        clearSuccess();
+
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
 
         const res = await apiFetch("/api/settings");
         const data = await res.json();
@@ -114,7 +253,7 @@
         }
 
         document.getElementById("clinic_name").value = data.clinic_name || "";
-        document.getElementById("accent_color").value = data.accent_color || "";
+        document.getElementById("accent_color").value = data.accent_color || "#2f6fed";
         document.getElementById("logo_url").value = data.logo_url || "";
         document.getElementById("cover_image_url").value = data.cover_image_url || "";
         document.getElementById("report_title").value = data.report_title || "";
@@ -123,10 +262,15 @@
         document.getElementById("website_url").value = data.website_url || "";
         document.getElementById("recommendation_mode_default").value =
             data.recommendation_mode_default || "natural_approaches_clinical";
+
+        setSwatchActive(data.accent_color || "#2f6fed");
+        updatePreview("logo_preview", "logo_meta", data.logo_url || "");
+        updatePreview("cover_preview", "cover_meta", data.cover_image_url || "");
     }
 
     async function saveSettings() {
         clearError();
+        clearSuccess();
 
         const payload = {
             clinic_name: document.getElementById("clinic_name").value.trim(),
@@ -155,7 +299,55 @@
         setSuccess("Settings saved.");
     }
 
+    async function uploadBrandAsset(fileInputId, endpoint, hiddenInputId, previewImgId, previewMetaId) {
+        clearError();
+        clearSuccess();
+
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
+
+        const fileInput = document.getElementById(fileInputId);
+        if (!fileInput.files.length) {
+            setError("Please choose a file first.");
+            return;
+        }
+
+        const formData = new FormData();
+        formData.append("file", fileInput.files[0]);
+
+        const response = await apiFetch(endpoint, {
+            method: "POST",
+            headers: {},
+            body: formData,
+        });
+
+        const data = await response.json().catch(() => ({}));
+
+        if (!response.ok) {
+            setError(data.detail || "Could not upload file.");
+            return;
+        }
+
+        const url = data.url || "";
+        document.getElementById(hiddenInputId).value = url;
+        updatePreview(previewImgId, previewMetaId, url);
+        setSuccess("File uploaded successfully. Click Save settings to persist it.");
+    }
+
+    document.querySelectorAll(".swatch-btn").forEach(btn => {
+        btn.addEventListener("click", () => setSwatchActive(btn.dataset.color));
+    });
+
+    document.getElementById("upload-logo-btn").addEventListener("click", () => {
+        uploadBrandAsset("logo_file", "/api/settings/upload-logo", "logo_url", "logo_preview", "logo_meta");
+    });
+
+    document.getElementById("upload-cover-btn").addEventListener("click", () => {
+        uploadBrandAsset("cover_file", "/api/settings/upload-cover", "cover_image_url", "cover_preview", "cover_meta");
+    });
+
     document.getElementById("save-settings-btn").addEventListener("click", saveSettings);
+
     loadSettings();
 </script>
 {% endblock %}

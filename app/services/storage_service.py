@@ -5,7 +5,10 @@ from typing import Optional
 
 import boto3
 from botocore.exceptions import ClientError
+from dotenv import load_dotenv
 
+
+load_dotenv()
 
 AWS_REGION = os.getenv("AWS_REGION", "eu-west-2")
 S3_BUCKET = os.getenv("S3_BUCKET")

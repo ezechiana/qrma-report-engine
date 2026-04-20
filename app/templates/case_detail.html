@@ -1,6 +1,3 @@
-
-case detail
-
 {% extends "base.html" %}
 
 {% block content %}
@@ -15,7 +12,7 @@ case detail
 <div class="card">
     <h3>Actions</h3>
     <div class="btn-row">
-        <button id="generate-report-btn">Generate report</button>
+        <button class="btn" id="generate-report-btn" type="button">Generate report</button>
         <button class="btn secondary" id="refresh-case-btn" type="button">Refresh case</button>
     </div>
 </div>
@@ -32,7 +29,7 @@ case detail
         <input id="share-password" placeholder="Leave blank for no password" />
     </div>
     <div class="btn-row">
-        <button id="create-share-link-btn" type="button">Create share link</button>
+        <button class="btn" id="create-share-link-btn" type="button">Create share link</button>
     </div>
     <div id="share-result" class="muted" style="margin-top:12px;"></div>
 </div>
@@ -59,62 +56,88 @@ case detail
         box.textContent = msg;
     }
 
+    function clearSuccess() {
+        const box = document.getElementById("success-box");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function getCaseDisplayName(caseData) {
+        return (
+            caseData.patient?.full_name ||
+            caseData.patient_name ||
+            [caseData.patient?.first_name, caseData.patient?.last_name].filter(Boolean).join(" ") ||
+            caseData.source_patient_data_json?.full_name ||
+            caseData.title ||
+            "Unnamed case"
+        );
+    }
+
     async function loadCase() {
         clearError();
-        if (!requireAuthOrRedirect()) return;
 
-        const caseResponse = await apiFetch(`/api/cases/${caseId}`);
-        const caseData = await caseResponse.json();
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
 
-        if (!caseResponse.ok) {
-            setError(caseData.detail || "Could not load case.");
-            return;
+        try {
+            const caseResponse = await apiFetch(`/api/cases/${caseId}`);
+            const caseData = await caseResponse.json().catch(() => ({}));
+
+            if (!caseResponse.ok) {
+                setError(caseData.detail || "Could not load case.");
+                return;
+            }
+
+            const patient = getCaseDisplayName(caseData);
+
+            document.getElementById("case-summary").innerHTML = `
+                <strong>${patient}</strong><br>
+                Status: ${safeText(caseData.status)}<br>
+                Created: ${formatDate(caseData.created_at)}
+            `;
+
+            const latestReportResponse = await apiFetch(`/api/cases/${caseId}/latest-report`);
+            if (latestReportResponse.ok) {
+                const latest = await latestReportResponse.json();
+                latestReportId = latest?.id || latest?.report_version_id || null;
+            } else {
+                latestReportId = null;
+            }
+
+            renderLatestReport();
+        } catch (err) {
+            console.error(err);
+            setError("Unexpected error while loading case.");
         }
-
-        const patient =
-            caseData.patient?.full_name ||
-            [caseData.patient?.first_name, caseData.patient?.last_name].filter(Boolean).join(" ") ||
-            caseData.title ||
-            "Unnamed case";
-
-        document.getElementById("case-summary").innerHTML = `
-            <strong>${patient}</strong><br>
-            Status: ${safeText(caseData.status)}<br>
-            Created: ${formatDate(caseData.created_at)}
-        `;
-
-        const latestReportResponse = await apiFetch(`/api/cases/${caseId}/latest-report`);
-        if (latestReportResponse.ok) {
-            const latest = await latestReportResponse.json();
-            latestReportId = latest?.id || latest?.report_version_id || null;
-        } else {
-            latestReportId = null;
-        }
-
-        renderLatestReport();
     }
 
     async function generateReport() {
         clearError();
+        clearSuccess();
 
-        const response = await apiFetch(`/api/cases/${caseId}/generate-report`, {
-            method: "POST"
-        });
-        const data = await response.json();
+        try {
+            const response = await apiFetch(`/api/cases/${caseId}/generate-report`, {
+                method: "POST"
+            });
+            const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
-            setError(data.detail || "Could not generate report.");
-            return;
+            if (!response.ok) {
+                setError(data.detail || "Could not generate report.");
+                return;
+            }
+
+            latestReportId = data.report_version_id;
+            setSuccess(`Report generated successfully${data.version_number ? ` (v${data.version_number})` : ""}.`);
+            renderLatestReport();
+        } catch (err) {
+            console.error(err);
+            setError("Unexpected error while generating report.");
         }
-
-        latestReportId = data.report_version_id;
-        setSuccess(`Report generated successfully (v${data.version_number}).`);
-        renderLatestReport();
     }
-
 
     function renderLatestReport() {
         const block = document.getElementById("latest-report-block");
+
         if (!latestReportId) {
             block.textContent = "No report generated yet.";
             return;
@@ -124,70 +147,49 @@ case detail
             <div><strong>Report ready</strong></div>
             <div class="btn-row" style="margin-top:10px;">
                 <a class="btn" href="/app/reports/${latestReportId}">Open report workspace</a>
-                <button class="btn secondary" type="button" onclick="openFullReportFromCase()">Open full report</button>
+                <a class="btn secondary" href="/app/reports/${latestReportId}/view">Open full report</a>
                 <a class="btn secondary" href="/api/reports/${latestReportId}/pdf" target="_blank">Download PDF</a>
-              </div>
+            </div>
         `;
     }
-
-    async function openFullReportFromCase() {
-        clearError();
-
-        if (!latestReportId) {
-            setError("Generate a report first.");
-            return;
-        }
-
-        const response = await apiFetch(`/api/reports/${latestReportId}/share-links`, {
-            method: "POST",
-            body: JSON.stringify({
-                password: null,
-                expires_at: null
-            }),
-        });
-
-        const data = await response.json();
-
-        if (!response.ok) {
-            setError(data.detail || "Could not open the full report.");
-            return;
-        }
-
-        window.open(data.share_url, "_blank", "noopener,noreferrer");
-    }
-
-
-
 
     async function createShareLink() {
         clearError();
+        clearSuccess();
 
         if (!latestReportId) {
             setError("Generate a report first.");
             return;
         }
 
-        const payload = {
-            password: document.getElementById("share-password").value || null,
-            expires_at: null
-        };
+        try {
+            const payload = {
+                password: document.getElementById("share-password").value || null,
+                expires_at: null
+            };
 
-        const response = await apiFetch(`/api/reports/${latestReportId}/share-links`, {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
+            const response = await apiFetch(`/api/reports/${latestReportId}/share-links`, {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
 
-        const data = await response.json();
+            const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
-            setError(data.detail || "Could not create share link.");
-            return;
+            if (!response.ok) {
+                setError(data.detail || "Could not create share link.");
+                return;
+            }
+
+            document.getElementById("share-result").innerHTML = `
+                <strong>Share link:</strong><br>
+                <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
+            `;
+
+            setSuccess("Share link created.");
+        } catch (err) {
+            console.error(err);
+            setError("Unexpected error while creating share link.");
         }
-
-        document.getElementById("share-result").innerHTML = `
-            <strong>Share link:</strong><br>
-            <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
-        `;
     }
 
     document.getElementById("generate-report-btn").addEventListener("click", generateReport);

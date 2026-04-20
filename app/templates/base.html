@@ -1,8 +1,7 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
     <title>{{ title or "Health Portal" }}</title>
-   
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         :root {
@@ -54,8 +53,10 @@
             overflow-y: auto;
         }
 
-
-        .sidebar h2 { margin: 0 0 6px; font-size: 20px; }
+        .sidebar h2 {
+            margin: 0 0 6px;
+            font-size: 20px;
+        }
 
         .sidebar .subtle {
             color: var(--sidebar-muted);
@@ -114,23 +115,9 @@
             font-weight: 700;
         }
 
-        .topbar-right {
-            display: flex;
-            align-items: center;
-            gap: 12px;
+        .content {
+            padding: 24px;
         }
-
-        .plan-badge {
-            padding: 8px 12px;
-            border-radius: 999px;
-            background: #eff6ff;
-            color: #1d4ed8;
-            font-size: 12px;
-            font-weight: 700;
-            border: 1px solid #bfdbfe;
-        }
-
-        .content { padding: 24px; }
 
         .card {
             background: var(--surface);
@@ -150,19 +137,6 @@
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 16px;
-        }
-
-        .stat-label {
-            font-size: 12px;
-            text-transform: uppercase;
-            color: var(--muted);
-            margin-bottom: 6px;
-            letter-spacing: .04em;
-        }
-
-        .stat-value {
-            font-size: 22px;
-            font-weight: 700;
         }
 
         .btn {
@@ -273,6 +247,7 @@
             border-radius: 12px;
             background: white;
         }
+
         .mobile-topbar {
             display: none;
             align-items: center;
@@ -310,7 +285,7 @@
             display: none;
         }
 
-                @media (max-width: 960px) {
+        @media (max-width: 960px) {
             .app { grid-template-columns: 1fr; }
 
             .sidebar {
@@ -392,9 +367,26 @@
             localStorage.removeItem("current_user");
         }
 
+        function getRedirectTarget() {
+            const path = window.location.pathname || "/app";
+            const search = window.location.search || "";
+            const hash = window.location.hash || "";
+            return `${path}${search}${hash}`;
+        }
+
+        function rememberRedirectTarget() {
+            const currentPath = window.location.pathname || "";
+            if (currentPath.startsWith("/login") || currentPath.startsWith("/register")) return;
+            localStorage.setItem("redirect_after_login", getRedirectTarget());
+        }
+
+        function redirectToLogin() {
+            rememberRedirectTarget();
+            window.location.href = "/login";
+        }
+
         async function apiFetch(url, options = {}) {
             const headers = new Headers(options.headers || {});
-
             if (!headers.has("Content-Type") && !(options.body instanceof FormData)) {
                 headers.set("Content-Type", "application/json");
             }
@@ -407,19 +399,36 @@
 
             if (response.status === 401) {
                 clearAuthSession();
-                if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
-                    window.location.href = "/login";
-                }
+                redirectToLogin();
             }
 
             return response;
         }
 
+        async function requireAuthOrRedirect() {
+            try {
+                const response = await fetch("/auth/me", {
+                    method: "GET",
+                    credentials: "same-origin",
+                });
 
-        function requireAuthOrRedirect() {
-            return true;
+                if (response.status === 401 || !response.ok) {
+                    clearAuthSession();
+                    redirectToLogin();
+                    return false;
+                }
+
+                const data = await response.json();
+                if (data && data.user) {
+                    localStorage.setItem("current_user", JSON.stringify(data.user));
+                }
+                return true;
+            } catch (e) {
+                clearAuthSession();
+                redirectToLogin();
+                return false;
+            }
         }
-
 
         async function logoutNow() {
             try {
@@ -427,10 +436,7 @@
                     method: "POST",
                     credentials: "same-origin",
                 });
-            } catch (e) {
-                // ignore
-            }
-
+            } catch (e) {}
             clearAuthSession();
             window.location.href = "/login";
         }
@@ -446,8 +452,6 @@
         }
     </script>
 </head>
-
-
 <body>
 <div class="app">
     <aside class="sidebar" id="app-sidebar">
@@ -468,7 +472,7 @@
         </nav>
 
         <div class="sidebar-footer">
-            <div id="sidebar-user-email">Not signed in</div>
+            <div id="sidebar-user-email">Signed in</div>
             <a href="#" onclick="logoutNow(); return false;">Logout</a>
         </div>
     </aside>
@@ -476,20 +480,16 @@
     <div class="sidebar-backdrop" id="sidebar-backdrop"></div>
 
     <main class="main">
-            <div class="mobile-topbar">
-                <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
-                <div class="mobile-topbar-title">{{ title if title else "Health Portal" }}</div>
-            </div>
+        <div class="mobile-topbar">
+            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
+            <div class="mobile-topbar-title">{{ title if title else "Health Portal" }}</div>
+        </div>
 
-            {% if title is not none and title != "" %}
-            <div class="topbar">
-                <div class="topbar-title">{{ title }}</div>
-                <div class="topbar-right">
-                    <div class="plan-badge" id="plan-badge">Practitioner</div>
-                </div>
-            </div>
-            {% endif %}
-
+        {% if title is not none and title != "" %}
+        <div class="topbar">
+            <div class="topbar-title">{{ title }}</div>
+        </div>
+        {% endif %}
 
         <div class="content">
             {% block content %}{% endblock %}
@@ -498,21 +498,20 @@
 </div>
 
 <script>
-    (function hydrateShell() {
-        const user = getCurrentUser();
+    (async function hydrateShell() {
+        const path = window.location.pathname;
 
-        if (!window.location.pathname.startsWith("/login") && !window.location.pathname.startsWith("/register")) {
-            requireAuthOrRedirect();
+        if (!path.startsWith("/login") && !path.startsWith("/register")) {
+            const isAuthenticated = await requireAuthOrRedirect();
+            if (!isAuthenticated) return;
         }
 
+        const user = getCurrentUser();
         if (user) {
             const emailEl = document.getElementById("sidebar-user-email");
-            const planEl = document.getElementById("plan-badge");
             if (emailEl) emailEl.textContent = user.email || user.full_name || "Signed in";
-            if (planEl) planEl.textContent = user.recommendation_mode_default || "Practitioner";
         }
 
-        const path = window.location.pathname;
         if (path === "/app") {
             document.getElementById("nav-dashboard")?.classList.add("active");
         } else if (path.startsWith("/app/cases/new")) {
@@ -548,12 +547,8 @@
         }
 
         function syncMobileShell() {
-            if (closeBtn) {
-                closeBtn.style.display = isMobile() ? "inline-flex" : "none";
-            }
-            if (!isMobile()) {
-                closeSidebar();
-            }
+            if (closeBtn) closeBtn.style.display = isMobile() ? "inline-flex" : "none";
+            if (!isMobile()) closeSidebar();
         }
 
         if (openBtn) openBtn.addEventListener("click", openSidebar);
