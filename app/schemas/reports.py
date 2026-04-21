@@ -26,6 +26,7 @@ class ReportVersionRead(BaseModel):
     patient_display_name: Optional[str] = None
     case_title: Optional[str] = None
     scan_datetime: Optional[datetime] = None
+    is_archived: bool = False
 
 
 class ReportOverrideUpdate(BaseModel):

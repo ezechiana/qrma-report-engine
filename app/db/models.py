@@ -198,7 +198,7 @@ class ReportVersion(Base):
         default=ReportStatus.queued,
         index=True,
     )
-
+    
     recommendation_mode: Mapped[RecommendationMode] = mapped_column(Enum(RecommendationMode))
 
     # nullable until build completes
@@ -206,6 +206,7 @@ class ReportVersion(Base):
     html_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     build_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
     # execution lifecycle
     job_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
@@ -230,7 +231,7 @@ class ReportVersion(Base):
         back_populates="report_version",
         cascade="all, delete-orphan",
     )
-    status = Column(String, index=True)
+
 
 class ReportOverride(Base):
     __tablename__ = "report_overrides"

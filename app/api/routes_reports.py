@@ -81,8 +81,8 @@ def _serialise_report(report: ReportVersion) -> dict:
         "patient_display_name": _patient_display_name_from_case(case),
         "case_title": case.title if case else None,
         "scan_datetime": case.scan_datetime if case else None,
+        "is_archived": bool(getattr(report, "is_archived", False)),
     }
-
 
 def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}
@@ -160,22 +160,27 @@ def _get_owned_report(
 
 @router.get("", response_model=list[ReportVersionRead])
 def list_reports(
+    include_archived: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    reports = (
+    query = (
         db.query(ReportVersion)
         .join(Case, Case.id == ReportVersion.case_id)
         .filter(Case.user_id == current_user.id)
-        .order_by(ReportVersion.generated_at.desc())
-        .all()
     )
+
+    if not include_archived:
+        query = query.filter(ReportVersion.is_archived == False)
+
+    reports = query.order_by(ReportVersion.generated_at.desc()).all()
     return [_serialise_report(report) for report in reports]
 
 
 @router.get("/case/{case_id}", response_model=list[ReportVersionRead])
 def list_case_reports(
     case_id: UUID,
+    include_archived: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -187,12 +192,12 @@ def list_case_reports(
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
 
-    reports = (
-        db.query(ReportVersion)
-        .filter(ReportVersion.case_id == case.id)
-        .order_by(ReportVersion.version_number.desc())
-        .all()
-    )
+    query = db.query(ReportVersion).filter(ReportVersion.case_id == case.id)
+
+    if not include_archived:
+        query = query.filter(ReportVersion.is_archived == False)
+
+    reports = query.order_by(ReportVersion.version_number.desc()).all()
     return [_serialise_report(report) for report in reports]
 
 
@@ -448,3 +453,51 @@ def finalise_report(
         "report_version_id": str(report.id),
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
     }
+
+
+@router.post("/{report_id}/archive")
+def archive_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = _get_owned_report(db, current_user, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    report.is_archived = True
+    db.commit()
+
+    log_action(
+        db,
+        "report_archived",
+        user_id=current_user.id,
+        case_id=report.case_id,
+        report_version_id=report.id,
+    )
+
+    return {"ok": True}
+
+
+@router.post("/{report_id}/restore")
+def restore_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = _get_owned_report(db, current_user, report_id)
+    if not report:
+        raise HTTPException(status_code=404, detail="Report not found")
+
+    report.is_archived = False
+    db.commit()
+
+    log_action(
+        db,
+        "report_restored",
+        user_id=current_user.id,
+        case_id=report.case_id,
+        report_version_id=report.id,
+    )
+
+    return {"ok": True}
