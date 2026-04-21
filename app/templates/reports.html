@@ -37,14 +37,12 @@
         <thead>
             <tr>
                 <th>Patient / Case</th>
-                <th>Version</th>
-                <th>Scan date</th>
                 <th>Generated</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="reports-body">
-            <tr><td colspan="5" class="muted">Loading…</td></tr>
+            <tr><td colspan="3" class="muted">Loading…</td></tr>
         </tbody>
     </table>
 </div>
@@ -65,7 +63,7 @@
 
         const filtered = allReports
             .filter(item => {
-                const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""} ${item.scan_datetime || ""}`.toLowerCase();
+                const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""}`.toLowerCase();
                 return !query || hay.includes(query);
             })
             .sort((a, b) => {
@@ -75,15 +73,13 @@
             });
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="5" class="muted">No reports found.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3" class="muted">No reports found.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = filtered.map(item => `
             <tr>
                 <td>${safeText(item.display_name)}</td>
-                <td>v${safeText(item.version_number)}</td>
-                <td>${formatDate(item.scan_datetime)}</td>
                 <td>${formatDate(item.generated_at)}</td>
                 <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
             </tr>

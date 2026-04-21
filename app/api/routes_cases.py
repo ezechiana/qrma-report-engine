@@ -14,6 +14,7 @@ from app.schemas.cases import (
 )
 from app.schemas.patients import PatientCreate
 from app.schemas.reports import GenerateReportResponse
+from app.schemas.cases import CaseCreateFromImport
 from app.services.audit_service import log_action
 from app.services.case_service import create_case, update_case
 from app.services.patient_service import create_patient
@@ -304,31 +305,98 @@ def create_from_import(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    patient_payload = PatientCreate(
-        first_name=payload.patient.first_name or "",
-        last_name=payload.patient.last_name or "",
-        date_of_birth=payload.patient.date_of_birth,
-        age=payload.patient.age,
-        sex=payload.patient.sex,
-        height_cm=payload.patient.height_cm,
-        weight_kg=payload.patient.weight_kg,
-    )
-    patient = create_patient(db, current_user, patient_payload)
+    # Use an existing patient if chosen; otherwise create a new one
+    if payload.existing_patient_id:
+        patient = _get_owned_patient(db, current_user, payload.existing_patient_id)
+        if not patient:
+            raise HTTPException(status_code=404, detail="Selected patient not found")
+
+        # Optional explicit overwrite of patient profile measurements
+        if payload.update_patient_measurements:
+            if payload.patient.height_cm is not None:
+                patient.height_cm = payload.patient.height_cm
+            if payload.patient.weight_kg is not None:
+                patient.weight_kg = payload.patient.weight_kg
+
+            # keep age in sync if DOB supplied
+            if payload.patient.date_of_birth is not None:
+                patient.date_of_birth = payload.patient.date_of_birth
+
+            db.flush()
+    else:
+        def _normalise_sex(value):
+            if not value:
+                return None
+
+            v = str(value).strip().lower()
+
+            mapping = {
+                "female": "female",
+                "f": "female",
+                "male": "male",
+                "m": "male",
+                "other": "other",
+                "prefer not to say": "prefer_not_to_say",
+                "prefer_not_to_say": "prefer_not_to_say",
+            }
+
+            return mapping.get(v, None)
+
+
+        def _normalise_sex(value):
+            if not value:
+                return None
+
+            v = str(value).strip().lower()
+
+            mapping = {
+                "female": "female",
+                "f": "female",
+                "male": "male",
+                "m": "male",
+                "other": "other",
+                "prefer not to say": "prefer_not_to_say",
+                "prefer_not_to_say": "prefer_not_to_say",
+            }
+
+            return mapping.get(v, None)
+
+
+        patient_payload = PatientCreate(
+            first_name=(payload.patient.first_name or "").strip(),
+            last_name=(payload.patient.last_name or "").strip(),
+            date_of_birth=payload.patient.date_of_birth,
+            sex=_normalise_sex(payload.patient.sex),  # ✅ FIX
+            height_cm=payload.patient.height_cm,
+            weight_kg=payload.patient.weight_kg,
+        )
+
+        patient = create_patient(db, current_user, patient_payload)
+
     case = create_case(db, current_user, patient, payload.case)
 
-    temp_html_bytes = load_temp_html(payload.temporary_upload_id)
+    try:
+        temp_html_bytes = load_temp_html(payload.temporary_upload_id)
+    except FileNotFoundError:
+        raise HTTPException(
+            status_code=400,
+            detail="Temporary upload expired. Please upload the file again."
+        )
+
     raw_scan_html_path = save_case_html(
         case_id=str(case.id),
         user_id=str(current_user.id),
         file_bytes=temp_html_bytes,
     )
 
+    # Always keep the imported values as part of the scan/case snapshot
     case.source_patient_data_json = make_json_safe(payload.patient.model_dump())
     case.raw_scan_html_path = raw_scan_html_path
 
     scan_metadata = getattr(payload, "scan_metadata", None)
     if scan_metadata and getattr(scan_metadata, "scan_datetime", None):
         case.scan_datetime = scan_metadata.scan_datetime
+
     db.commit()
     db.refresh(case)
 
@@ -337,7 +405,12 @@ def create_from_import(
         "patient_confirmed_from_scan",
         user_id=current_user.id,
         case_id=case.id,
-        metadata_json={"temporary_upload_id": payload.temporary_upload_id},
+        metadata_json={
+            "temporary_upload_id": payload.temporary_upload_id,
+            "linked_existing_patient": bool(payload.existing_patient_id),
+            "existing_patient_id": str(payload.existing_patient_id) if payload.existing_patient_id else None,
+            "update_patient_measurements": payload.update_patient_measurements,
+        },
     )
 
     return {
@@ -377,9 +450,6 @@ def create_from_existing_patient_import(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from app.services.case_service import create_case
-    from app.services.scan_import_service import load_temp_html, save_case_html
-    from app.schemas.cases import CaseCreateFromImport
 
     patient_id = payload.get("patient_id")
     temporary_upload_id = payload.get("temporary_upload_id")

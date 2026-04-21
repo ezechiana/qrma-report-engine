@@ -1,6 +1,26 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.match-option {
+    display: block;
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 10px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    background: white;
+}
+
+.match-option:hover {
+    background: #f8fafc;
+}
+
+.readonly-input {
+    background: #f8fafc;
+}
+</style>
+
 <div id="error-box" class="error" style="display:none;"></div>
 <div id="success-box" class="success" style="display:none;"></div>
 
@@ -14,33 +34,12 @@
             <input id="scan-file" type="file" accept=".html,.htm" required />
         </div>
 
-        <button type="submit">Upload and parse</button>
+        <button type="submit" class="btn">Upload and parse</button>
     </form>
 </div>
 
 <div class="card" id="confirm-card" style="display:none;">
     <h2>Confirm patient details</h2>
-
-    <div class="field">
-        <label>Patient handling</label>
-        <select id="patient-mode">
-            <option value="new">Create new patient</option>
-            <option value="existing">Link to existing patient</option>
-        </select>
-    </div>
-
-    <div id="existing-patient-block" style="display:none;">
-        <div class="field">
-            <label>Search existing patient</label>
-            <input id="patient-search" placeholder="Type patient name" />
-        </div>
-        <div class="field">
-            <label>Select patient</label>
-            <select id="existing-patient-select">
-                <option value="">Choose patient…</option>
-            </select>
-        </div>
-    </div>
 
     <form id="confirm-form">
         <div class="grid-2">
@@ -56,12 +55,12 @@
 
             <div class="field">
                 <label>Date of birth</label>
-                <input id="date_of_birth" />
+                <input id="date_of_birth" type="date" />
             </div>
 
             <div class="field">
                 <label>Age</label>
-                <input id="age" />
+                <input id="age" class="readonly-input" readonly />
             </div>
 
             <div class="field">
@@ -71,12 +70,12 @@
 
             <div class="field">
                 <label>Height (cm)</label>
-                <input id="height_cm" />
+                <input id="height_cm" type="number" step="0.1" />
             </div>
 
             <div class="field">
                 <label>Weight (kg)</label>
-                <input id="weight_kg" />
+                <input id="weight_kg" type="number" step="0.1" />
             </div>
 
             <div class="field">
@@ -85,8 +84,42 @@
             </div>
         </div>
 
+        <div class="card" id="patient-link-card" style="margin-top:16px;">
+            <h3 style="margin-top:0;">Patient matching</h3>
+            <p class="muted" style="margin-top:0;">
+                Choose whether to create a new patient or link this scan to an existing patient.
+            </p>
+
+            <div class="field">
+                <label style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="patient-link-mode" value="new" checked>
+                    Create new patient
+                </label>
+            </div>
+
+            <div class="field">
+                <label style="display:flex; align-items:center; gap:8px;">
+                    <input type="radio" name="patient-link-mode" value="existing">
+                    Link to an existing patient
+                </label>
+            </div>
+
+            <div id="patient-match-list" style="display:none; margin-top:12px;"></div>
+
+            <div id="patient-mismatch-warning" class="notice" style="display:none; margin-top:12px;"></div>
+
+            <div id="patient-measurement-warning" class="notice" style="display:none; margin-top:12px;"></div>
+
+            <div id="update-measurements-wrap" style="display:none; margin-top:12px;">
+                <label style="display:flex; align-items:center; gap:8px;">
+                    <input type="checkbox" id="update-patient-measurements">
+                    Update the patient profile with imported height and weight as well
+                </label>
+            </div>
+        </div>
+
         <div class="btn-row">
-            <button type="submit">Create case</button>
+            <button type="submit" class="btn">Create case</button>
             <button type="button" class="btn secondary" id="create-and-generate">Create and generate report</button>
         </div>
     </form>
@@ -95,10 +128,16 @@
 <script>
     let temporaryUploadId = null;
     let parsedScanMetadata = null;
+    let parsedPatientData = null;
     let allPatients = [];
+    let selectedExistingPatientId = null;
 
     function showError(msg) {
         const box = document.getElementById("error-box");
+        const successBox = document.getElementById("success-box");
+        successBox.style.display = "none";
+        successBox.textContent = "";
+
         box.style.display = "block";
 
         if (Array.isArray(msg)) {
@@ -126,50 +165,219 @@
 
     function showSuccess(msg) {
         const box = document.getElementById("success-box");
+        clearError();
         box.style.display = "block";
         box.textContent = msg;
+    }
+
+    function normaliseText(value) {
+        return (value || "")
+            .toString()
+            .trim()
+            .toLowerCase()
+            .replace(/\s+/g, " ");
+    }
+
+    function safeNumber(value) {
+        if (value === null || value === undefined || value === "") return null;
+        const n = Number(value);
+        return Number.isNaN(n) ? null : n;
     }
 
     function patientName(p) {
         return (
             p.full_name ||
-            [p.first_name, p.last_name].filter(Boolean).join(" ") ||
+            [p.first_name, p.last_name].filter(Boolean).join(" ").trim() ||
             "Unnamed patient"
         );
     }
 
-    function renderExistingPatients() {
-        const select = document.getElementById("existing-patient-select");
-        const query = (document.getElementById("patient-search").value || "").trim().toLowerCase();
-
-        const filtered = allPatients.filter(p => patientName(p).toLowerCase().includes(query));
-
-        select.innerHTML = `<option value="">Choose patient…</option>` + filtered.map(p => `
-            <option value="${p.id}">${patientName(p)}</option>
-        `).join("");
+    function namesMatch(imported, existing) {
+        return (
+            normaliseText(imported.first_name) === normaliseText(existing.first_name) &&
+            normaliseText(imported.last_name) === normaliseText(existing.last_name)
+        );
     }
 
-    async function loadPatientsForLinking() {
+    function valuesDiffer(a, b) {
+        if (a === null || a === undefined || a === "") return false;
+        if (b === null || b === undefined || b === "") return false;
+        return String(a) !== String(b);
+    }
+
+    function scorePatientMatch(imported, existing) {
+        let score = 0;
+
+        if (namesMatch(imported, existing)) score += 100;
+
+        if (
+            imported.date_of_birth &&
+            existing.date_of_birth &&
+            imported.date_of_birth === existing.date_of_birth
+        ) {
+            score += 50;
+        }
+
+        if (
+            imported.sex &&
+            existing.sex &&
+            normaliseText(imported.sex) === normaliseText(existing.sex)
+        ) {
+            score += 10;
+        }
+
+        return score;
+    }
+
+    async function loadPatientsForMatching() {
         try {
-            const res = await apiFetch("/api/patients");
-            if (!res.ok) return;
-            const data = await res.json();
+            const response = await apiFetch("/api/patients");
+            if (!response.ok) {
+                allPatients = [];
+                return;
+            }
+            const data = await response.json().catch(() => ([]));
             allPatients = Array.isArray(data) ? data : (data.items || []);
-            renderExistingPatients();
         } catch (e) {
-            console.warn("Could not load patients for linking", e);
+            console.warn("Could not load patients for matching", e);
+            allPatients = [];
         }
     }
 
-    document.getElementById("patient-mode").addEventListener("change", () => {
-        const mode = document.getElementById("patient-mode").value;
-        document.getElementById("existing-patient-block").style.display =
-            mode === "existing" ? "block" : "none";
-    });
+    function renderPatientMatches() {
+        const list = document.getElementById("patient-match-list");
+        const mode = document.querySelector('input[name="patient-link-mode"]:checked')?.value;
 
-    document.getElementById("patient-search").addEventListener("input", renderExistingPatients);
+        if (mode !== "existing") {
+            list.style.display = "none";
+            document.getElementById("patient-mismatch-warning").style.display = "none";
+            document.getElementById("patient-measurement-warning").style.display = "none";
+            document.getElementById("update-measurements-wrap").style.display = "none";
+            document.getElementById("update-patient-measurements").checked = false;
+            selectedExistingPatientId = null;
+            return;
+        }
 
-    document.getElementById("upload-form").addEventListener("submit", async (e) => {
+        const imported = {
+            first_name: document.getElementById("first_name").value || parsedPatientData?.first_name || "",
+            last_name: document.getElementById("last_name").value || parsedPatientData?.last_name || "",
+            date_of_birth: document.getElementById("date_of_birth").value || parsedPatientData?.date_of_birth || null,
+            sex: document.getElementById("sex").value || parsedPatientData?.sex || null,
+            height_cm: safeNumber(document.getElementById("height_cm").value) ?? parsedPatientData?.height_cm ?? null,
+            weight_kg: safeNumber(document.getElementById("weight_kg").value) ?? parsedPatientData?.weight_kg ?? null,
+        };
+
+        const matches = allPatients
+            .map(p => ({ ...p, _score: scorePatientMatch(imported, p) }))
+            .sort((a, b) => b._score - a._score);
+
+        list.style.display = "block";
+
+        if (!matches.length) {
+            list.innerHTML = `<div class="muted">No existing patients found.</div>`;
+            selectedExistingPatientId = null;
+            return;
+        }
+
+        list.innerHTML = matches.map((p, index) => `
+            <label class="match-option">
+                <input
+                    type="radio"
+                    name="existing-patient-choice"
+                    value="${p.id}"
+                    ${index === 0 ? "checked" : ""}
+                    style="margin-right:8px;"
+                >
+                <strong>${safeText(patientName(p))}</strong>
+                <div class="muted" style="margin-top:4px;">
+                    DOB: ${safeText(p.date_of_birth)} · Sex: ${safeText(p.sex)} · Cases: ${safeText(p.case_count || 0)}
+                </div>
+            </label>
+        `).join("");
+
+        const first = matches[0];
+        selectedExistingPatientId = first ? first.id : null;
+        updateLinkWarnings();
+
+        document.querySelectorAll('input[name="existing-patient-choice"]').forEach(radio => {
+            radio.addEventListener("change", (e) => {
+                selectedExistingPatientId = e.target.value;
+                updateLinkWarnings();
+            });
+        });
+    }
+
+    function updateLinkWarnings() {
+        const mismatchBox = document.getElementById("patient-mismatch-warning");
+        const measurementBox = document.getElementById("patient-measurement-warning");
+        const measurementWrap = document.getElementById("update-measurements-wrap");
+
+        mismatchBox.style.display = "none";
+        mismatchBox.innerHTML = "";
+        measurementBox.style.display = "none";
+        measurementBox.innerHTML = "";
+        measurementWrap.style.display = "none";
+        document.getElementById("update-patient-measurements").checked = false;
+
+        if (!selectedExistingPatientId) return;
+
+        const imported = {
+            first_name: document.getElementById("first_name").value || parsedPatientData?.first_name || "",
+            last_name: document.getElementById("last_name").value || parsedPatientData?.last_name || "",
+            date_of_birth: document.getElementById("date_of_birth").value || parsedPatientData?.date_of_birth || null,
+            sex: document.getElementById("sex").value || parsedPatientData?.sex || null,
+            height_cm: safeNumber(document.getElementById("height_cm").value) ?? parsedPatientData?.height_cm ?? null,
+            weight_kg: safeNumber(document.getElementById("weight_kg").value) ?? parsedPatientData?.weight_kg ?? null,
+        };
+
+        const existing = allPatients.find(p => String(p.id) === String(selectedExistingPatientId));
+        if (!existing) return;
+
+        const mismatchMessages = [];
+
+        if (!namesMatch(imported, existing)) {
+            mismatchMessages.push(
+                `Imported name: ${safeText([imported.first_name, imported.last_name].filter(Boolean).join(" "))}; existing patient: ${safeText(patientName(existing))}.`
+            );
+        }
+
+        if (
+            imported.date_of_birth &&
+            existing.date_of_birth &&
+            imported.date_of_birth !== existing.date_of_birth
+        ) {
+            mismatchMessages.push(`Date of birth differs (${imported.date_of_birth} vs ${existing.date_of_birth}).`);
+        }
+
+        if (
+            imported.sex &&
+            existing.sex &&
+            normaliseText(imported.sex) !== normaliseText(existing.sex)
+        ) {
+            mismatchMessages.push(`Sex differs (${imported.sex} vs ${existing.sex}).`);
+        }
+
+        if (mismatchMessages.length) {
+            mismatchBox.style.display = "block";
+            mismatchBox.innerHTML = `<strong>Warning:</strong> The imported identity details do not fully match this patient.<br>${mismatchMessages.join("<br>")}`;
+        }
+
+        const measurementMessages = [];
+        if (valuesDiffer(imported.height_cm, existing.height_cm)) {
+            measurementMessages.push(`Height differs (${safeText(imported.height_cm)} vs ${safeText(existing.height_cm)} cm).`);
+        }
+        if (valuesDiffer(imported.weight_kg, existing.weight_kg)) {
+            measurementMessages.push(`Weight differs (${safeText(imported.weight_kg)} vs ${safeText(existing.weight_kg)} kg).`);
+        }
+
+        if (measurementMessages.length) {
+            measurementBox.style.display = "block";
+            measurementBox.innerHTML = `<strong>Imported measurements differ from the current patient profile.</strong><br>${measurementMessages.join("<br>")}`;
+            measurementWrap.style.display = "block";
+        }
+    }
+
+    async function handleUploadSubmit(e) {
         e.preventDefault();
         clearError();
 
@@ -190,7 +398,7 @@
             body: formData,
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
             showError(data.detail || "Could not parse the HTML file.");
@@ -201,6 +409,8 @@
         parsedScanMetadata = data.scan_metadata || null;
 
         const p = data.source_patient_data || {};
+        parsedPatientData = p;
+
         document.getElementById("first_name").value = p.first_name || "";
         document.getElementById("last_name").value = p.last_name || "";
         document.getElementById("date_of_birth").value = p.date_of_birth || "";
@@ -212,9 +422,12 @@
             (p.full_name ? `${p.full_name} QRMA scan` : "QRMA scan case");
 
         document.getElementById("confirm-card").style.display = "block";
-        await loadPatientsForLinking();
+
+        await loadPatientsForMatching();
+        renderPatientMatches();
+
         showSuccess("Scan parsed successfully. Please confirm the patient details.");
-    });
+    }
 
     async function createCase(generateAfter = false) {
         clearError();
@@ -232,66 +445,59 @@
                 const settings = await settingsResponse.json();
                 recommendationMode = settings.recommendation_mode_default || recommendationMode;
             }
-        } catch (e) {}
-
-        const patientMode = document.getElementById("patient-mode").value;
-
-        let response;
-        let data;
-
-        if (patientMode === "existing") {
-            const existingPatientId = document.getElementById("existing-patient-select").value;
-            if (!existingPatientId) {
-                showError("Please select an existing patient.");
-                return;
-            }
-
-            response = await apiFetch("/api/cases/from-existing-patient-import", {
-                method: "POST",
-                body: JSON.stringify({
-                    temporary_upload_id: temporaryUploadId,
-                    patient_id: existingPatientId,
-                    scan_metadata: parsedScanMetadata,
-                    case: {
-                        title: document.getElementById("case_title").value || "QRMA scan case",
-                        recommendation_mode: recommendationMode,
-                        clinical_context_json: null
-                    }
-                }),
-            });
-
-            data = await response.json();
-        } else {
-            const payload = {
-                temporary_upload_id: temporaryUploadId,
-                patient: {
-                    first_name: document.getElementById("first_name").value || "",
-                    last_name: document.getElementById("last_name").value || "",
-                    date_of_birth: document.getElementById("date_of_birth").value || null,
-                    age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
-                    sex: document.getElementById("sex").value || null,
-                    height_cm: document.getElementById("height_cm").value ? Number(document.getElementById("height_cm").value) : null,
-                    weight_kg: document.getElementById("weight_kg").value ? Number(document.getElementById("weight_kg").value) : null,
-                    full_name: [
-                        document.getElementById("first_name").value || "",
-                        document.getElementById("last_name").value || ""
-                    ].join(" ").trim() || null
-                },
-                scan_metadata: parsedScanMetadata,
-                case: {
-                    title: document.getElementById("case_title").value || "QRMA scan case",
-                    recommendation_mode: recommendationMode,
-                    clinical_context_json: null
-                }
-            };
-
-            response = await apiFetch("/api/cases/create-from-import", {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-
-            data = await response.json();
+        } catch (e) {
+            console.warn("Could not load recommendation mode from settings", e);
         }
+
+        const linkMode = document.querySelector('input[name="patient-link-mode"]:checked')?.value || "new";
+
+        if (linkMode === "existing" && !selectedExistingPatientId) {
+            showError("Please select an existing patient to link this scan to.");
+            return;
+        }
+
+        const mismatchVisible = document.getElementById("patient-mismatch-warning").style.display !== "none";
+        if (linkMode === "existing" && mismatchVisible) {
+            const confirmed = window.confirm(
+                "The imported name or identity details do not fully match the selected patient record. Do you want to continue linking this scan?"
+            );
+            if (!confirmed) return;
+        }
+
+        const payload = {
+            temporary_upload_id: temporaryUploadId,
+            patient: {
+                first_name: document.getElementById("first_name").value || "",
+                last_name: document.getElementById("last_name").value || "",
+                date_of_birth: document.getElementById("date_of_birth").value || null,
+                age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
+                sex: document.getElementById("sex").value || null,
+                height_cm: safeNumber(document.getElementById("height_cm").value),
+                weight_kg: safeNumber(document.getElementById("weight_kg").value),
+                full_name: [
+                    document.getElementById("first_name").value || "",
+                    document.getElementById("last_name").value || ""
+                ].join(" ").trim() || null
+            },
+            scan_metadata: parsedScanMetadata,
+            case: {
+                title: document.getElementById("case_title").value || "QRMA scan case",
+                recommendation_mode: recommendationMode,
+                clinical_context_json: null
+            },
+            existing_patient_id: linkMode === "existing" ? selectedExistingPatientId : null,
+            update_patient_measurements: (
+                linkMode === "existing" &&
+                document.getElementById("update-patient-measurements").checked
+            )
+        };
+
+        const response = await apiFetch("/api/cases/create-from-import", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
             showError(data.detail || data || "Could not create case.");
@@ -309,7 +515,7 @@
             method: "POST"
         });
 
-        const genData = await genResponse.json();
+        const genData = await genResponse.json().catch(() => ({}));
 
         if (!genResponse.ok) {
             showError(genData.detail || "Case created, but report generation failed.");
@@ -320,6 +526,8 @@
         window.location.href = `/app/cases/${caseId}`;
     }
 
+    document.getElementById("upload-form").addEventListener("submit", handleUploadSubmit);
+
     document.getElementById("confirm-form").addEventListener("submit", async (e) => {
         e.preventDefault();
         await createCase(false);
@@ -327,6 +535,18 @@
 
     document.getElementById("create-and-generate").addEventListener("click", async () => {
         await createCase(true);
+    });
+
+    document.querySelectorAll('input[name="patient-link-mode"]').forEach(radio => {
+        radio.addEventListener("change", renderPatientMatches);
+    });
+
+    ["first_name", "last_name", "date_of_birth", "sex", "height_cm", "weight_kg"].forEach(id => {
+        document.getElementById(id).addEventListener("input", () => {
+            if (document.querySelector('input[name="patient-link-mode"]:checked')?.value === "existing") {
+                renderPatientMatches();
+            }
+        });
     });
 </script>
 {% endblock %}

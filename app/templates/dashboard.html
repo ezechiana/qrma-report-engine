@@ -45,15 +45,6 @@
     flex-wrap: wrap;
 }
 
-.secondary-btn {
-    border: 1px solid #d1d5db;
-    background: white;
-    padding: 8px 14px;
-    border-radius: 10px;
-    cursor: pointer;
-    font-weight: 600;
-}
-
 .reports-table {
     width: 100%;
     border-collapse: collapse;
@@ -112,7 +103,6 @@
         <h2>Recent Reports</h2>
         <div class="btn-row">
             <input class="search-input" id="dashboard-search" placeholder="Search patient or case name" />
-            <button class="secondary-btn" type="button" id="refresh-dashboard-btn">Refresh</button>
         </div>
     </div>
 
@@ -121,14 +111,12 @@
             <thead>
                 <tr>
                     <th>Patient / Case</th>
-                    <th>Version</th>
-                    <th>Scan date</th>
                     <th>Generated</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="reports-table-body">
-                <tr><td colspan="5">Loading…</td></tr>
+                <tr><td colspan="3">Loading…</td></tr>
             </tbody>
         </table>
     </div>
@@ -154,20 +142,18 @@
         const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
 
         const filtered = dashboardRows.filter(item => {
-            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""} ${item.scan_datetime || ""}`.toLowerCase();
+            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""}`.toLowerCase();
             return !query || hay.includes(query);
         });
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="5">No matching reports.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="3">No matching reports.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = filtered.map(item => `
             <tr>
                 <td>${safeText(item.display_name)}</td>
-                <td>v${safeText(item.version_number)}</td>
-                <td>${formatDate(item.scan_datetime)}</td>
                 <td>${formatDate(item.generated_at)}</td>
                 <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
             </tr>
@@ -190,7 +176,7 @@
                 const errorData = await reportsRes.json().catch(() => ({}));
                 showDashboardError(errorData.detail || "Could not load dashboard data.");
                 document.getElementById("reports-table-body").innerHTML =
-                    `<tr><td colspan="5">Could not load reports.</td></tr>`;
+                    `<tr><td colspan="3">Could not load reports.</td></tr>`;
                 return;
             }
 
@@ -211,7 +197,6 @@
                         ...r,
                         display_name: r.display_name || linkedCase.display_name || linkedCase.title || `Case ${safeText(r.case_id)}`,
                         patient_display_name: r.patient_display_name || linkedCase.patient_display_name || "",
-                        scan_datetime: r.scan_datetime || linkedCase.scan_datetime || null,
                     };
                 });
 
@@ -230,11 +215,10 @@
             console.error(err);
             showDashboardError("Unexpected error while loading dashboard.");
             document.getElementById("reports-table-body").innerHTML =
-                `<tr><td colspan="5">Unexpected error.</td></tr>`;
+                `<tr><td colspan="3">Unexpected error.</td></tr>`;
         }
     }
 
-    document.getElementById("refresh-dashboard-btn").addEventListener("click", loadDashboard);
     document.getElementById("dashboard-search").addEventListener("input", renderDashboardRows);
 
     loadDashboard();

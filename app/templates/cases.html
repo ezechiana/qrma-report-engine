@@ -1,0 +1,151 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.cases-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.cases-toolbar-left,
+.cases-toolbar-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.cases-search {
+    max-width: 320px;
+}
+
+.cases-sort {
+    max-width: 180px;
+}
+
+.empty-state {
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+}
+</style>
+
+<div id="cases-error" class="error" style="display:none;"></div>
+
+<p class="muted" style="margin-bottom:20px;">Browse imported cases, search by patient or case name, and create a new case when needed.</p>
+
+<div class="card">
+    <div class="cases-toolbar">
+        <div class="cases-toolbar-left">
+            <input id="cases-search" class="cases-search" placeholder="Search patient or case name" />
+            <select id="cases-sort" class="cases-sort">
+                <option value="recent">Newest first</option>
+                <option value="oldest">Oldest first</option>
+                <option value="name_asc">Name A–Z</option>
+                <option value="name_desc">Name Z–A</option>
+            </select>
+        </div>
+
+        <div class="cases-toolbar-right">
+            <a href="/app/cases/new" class="btn">New Case</a>
+        </div>
+    </div>
+
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Patient / Case</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="cases-body">
+            <tr><td colspan="4" class="muted">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+
+<script>
+    let allCases = [];
+
+    function showCasesError(message) {
+        const box = document.getElementById("cases-error");
+        box.style.display = "block";
+        box.textContent = message;
+    }
+
+    function clearCasesError() {
+        const box = document.getElementById("cases-error");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function renderCases() {
+        const tbody = document.getElementById("cases-body");
+        const query = (document.getElementById("cases-search").value || "").trim().toLowerCase();
+        const sort = document.getElementById("cases-sort").value;
+
+        let rows = allCases.filter(item => {
+            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.status || ""} ${item.created_at || ""}`.toLowerCase();
+            return !query || hay.includes(query);
+        });
+
+        if (sort === "name_asc") {
+            rows.sort((a, b) => String(a.display_name || "").localeCompare(String(b.display_name || "")));
+        } else if (sort === "name_desc") {
+            rows.sort((a, b) => String(b.display_name || "").localeCompare(String(a.display_name || "")));
+        } else if (sort === "oldest") {
+            rows.sort((a, b) => new Date(a.created_at || 0) - new Date(b.created_at || 0));
+        } else {
+            rows.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+        }
+
+        if (!rows.length) {
+            tbody.innerHTML = `<tr><td colspan="4"><div class="empty-state">No cases found.</div></td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = rows.map(item => `
+            <tr>
+                <td>${safeText(item.display_name)}</td>
+                <td>${safeText(item.status)}</td>
+                <td>${formatDate(item.created_at)}</td>
+                <td><a class="link" href="/app/cases/${item.id}">Open</a></td>
+            </tr>
+        `).join("");
+    }
+
+    async function loadCases() {
+        clearCasesError();
+
+        const authed = await requireAuthOrRedirect();
+        if (!authed) return;
+
+        try {
+            const response = await apiFetch("/api/cases");
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showCasesError(data.detail || "Could not load cases.");
+                return;
+            }
+
+            allCases = Array.isArray(data) ? data : (data.items || []);
+            renderCases();
+        } catch (err) {
+            console.error(err);
+            showCasesError("Unexpected error while loading cases.");
+        }
+    }
+
+    document.getElementById("cases-search").addEventListener("input", renderCases);
+    document.getElementById("cases-sort").addEventListener("change", renderCases);
+
+    loadCases();
+</script>
+{% endblock %}

@@ -111,7 +111,7 @@ def reports_page(request: Request):
         name="reports.html",
         context={
             "request": request,
-            "title": "",
+            "title": "Reports",
         },
     )
 
@@ -159,6 +159,17 @@ def patient_detail_page(patient_id: str, request: Request):
             "request": request,
             "title": "Patient Detail",
             "patient_id": patient_id,
+        },
+    )
+
+@router.get("/app/cases")
+def cases_page(request: Request):
+    return templates.TemplateResponse(
+        request=request,
+        name="cases.html",
+        context={
+            "request": request,
+            "title": "Cases",
         },
     )
 

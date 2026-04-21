@@ -107,12 +107,85 @@
             display: flex;
             justify-content: space-between;
             align-items: center;
-            gap: 12px;
+            gap: 16px;
         }
 
         .topbar-title {
             font-size: 22px;
             font-weight: 700;
+        }
+
+        .topbar-actions {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            position: relative;
+        }
+
+        .account-trigger {
+            border: 1px solid var(--line);
+            background: white;
+            border-radius: 999px;
+            padding: 8px 14px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--text);
+        }
+
+        .account-menu {
+            position: absolute;
+            top: calc(100% + 10px);
+            right: 0;
+            min-width: 220px;
+            background: white;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.10);
+            padding: 8px;
+            display: none;
+            z-index: 100;
+        }
+
+        .account-menu.open {
+            display: block;
+        }
+
+        .account-menu-header {
+            padding: 10px 12px;
+            border-bottom: 1px solid var(--line);
+            margin-bottom: 6px;
+        }
+
+        .account-menu-name {
+            font-weight: 700;
+            font-size: 14px;
+        }
+
+        .account-menu-email {
+            font-size: 12px;
+            color: var(--muted);
+            margin-top: 4px;
+            word-break: break-word;
+        }
+
+        .account-menu a,
+        .account-menu button {
+            display: block;
+            width: 100%;
+            text-align: left;
+            padding: 10px 12px;
+            border: none;
+            background: white;
+            border-radius: 10px;
+            cursor: pointer;
+            font: inherit;
+            color: var(--text);
+        }
+
+        .account-menu a:hover,
+        .account-menu button:hover {
+            background: #f8fafc;
         }
 
         .content {
@@ -251,6 +324,7 @@
         .mobile-topbar {
             display: none;
             align-items: center;
+            justify-content: space-between;
             gap: 12px;
             padding: 14px 16px;
             background: var(--surface);
@@ -258,6 +332,13 @@
             position: sticky;
             top: 0;
             z-index: 45;
+        }
+
+        .mobile-topbar-left {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            min-width: 0;
         }
 
         .mobile-menu-btn,
@@ -285,6 +366,8 @@
             display: none;
         }
 
+
+        
         @media (max-width: 960px) {
             .app { grid-template-columns: 1fr; }
 
@@ -465,16 +548,13 @@
 
         <nav>
             <a href="/app" id="nav-dashboard">Dashboard</a>
-            <a href="/app/cases/new" id="nav-new-case">New case</a>
             <a href="/app/patients" id="nav-patients">Patients</a>
+            <a href="/app/cases" id="nav-cases">Cases</a>
             <a href="/app/reports" id="nav-reports">Reports</a>
-            <a href="/app/settings" id="nav-settings">Settings</a>
-            <a href="/app/billing" id="nav-billing">Billing</a>
         </nav>
 
         <div class="sidebar-footer">
             <div id="sidebar-user-email">Signed in</div>
-            <a href="#" onclick="logoutNow(); return false;">Logout</a>
         </div>
     </aside>
 
@@ -482,13 +562,28 @@
 
     <main class="main">
         <div class="mobile-topbar">
-            <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
-            <div class="mobile-topbar-title">{{ title if title else "Health Portal" }}</div>
+            <div class="mobile-topbar-left">
+                <button class="mobile-menu-btn" id="mobile-menu-btn" aria-label="Open menu">☰</button>
+                <div class="mobile-topbar-title">{{ title if title else "Health Portal" }}</div>
+            </div>
+            <button class="account-trigger" id="mobile-account-trigger" type="button">⋯</button>
         </div>
 
         {% if title is not none and title != "" %}
         <div class="topbar">
             <div class="topbar-title">{{ title }}</div>
+            <div class="topbar-actions">
+                <button class="account-trigger" id="account-trigger" type="button">Account</button>
+                <div class="account-menu" id="account-menu">
+                    <div class="account-menu-header">
+                        <div class="account-menu-name" id="account-menu-name">Practitioner</div>
+                        <div class="account-menu-email" id="account-menu-email">Signed in</div>
+                    </div>
+                    <a href="/app/settings">Settings</a>
+                    <a href="/app/billing">Billing</a>
+                    <button type="button" onclick="logoutNow()">Logout</button>
+                </div>
+            </div>
         </div>
         {% endif %}
 
@@ -510,27 +605,34 @@
         const user = getCurrentUser();
         if (user) {
             const emailEl = document.getElementById("sidebar-user-email");
-            if (emailEl) emailEl.textContent = user.email || user.full_name || "Signed in";
+            const menuNameEl = document.getElementById("account-menu-name");
+            const menuEmailEl = document.getElementById("account-menu-email");
+
+            const displayName = user.full_name || "Practitioner";
+            const email = user.email || "Signed in";
+
+            if (emailEl) emailEl.textContent = email;
+            if (menuNameEl) menuNameEl.textContent = displayName;
+            if (menuEmailEl) menuEmailEl.textContent = email;
         }
 
         if (path === "/app") {
             document.getElementById("nav-dashboard")?.classList.add("active");
-        } else if (path.startsWith("/app/cases/new")) {
-            document.getElementById("nav-new-case")?.classList.add("active");
-        } else if (path.startsWith("/app/reports")) {
-            document.getElementById("nav-reports")?.classList.add("active");
-        } else if (path.startsWith("/app/settings")) {
-            document.getElementById("nav-settings")?.classList.add("active");
-        } else if (path.startsWith("/app/billing")) {
-            document.getElementById("nav-billing")?.classList.add("active");
         } else if (path.startsWith("/app/patients")) {
             document.getElementById("nav-patients")?.classList.add("active");
+        } else if (path.startsWith("/app/cases")) {
+            document.getElementById("nav-cases")?.classList.add("active");
+        } else if (path.startsWith("/app/reports")) {
+            document.getElementById("nav-reports")?.classList.add("active");
+        }
 
-            
         const sidebar = document.getElementById("app-sidebar");
         const backdrop = document.getElementById("sidebar-backdrop");
         const openBtn = document.getElementById("mobile-menu-btn");
         const closeBtn = document.getElementById("mobile-close-btn");
+        const accountTrigger = document.getElementById("account-trigger");
+        const mobileAccountTrigger = document.getElementById("mobile-account-trigger");
+        const accountMenu = document.getElementById("account-menu");
 
         function isMobile() {
             return window.innerWidth <= 960;
@@ -554,12 +656,47 @@
             if (!isMobile()) closeSidebar();
         }
 
+        function toggleAccountMenu() {
+            if (!accountMenu) return;
+            accountMenu.classList.toggle("open");
+        }
+
+        function closeAccountMenu() {
+            if (accountMenu) accountMenu.classList.remove("open");
+        }
+
         if (openBtn) openBtn.addEventListener("click", openSidebar);
         if (closeBtn) closeBtn.addEventListener("click", closeSidebar);
         if (backdrop) backdrop.addEventListener("click", closeSidebar);
 
+        if (accountTrigger) {
+            accountTrigger.addEventListener("click", function (e) {
+                e.stopPropagation();
+                toggleAccountMenu();
+            });
+        }
+
+        if (mobileAccountTrigger) {
+            mobileAccountTrigger.addEventListener("click", function (e) {
+                e.stopPropagation();
+                toggleAccountMenu();
+            });
+        }
+
+        document.addEventListener("click", function (e) {
+            if (!accountMenu) return;
+            if (!accountMenu.contains(e.target) &&
+                e.target !== accountTrigger &&
+                e.target !== mobileAccountTrigger) {
+                closeAccountMenu();
+            }
+        });
+
         document.addEventListener("keydown", function (e) {
-            if (e.key === "Escape") closeSidebar();
+            if (e.key === "Escape") {
+                closeSidebar();
+                closeAccountMenu();
+            }
         });
 
         window.addEventListener("resize", syncMobileShell);
