@@ -1,33 +1,221 @@
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.patient-hero {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.patient-hero-text h2 {
+    margin: 0 0 8px;
+    font-size: 28px;
+    line-height: 1.15;
+}
+
+.patient-meta {
+    color: #64748b;
+    line-height: 1.6;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 16px;
+}
+
+.summary-card {
+    background: white;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 18px;
+}
+
+.summary-label {
+    font-size: 13px;
+    color: #64748b;
+    margin-bottom: 6px;
+}
+
+.summary-value {
+    font-size: 24px;
+    font-weight: 700;
+}
+
+.section-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.timeline {
+    display: grid;
+    gap: 12px;
+}
+
+.timeline-item {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 12px 14px;
+    background: #fff;
+}
+
+.timeline-title {
+    font-weight: 700;
+    margin-bottom: 4px;
+}
+
+.timeline-meta {
+    font-size: 13px;
+    color: #64748b;
+}
+
+.empty-state {
+    padding: 24px;
+    text-align: center;
+    color: #64748b;
+}
+
+.edit-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+@media (max-width: 900px) {
+    .summary-grid,
+    .edit-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
 <div id="patient-error" class="error" style="display:none;"></div>
+<div id="patient-success" class="success" style="display:none;"></div>
 
 <div class="card">
-    <h2 id="patient-name">Loading patient…</h2>
-    <div id="patient-summary" class="muted">Please wait…</div>
+    <div class="patient-hero">
+        <div class="patient-hero-text">
+            <h2 id="patient-name">Loading patient…</h2>
+            <div id="patient-summary" class="patient-meta">Please wait…</div>
+        </div>
+
+        <div class="btn-row">
+            <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
+            <a class="btn" href="/app/cases/new?patient_id={{ patient_id }}">New case</a>
+            <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
+        </div>
+    </div>
+</div>
+
+<div class="summary-grid">
+    <div class="summary-card">
+        <div class="summary-label">Cases</div>
+        <div class="summary-value" id="patient-case-count">—</div>
+    </div>
+
+    <div class="summary-card">
+        <div class="summary-label">Reports</div>
+        <div class="summary-value" id="patient-report-count">—</div>
+    </div>
+
+    <div class="summary-card">
+        <div class="summary-label">Last activity</div>
+        <div class="summary-value" id="patient-last-activity" style="font-size:18px;">—</div>
+    </div>
+
+    <div class="summary-card">
+        <div class="summary-label">Data sources</div>
+        <div class="summary-value" id="patient-data-sources" style="font-size:18px;">—</div>
+    </div>
+</div>
+
+<div class="card" id="edit-patient-card" style="display:none;">
+    <h3>Edit patient</h3>
+
+    <div class="edit-grid">
+        <div class="field">
+            <label>First name</label>
+            <input id="edit-first-name" maxlength="100">
+        </div>
+
+        <div class="field">
+            <label>Last name</label>
+            <input id="edit-last-name" maxlength="100">
+        </div>
+
+        <div class="field">
+            <label>Date of birth</label>
+            <input id="edit-date-of-birth" type="date">
+        </div>
+
+        <div class="field">
+            <label>Age</label>
+            <input id="edit-age-preview" readonly>
+        </div>
+
+        <div class="field">
+            <label>Sex</label>
+            <select id="edit-sex">
+                <option value="">Select</option>
+                <option value="female">Female</option>
+                <option value="male">Male</option>
+                <option value="other">Other</option>
+                <option value="prefer_not_to_say">Prefer not to say</option>
+            </select>
+        </div>
+
+        <div class="field">
+            <label>Height (cm)</label>
+            <input id="edit-height-cm" type="number" step="0.1" min="0" max="300">
+        </div>
+
+        <div class="field">
+            <label>Weight (kg)</label>
+            <input id="edit-weight-kg" type="number" step="0.1" min="0" max="500">
+        </div>
+    </div>
+
+    <div class="btn-row">
+        <button class="btn" type="button" id="save-patient-btn">Save changes</button>
+        <button class="btn secondary" type="button" id="cancel-edit-patient-btn">Cancel</button>
+    </div>
 </div>
 
 <div class="card">
-    <h3>Cases</h3>
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Cases</h3>
+        <a class="btn secondary" href="/app/cases">View all cases</a>
+    </div>
+
     <table class="table">
         <thead>
             <tr>
                 <th>Case</th>
                 <th>Status</th>
-                <th>Scan date</th>
                 <th>Created</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="patient-cases-body">
-            <tr><td colspan="5" class="muted">Loading…</td></tr>
+            <tr><td colspan="4" class="muted">Loading…</td></tr>
         </tbody>
     </table>
 </div>
 
 <div class="card">
-    <h3>Reports</h3>
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Reports</h3>
+        <a class="btn secondary" href="/app/reports">View all reports</a>
+    </div>
+
     <table class="table">
         <thead>
             <tr>
@@ -43,13 +231,45 @@
     </table>
 </div>
 
+<div class="card">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Activity timeline</h3>
+    </div>
+
+    <div id="patient-timeline" class="timeline">
+        <div class="muted">Loading…</div>
+    </div>
+</div>
+
 <script>
     const patientId = "{{ patient_id }}";
+    let currentPatient = null;
+    let preselectedPatientId = getQueryParam("patient_id");
+    let currentCases = [];
+    let currentReports = [];
 
     function showPatientError(message) {
         const box = document.getElementById("patient-error");
         box.style.display = "block";
         box.textContent = message;
+    }
+
+    function clearPatientError() {
+        const box = document.getElementById("patient-error");
+        box.style.display = "none";
+        box.textContent = "";
+    }
+
+    function showPatientSuccess(message) {
+        const box = document.getElementById("patient-success");
+        box.style.display = "block";
+        box.textContent = message;
+    }
+
+    function clearPatientSuccess() {
+        const box = document.getElementById("patient-success");
+        box.style.display = "none";
+        box.textContent = "";
     }
 
     function patientName(patient) {
@@ -59,8 +279,140 @@
             "Unnamed patient"
         );
     }
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+
+    function calculateAgeFromDob(dobValue) {
+        if (!dobValue) return null;
+
+        const dob = new Date(dobValue);
+        if (Number.isNaN(dob.getTime())) return null;
+
+        const today = new Date();
+        let age = today.getFullYear() - dob.getFullYear();
+        const monthDiff = today.getMonth() - dob.getMonth();
+
+        if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < dob.getDate())) {
+            age--;
+        }
+
+        return age;
+    }
+
+    function updateAgePreview() {
+        const dobValue = document.getElementById("edit-date-of-birth").value;
+        const age = calculateAgeFromDob(dobValue);
+        document.getElementById("edit-age-preview").value = age === null ? "" : age;
+    }
+
+    function populateEditForm(patient) {
+        document.getElementById("edit-first-name").value = patient.first_name || "";
+        document.getElementById("edit-last-name").value = patient.last_name || "";
+        document.getElementById("edit-date-of-birth").value = patient.date_of_birth || "";
+        document.getElementById("edit-sex").value = patient.sex || "";
+        document.getElementById("edit-height-cm").value = patient.height_cm ?? "";
+        document.getElementById("edit-weight-kg").value = patient.weight_kg ?? "";
+        updateAgePreview();
+    }
+
+    function renderPatientSummary(patient) {
+        document.getElementById("patient-name").textContent = patientName(patient);
+        document.getElementById("patient-summary").innerHTML = `
+            Sex: ${safeText(patient.sex)}<br>
+            Date of birth: ${safeText(patient.date_of_birth)}<br>
+            Height: ${safeText(patient.height_cm)}${patient.height_cm ? " cm" : ""}<br>
+            Weight: ${safeText(patient.weight_kg)}${patient.weight_kg ? " kg" : ""}
+        `;
+
+        document.getElementById("patient-case-count").textContent = safeText(patient.case_count || 0);
+        document.getElementById("patient-report-count").textContent = safeText(patient.report_count || 0);
+        document.getElementById("patient-last-activity").textContent = formatDate(patient.last_activity_at);
+        document.getElementById("patient-data-sources").textContent =
+            (patient.data_sources && patient.data_sources.length)
+                ? patient.data_sources.join(", ")
+                : "—";
+    }
+
+    function renderCases(casesData) {
+        const casesBody = document.getElementById("patient-cases-body");
+        const caseRows = Array.isArray(casesData) ? casesData : (casesData.items || []);
+
+        if (!caseRows.length) {
+            casesBody.innerHTML = `<tr><td colspan="4" class="muted">No cases yet.</td></tr>`;
+            return;
+        }
+
+        casesBody.innerHTML = caseRows.map(item => `
+            <tr>
+                <td>${safeText(item.display_name || item.title)}</td>
+                <td>${safeText(item.status)}</td>
+                <td>${formatDate(item.created_at)}</td>
+                <td><a class="link" href="/app/cases/${item.id}">Open</a></td>
+            </tr>
+        `).join("");
+    }
+
+    function renderReports(reportsData) {
+        const reportsBody = document.getElementById("patient-reports-body");
+        const reportRows = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
+
+        if (!reportRows.length) {
+            reportsBody.innerHTML = `<tr><td colspan="4" class="muted">No reports yet.</td></tr>`;
+            return;
+        }
+
+        reportsBody.innerHTML = reportRows.map(item => `
+            <tr>
+                <td>${safeText(item.display_name || item.case_title)}</td>
+                <td>v${safeText(item.version_number)}</td>
+                <td>${formatDate(item.generated_at)}</td>
+                <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
+            </tr>
+        `).join("");
+    }
+
+    function renderTimeline() {
+        const timeline = document.getElementById("patient-timeline");
+
+        const items = [];
+
+        currentCases.forEach(item => {
+            items.push({
+                when: item.created_at,
+                title: item.display_name || item.title || "Case created",
+                meta: `Case · ${safeText(item.status)}`
+            });
+        });
+
+        currentReports.forEach(item => {
+            items.push({
+                when: item.generated_at,
+                title: item.display_name || item.case_title || "Report generated",
+                meta: `Report · v${safeText(item.version_number)}`
+            });
+        });
+
+        items.sort((a, b) => new Date(b.when || 0) - new Date(a.when || 0));
+
+        if (!items.length) {
+            timeline.innerHTML = `<div class="empty-state">No activity recorded yet.</div>`;
+            return;
+        }
+
+        timeline.innerHTML = items.map(item => `
+            <div class="timeline-item">
+                <div class="timeline-title">${safeText(item.title)}</div>
+                <div class="timeline-meta">${safeText(item.meta)} · ${formatDate(item.when)}</div>
+            </div>
+        `).join("");
+    }
 
     async function loadPatientDetail() {
+        clearPatientError();
+        clearPatientSuccess();
+
         const authed = await requireAuthOrRedirect();
         if (!authed) return;
 
@@ -80,40 +432,130 @@
                 return;
             }
 
-            document.getElementById("patient-name").textContent = patientName(patientData);
-            document.getElementById("patient-summary").innerHTML = `
-                Sex: ${safeText(patientData.sex)}<br>
-                Age: ${safeText(patientData.age)}<br>
-                Date of birth: ${safeText(patientData.date_of_birth)}
-            `;
+            currentPatient = patientData;
+            currentCases = Array.isArray(casesData) ? casesData : (casesData.items || []);
+            currentReports = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
 
-            const casesBody = document.getElementById("patient-cases-body");
-            const caseRows = Array.isArray(casesData) ? casesData : (casesData.items || []);
-            casesBody.innerHTML = caseRows.length ? caseRows.map(item => `
-                <tr>
-                    <td>${safeText(item.display_name || item.title)}</td>
-                    <td>${safeText(item.status)}</td>
-                    <td>${formatDate(item.scan_datetime)}</td>
-                    <td>${formatDate(item.created_at)}</td>
-                    <td><a class="link" href="/app/cases/${item.id}">Open</a></td>
-                </tr>
-            `).join("") : `<tr><td colspan="5" class="muted">No cases yet.</td></tr>`;
-
-            const reportsBody = document.getElementById("patient-reports-body");
-            const reportRows = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
-            reportsBody.innerHTML = reportRows.length ? reportRows.map(item => `
-                <tr>
-                    <td>${safeText(item.display_name || item.case_title)}</td>
-                    <td>v${safeText(item.version_number)}</td>
-                    <td>${formatDate(item.generated_at)}</td>
-                    <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
-                </tr>
-            `).join("") : `<tr><td colspan="4" class="muted">No reports yet.</td></tr>`;
+            renderPatientSummary(currentPatient);
+            populateEditForm(currentPatient);
+            renderCases(currentCases);
+            renderReports(currentReports);
+            renderTimeline();
         } catch (err) {
             console.error(err);
             showPatientError("Unexpected error while loading patient detail.");
         }
     }
+
+    async function savePatient() {
+        clearPatientError();
+        clearPatientSuccess();
+
+        const dobValue = document.getElementById("edit-date-of-birth").value || null;
+        const calculatedAge = calculateAgeFromDob(dobValue);
+
+        if (dobValue) {
+            const dob = new Date(dobValue);
+            const today = new Date();
+
+            if (dob > today) {
+                showPatientError("Date of birth cannot be in the future.");
+                return;
+            }
+
+            if (dob.getFullYear() < 1900) {
+                showPatientError("Please enter a realistic date of birth.");
+                return;
+            }
+
+            if (calculatedAge !== null && calculatedAge > 130) {
+                showPatientError("Please enter a realistic date of birth.");
+                return;
+            }
+        }
+
+        const payload = {
+            first_name: document.getElementById("edit-first-name").value.trim(),
+            last_name: document.getElementById("edit-last-name").value.trim(),
+            date_of_birth: dobValue,
+            sex: document.getElementById("edit-sex").value || null,
+            height_cm: document.getElementById("edit-height-cm").value
+                ? Number(document.getElementById("edit-height-cm").value)
+                : null,
+            weight_kg: document.getElementById("edit-weight-kg").value
+                ? Number(document.getElementById("edit-weight-kg").value)
+                : null,
+        };
+
+        if (!payload.first_name || !payload.last_name) {
+            showPatientError("First name and last name are required.");
+            return;
+        }
+
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}`, {
+                method: "PATCH",
+                body: JSON.stringify(payload),
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showPatientError(data.detail || "Could not update patient.");
+                return;
+            }
+
+            document.getElementById("edit-patient-card").style.display = "none";
+            showPatientSuccess("Patient updated.");
+            await loadPatientDetail();
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while updating patient.");
+        }
+    }
+
+    async function deletePatient() {
+        clearPatientError();
+        clearPatientSuccess();
+
+        const confirmed = window.confirm(
+            "Delete this patient? This will only work if there are no linked cases."
+        );
+        if (!confirmed) return;
+
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}`, {
+                method: "DELETE",
+            });
+
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                showPatientError(data.detail || "Could not delete patient.");
+                return;
+            }
+
+            window.location.href = "/app/patients";
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while deleting patient.");
+        }
+    }
+
+    document.getElementById("edit-patient-toggle-btn").addEventListener("click", () => {
+        const card = document.getElementById("edit-patient-card");
+        card.style.display = card.style.display === "none" ? "block" : "none";
+    });
+
+    document.getElementById("cancel-edit-patient-btn").addEventListener("click", () => {
+        document.getElementById("edit-patient-card").style.display = "none";
+        if (currentPatient) populateEditForm(currentPatient);
+        clearPatientError();
+    });
+
+    document.getElementById("save-patient-btn").addEventListener("click", savePatient);
+    document.getElementById("delete-patient-btn").addEventListener("click", deletePatient);
+    document.getElementById("edit-date-of-birth").addEventListener("input", updateAgePreview);
 
     loadPatientDetail();
 </script>

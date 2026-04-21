@@ -85,10 +85,13 @@
         </div>
 
         <div class="card" id="patient-link-card" style="margin-top:16px;">
-            <h3 style="margin-top:0;">Patient matching</h3>
-            <p class="muted" style="margin-top:0;">
+            <h3 id="patient-link-title" style="margin-top:0;">Patient matching</h3>
+            <p id="patient-link-description" class="muted" style="margin-top:0;">
                 Choose whether to create a new patient or link this scan to an existing patient.
             </p>
+
+            <!-- NEW: contextual patient summary -->
+            <div id="linked-patient-summary" style="display:none; margin-top:10px; font-weight:600;"></div>
 
             <div class="field">
                 <label style="display:flex; align-items:center; gap:8px;">
@@ -126,6 +129,13 @@
 </div>
 
 <script>
+
+    function getQueryParam(name) {
+        const url = new URL(window.location.href);
+        return url.searchParams.get(name);
+    }
+
+    let preselectedPatientId = getQueryParam("patient_id");
     let temporaryUploadId = null;
     let parsedScanMetadata = null;
     let parsedPatientData = null;
@@ -424,8 +434,39 @@
         document.getElementById("confirm-card").style.display = "block";
 
         await loadPatientsForMatching();
-        renderPatientMatches();
 
+        if (preselectedPatientId) {
+            // Lock to existing patient mode
+            document.querySelector('input[value="existing"]').checked = true;
+            selectedExistingPatientId = preselectedPatientId;
+
+            // Hide matching UI controls
+            document.getElementById("patient-match-list").style.display = "none";
+
+            // Change heading + description
+            document.getElementById("patient-link-title").textContent = "Linked patient";
+            document.getElementById("patient-link-description").textContent =
+                "This case will be linked to the patient record you started from.";
+
+            // Show patient name
+            const existing = allPatients.find(p => String(p.id) === String(preselectedPatientId));
+            if (existing) {
+                const summary = document.getElementById("linked-patient-summary");
+                summary.style.display = "block";
+                summary.textContent = patientName(existing);
+            }
+
+            // Hide radio buttons entirely
+            document.querySelectorAll('input[name="patient-link-mode"]').forEach(el => {
+                el.closest("label").style.display = "none";
+            });
+
+            // Still run warnings (important)
+            updateLinkWarnings();
+
+        } else {
+            renderPatientMatches();
+        }
         showSuccess("Scan parsed successfully. Please confirm the patient details.");
     }
 
