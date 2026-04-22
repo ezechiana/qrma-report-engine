@@ -64,43 +64,19 @@ def _serialise_patient(db: Session, patient: Patient) -> dict:
         "data_sources": data_sources,
     }
 
+def _get_health_index_from_snapshot(report: ReportVersion):
+    snapshot = getattr(report, "metrics_snapshot", None)
 
-def _extract_health_index(report: ReportVersion):
-    payload = report.report_json or {}
-
-    if not isinstance(payload, dict):
+    if not isinstance(snapshot, dict):
         return None
 
-    def find_number(obj):
-        if isinstance(obj, (int, float)):
-            return float(obj)
+    value = snapshot.get("health_index")
 
-        if isinstance(obj, str):
-            try:
-                return float(obj)
-            except:
-                return None
+    if isinstance(value, (int, float)):
+        return float(value)
 
-        if isinstance(obj, dict):
-            for k, v in obj.items():
-                if k.lower() in ["health_index", "healthindex", "score", "value", "index"]:
-                    num = find_number(v)
-                    if num is not None:
-                        return num
-                else:
-                    num = find_number(v)
-                    if num is not None:
-                        return num
+    return None
 
-        if isinstance(obj, list):
-            for item in obj:
-                num = find_number(item)
-                if num is not None:
-                    return num
-
-        return None
-
-    return find_number(payload)
 
 @router.get("", response_model=list[PatientRead])
 def list_patients(
@@ -264,7 +240,7 @@ def list_patient_reports(
             "display_name": getattr(report.case, "title", None) or f"Report {str(report.id)[:8]}",
             "scan_datetime": getattr(report.case, "scan_datetime", None) if getattr(report, "case", None) else None,
             "is_archived": bool(getattr(report, "is_archived", False)),
-            "health_index": _extract_health_index(report),
+            "health_index": _get_health_index_from_snapshot(report),
         }
         for report in reports
     ]
@@ -304,7 +280,7 @@ def get_patient_trends(
         generated_at = report.generated_at.isoformat() if report.generated_at else None
         scan_datetime = report.case.scan_datetime.isoformat() if getattr(report, "case", None) and report.case.scan_datetime else None
 
-        health_index = _extract_health_index(report)
+        health_index = _get_health_index_from_snapshot(report)
         if health_index is not None:
             health_index_points.append({
                 "report_id": str(report.id),

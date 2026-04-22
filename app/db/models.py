@@ -4,9 +4,10 @@ import enum
 import uuid
 from datetime import date, datetime
 from typing import Optional
-
+import json
 from sqlalchemy import (
     Boolean,
+    JSON,
     Column,
     Date,
     DateTime,
@@ -208,6 +209,7 @@ class ReportVersion(Base):
     build_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
 
+
     # execution lifecycle
     job_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     started_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
@@ -216,6 +218,7 @@ class ReportVersion(Base):
     error_message: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
 
     generated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    metrics_snapshot = Column(JSON, nullable=True)
 
     case: Mapped["Case"] = relationship(back_populates="report_versions")
     overrides: Mapped[Optional["ReportOverride"]] = relationship(

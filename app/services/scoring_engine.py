@@ -412,6 +412,44 @@ def _marker_position_factor(marker) -> float:
 
     return 0.5
 
+def build_metrics_snapshot(viewer_data):
+    snapshot = {
+        "health_index": None,
+        "systems": {},
+        "markers": {}
+    }
+
+    # Health Index (CONFIRMED from your templates)
+    snapshot["health_index"] = (
+        viewer_data.get("overview", {}).get("overall_scan_score")
+    )
+
+    # Systems (optional for now)
+    systems = viewer_data.get("systems", {}).get("system_score_cards", [])
+    for s in systems:
+        key = (s.get("title") or "").lower().replace(" ", "_")
+        value = s.get("score")
+        if key and isinstance(value, (int, float)):
+            snapshot["systems"][key] = value
+
+    # Markers (optional for now)
+    detail = viewer_data.get("detail", {})
+    tables = detail.get("full_marker_tables", [])
+
+    for section in tables:
+        for row in section.get("rows", []):
+            key = (row.get("display_name") or "").lower().replace(" ", "_")
+            value = row.get("value")
+
+            try:
+                value = float(value)
+            except:
+                continue
+
+            snapshot["markers"][key] = value
+
+    return snapshot
+
 
 def _section_weight(title: str | None) -> float:
     return SECTION_WEIGHTS.get(_norm(title), DEFAULT_SECTION_WEIGHT)
