@@ -61,6 +61,13 @@ def _case_display_name(case: Case | None) -> str | None:
         return case.title
     return f"Case {str(case.id)[:8]}"
 
+def _format_scan_datetime(case: Case | None) -> str | None:
+    if not case or not case.scan_datetime:
+        return None
+    # Important: do NOT apply timezone conversion.
+    # Raw QRMA HTML has no timezone, so display the stored local wall time as-is.
+    return case.scan_datetime.strftime("%d/%m/%Y, %H:%M")
+
 
 def _serialise_report(report: ReportVersion) -> dict:
     case = getattr(report, "case", None)
@@ -81,8 +88,10 @@ def _serialise_report(report: ReportVersion) -> dict:
         "patient_display_name": _patient_display_name_from_case(case),
         "case_title": case.title if case else None,
         "scan_datetime": case.scan_datetime if case else None,
+        "scan_datetime_display": _format_scan_datetime(case),
         "is_archived": bool(getattr(report, "is_archived", False)),
     }
+
 
 def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}

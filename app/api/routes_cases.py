@@ -1,5 +1,6 @@
 from uuid import UUID
 
+from app.api.routes_reports import _format_scan_datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
@@ -25,12 +26,12 @@ from app.services.scan_import_service import (
     load_temp_html,
     save_case_html,
 )
-
+from datetime import date, datetime
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
 
 def make_json_safe(obj):
-    from datetime import date, datetime
+   
 
     if isinstance(obj, dict):
         return {k: make_json_safe(v) for k, v in obj.items()}
@@ -267,6 +268,7 @@ def get_latest_report_for_case(
             case.source_patient_data_json or {},
         ),
         "scan_datetime": case.scan_datetime.isoformat() if case.scan_datetime else None,
+            "scan_datetime_display": _format_scan_datetime(case),
     }
 
 
@@ -393,9 +395,36 @@ def create_from_import(
     case.source_patient_data_json = make_json_safe(payload.patient.model_dump())
     case.raw_scan_html_path = raw_scan_html_path
 
-    scan_metadata = getattr(payload, "scan_metadata", None)
-    if scan_metadata and getattr(scan_metadata, "scan_datetime", None):
-        case.scan_datetime = scan_metadata.scan_datetime
+    # Re-parse server-side from the uploaded HTML so scan datetime does not depend
+    # on what the browser sent back.
+    reparsed = parse_qrma_html(temp_html_bytes)
+    reparsed_scan_metadata = reparsed.get("scan_metadata", {}) or {}
+    reparsed_scan_datetime = reparsed_scan_metadata.get("scan_datetime")
+
+    if reparsed_scan_datetime:
+        case.scan_datetime = reparsed_scan_datetime
+    else:
+        # Fallback to client payload only if server-side parse did not produce a datetime
+        scan_metadata = getattr(payload, "scan_metadata", None)
+        raw_scan_datetime = getattr(scan_metadata, "scan_datetime", None) if scan_metadata else None
+
+        if raw_scan_datetime:
+            if isinstance(raw_scan_datetime, datetime):
+                case.scan_datetime = raw_scan_datetime
+            elif isinstance(raw_scan_datetime, str):
+                for fmt in (
+                    "%Y-%m-%dT%H:%M:%S",
+                    "%Y-%m-%dT%H:%M:%S.%f",
+                    "%Y-%m-%d %H:%M:%S",
+                    "%Y-%m-%d %H:%M",
+                    "%d/%m/%Y %H:%M",
+                    "%d/%m/%Y %H:%M:%S",
+                ):
+                    try:
+                        case.scan_datetime = datetime.strptime(raw_scan_datetime, fmt)
+                        break
+                    except Exception:
+                        continue
 
     db.commit()
     db.refresh(case)
@@ -485,8 +514,32 @@ def create_from_existing_patient_import(
     case.raw_scan_html_path = path
 
     # Persist scan datetime if available
-    if scan_metadata and scan_metadata.get("scan_datetime"):
-        case.scan_datetime = scan_metadata.get("scan_datetime")
+    # Persist scan datetime from server-side parse first
+    reparsed = parse_qrma_html(html_bytes)
+    reparsed_scan_metadata = reparsed.get("scan_metadata", {}) or {}
+    reparsed_scan_datetime = reparsed_scan_metadata.get("scan_datetime")
+
+    if reparsed_scan_datetime:
+        case.scan_datetime = reparsed_scan_datetime
+    elif scan_metadata and scan_metadata.get("scan_datetime"):
+        raw_scan_datetime = scan_metadata.get("scan_datetime")
+
+        if isinstance(raw_scan_datetime, datetime):
+            case.scan_datetime = raw_scan_datetime
+        elif isinstance(raw_scan_datetime, str):
+            for fmt in (
+                "%Y-%m-%dT%H:%M:%S",
+                "%Y-%m-%dT%H:%M:%S.%f",
+                "%Y-%m-%d %H:%M:%S",
+                "%Y-%m-%d %H:%M",
+                "%d/%m/%Y %H:%M",
+                "%d/%m/%Y %H:%M:%S",
+            ):
+                try:
+                    case.scan_datetime = datetime.strptime(raw_scan_datetime, fmt)
+                    break
+                except Exception:
+                    continue
 
     db.commit()
     db.refresh(case)

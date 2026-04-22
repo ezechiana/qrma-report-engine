@@ -278,7 +278,26 @@ def get_patient_trends(
 
     for report in reports:
         generated_at = report.generated_at.isoformat() if report.generated_at else None
-        scan_datetime = report.case.scan_datetime.isoformat() if getattr(report, "case", None) and report.case.scan_datetime else None
+        
+        scan_datetime = None
+
+        if getattr(report, "case", None) and report.case.scan_datetime:
+            scan_datetime = report.case.scan_datetime.isoformat()
+        else:
+            snapshot = getattr(report, "metrics_snapshot", None) or {}
+            source_patient_data = getattr(report.case, "source_patient_data_json", None) if getattr(report, "case", None) else None
+            report_json = getattr(report, "report_json", None) or {}
+
+            raw_scan_datetime = (
+                (source_patient_data or {}).get("scan_datetime")
+                or (snapshot.get("scan_datetime") if isinstance(snapshot, dict) else None)
+                or ((report_json.get("viewer") or {}).get("overview") or {}).get("patient", {}).get("scan_datetime")
+                or ((report_json.get("viewer") or {}).get("patient") or {}).get("scan_datetime")
+                or (report_json.get("patient_header") or {}).get("scan_datetime")
+            )
+
+            if raw_scan_datetime:
+                scan_datetime = str(raw_scan_datetime)
 
         health_index = _get_health_index_from_snapshot(report)
         if health_index is not None:

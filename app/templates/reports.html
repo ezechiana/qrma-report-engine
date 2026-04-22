@@ -88,6 +88,7 @@
         <thead>
             <tr>
                 <th>Patient / Case</th>
+                <th>Scan date/time</th>
                 <th>Version</th>
                 <th>Generated</th>
                 <th>Status</th>
@@ -95,7 +96,7 @@
             </tr>
         </thead>
         <tbody id="reports-body">
-            <tr><td colspan="5" class="muted">Loading…</td></tr>
+            <tr><td colspan="6" class="muted">Loading?</td></tr>
         </tbody>
     </table>
 </div>
@@ -111,19 +112,17 @@ function showReportsError(message) {
 
 function getLatestVersions(reports) {
     const latestMap = {};
-
     reports.forEach(r => {
         if (!latestMap[r.case_id] || r.version_number > latestMap[r.case_id]) {
             latestMap[r.case_id] = r.version_number;
         }
     });
-
     return latestMap;
 }
 
 function renderReports() {
     const tbody = document.getElementById("reports-body");
-    const query = document.getElementById("reports-search").value.toLowerCase();
+    const query = (document.getElementById("reports-search").value || "").toLowerCase();
     const sort = document.getElementById("reports-sort").value;
     const showArchived = document.getElementById("show-archived").checked;
 
@@ -132,7 +131,7 @@ function renderReports() {
     let rows = allReports
         .filter(r => showArchived || !r.is_archived)
         .filter(r => {
-            const hay = `${r.display_name || ""} ${r.patient_display_name || ""}`.toLowerCase();
+            const hay = `${r.display_name || ""} ${r.patient_display_name || ""} ${r.scan_datetime_display || ""}`.toLowerCase();
             return !query || hay.includes(query);
         });
 
@@ -143,7 +142,7 @@ function renderReports() {
     });
 
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="5" class="muted">No reports found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="6" class="muted">No reports found.</td></tr>`;
         return;
     }
 
@@ -156,14 +155,22 @@ function renderReports() {
                 ${safeText(r.display_name)}
                 ${isLatest ? `<span class="badge latest">Latest</span>` : ""}
             </td>
-            <td>v${safeText(r.version_number)}</td>
-            <td>${formatDate(r.generated_at)}</td>
+
             <td>
-                ${r.is_archived 
+                ${safeText(r.scan_datetime_display || "?")}
+            </td>
+
+            <td>v${safeText(r.version_number)}</td>
+
+            <td>${formatDate(r.generated_at)}</td>
+
+            <td>
+                ${r.is_archived
                     ? `<span class="badge archived">Archived</span>`
                     : `<span class="badge">Active</span>`
                 }
             </td>
+
             <td>
                 <a class="link" href="/app/reports/${r.id}">Open</a>
                 &nbsp;|&nbsp;
@@ -203,12 +210,22 @@ async function loadReports() {
 async function archiveReport(id) {
     if (!confirm("Archive this report?")) return;
 
-    await apiFetch(`/api/reports/${id}/archive`, { method: "POST" });
+    const res = await apiFetch(`/api/reports/${id}/archive`, { method: "POST" });
+    if (!res.ok) {
+        showReportsError("Failed to archive report.");
+        return;
+    }
+
     loadReports();
 }
 
 async function restoreReport(id) {
-    await apiFetch(`/api/reports/${id}/restore`, { method: "POST" });
+    const res = await apiFetch(`/api/reports/${id}/restore`, { method: "POST" });
+    if (!res.ok) {
+        showReportsError("Failed to restore report.");
+        return;
+    }
+
     loadReports();
 }
 

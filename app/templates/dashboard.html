@@ -1,3 +1,4 @@
+
 {% extends "base.html" %}
 
 {% block content %}
@@ -84,17 +85,17 @@
 <div class="dashboard-grid">
     <div class="dashboard-card">
         <div class="card-title">Total Reports</div>
-        <div class="card-value" id="total-reports">—</div>
+        <div class="card-value" id="total-reports">?</div>
     </div>
 
     <div class="dashboard-card">
         <div class="card-title">Recent Cases</div>
-        <div class="card-value" id="total-cases">—</div>
+        <div class="card-value" id="total-cases">?</div>
     </div>
 
     <div class="dashboard-card">
         <div class="card-title">Last Activity</div>
-        <div class="card-value" id="last-activity">—</div>
+        <div class="card-value" id="last-activity">?</div>
     </div>
 </div>
 
@@ -110,13 +111,15 @@
         <table class="reports-table">
             <thead>
                 <tr>
-                    <th>Patient / Case</th>
+                    <th>Report</th>
+                    <th>Scan date/time</th>
+                    <th>Status</th>
                     <th>Generated</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="reports-table-body">
-                <tr><td colspan="3">Loading…</td></tr>
+                <tr><td colspan="5">Loading?</td></tr>
             </tbody>
         </table>
     </div>
@@ -142,18 +145,20 @@
         const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
 
         const filtered = dashboardRows.filter(item => {
-            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""}`.toLowerCase();
+            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""} ${item.scan_datetime_display || ""}`.toLowerCase();
             return !query || hay.includes(query);
         });
 
         if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="3">No matching reports.</td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="5">No matching reports.</td></tr>`;
             return;
         }
 
         tbody.innerHTML = filtered.map(item => `
             <tr>
                 <td>${safeText(item.display_name)}</td>
+                <td>${safeText(item.scan_datetime_display || "?")}</td>
+                <td>${safeText(item.status)}</td>
                 <td>${formatDate(item.generated_at)}</td>
                 <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
             </tr>
@@ -176,7 +181,7 @@
                 const errorData = await reportsRes.json().catch(() => ({}));
                 showDashboardError(errorData.detail || "Could not load dashboard data.");
                 document.getElementById("reports-table-body").innerHTML =
-                    `<tr><td colspan="3">Could not load reports.</td></tr>`;
+                    `<tr><td colspan="5">Could not load reports.</td></tr>`;
                 return;
             }
 
@@ -197,6 +202,7 @@
                         ...r,
                         display_name: r.display_name || linkedCase.display_name || linkedCase.title || `Case ${safeText(r.case_id)}`,
                         patient_display_name: r.patient_display_name || linkedCase.patient_display_name || "",
+                        scan_datetime_display: r.scan_datetime_display || (linkedCase.scan_datetime ? formatDate(linkedCase.scan_datetime) : null),
                     };
                 });
 
@@ -208,14 +214,14 @@
             document.getElementById("last-activity").textContent =
                 dashboardRows.length && dashboardRows[0].generated_at
                     ? formatDate(dashboardRows[0].generated_at)
-                    : "—";
+                    : "?";
 
             renderDashboardRows();
         } catch (err) {
             console.error(err);
             showDashboardError("Unexpected error while loading dashboard.");
             document.getElementById("reports-table-body").innerHTML =
-                `<tr><td colspan="3">Unexpected error.</td></tr>`;
+                `<tr><td colspan="5">Unexpected error.</td></tr>`;
         }
     }
 

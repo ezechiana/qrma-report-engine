@@ -92,7 +92,7 @@
                 <strong>${safeText(data.display_name)}</strong><br>
                 Patient: ${safeText(data.patient_display_name)}<br>
                 Version: v${safeText(data.version_number)}<br>
-                Scan date: ${formatDate(data.scan_datetime)}<br>
+                Scan date: ${safeText(data.scan_datetime_display || "?")}<br>
                 Generated: ${formatDate(data.generated_at)}
             `;
 

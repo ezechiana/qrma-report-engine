@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import os
+import re
 import uuid
 from pathlib import Path
 
@@ -96,14 +97,49 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
         r"Weight[:\s]*</?[^>]*>\s*([^<\n\r]+)",
         r"Weight[:\s]+([^\n\r<]+)",
     ])
-    scan_date = find([
-        r"Scan date[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Scan Date[:\s]+([^\n\r<]+)",
-    ])
-    scan_time = find([
-        r"Scan time[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Scan Time[:\s]+([^\n\r<]+)",
-    ])
+    
+    def normalise_whitespace(value: str) -> str:
+        return re.sub(r"\s+", " ", value or "").strip()
+
+    clean_text = normalise_whitespace(re.sub(r"<[^>]+>", " ", text))
+
+    testing_time = None
+    testing_time_match = re.search(
+        r"Testing\s*Time:\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}\s+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)",
+        clean_text,
+        flags=re.IGNORECASE,
+    )
+    if testing_time_match:
+        testing_time = testing_time_match.group(1).strip()
+
+    scan_date = None
+    scan_time = None
+
+    if testing_time and " " in testing_time:
+        parts = testing_time.split()
+        if len(parts) >= 2:
+            scan_date = parts[0]
+            scan_time = parts[1]
+
+    # fallback legacy fields if Testing Time is missing
+    if not scan_date:
+        legacy_scan_date = re.search(
+            r"Scan\s*Date:\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})",
+            clean_text,
+            flags=re.IGNORECASE,
+        )
+        if legacy_scan_date:
+            scan_date = legacy_scan_date.group(1).strip()
+
+    if not scan_time:
+        legacy_scan_time = re.search(
+            r"Scan\s*Time:\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)",
+            clean_text,
+            flags=re.IGNORECASE,
+        )
+        if legacy_scan_time:
+            scan_time = legacy_scan_time.group(1).strip()
+
 
     def parse_float(value: str | None) -> float | None:
         if not value:
@@ -124,13 +160,20 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             last_name = ""
 
     parsed_scan_datetime = None
+
     if scan_date and scan_time:
-        for fmt in ("%d/%m/%Y %H:%M", "%Y-%m-%d %H:%M"):
+        for fmt in (
+            "%d/%m/%Y %H:%M",
+            "%d/%m/%Y %H:%M:%S",
+            "%Y-%m-%d %H:%M",
+            "%Y-%m-%d %H:%M:%S",
+        ):
             try:
                 parsed_scan_datetime = datetime.strptime(f"{scan_date} {scan_time}", fmt)
                 break
             except Exception:
-                pass
+                continue
+
 
     return {
         "source_patient_data": {
