@@ -65,6 +65,43 @@ def _serialise_patient(db: Session, patient: Patient) -> dict:
     }
 
 
+def _extract_health_index(report: ReportVersion):
+    payload = report.report_json or {}
+
+    if not isinstance(payload, dict):
+        return None
+
+    def find_number(obj):
+        if isinstance(obj, (int, float)):
+            return float(obj)
+
+        if isinstance(obj, str):
+            try:
+                return float(obj)
+            except:
+                return None
+
+        if isinstance(obj, dict):
+            for k, v in obj.items():
+                if k.lower() in ["health_index", "healthindex", "score", "value", "index"]:
+                    num = find_number(v)
+                    if num is not None:
+                        return num
+                else:
+                    num = find_number(v)
+                    if num is not None:
+                        return num
+
+        if isinstance(obj, list):
+            for item in obj:
+                num = find_number(item)
+                if num is not None:
+                    return num
+
+        return None
+
+    return find_number(payload)
+
 @router.get("", response_model=list[PatientRead])
 def list_patients(
     db: Session = Depends(get_db),
@@ -194,6 +231,7 @@ def list_patient_cases(
 @router.get("/{patient_id}/reports")
 def list_patient_reports(
     patient_id: UUID,
+    include_archived: bool = False,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -205,13 +243,16 @@ def list_patient_reports(
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
 
-    reports = (
+    query = (
         db.query(ReportVersion)
         .join(Case, Case.id == ReportVersion.case_id)
         .filter(Case.patient_id == patient.id, Case.user_id == current_user.id)
-        .order_by(ReportVersion.generated_at.desc())
-        .all()
     )
+
+    if hasattr(ReportVersion, "is_archived") and not include_archived:
+        query = query.filter(ReportVersion.is_archived == False)
+
+    reports = query.order_by(ReportVersion.generated_at.desc()).all()
 
     return [
         {
@@ -222,6 +263,77 @@ def list_patient_reports(
             "generated_at": report.generated_at,
             "display_name": getattr(report.case, "title", None) or f"Report {str(report.id)[:8]}",
             "scan_datetime": getattr(report.case, "scan_datetime", None) if getattr(report, "case", None) else None,
+            "is_archived": bool(getattr(report, "is_archived", False)),
+            "health_index": _extract_health_index(report),
         }
         for report in reports
     ]
+
+
+@router.get("/{patient_id}/trends")
+def get_patient_trends(
+    patient_id: UUID,
+    include_archived: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    patient = (
+        db.query(Patient)
+        .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
+        .first()
+    )
+    if not patient:
+        raise HTTPException(status_code=404, detail="Patient not found")
+
+    query = (
+        db.query(ReportVersion)
+        .join(Case, Case.id == ReportVersion.case_id)
+        .filter(Case.patient_id == patient.id, Case.user_id == current_user.id)
+        .order_by(ReportVersion.generated_at.asc())
+    )
+
+    if hasattr(ReportVersion, "is_archived") and not include_archived:
+        query = query.filter(ReportVersion.is_archived == False)
+
+    reports = query.all()
+
+    health_index_points = []
+    weight_points = []
+
+    for report in reports:
+        generated_at = report.generated_at.isoformat() if report.generated_at else None
+        scan_datetime = report.case.scan_datetime.isoformat() if getattr(report, "case", None) and report.case.scan_datetime else None
+
+        health_index = _extract_health_index(report)
+        if health_index is not None:
+            health_index_points.append({
+                "report_id": str(report.id),
+                "case_id": str(report.case_id),
+                "label": report.case.title if getattr(report, "case", None) else f"Report v{report.version_number}",
+                "version_number": report.version_number,
+                "generated_at": generated_at,
+                "scan_datetime": scan_datetime,
+                "value": health_index,
+                "is_archived": bool(getattr(report, "is_archived", False)),
+            })
+
+        source_patient_data = getattr(report.case, "source_patient_data_json", None) if getattr(report, "case", None) else None
+        if isinstance(source_patient_data, dict):
+            weight = source_patient_data.get("weight_kg")
+            if isinstance(weight, (int, float)):
+                weight_points.append({
+                    "report_id": str(report.id),
+                    "case_id": str(report.case_id),
+                    "label": report.case.title if getattr(report, "case", None) else f"Report v{report.version_number}",
+                    "version_number": report.version_number,
+                    "generated_at": generated_at,
+                    "scan_datetime": scan_datetime,
+                    "value": float(weight),
+                    "is_archived": bool(getattr(report, "is_archived", False)),
+                })
+
+    return {
+        "patient_id": str(patient.id),
+        "health_index": health_index_points,
+        "weight_kg": weight_points,
+    }

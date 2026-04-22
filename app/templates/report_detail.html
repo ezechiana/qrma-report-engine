@@ -138,9 +138,46 @@
         }
     }
 
-    document.getElementById("refresh-report-btn").addEventListener("click", loadReport);
-    document.getElementById("create-share-link-btn").addEventListener("click", createShareLink);
 
+    const shareBtn = document.getElementById("create-share-link-btn");
+    if (shareBtn) {
+        shareBtn.addEventListener("click", createShareLink);
+    }
+
+    const generateBtn = document.getElementById("generate-new-version-btn");
+
+    if (generateBtn) {
+        generateBtn.addEventListener("click", async () => {
+            clearError();
+            clearSuccess();
+
+            try {
+                generateBtn.disabled = true;
+                generateBtn.textContent = "Generating...";
+
+                const res = await apiFetch(`/api/reports/${reportId}/generate-new-version`, {
+                    method: "POST"
+                });
+
+                const data = await res.json().catch(() => ({}));
+
+                if (!res.ok) {
+                    setError(data.detail || "Failed to generate new version.");
+                    return;
+                }
+
+                setSuccess("New report version generated.");
+                await loadReport();
+
+            } catch (err) {
+                console.error(err);
+                setError("Unexpected error while generating report.");
+            } finally {
+                generateBtn.disabled = false;
+                generateBtn.textContent = "Generate new version";
+            }
+        });
+    }
     loadReport();
 </script>
 {% endblock %}

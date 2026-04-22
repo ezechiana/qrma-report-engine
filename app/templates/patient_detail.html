@@ -89,6 +89,80 @@
     gap: 14px;
 }
 
+.trend-grid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 16px;
+}
+
+.trend-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 16px;
+    padding: 16px;
+    background: white;
+}
+
+.trend-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.trend-title {
+    font-size: 18px;
+    font-weight: 700;
+    margin: 0;
+}
+
+.trend-subtitle {
+    color: #64748b;
+    font-size: 14px;
+    margin-top: 4px;
+}
+
+.trend-stats {
+    display: flex;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.trend-stat {
+    padding: 10px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    min-width: 110px;
+}
+
+.trend-stat-label {
+    font-size: 12px;
+    color: #64748b;
+    margin-bottom: 4px;
+}
+
+.trend-stat-value {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.chart-wrap {
+    width: 100%;
+    overflow-x: auto;
+}
+
+.chart-svg {
+    width: 100%;
+    min-height: 280px;
+    display: block;
+}
+
+.chart-empty {
+    color: #64748b;
+    padding: 20px 0 6px;
+}
+
 @media (max-width: 900px) {
     .summary-grid,
     .edit-grid {
@@ -134,6 +208,68 @@
     <div class="summary-card">
         <div class="summary-label">Data sources</div>
         <div class="summary-value" id="patient-data-sources" style="font-size:18px;">—</div>
+    </div>
+</div>
+
+<div class="card">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Trend overview</h3>
+    </div>
+
+    <div class="trend-grid">
+        <div class="trend-card">
+            <div class="trend-header">
+                <div>
+                    <div class="trend-title">Health Index trend</div>
+                    <div class="trend-subtitle">Shows Health Index across report versions over time.</div>
+                </div>
+                <div class="trend-stats">
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">First</div>
+                        <div class="trend-stat-value" id="health-index-first">—</div>
+                    </div>
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">Latest</div>
+                        <div class="trend-stat-value" id="health-index-latest">—</div>
+                    </div>
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">Change</div>
+                        <div class="trend-stat-value" id="health-index-change">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <svg id="health-index-chart" class="chart-svg" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+                <div id="health-index-empty" class="chart-empty" style="display:none;">No Health Index data yet.</div>
+            </div>
+        </div>
+
+        <div class="trend-card">
+            <div class="trend-header">
+                <div>
+                    <div class="trend-title">Weight trend</div>
+                    <div class="trend-subtitle">Shows imported weight snapshots from scan data over time.</div>
+                </div>
+                <div class="trend-stats">
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">First</div>
+                        <div class="trend-stat-value" id="weight-first">—</div>
+                    </div>
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">Latest</div>
+                        <div class="trend-stat-value" id="weight-latest">—</div>
+                    </div>
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">Change</div>
+                        <div class="trend-stat-value" id="weight-change">—</div>
+                    </div>
+                </div>
+            </div>
+            <div class="chart-wrap">
+                <svg id="weight-chart" class="chart-svg" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+                <div id="weight-empty" class="chart-empty" style="display:none;">No weight trend data yet.</div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -244,9 +380,9 @@
 <script>
     const patientId = "{{ patient_id }}";
     let currentPatient = null;
-    let preselectedPatientId = getQueryParam("patient_id");
     let currentCases = [];
     let currentReports = [];
+    let currentTrends = { health_index: [], weight_kg: [] };
 
     function showPatientError(message) {
         const box = document.getElementById("patient-error");
@@ -278,10 +414,6 @@
             [patient.first_name, patient.last_name].filter(Boolean).join(" ") ||
             "Unnamed patient"
         );
-    }
-    function getQueryParam(name) {
-        const url = new URL(window.location.href);
-        return url.searchParams.get(name);
     }
 
     function calculateAgeFromDob(dobValue) {
@@ -409,6 +541,122 @@
         `).join("");
     }
 
+    function renderSimpleLineChart(svgId, emptyId, points, minFloor = null, maxCeil = null) {
+        const svg = document.getElementById(svgId);
+        const empty = document.getElementById(emptyId);
+
+        if (!points || points.length === 0) {
+            svg.innerHTML = "";
+            empty.style.display = "block";
+            return;
+        }
+
+        empty.style.display = "none";
+
+        const width = 760;
+        const height = 280;
+        const padLeft = 46;
+        const padRight = 20;
+        const padTop = 20;
+        const padBottom = 38;
+
+        const values = points.map(p => Number(p.value)).filter(v => !Number.isNaN(v));
+        if (!values.length) {
+            svg.innerHTML = "";
+            empty.style.display = "block";
+            return;
+        }
+
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+
+        if (minFloor !== null) min = Math.min(min, minFloor);
+        if (maxCeil !== null) max = Math.max(max, maxCeil);
+
+        if (min === max) {
+            min -= 1;
+            max += 1;
+        }
+
+        const xSpan = width - padLeft - padRight;
+        const ySpan = height - padTop - padBottom;
+
+        const coords = points.map((p, index) => {
+            const x = padLeft + (points.length === 1 ? xSpan / 2 : (index / (points.length - 1)) * xSpan);
+            const y = padTop + ((max - Number(p.value)) / (max - min)) * ySpan;
+            return { ...p, x, y };
+        });
+
+        const linePath = coords.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x} ${p.y}`).join(" ");
+
+        const gridLines = 4;
+        let grid = "";
+        for (let i = 0; i <= gridLines; i++) {
+            const y = padTop + (i / gridLines) * ySpan;
+            const value = (max - ((max - min) * i / gridLines)).toFixed(1);
+            grid += `
+                <line x1="${padLeft}" y1="${y}" x2="${width - padRight}" y2="${y}" stroke="#e5e7eb" stroke-width="1" />
+                <text x="${padLeft - 8}" y="${y + 4}" text-anchor="end" font-size="11" fill="#64748b">${value}</text>
+            `;
+        }
+
+        const labels = coords.map(p => {
+            const d = p.scan_datetime || p.generated_at;
+            const label = d ? new Date(d).toLocaleDateString() : "";
+            return `
+                <text x="${p.x}" y="${height - 12}" text-anchor="middle" font-size="11" fill="#64748b">${label}</text>
+            `;
+        }).join("");
+
+        const circles = coords.map(p => `
+            <circle cx="${p.x}" cy="${p.y}" r="4" fill="#1d4ed8">
+                <title>${p.label || ""} — ${p.value}</title>
+            </circle>
+        `).join("");
+
+        svg.innerHTML = `
+            <rect x="0" y="0" width="${width}" height="${height}" fill="white"></rect>
+            ${grid}
+            <path d="${linePath}" fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
+            ${circles}
+            ${labels}
+        `;
+    }
+
+    function setTrendStats(prefix, points, suffix = "") {
+        const firstEl = document.getElementById(`${prefix}-first`);
+        const latestEl = document.getElementById(`${prefix}-latest`);
+        const changeEl = document.getElementById(`${prefix}-change`);
+
+        if (!points || !points.length) {
+            firstEl.textContent = "—";
+            latestEl.textContent = "—";
+            changeEl.textContent = "—";
+            return;
+        }
+
+        const first = Number(points[0].value);
+        const latest = Number(points[points.length - 1].value);
+        const change = latest - first;
+
+        firstEl.textContent = `${first.toFixed(1)}${suffix}`;
+        latestEl.textContent = `${latest.toFixed(1)}${suffix}`;
+        changeEl.textContent = `${change > 0 ? "+" : ""}${change.toFixed(1)}${suffix}`;
+    }
+
+    function renderTrends(trends) {
+        currentTrends = trends || { health_index: [], weight_kg: [] };
+
+        const healthIndexPoints = currentTrends.health_index || [];
+        const weightPoints = currentTrends.weight_kg || [];
+
+        renderSimpleLineChart("health-index-chart", "health-index-empty", healthIndexPoints, 0, 100);
+        setTrendStats("health-index", healthIndexPoints);
+
+        renderSimpleLineChart("weight-chart", "weight-empty", weightPoints, null, null);
+        setTrendStats("weight", weightPoints, " kg");
+    }
+
     async function loadPatientDetail() {
         clearPatientError();
         clearPatientSuccess();
@@ -417,15 +665,17 @@
         if (!authed) return;
 
         try {
-            const [patientRes, casesRes, reportsRes] = await Promise.all([
+            const [patientRes, casesRes, reportsRes, trendsRes] = await Promise.all([
                 apiFetch(`/api/patients/${patientId}`),
                 apiFetch(`/api/patients/${patientId}/cases`),
-                apiFetch(`/api/patients/${patientId}/reports`)
+                apiFetch(`/api/patients/${patientId}/reports`),
+                apiFetch(`/api/patients/${patientId}/trends`)
             ]);
 
             const patientData = await patientRes.json().catch(() => ({}));
             const casesData = await casesRes.json().catch(() => ([]));
             const reportsData = await reportsRes.json().catch(() => ([]));
+            const trendsData = await trendsRes.json().catch(() => ({ health_index: [], weight_kg: [] }));
 
             if (!patientRes.ok) {
                 showPatientError(patientData.detail || "Could not load patient.");
@@ -441,6 +691,7 @@
             renderCases(currentCases);
             renderReports(currentReports);
             renderTimeline();
+            renderTrends(trendsData);
         } catch (err) {
             console.error(err);
             showPatientError("Unexpected error while loading patient detail.");
@@ -542,10 +793,33 @@
         }
     }
 
-    document.getElementById("edit-patient-toggle-btn").addEventListener("click", () => {
-        const card = document.getElementById("edit-patient-card");
-        card.style.display = card.style.display === "none" ? "block" : "none";
-    });
+    const toggleBtn = document.getElementById("edit-patient-toggle-btn");
+    if (toggleBtn) {
+        toggleBtn.addEventListener("click", () => {
+            const card = document.getElementById("edit-patient-card");
+            if (!card) return;
+            card.style.display = card.style.display === "none" ? "block" : "none";
+        });
+    }
+
+    const cancelBtn = document.getElementById("cancel-edit-patient-btn");
+    if (cancelBtn) {
+        cancelBtn.addEventListener("click", () => {
+            const card = document.getElementById("edit-patient-card");
+            if (card) card.style.display = "none";
+            if (currentPatient) populateEditForm(currentPatient);
+            clearPatientError();
+        });
+    }
+
+    const saveBtn = document.getElementById("save-patient-btn");
+    if (saveBtn) saveBtn.addEventListener("click", savePatient);
+
+    const deleteBtn = document.getElementById("delete-patient-btn");
+    if (deleteBtn) deleteBtn.addEventListener("click", deletePatient);
+
+    const dobInput = document.getElementById("edit-date-of-birth");
+    if (dobInput) dobInput.addEventListener("input", updateAgePreview);
 
     document.getElementById("cancel-edit-patient-btn").addEventListener("click", () => {
         document.getElementById("edit-patient-card").style.display = "none";
