@@ -1,7 +1,6 @@
 from datetime import datetime, date
 from typing import Optional, Any
 from uuid import UUID
-from datetime import datetime
 
 from pydantic import BaseModel, ConfigDict
 
@@ -86,7 +85,7 @@ class CreateFromImportRequest(BaseModel):
 
     existing_patient_id: Optional[UUID] = None
     update_patient_measurements: bool = False
-
+    allow_duplicate: bool = False
 
 
 class GenerateReportResponse(BaseModel):

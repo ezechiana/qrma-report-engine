@@ -155,7 +155,7 @@ class Case(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
     patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), index=True)
-
+    raw_scan_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
     title: Mapped[str] = mapped_column(String(255))
     status: Mapped[CaseStatus] = mapped_column(Enum(CaseStatus), default=CaseStatus.draft, index=True)
     recommendation_mode: Mapped[RecommendationMode] = mapped_column(

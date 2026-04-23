@@ -3,13 +3,21 @@ from __future__ import annotations
 import os
 import re
 import uuid
+import hashlib
 from pathlib import Path
+
+from app.services.storage_service import upload_bytes, download_bytes
 
 
 TEMP_UPLOAD_DIR = Path(os.getenv("TEMP_UPLOAD_DIR", "/tmp/qrma_imports"))
 TEMP_UPLOAD_DIR.mkdir(parents=True, exist_ok=True)
 
-from app.services.storage_service import upload_bytes, download_bytes
+
+def compute_html_hash(file_bytes: bytes) -> str:
+    """
+    Stable fingerprint of uploaded HTML.
+    """
+    return hashlib.sha256(file_bytes).hexdigest()
 
 
 def save_temp_html(file_bytes: bytes) -> tuple[str, str]:
@@ -24,15 +32,49 @@ def load_temp_html(temp_id: str) -> bytes:
     return path.read_bytes()
 
 
-def save_case_html(case_id: str, user_id: str, file_bytes: bytes) -> str:
+def save_case_html(
+    case_id: str,
+    user_id: str,
+    file_bytes: bytes,
+    db=None,
+    allow_duplicate: bool = False,
+) -> str:
     """
     Persist the uploaded QRMA HTML against the case using S3 storage.
-
-    Key shape:
-      cases/<user_id>/<case_id>/raw_scan.html
+    Also prevents duplicate uploads using SHA256 hash unless allow_duplicate=True.
+    Returns the FINAL stored S3 key.
     """
+    html_hash = compute_html_hash(file_bytes)
+
+    if db is not None and not allow_duplicate:
+        from app.db.models import Case
+
+        existing = (
+            db.query(Case)
+            .filter(
+                Case.user_id == user_id,
+                Case.raw_scan_hash == html_hash,
+            )
+            .first()
+        )
+
+        if existing:
+            raise ValueError("This scan has already been imported.")
+
     key = f"cases/{user_id}/{case_id}/raw_scan.html"
-    return upload_bytes(key, file_bytes, "text/html; charset=utf-8")
+
+    # IMPORTANT: store the normalized/final S3 key returned by upload_bytes
+    stored_key = upload_bytes(key, file_bytes, "text/html; charset=utf-8")
+
+    if db is not None:
+        from app.db.models import Case
+
+        case = db.query(Case).filter(Case.id == case_id).first()
+        if case:
+            case.raw_scan_hash = html_hash
+            db.commit()
+
+    return stored_key
 
 
 def load_case_html(path: str) -> bytes:
@@ -42,78 +84,90 @@ def load_case_html(path: str) -> bytes:
     return download_bytes(path)
 
 
+def _search(pattern: str, text: str) -> str | None:
+    match = re.search(pattern, text, flags=re.IGNORECASE)
+    return match.group(1).strip() if match else None
+
+
+def _normalise_whitespace(text: str) -> str:
+    return re.sub(r"\s+", " ", text or "").strip()
+
+
+def _to_float(value: str | None) -> float | None:
+    if value is None:
+        return None
+    value = value.strip().replace("cm", "").replace("kg", "").strip()
+    try:
+        return float(value)
+    except Exception:
+        match = re.search(r"-?\d+(?:\.\d+)?", value)
+        return float(match.group(0)) if match else None
+
+
 def parse_qrma_html(file_bytes: bytes) -> dict:
     """
     MVP import parser for pre-filling patient metadata from QRMA HTML.
 
-    This parser is intentionally tolerant. It only tries to extract:
-    - name
-    - DOB
-    - age
-    - sex
-    - height
-    - weight
-    - scan date / time
-
-    It does NOT build the full clinical report object.
-    The full report generation should use the legacy engine adapter in report_service.py.
+    Uses the same patient-extraction pattern as the fuller HTML parser:
+    Name / Sex / Age / Figure / Testing Time
     """
-    import re
     from datetime import datetime
 
     text = file_bytes.decode("utf-8", errors="ignore")
+    clean = _normalise_whitespace(re.sub(r"<[^>]+>", " ", text))
 
-    def find(patterns: list[str]) -> str | None:
-        for pattern in patterns:
-            m = re.search(pattern, text, re.IGNORECASE | re.DOTALL)
-            if m:
-                value = m.group(1).strip()
-                value = re.sub(r"<[^>]+>", "", value).strip()
-                if value:
-                    return value
-        return None
+    name = _search(r"Name:\s*(.+?)(?:Sex:|Age:|Figure:|Testing Time:)", clean)
+    if name:
+        name = _normalise_whitespace(name)
 
-    name = find([
-        r"Name[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Name[:\s]+([^\n\r<]+)",
-    ])
-    sex = find([
-        r"Sex[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Sex[:\s]+([^\n\r<]+)",
-    ])
-    age = find([
-        r"Age[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Age[:\s]+([^\n\r<]+)",
-    ])
-    dob = find([
-        r"DOB[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Date of Birth[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-    ])
-    height = find([
-        r"Height[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Height[:\s]+([^\n\r<]+)",
-    ])
-    weight = find([
-        r"Weight[:\s]*</?[^>]*>\s*([^<\n\r]+)",
-        r"Weight[:\s]+([^\n\r<]+)",
-    ])
-    
-    def normalise_whitespace(value: str) -> str:
-        return re.sub(r"\s+", " ", value or "").strip()
+    sex = _search(r"Sex:\s*([A-Za-z]+)", clean)
 
-    clean_text = normalise_whitespace(re.sub(r"<[^>]+>", " ", text))
+    age_raw = _search(r"Age:\s*(\d+)", clean)
+    age = int(age_raw) if age_raw and age_raw.isdigit() else None
 
-    testing_time = None
-    testing_time_match = re.search(
-        r"Testing\s*Time:\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}\s+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)",
-        clean_text,
-        flags=re.IGNORECASE,
+    dob = None
+    dob = (
+        _search(r"DOB:\s*([^\s]+)", clean)
+        or _search(r"Date of Birth:\s*([^\s]+)", clean)
     )
-    if testing_time_match:
-        testing_time = testing_time_match.group(1).strip()
+
+    figure = _search(r"Figure:\s*([^\n\r]+?)(?:Testing Time:|$)", clean)
+
+    height_cm = None
+    weight_kg = None
+
+    if figure:
+        height_match = re.search(r"([\d\.]+)\s*cm", figure, flags=re.IGNORECASE)
+        weight_match = re.search(r"([\d\.]+)\s*kg", figure, flags=re.IGNORECASE)
+
+        if height_match:
+            height_cm = _to_float(height_match.group(1))
+        if weight_match:
+            weight_kg = _to_float(weight_match.group(1))
+
+    # fallback explicit labels if Figure did not provide values
+    if height_cm is None:
+        explicit_height = (
+            _search(r"Height:\s*([^\s]+(?:\s*cm)?)", clean)
+            or _search(r"Height\s+([^\s]+(?:\s*cm)?)", clean)
+        )
+        height_cm = _to_float(explicit_height)
+
+    if weight_kg is None:
+        explicit_weight = (
+            _search(r"Weight:\s*([^\s]+(?:\s*kg)?)", clean)
+            or _search(r"Weight\s+([^\s]+(?:\s*kg)?)", clean)
+        )
+        weight_kg = _to_float(explicit_weight)
+
+    testing_time = _search(
+        r"Testing\s*Time:\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}\s+[0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)",
+        clean,
+    )
 
     scan_date = None
     scan_time = None
+    parsed_scan_datetime = None
 
     if testing_time and " " in testing_time:
         parts = testing_time.split()
@@ -121,45 +175,21 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             scan_date = parts[0]
             scan_time = parts[1]
 
-    # fallback legacy fields if Testing Time is missing
     if not scan_date:
-        legacy_scan_date = re.search(
+        legacy_scan_date = _search(
             r"Scan\s*Date:\s*([0-9]{1,2}/[0-9]{1,2}/[0-9]{4}|[0-9]{4}-[0-9]{2}-[0-9]{2})",
-            clean_text,
-            flags=re.IGNORECASE,
+            clean,
         )
         if legacy_scan_date:
-            scan_date = legacy_scan_date.group(1).strip()
+            scan_date = legacy_scan_date
 
     if not scan_time:
-        legacy_scan_time = re.search(
+        legacy_scan_time = _search(
             r"Scan\s*Time:\s*([0-9]{1,2}:[0-9]{2}(?::[0-9]{2})?)",
-            clean_text,
-            flags=re.IGNORECASE,
+            clean,
         )
         if legacy_scan_time:
-            scan_time = legacy_scan_time.group(1).strip()
-
-
-    def parse_float(value: str | None) -> float | None:
-        if not value:
-            return None
-        m = re.search(r"-?\d+(?:\.\d+)?", value)
-        return float(m.group(0)) if m else None
-
-    first_name = None
-    last_name = None
-    full_name = name
-    if name:
-        parts = name.split()
-        if len(parts) >= 2:
-            first_name = parts[0]
-            last_name = " ".join(parts[1:])
-        elif len(parts) == 1:
-            first_name = parts[0]
-            last_name = ""
-
-    parsed_scan_datetime = None
+            scan_time = legacy_scan_time
 
     if scan_date and scan_time:
         for fmt in (
@@ -174,8 +204,18 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             except Exception:
                 continue
 
-    print("PARSED testing_time:", testing_time)
-    print("PARSED scan_datetime:", parsed_scan_datetime)
+    first_name = None
+    last_name = None
+    full_name = name
+
+    if name:
+        parts = name.split()
+        if len(parts) >= 2:
+            first_name = parts[0]
+            last_name = " ".join(parts[1:])
+        elif len(parts) == 1:
+            first_name = parts[0]
+            last_name = ""
 
     return {
         "source_patient_data": {
@@ -183,10 +223,10 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             "last_name": last_name,
             "full_name": full_name,
             "date_of_birth": dob,
-            "age": int(age) if age and str(age).isdigit() else None,
+            "age": age,
             "sex": sex,
-            "height_cm": parse_float(height),
-            "weight_kg": parse_float(weight),
+            "height_cm": height_cm,
+            "weight_kg": weight_kg,
         },
         "scan_metadata": {
             "scan_date": scan_date,
@@ -194,6 +234,3 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             "scan_datetime": parsed_scan_datetime,
         },
     }
-
-
-

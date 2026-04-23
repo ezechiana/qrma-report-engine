@@ -60,19 +60,39 @@ def _extract_health_index_from_viewer(viewer_payload: dict) -> float | None:
         return None
 
 
-def _build_metrics_snapshot(viewer_payload: dict) -> dict:
+def _extract_weight_from_enriched(enriched_report: dict) -> float | None:
+    """
+    Extract weight from enriched report payload.
+    Handles multiple possible locations safely.
+    """
+    try:
+        patient = enriched_report.get("patient") or {}
+        weight = patient.get("weight_kg") or patient.get("weight")
+        if weight is None:
+            return None
+        return float(weight)
+    except Exception:
+        return None
+
+
+def _build_metrics_snapshot(viewer_payload: dict, enriched_report: dict | None = None) -> dict:
     """
     Structured snapshot used for longitudinal trends.
 
-    Option A architecture:
-    - store a JSON snapshot on ReportVersion
-    - trend endpoints read from this instead of scraping report_json later
+    Now includes weight tracking.
     """
+    weight_kg = None
+
+    if enriched_report:
+        weight_kg = _extract_weight_from_enriched(enriched_report)
+
     return {
         "health_index": _extract_health_index_from_viewer(viewer_payload),
+        "weight_kg": weight_kg,   # ? NEW
         "systems": {},
         "markers": {},
     }
+
 
 
 def parse_and_enrich_case_html(case: Case):
@@ -183,7 +203,7 @@ async def build_report_version(
         pdf_path = _to_str_path(built.get("pdf_path"))
         viewer_payload = built.get("viewer_payload") or {}
 
-        metrics_snapshot = _build_metrics_snapshot(viewer_payload)
+        metrics_snapshot = _build_metrics_snapshot(viewer_payload, enriched_report)
 
         report_json = {
             "case_id": str(case.id),

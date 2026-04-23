@@ -19,6 +19,23 @@
 .readonly-input {
     background: #f8fafc;
 }
+
+.error-action-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.error-message-text {
+    flex: 1 1 auto;
+}
+
+.btn.small {
+    padding: 8px 12px;
+    font-size: 0.9rem;
+}
 </style>
 
 <div id="error-box" class="error" style="display:none;"></div>
@@ -90,7 +107,6 @@
                 Choose whether to create a new patient or link this scan to an existing patient.
             </p>
 
-            <!-- NEW: contextual patient summary -->
             <div id="linked-patient-summary" style="display:none; margin-top:10px; font-weight:600;"></div>
 
             <div class="field">
@@ -129,10 +145,51 @@
 </div>
 
 <script>
-
     function getQueryParam(name) {
         const url = new URL(window.location.href);
         return url.searchParams.get(name);
+    }
+
+    function safeText(value) {
+        if (value === null || value === undefined) return "";
+        return String(value)
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function tryParseJsonString(value) {
+        if (typeof value !== "string") return value;
+        const trimmed = value.trim();
+        if (!trimmed) return value;
+        if (!(trimmed.startsWith("{") || trimmed.startsWith("["))) return value;
+
+        try {
+            return JSON.parse(trimmed);
+        } catch {
+            return value;
+        }
+    }
+
+    function unwrapErrorPayload(msg) {
+        // Handles:
+        // 1) object with detail
+        // 2) raw object
+        // 3) JSON string
+        // 4) object whose detail is a JSON string
+        let out = msg;
+
+        out = tryParseJsonString(out);
+
+        if (out && typeof out === "object" && "detail" in out) {
+            out = out.detail;
+        }
+
+        out = tryParseJsonString(out);
+
+        return out;
     }
 
     let preselectedPatientId = getQueryParam("patient_id");
@@ -145,32 +202,60 @@
     function showError(msg) {
         const box = document.getElementById("error-box");
         const successBox = document.getElementById("success-box");
+
         successBox.style.display = "none";
         successBox.textContent = "";
 
         box.style.display = "block";
+        box.textContent = "";
+        box.innerHTML = "";
 
-        if (Array.isArray(msg)) {
-            box.innerHTML = msg.map(item => {
+        const detail = unwrapErrorPayload(msg);
+
+        if (Array.isArray(detail)) {
+            box.innerHTML = detail.map(item => {
                 const loc = Array.isArray(item.loc) ? item.loc.join(" → ") : "";
                 const text = item.msg || JSON.stringify(item);
-                return `<div>${loc ? `<strong>${loc}:</strong> ` : ""}${text}</div>`;
+                return `<div>${loc ? `<strong>${safeText(loc)}:</strong> ` : ""}${safeText(text)}</div>`;
             }).join("");
             return;
         }
 
-        if (typeof msg === "object" && msg !== null) {
-            box.textContent = JSON.stringify(msg, null, 2);
+        if (detail && typeof detail === "object") {
+            if (detail.code === "duplicate_scan") {
+                box.innerHTML = `
+                    <div class="error-action-row">
+                        <div class="error-message-text">${safeText(detail.message || "This scan has already been imported.")}</div>
+                        ${detail.allow_duplicate_supported ? `<button type="button" id="force-import-btn" class="btn small">Import anyway</button>` : ""}
+                    </div>
+                `;
+
+                const btn = document.getElementById("force-import-btn");
+                if (btn) {
+                    btn.onclick = async () => {
+                        await createCase(false, true);
+                    };
+                }
+                return;
+            }
+
+            if (detail.message) {
+                box.textContent = detail.message;
+                return;
+            }
+
+            box.textContent = JSON.stringify(detail);
             return;
         }
 
-        box.textContent = msg;
+        box.textContent = detail || "Something went wrong.";
     }
 
     function clearError() {
         const box = document.getElementById("error-box");
         box.style.display = "none";
         box.textContent = "";
+        box.innerHTML = "";
     }
 
     function showSuccess(msg) {
@@ -356,7 +441,7 @@
             existing.date_of_birth &&
             imported.date_of_birth !== existing.date_of_birth
         ) {
-            mismatchMessages.push(`Date of birth differs (${imported.date_of_birth} vs ${existing.date_of_birth}).`);
+            mismatchMessages.push(`Date of birth differs (${safeText(imported.date_of_birth)} vs ${safeText(existing.date_of_birth)}).`);
         }
 
         if (
@@ -364,7 +449,7 @@
             existing.sex &&
             normaliseText(imported.sex) !== normaliseText(existing.sex)
         ) {
-            mismatchMessages.push(`Sex differs (${imported.sex} vs ${existing.sex}).`);
+            mismatchMessages.push(`Sex differs (${safeText(imported.sex)} vs ${safeText(existing.sex)}).`);
         }
 
         if (mismatchMessages.length) {
@@ -411,7 +496,7 @@
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            showError(data.detail || "Could not parse the HTML file.");
+            showError(data);
             return;
         }
 
@@ -436,19 +521,15 @@
         await loadPatientsForMatching();
 
         if (preselectedPatientId) {
-            // Lock to existing patient mode
             document.querySelector('input[value="existing"]').checked = true;
             selectedExistingPatientId = preselectedPatientId;
 
-            // Hide matching UI controls
             document.getElementById("patient-match-list").style.display = "none";
 
-            // Change heading + description
             document.getElementById("patient-link-title").textContent = "Linked patient";
             document.getElementById("patient-link-description").textContent =
                 "This case will be linked to the patient record you started from.";
 
-            // Show patient name
             const existing = allPatients.find(p => String(p.id) === String(preselectedPatientId));
             if (existing) {
                 const summary = document.getElementById("linked-patient-summary");
@@ -456,21 +537,19 @@
                 summary.textContent = patientName(existing);
             }
 
-            // Hide radio buttons entirely
             document.querySelectorAll('input[name="patient-link-mode"]').forEach(el => {
                 el.closest("label").style.display = "none";
             });
 
-            // Still run warnings (important)
             updateLinkWarnings();
-
         } else {
             renderPatientMatches();
         }
+
         showSuccess("Scan parsed successfully. Please confirm the patient details.");
     }
 
-    async function createCase(generateAfter = false) {
+    async function createCase(generateAfter = false, forceDuplicate = false) {
         clearError();
 
         if (!temporaryUploadId) {
@@ -530,7 +609,8 @@
             update_patient_measurements: (
                 linkMode === "existing" &&
                 document.getElementById("update-patient-measurements").checked
-            )
+            ),
+            allow_duplicate: forceDuplicate
         };
 
         const response = await apiFetch("/api/cases/create-from-import", {
@@ -541,7 +621,7 @@
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            showError(data.detail || data || "Could not create case.");
+            showError(data);
             return;
         }
 
@@ -559,7 +639,7 @@
         const genData = await genResponse.json().catch(() => ({}));
 
         if (!genResponse.ok) {
-            showError(genData.detail || "Case created, but report generation failed.");
+            showError(genData);
             window.location.href = `/app/cases/${caseId}`;
             return;
         }

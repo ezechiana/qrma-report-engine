@@ -1,21 +1,22 @@
 from uuid import UUID
+from datetime import date, datetime
 
-from app.api.routes_reports import _format_scan_datetime
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, Patient, ReportVersion, User
+from app.api.routes_reports import _format_scan_datetime
+from app.db.models import Case, CaseStatus, Patient, ReportVersion, User
 from app.schemas.cases import (
     CaseCreate,
     CaseRead,
     CaseUpdate,
     CreateFromImportRequest,
     ImportFromHtmlResponse,
+    CaseCreateFromImport,
 )
 from app.schemas.patients import PatientCreate
 from app.schemas.reports import GenerateReportResponse
-from app.schemas.cases import CaseCreateFromImport
 from app.services.audit_service import log_action
 from app.services.case_service import create_case, update_case
 from app.services.patient_service import create_patient
@@ -26,13 +27,11 @@ from app.services.scan_import_service import (
     load_temp_html,
     save_case_html,
 )
-from datetime import date, datetime
+
 router = APIRouter(prefix="/api/cases", tags=["cases"])
 
 
 def make_json_safe(obj):
-   
-
     if isinstance(obj, dict):
         return {k: make_json_safe(v) for k, v in obj.items()}
     elif isinstance(obj, list):
@@ -110,6 +109,8 @@ def _case_display_name(case: Case) -> str:
     return f"Case {str(case.id)[:8]}"
 
 
+
+
 def _serialize_case(case: Case) -> dict:
     patient_name = _patient_display_name(
         getattr(case, "patient", None),
@@ -135,6 +136,25 @@ def _serialize_case(case: Case) -> dict:
         "created_at": case.created_at,
         "updated_at": case.updated_at,
     }
+
+
+def _normalise_sex(value):
+    if not value:
+        return None
+
+    v = str(value).strip().lower()
+
+    mapping = {
+        "female": "female",
+        "f": "female",
+        "male": "male",
+        "m": "male",
+        "other": "other",
+        "prefer not to say": "prefer_not_to_say",
+        "prefer_not_to_say": "prefer_not_to_say",
+    }
+
+    return mapping.get(v, None)
 
 
 @router.get("", response_model=list[CaseRead])
@@ -268,7 +288,7 @@ def get_latest_report_for_case(
             case.source_patient_data_json or {},
         ),
         "scan_datetime": case.scan_datetime.isoformat() if case.scan_datetime else None,
-            "scan_datetime_display": _format_scan_datetime(case),
+        "scan_datetime_display": _format_scan_datetime(case),
     }
 
 
@@ -302,77 +322,34 @@ async def import_from_html(
 
 
 @router.post("/create-from-import")
-def create_from_import(
+async def create_from_import(
     payload: CreateFromImportRequest,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    # Use an existing patient if chosen; otherwise create a new one
     if payload.existing_patient_id:
         patient = _get_owned_patient(db, current_user, payload.existing_patient_id)
         if not patient:
             raise HTTPException(status_code=404, detail="Selected patient not found")
 
-        # Optional explicit overwrite of patient profile measurements
         if payload.update_patient_measurements:
             if payload.patient.height_cm is not None:
                 patient.height_cm = payload.patient.height_cm
             if payload.patient.weight_kg is not None:
                 patient.weight_kg = payload.patient.weight_kg
-
-            # keep age in sync if DOB supplied
             if payload.patient.date_of_birth is not None:
                 patient.date_of_birth = payload.patient.date_of_birth
 
             db.flush()
     else:
-        def _normalise_sex(value):
-            if not value:
-                return None
-
-            v = str(value).strip().lower()
-
-            mapping = {
-                "female": "female",
-                "f": "female",
-                "male": "male",
-                "m": "male",
-                "other": "other",
-                "prefer not to say": "prefer_not_to_say",
-                "prefer_not_to_say": "prefer_not_to_say",
-            }
-
-            return mapping.get(v, None)
-
-
-        def _normalise_sex(value):
-            if not value:
-                return None
-
-            v = str(value).strip().lower()
-
-            mapping = {
-                "female": "female",
-                "f": "female",
-                "male": "male",
-                "m": "male",
-                "other": "other",
-                "prefer not to say": "prefer_not_to_say",
-                "prefer_not_to_say": "prefer_not_to_say",
-            }
-
-            return mapping.get(v, None)
-
-
         patient_payload = PatientCreate(
             first_name=(payload.patient.first_name or "").strip(),
             last_name=(payload.patient.last_name or "").strip(),
             date_of_birth=payload.patient.date_of_birth,
-            sex=_normalise_sex(payload.patient.sex),  # ✅ FIX
+            sex=_normalise_sex(payload.patient.sex),
             height_cm=payload.patient.height_cm,
             weight_kg=payload.patient.weight_kg,
         )
-
         patient = create_patient(db, current_user, patient_payload)
 
     case = create_case(db, current_user, patient, payload.case)
@@ -380,23 +357,38 @@ def create_from_import(
     try:
         temp_html_bytes = load_temp_html(payload.temporary_upload_id)
     except FileNotFoundError:
+        db.delete(case)
+        db.commit()
         raise HTTPException(
             status_code=400,
-            detail="Temporary upload expired. Please upload the file again."
+            detail="Temporary upload expired. Please upload the file again.",
         )
 
-    raw_scan_html_path = save_case_html(
-        case_id=str(case.id),
-        user_id=str(current_user.id),
-        file_bytes=temp_html_bytes,
-    )
+    allow_duplicate = bool(getattr(payload, "allow_duplicate", False))
 
-    # Always keep the imported values as part of the scan/case snapshot
+    try:
+        raw_scan_html_path = save_case_html(
+            case_id=str(case.id),
+            user_id=str(current_user.id),
+            file_bytes=temp_html_bytes,
+            db=db,
+            allow_duplicate=allow_duplicate,
+        )
+    except ValueError as exc:
+        db.delete(case)
+        db.commit()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "duplicate_scan",
+                "message": str(exc),
+                "allow_duplicate_supported": True,
+            },
+        )
+
     case.source_patient_data_json = make_json_safe(payload.patient.model_dump())
     case.raw_scan_html_path = raw_scan_html_path
 
-    # Re-parse server-side from the uploaded HTML so scan datetime does not depend
-    # on what the browser sent back.
     reparsed = parse_qrma_html(temp_html_bytes)
     reparsed_scan_metadata = reparsed.get("scan_metadata", {}) or {}
     reparsed_scan_datetime = reparsed_scan_metadata.get("scan_datetime")
@@ -404,7 +396,6 @@ def create_from_import(
     if reparsed_scan_datetime:
         case.scan_datetime = reparsed_scan_datetime
     else:
-        # Fallback to client payload only if server-side parse did not produce a datetime
         scan_metadata = getattr(payload, "scan_metadata", None)
         raw_scan_datetime = getattr(scan_metadata, "scan_datetime", None) if scan_metadata else None
 
@@ -426,6 +417,9 @@ def create_from_import(
                     except Exception:
                         continue
 
+    # Immediately move out of draft once the scan is attached
+    case.status = CaseStatus.queued
+
     db.commit()
     db.refresh(case)
 
@@ -439,14 +433,36 @@ def create_from_import(
             "linked_existing_patient": bool(payload.existing_patient_id),
             "existing_patient_id": str(payload.existing_patient_id) if payload.existing_patient_id else None,
             "update_patient_measurements": payload.update_patient_measurements,
+            "allow_duplicate": allow_duplicate,
+            "status_after_import": case.status.value if hasattr(case.status, "value") else str(case.status),
         },
     )
 
-    return {
-        "patient_id": patient.id,
-        "case_id": case.id,
-    }
+    # AUTO-GENERATE REPORT IMMEDIATELY
+    try:
+        report = await generate_report_version(db, case, current_user)
+        db.refresh(case)
 
+        return {
+            "patient_id": patient.id,
+            "case_id": case.id,
+            "status": case.status.value if hasattr(case.status, "value") else str(case.status),
+            "report_version_id": report.id,
+            "report_status": report.status.value if hasattr(report.status, "value") else str(report.status),
+            "auto_generated": True,
+        }
+    except Exception as exc:
+        db.refresh(case)
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "report_generation_failed",
+                "message": "Case was created, but automatic report generation failed.",
+                "case_id": str(case.id),
+                "status": case.status.value if hasattr(case.status, "value") else str(case.status),
+                "error": str(exc),
+            },
+        )
 
 @router.post("/{case_id}/generate-report", response_model=GenerateReportResponse)
 async def generate_report(
@@ -479,18 +495,18 @@ def create_from_existing_patient_import(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-
     patient_id = payload.get("patient_id")
     temporary_upload_id = payload.get("temporary_upload_id")
     case_payload = payload.get("case", {})
     scan_metadata = payload.get("scan_metadata")
+    allow_duplicate = bool(payload.get("allow_duplicate", False))
 
     if not patient_id:
         raise HTTPException(status_code=400, detail="Missing patient_id")
 
     patient = db.query(Patient).filter(
         Patient.id == patient_id,
-        Patient.user_id == current_user.id
+        Patient.user_id == current_user.id,
     ).first()
 
     if not patient:
@@ -500,21 +516,41 @@ def create_from_existing_patient_import(
         db,
         current_user,
         patient,
-        CaseCreateFromImport(**case_payload)
+        CaseCreateFromImport(**case_payload),
     )
 
-    # Attach HTML
-    html_bytes = load_temp_html(temporary_upload_id)
-    path = save_case_html(
-        case_id=str(case.id),
-        user_id=str(current_user.id),
-        file_bytes=html_bytes,
-    )
+    try:
+        html_bytes = load_temp_html(temporary_upload_id)
+    except FileNotFoundError:
+        db.delete(case)
+        db.commit()
+        raise HTTPException(
+            status_code=400,
+            detail="Temporary upload expired. Please upload the file again.",
+        )
+
+    try:
+        path = save_case_html(
+            case_id=str(case.id),
+            user_id=str(current_user.id),
+            file_bytes=html_bytes,
+            db=db,
+            allow_duplicate=allow_duplicate,
+        )
+    except ValueError as exc:
+        db.delete(case)
+        db.commit()
+        raise HTTPException(
+            status_code=409,
+            detail={
+                "code": "duplicate_scan",
+                "message": str(exc),
+                "allow_duplicate_supported": True,
+            },
+        )
 
     case.raw_scan_html_path = path
 
-    # Persist scan datetime if available
-    # Persist scan datetime from server-side parse first
     reparsed = parse_qrma_html(html_bytes)
     reparsed_scan_metadata = reparsed.get("scan_metadata", {}) or {}
     reparsed_scan_datetime = reparsed_scan_metadata.get("scan_datetime")
@@ -545,5 +581,5 @@ def create_from_existing_patient_import(
     db.refresh(case)
 
     return {
-        "case_id": case.id
+        "case_id": case.id,
     }
