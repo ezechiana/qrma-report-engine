@@ -174,6 +174,8 @@ def parse_qrma_html(file_bytes: bytes) -> dict:
             except Exception:
                 continue
 
+    print("PARSED testing_time:", testing_time)
+    print("PARSED scan_datetime:", parsed_scan_datetime)
 
     return {
         "source_patient_data": {

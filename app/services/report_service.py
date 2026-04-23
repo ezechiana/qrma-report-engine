@@ -32,11 +32,47 @@ def _build_case_filenames(case: Case, version_number: int) -> tuple[str, str]:
     return html_key, pdf_key
 
 
-
 def _to_str_path(value):
     if isinstance(value, Path):
         return str(value)
     return value
+
+
+def _extract_health_index_from_viewer(viewer_payload: dict) -> float | None:
+    """
+    Pull the canonical Health Index from the built viewer payload.
+
+    We do not guess from arbitrary nested scores. We only use the known
+    overview field that powers the report viewer.
+    """
+    if not isinstance(viewer_payload, dict):
+        return None
+
+    overview = viewer_payload.get("overview") or {}
+    value = overview.get("overall_scan_score")
+
+    if value is None:
+        return None
+
+    try:
+        return float(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _build_metrics_snapshot(viewer_payload: dict) -> dict:
+    """
+    Structured snapshot used for longitudinal trends.
+
+    Option A architecture:
+    - store a JSON snapshot on ReportVersion
+    - trend endpoints read from this instead of scraping report_json later
+    """
+    return {
+        "health_index": _extract_health_index_from_viewer(viewer_payload),
+        "systems": {},
+        "markers": {},
+    }
 
 
 def parse_and_enrich_case_html(case: Case):
@@ -147,6 +183,8 @@ async def build_report_version(
         pdf_path = _to_str_path(built.get("pdf_path"))
         viewer_payload = built.get("viewer_payload") or {}
 
+        metrics_snapshot = _build_metrics_snapshot(viewer_payload)
+
         report_json = {
             "case_id": str(case.id),
             "version_number": version_number,
@@ -154,11 +192,17 @@ async def build_report_version(
             "html_path": html_path,
             "pdf_path": pdf_path,
             "viewer": viewer_payload,
+            "metrics_snapshot": metrics_snapshot,
         }
 
         report.report_json = report_json
         report.html_path = html_path
         report.pdf_path = pdf_path
+
+        # Critical for trends
+        if hasattr(report, "metrics_snapshot"):
+            report.metrics_snapshot = metrics_snapshot
+
         report.status = ReportStatus.ready
         report.error_message = None
 
