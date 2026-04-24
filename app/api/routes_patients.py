@@ -458,6 +458,225 @@ def _compute_trend_summary(series_dict: dict):
     return summary
 
 
+def _num(value, default: float = 0.0) -> float:
+    try:
+        if value is None:
+            return default
+        return float(value)
+    except (TypeError, ValueError):
+        return default
+
+
+def _signed(value) -> str:
+    n = _num(value)
+    return f"{n:+.3f}".rstrip("0").rstrip(".")
+
+
+def _trend_direction_word(direction: str | None) -> str:
+    return {
+        "up": "increased",
+        "down": "decreased",
+        "flat": "remained broadly stable",
+        "baseline": "is baseline only",
+    }.get(direction or "", "changed")
+
+
+def _category_hotspots(trend_summary: list[dict]) -> list[dict]:
+    buckets: dict[str, dict] = {}
+
+    for item in trend_summary or []:
+        if not item.get("has_trend") or not item.get("is_meaningful"):
+            continue
+
+        category = _clean_category_name(item.get("category"))
+        if category == "Uncategorised":
+            category = "Other"
+
+        bucket = buckets.setdefault(category, {
+            "category": category,
+            "count": 0,
+            "band_changes": 0,
+            "largest_abs_delta": 0.0,
+            "largest_marker": None,
+            "largest_delta": 0.0,
+        })
+
+        delta = _num(item.get("delta"))
+        abs_delta = abs(delta)
+        bucket["count"] += 1
+
+        if item.get("band_changed"):
+            bucket["band_changes"] += 1
+
+        if abs_delta > bucket["largest_abs_delta"]:
+            bucket["largest_abs_delta"] = abs_delta
+            bucket["largest_marker"] = item.get("label") or item.get("key")
+            bucket["largest_delta"] = delta
+
+    hotspots = list(buckets.values())
+    hotspots.sort(key=lambda x: (x["band_changes"], x["count"], x["largest_abs_delta"]), reverse=True)
+
+    return hotspots[:5]
+
+
+def _build_trend_intelligence(
+    trend_summary: list[dict],
+    health_index_points: list[dict],
+    system_group_averages: dict,
+) -> dict:
+    """
+    Deterministic, non-AI trend interpretation layer.
+
+    It turns raw trend rows into practitioner-facing orientation:
+    - what changed most
+    - which categories are clustered
+    - whether overall Health Index changed
+    - where follow-up attention should go
+    """
+    trend_summary = trend_summary or []
+    has_real_trend = any(item.get("has_trend") for item in trend_summary)
+
+    meaningful = [
+        item for item in trend_summary
+        if item.get("has_trend") and item.get("is_meaningful")
+    ]
+    band_changes = [
+        item for item in meaningful
+        if item.get("band_changed")
+    ]
+
+    meaningful_sorted = sorted(meaningful, key=lambda x: abs(_num(x.get("delta"))), reverse=True)
+    largest_increases = [x for x in meaningful_sorted if _num(x.get("delta")) > 0][:3]
+    largest_decreases = [x for x in meaningful_sorted if _num(x.get("delta")) < 0][:3]
+    hotspots = _category_hotspots(trend_summary)
+
+    health_change = None
+    health_direction = "stable"
+    if len(health_index_points or []) >= 2:
+        first = _num(health_index_points[0].get("value"))
+        latest = _num(health_index_points[-1].get("value"))
+        health_change = round(latest - first, 3)
+        if health_change > 0:
+            health_direction = "improved"
+        elif health_change < 0:
+            health_direction = "declined"
+
+    cards = [
+        {
+            "label": "Tracked markers",
+            "value": len(trend_summary),
+            "detail": f"{len(meaningful)} significant; {len(band_changes)} band changes",
+            "tone": "neutral",
+        },
+        {
+            "label": "Largest increase",
+            "value": _signed(largest_increases[0].get("delta")) if largest_increases else "—",
+            "detail": _humanize_key(largest_increases[0].get("label") or largest_increases[0].get("key")) if largest_increases else "No upward change detected",
+            "tone": "increase" if largest_increases else "neutral",
+        },
+        {
+            "label": "Largest decrease",
+            "value": _signed(largest_decreases[0].get("delta")) if largest_decreases else "—",
+            "detail": _humanize_key(largest_decreases[0].get("label") or largest_decreases[0].get("key")) if largest_decreases else "No downward change detected",
+            "tone": "decrease" if largest_decreases else "neutral",
+        },
+        {
+            "label": "Health Index",
+            "value": _signed(health_change) if health_change is not None else "Baseline",
+            "detail": f"Overall trend {health_direction}" if health_change is not None else "Add another scan to calculate overall trend",
+            "tone": "increase" if health_change and health_change > 0 else "decrease" if health_change and health_change < 0 else "neutral",
+        },
+    ]
+
+    insights = []
+
+    if not has_real_trend:
+        insights.append({
+            "title": "Baseline scan only",
+            "body": "Trend intelligence will appear after at least two generated reports for this patient.",
+            "tone": "neutral",
+        })
+    else:
+        if health_change is not None and abs(health_change) >= 1:
+            insights.append({
+                "title": f"Overall Health Index {health_direction}",
+                "body": f"Health Index changed by {_signed(health_change)} points across the available scans.",
+                "tone": "increase" if health_change > 0 else "decrease",
+            })
+
+        if hotspots:
+            top = hotspots[0]
+            insight_body = (
+                f"{top['count']} significant marker changes are clustered in {top['category']}. "
+                f"Largest movement: {_humanize_key(top['largest_marker'])} ({_signed(top['largest_delta'])})."
+            )
+            if top["band_changes"]:
+                insight_body += f" {top['band_changes']} marker(s) changed band."
+
+            insights.append({
+                "title": f"{top['category']} is the strongest trend cluster",
+                "body": insight_body,
+                "tone": "warning" if top["band_changes"] else "neutral",
+            })
+
+        if largest_increases:
+            item = largest_increases[0]
+            insights.append({
+                "title": "Largest upward movement",
+                "body": f"{_humanize_key(item.get('label') or item.get('key'))} increased by {_signed(item.get('delta'))}.",
+                "tone": "increase",
+            })
+
+        if largest_decreases:
+            item = largest_decreases[0]
+            insights.append({
+                "title": "Largest downward movement",
+                "body": f"{_humanize_key(item.get('label') or item.get('key'))} decreased by {_signed(item.get('delta'))}.",
+                "tone": "decrease",
+            })
+
+        if band_changes:
+            first_three = ", ".join(
+                _humanize_key(item.get("label") or item.get("key"))
+                for item in band_changes[:3]
+            )
+            insights.append({
+                "title": "Band changes need review",
+                "body": f"{len(band_changes)} marker(s) changed interpretation band. Review: {first_three}.",
+                "tone": "warning",
+            })
+
+    if not insights:
+        insights.append({
+            "title": "No major trend signal detected",
+            "body": "Tracked markers are not showing a strong directional pattern across the available scans.",
+            "tone": "neutral",
+        })
+
+    focus_areas = [
+        {
+            "category": item["category"],
+            "count": item["count"],
+            "band_changes": item["band_changes"],
+            "largest_marker": _humanize_key(item["largest_marker"]),
+            "largest_delta": round(item["largest_delta"], 3),
+        }
+        for item in hotspots
+    ]
+
+    return {
+        "has_trend": has_real_trend,
+        "summary": (
+            "Trend intelligence is based on marker movement, band changes, and category clustering across generated reports."
+            if has_real_trend else
+            "Trend intelligence requires at least two generated reports for this patient."
+        ),
+        "cards": cards,
+        "insights": insights[:5],
+        "focus_areas": focus_areas,
+    }
+
+
 def _point(report: ReportVersion, value: float, meta: dict | None = None):
     case = getattr(report, "case", None)
     scan_dt = case.scan_datetime if case and case.scan_datetime else None
@@ -658,6 +877,7 @@ def get_patient_trends(
                     _point(report, sum(values) / len(values))
                 )
     trend_summary = _compute_trend_summary(markers)
+    trend_intelligence = _build_trend_intelligence(trend_summary, health_index_points, system_group_averages)
 
     return {
         "patient_id": str(patient.id),
@@ -669,7 +889,8 @@ def get_patient_trends(
         "system_group_averages": system_group_averages,
         "system_options": [{"key": k, "label": _humanize_key(k)} for k in sorted(systems.keys())],
         "marker_options": [{"key": k, "label": _humanize_key(k)} for k in sorted(markers.keys())],
-        "trend_summary": trend_summary, 
+        "trend_summary": trend_summary,
+        "trend_intelligence": trend_intelligence,
     }
 
 

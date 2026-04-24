@@ -558,6 +558,157 @@
     background: #ffffff;
 }
 
+/* Trend intelligence and collapsible cards */
+.trend-intelligence-panel {
+    border: 1px solid #dbeafe;
+    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 18px;
+}
+
+.trend-intelligence-content {
+    display: grid;
+    gap: 14px;
+}
+
+.trend-intelligence-panel.is-collapsed .trend-intelligence-content,
+.trend-chart-panel.is-collapsed .trend-chart-content,
+.collapsible-section.is-collapsed .collapsible-content {
+    display: none;
+}
+
+.trend-intelligence-cards {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+}
+
+.trend-intel-card {
+    background: #ffffff;
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 12px;
+    min-height: 72px;
+}
+
+.trend-intel-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    font-weight: 800;
+    margin-bottom: 6px;
+}
+
+.trend-intel-value {
+    font-size: 20px;
+    font-weight: 800;
+    color: #0f172a;
+}
+
+.trend-intel-detail {
+    margin-top: 4px;
+    font-size: 12px;
+    color: #64748b;
+    line-height: 1.35;
+}
+
+.trend-intel-list {
+    display: grid;
+    gap: 8px;
+}
+
+.trend-intel-item {
+    border: 1px solid #e5e7eb;
+    background: #ffffff;
+    border-radius: 12px;
+    padding: 10px 12px;
+}
+
+.trend-intel-item-title {
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 3px;
+}
+
+.trend-intel-item-body {
+    color: #475569;
+    line-height: 1.45;
+    font-size: 13px;
+}
+
+.trend-intel-focus {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.trend-focus-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
+    border-radius: 999px;
+    padding: 6px 9px;
+    font-size: 12px;
+    color: #334155;
+}
+
+.trend-tone-increase {
+    color: #b45309;
+}
+
+.trend-tone-decrease {
+    color: #0369a1;
+}
+
+.trend-tone-warning {
+    color: #b91c1c;
+}
+
+.trend-chart-panel {
+    margin-top: 16px;
+}
+
+.trend-chart-toolbar {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.trend-chart-content {
+    border-top: 1px solid #eef2f7;
+    padding-top: 12px;
+}
+
+.collapsible-section .section-toolbar {
+    margin-bottom: 12px;
+}
+
+.collapse-mini-btn {
+    border: 1px solid #dbe7f3;
+    background: #ffffff;
+    color: #334155;
+    border-radius: 999px;
+    padding: 6px 10px;
+    font-size: 12px;
+    cursor: pointer;
+}
+
+.collapse-mini-btn:hover {
+    background: #f8fafc;
+}
+
+@media (max-width: 900px) {
+    .trend-intelligence-cards {
+        grid-template-columns: 1fr;
+    }
+}
+
 .trend-sort-header {
     display: inline-flex;
     align-items: center;
@@ -650,6 +801,23 @@
         <h3 style="margin:0;">Trend overview</h3>
     </div>
 
+    <div class="trend-intelligence-panel" id="trend-intelligence-panel">
+        <div class="section-toolbar">
+            <div>
+                <div class="trend-section-label">Trend intelligence</div>
+                <h3 style="margin:0;">Clinical trend insights</h3>
+                <div class="muted" id="trend-intelligence-note" style="margin-top:4px;">Loading trend intelligence…</div>
+            </div>
+            <button class="trend-collapse-btn" type="button" id="trend-intelligence-collapse-btn">Collapse insights</button>
+        </div>
+
+        <div class="trend-intelligence-content" id="trend-intelligence-content">
+            <div id="trend-intelligence-cards" class="trend-intelligence-cards"></div>
+            <div id="trend-intelligence-insights" class="trend-intel-list"></div>
+            <div id="trend-intelligence-focus" class="trend-intel-focus"></div>
+        </div>
+    </div>
+
     <div class="trend-summary-panel">
         <div class="section-toolbar">
             <div>
@@ -713,51 +881,59 @@
         </div>
     </div>
 
-    <div class="trend-controls" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-        <select id="trend-type">
-            <option value="health">Health Index</option>
-            <option value="group">Clinical area</option>
-            <option value="system">Individual system</option>
-            <option value="marker">Marker</option>
-        </select>
-        <select id="trend-group" style="display:none;"></select>
-
-        <div id="trend-key-wrap" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
-            <input id="trend-key-search" list="trend-key-list" placeholder="Type marker or system name…" style="min-width:260px;">
-            <datalist id="trend-key-list"></datalist>
-            <select id="trend-key"></select>
-        </div>
-    </div>
-
-    <div class="trend-chart-panel">
-        <div class="trend-section-label">Marker trend visualization</div>
-        <div class="trend-header">
+    <div class="trend-chart-panel" id="trend-chart-panel">
+        <div class="trend-chart-toolbar">
             <div>
+                <div class="trend-section-label">Trend visualization</div>
                 <div class="trend-title" id="trend-title">Health Index</div>
                 <div class="trend-subtitle" id="trend-subtitle">Longitudinal scan trend.</div>
             </div>
-
-            <div class="trend-stats">
-                <div class="trend-stat">
-                    <div class="trend-stat-label">First</div>
-                    <div class="trend-stat-value" id="trend-first">—</div>
-                </div>
-                <div class="trend-stat">
-                    <div class="trend-stat-label">Latest</div>
-                    <div class="trend-stat-value" id="trend-latest">—</div>
-                </div>
-                <div class="trend-stat">
-                    <div class="trend-stat-label">Change</div>
-                    <div class="trend-stat-value" id="trend-change">—</div>
-                </div>
+            <div class="trend-summary-actions">
+                <button class="trend-collapse-btn" type="button" id="trend-chart-collapse-btn">Collapse chart</button>
             </div>
         </div>
 
-        <div id="trend-meta-panel" class="muted" style="margin:12px 0; display:none;"></div>
+        <div class="trend-chart-content" id="trend-chart-content">
+            <div class="trend-controls" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
+                <select id="trend-type">
+                    <option value="health">Health Index</option>
+                    <option value="group">Clinical area</option>
+                    <option value="system">Individual system</option>
+                    <option value="marker">Marker</option>
+                </select>
+                <select id="trend-group" style="display:none;"></select>
 
-        <div class="chart-wrap">
-            <svg id="main-trend-chart" class="chart-svg" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
-            <div id="main-trend-empty" class="chart-empty" style="display:none;">No trend data yet.</div>
+                <div id="trend-key-wrap" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+                    <input id="trend-key-search" list="trend-key-list" placeholder="Type marker or system name…" style="min-width:260px;">
+                    <datalist id="trend-key-list"></datalist>
+                    <select id="trend-key"></select>
+                </div>
+            </div>
+
+            <div class="trend-header">
+                <div></div>
+                <div class="trend-stats">
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">First</div>
+                        <div class="trend-stat-value" id="trend-first">—</div>
+                    </div>
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">Latest</div>
+                        <div class="trend-stat-value" id="trend-latest">—</div>
+                    </div>
+                    <div class="trend-stat">
+                        <div class="trend-stat-label">Change</div>
+                        <div class="trend-stat-value" id="trend-change">—</div>
+                    </div>
+                </div>
+            </div>
+
+            <div id="trend-meta-panel" class="muted" style="margin:12px 0; display:none;"></div>
+
+            <div class="chart-wrap">
+                <svg id="main-trend-chart" class="chart-svg" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+                <div id="main-trend-empty" class="chart-empty" style="display:none;">No trend data yet.</div>
+            </div>
         </div>
     </div>
 
@@ -826,12 +1002,14 @@
     </div>
 </div>
 
-<div class="card">
+<div class="card collapsible-section" id="cases-content-section">
     <div class="section-toolbar">
         <h3 style="margin:0;">Cases</h3>
+        <button class="collapse-mini-btn" type="button" data-collapse-target="cases-content">Collapse</button>
         <a class="btn secondary" href="/app/cases">View all cases</a>
     </div>
 
+    <div class="collapsible-content" id="cases-content">
     <table class="table">
         <thead>
             <tr>
@@ -845,14 +1023,17 @@
             <tr><td colspan="4" class="muted">Loading…</td></tr>
         </tbody>
     </table>
+    </div>
 </div>
 
-<div class="card">
+<div class="card collapsible-section" id="reports-content-section">
     <div class="section-toolbar">
         <h3 style="margin:0;">Reports</h3>
+        <button class="collapse-mini-btn" type="button" data-collapse-target="reports-content">Collapse</button>
         <a class="btn secondary" href="/app/reports">View all reports</a>
     </div>
 
+    <div class="collapsible-content" id="reports-content">
     <table class="table">
         <thead>
             <tr>
@@ -866,15 +1047,19 @@
             <tr><td colspan="4" class="muted">Loading…</td></tr>
         </tbody>
     </table>
+    </div>
 </div>
 
-<div class="card">
+<div class="card collapsible-section" id="activity-content-section">
     <div class="section-toolbar">
         <h3 style="margin:0;">Activity timeline</h3>
+        <button class="collapse-mini-btn" type="button" data-collapse-target="activity-content">Collapse</button>
     </div>
 
+    <div class="collapsible-content" id="activity-content">
     <div id="patient-timeline" class="timeline">
         <div class="muted">Loading…</div>
+    </div>
     </div>
 </div>
 
@@ -883,7 +1068,7 @@
     let currentPatient = null;
     let currentCases = [];
     let currentReports = [];
-    let currentTrends = { health_index: [], weight_kg: [] };
+    let currentTrends = { health_index: [], weight_kg: [], trend_summary: [], trend_intelligence: null };
     let trendSummarySort = { key: "change", dir: "desc" };
 
     function showPatientError(message) {
@@ -1556,6 +1741,64 @@
     }
 
 
+
+    function trendToneClass(tone) {
+        if (tone === "increase") return "trend-tone-increase";
+        if (tone === "decrease") return "trend-tone-decrease";
+        if (tone === "warning") return "trend-tone-warning";
+        return "";
+    }
+
+    function renderTrendIntelligence(intelligence) {
+        const note = document.getElementById("trend-intelligence-note");
+        const cardsBox = document.getElementById("trend-intelligence-cards");
+        const insightsBox = document.getElementById("trend-intelligence-insights");
+        const focusBox = document.getElementById("trend-intelligence-focus");
+
+        if (!cardsBox || !insightsBox || !focusBox) return;
+
+        if (!intelligence) {
+            if (note) note.textContent = "Trend intelligence will appear once trend data is available.";
+            cardsBox.innerHTML = "";
+            insightsBox.innerHTML = `
+                <div class="trend-intel-item">
+                    <div class="trend-intel-item-title">No trend intelligence yet</div>
+                    <div class="trend-intel-item-body">Generate at least two reports for this patient to calculate movement, clusters, and follow-up priorities.</div>
+                </div>
+            `;
+            focusBox.innerHTML = "";
+            return;
+        }
+
+        if (note) note.textContent = intelligence.summary || "Trend intelligence is based on available scan history.";
+
+        const cards = Array.isArray(intelligence.cards) ? intelligence.cards : [];
+        cardsBox.innerHTML = cards.map(card => `
+            <div class="trend-intel-card">
+                <div class="trend-intel-label">${safeText(card.label || "")}</div>
+                <div class="trend-intel-value ${trendToneClass(card.tone)}">${safeText(card.value ?? "—")}</div>
+                <div class="trend-intel-detail">${safeText(card.detail || "")}</div>
+            </div>
+        `).join("");
+
+        const insights = Array.isArray(intelligence.insights) ? intelligence.insights : [];
+        insightsBox.innerHTML = insights.map(item => `
+            <div class="trend-intel-item">
+                <div class="trend-intel-item-title ${trendToneClass(item.tone)}">${safeText(item.title || "Trend insight")}</div>
+                <div class="trend-intel-item-body">${safeText(item.body || "")}</div>
+            </div>
+        `).join("");
+
+        const focusAreas = Array.isArray(intelligence.focus_areas) ? intelligence.focus_areas : [];
+        focusBox.innerHTML = focusAreas.map(item => `
+            <span class="trend-focus-pill" title="${safeText(item.largest_marker || "")}">
+                ${safeText(item.category || "Other")}
+                <strong>${safeText(item.count ?? 0)}</strong>
+                ${item.band_changes ? `<span class="trend-tone-warning">${safeText(item.band_changes)} band</span>` : ""}
+            </span>
+        `).join("");
+    }
+
     function renderTrends(trends) {
         currentTrends = trends || {
             health_index: [],
@@ -1566,9 +1809,11 @@
             system_group_averages: {},
             marker_options: [],
             trend_summary: [],
+            trend_intelligence: null,
         };
 
         populateTrendControls();
+        renderTrendIntelligence(currentTrends.trend_intelligence || null);
         renderTrendSummary(currentTrends.trend_summary || []);
         renderSelectedTrend();
 
@@ -1845,7 +2090,10 @@
                 systems: {},
                 markers: {},
                 system_groups: {},
-                system_group_averages: {}
+                system_group_averages: {},
+                marker_options: [],
+                trend_summary: [],
+                trend_intelligence: null
             }));
 
             if (!patientRes.ok) {
@@ -2049,6 +2297,40 @@
             renderTrendSummary(currentTrends.trend_summary || []);
         });
     });
+
+
+    const trendIntelligenceCollapseBtn = document.getElementById("trend-intelligence-collapse-btn");
+    if (trendIntelligenceCollapseBtn) {
+        trendIntelligenceCollapseBtn.addEventListener("click", () => {
+            const panel = document.getElementById("trend-intelligence-panel");
+            if (!panel) return;
+            const collapsed = panel.classList.toggle("is-collapsed");
+            trendIntelligenceCollapseBtn.textContent = collapsed ? "Expand insights" : "Collapse insights";
+        });
+    }
+
+    const trendChartCollapseBtn = document.getElementById("trend-chart-collapse-btn");
+    if (trendChartCollapseBtn) {
+        trendChartCollapseBtn.addEventListener("click", () => {
+            const panel = document.getElementById("trend-chart-panel");
+            if (!panel) return;
+            const collapsed = panel.classList.toggle("is-collapsed");
+            trendChartCollapseBtn.textContent = collapsed ? "Expand chart" : "Collapse chart";
+        });
+    }
+
+    document.querySelectorAll("[data-collapse-target]").forEach(button => {
+        button.addEventListener("click", () => {
+            const targetId = button.getAttribute("data-collapse-target");
+            const content = document.getElementById(targetId);
+            if (!content) return;
+            const section = content.closest(".collapsible-section");
+            if (!section) return;
+            const collapsed = section.classList.toggle("is-collapsed");
+            button.textContent = collapsed ? "Expand" : "Collapse";
+        });
+    });
+
 
     loadPatientDetail();
 </script>
