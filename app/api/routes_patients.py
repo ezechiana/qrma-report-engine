@@ -519,10 +519,22 @@ def _category_hotspots(trend_summary: list[dict]) -> list[dict]:
     return hotspots[:5]
 
 
+
+def _trend_confidence(report_count: int, meaningful_count: int, hotspot_count: int) -> dict:
+    """Simple deterministic confidence label for non-diagnostic trend interpretation."""
+    if report_count >= 3 and meaningful_count >= 5 and hotspot_count >= 1:
+        return {"label": "High", "reason": f"consistent multi-marker pattern across {report_count} generated reports"}
+    if report_count >= 2 and meaningful_count >= 3:
+        return {"label": "Medium", "reason": f"trend detected across {report_count} generated reports"}
+    if report_count >= 2:
+        return {"label": "Low", "reason": "limited trend signal across the available reports"}
+    return {"label": "Baseline", "reason": "requires at least two generated reports"}
+
 def _build_trend_intelligence(
     trend_summary: list[dict],
     health_index_points: list[dict],
     system_group_averages: dict,
+    report_count: int = 0,
 ) -> dict:
     """
     Deterministic, non-AI trend interpretation layer.
@@ -549,6 +561,7 @@ def _build_trend_intelligence(
     largest_increases = [x for x in meaningful_sorted if _num(x.get("delta")) > 0][:3]
     largest_decreases = [x for x in meaningful_sorted if _num(x.get("delta")) < 0][:3]
     hotspots = _category_hotspots(trend_summary)
+    confidence = _trend_confidence(report_count or len(health_index_points or []), len(meaningful), len(hotspots))
 
     health_change = None
     health_direction = "stable"
@@ -567,6 +580,7 @@ def _build_trend_intelligence(
             "value": len(trend_summary),
             "detail": f"{len(meaningful)} significant; {len(band_changes)} band changes",
             "tone": "neutral",
+            "confidence": confidence["label"],
         },
         {
             "label": "Largest increase",
@@ -614,15 +628,15 @@ def _build_trend_intelligence(
                 insight_body += f" {top['band_changes']} marker(s) changed band."
 
             insights.append({
-                "title": f"{top['category']} is the strongest trend cluster",
-                "body": insight_body,
+                "title": f"{top['category']}-related markers show the strongest clustered change pattern",
+                "body": insight_body.replace("Largest movement:", "Most significant directional change:"),
                 "tone": "warning" if top["band_changes"] else "neutral",
             })
 
         if largest_increases:
             item = largest_increases[0]
             insights.append({
-                "title": "Largest upward movement",
+                "title": "Most significant upward directional change",
                 "body": f"{_humanize_key(item.get('label') or item.get('key'))} increased by {_signed(item.get('delta'))}.",
                 "tone": "increase",
             })
@@ -630,7 +644,7 @@ def _build_trend_intelligence(
         if largest_decreases:
             item = largest_decreases[0]
             insights.append({
-                "title": "Largest downward movement",
+                "title": "Most significant downward directional change",
                 "body": f"{_humanize_key(item.get('label') or item.get('key'))} decreased by {_signed(item.get('delta'))}.",
                 "tone": "decrease",
             })
@@ -641,8 +655,8 @@ def _build_trend_intelligence(
                 for item in band_changes[:3]
             )
             insights.append({
-                "title": "Band changes need review",
-                "body": f"{len(band_changes)} marker(s) changed interpretation band. Review: {first_three}.",
+                "title": "Band changes require clinical review",
+                "body": f"{len(band_changes)} marker(s) changed classification band — this may indicate systemic recalibration. Review high-impact markers first: {first_three}.",
                 "tone": "warning",
             })
 
@@ -674,6 +688,7 @@ def _build_trend_intelligence(
         "cards": cards,
         "insights": insights[:5],
         "focus_areas": focus_areas,
+        "confidence": confidence,
     }
 
 
@@ -729,6 +744,592 @@ def _metric_meta(metric, fallback_category: str | None = None, fallback_label: s
     if fallback_label:
         meta["marker_label"] = _humanize_key(fallback_label)
     return meta
+
+
+# =========================
+# TREND-AWARE RECOMMENDATION NARRATIVES
+# =========================
+
+def _safe_text(value) -> str:
+    return str(value or "").strip()
+
+
+def _normalise_text(value: str | None) -> str:
+    return _safe_text(value).lower().replace("_", " ").strip()
+
+
+def _viewer_recommendations_from_report(report: ReportVersion) -> dict:
+    """
+    Reuse the existing report recommendation payload.
+    This avoids creating an independent recommendation engine.
+    """
+    report_json = getattr(report, "report_json", None)
+    if not isinstance(report_json, dict):
+        return {}
+
+    viewer = report_json.get("viewer") or {}
+    if not isinstance(viewer, dict):
+        return {}
+
+    recommendations = viewer.get("recommendations") or {}
+    return recommendations if isinstance(recommendations, dict) else {}
+
+
+def _recommendation_mode_from_report(report: ReportVersion) -> str:
+    raw = getattr(report, "recommendation_mode", None)
+    return raw.value if hasattr(raw, "value") else str(raw or "natural_approaches_clinical")
+
+
+def _recommendations_are_enabled(mode: str | None) -> bool:
+    return (mode or "").strip().lower() != "recommendations_off"
+
+
+def _clean_trend_marker_label(value: str | None) -> str:
+    text = _safe_text(value)
+    for suffix in (" Significant Band", " Significant"):
+        if text.lower().endswith(suffix.lower()):
+            text = text[: -len(suffix)]
+    return " ".join(text.split())
+
+
+def _trend_item_category(item: dict) -> str:
+    return _clean_category_name(
+        item.get("category")
+        or item.get("category_name")
+        or item.get("qrma_category")
+        or item.get("system")
+        or item.get("group")
+        or "General"
+    )
+
+
+def _direction_phrase(direction: str | None) -> str:
+    if direction == "up":
+        return "increased"
+    if direction == "down":
+        return "decreased"
+    if direction == "flat":
+        return "remained broadly stable"
+    return "changed"
+
+
+def _delta_text(delta) -> str:
+    try:
+        value = float(delta)
+    except Exception:
+        return ""
+    return f"{value:+.3f}".rstrip("0").rstrip(".")
+
+
+def _trend_matches_product(product: dict, trend_item: dict) -> bool:
+    marker_label = _normalise_text(trend_item.get("label"))
+    marker_key = _normalise_text(trend_item.get("key"))
+    category = _normalise_text(_trend_item_category(trend_item))
+
+    supporting_markers = [_normalise_text(x) for x in product.get("supporting_markers", []) or []]
+    supporting_sections = [_normalise_text(x) for x in product.get("supporting_sections", []) or []]
+    focus_area = _normalise_text(product.get("focus_area"))
+    pattern_alignment = _normalise_text(product.get("pattern_alignment"))
+    rationale = _normalise_text(product.get("rationale"))
+
+    haystacks = supporting_markers + supporting_sections + [focus_area, pattern_alignment, rationale]
+
+    for h in haystacks:
+        if not h:
+            continue
+        if marker_label and (marker_label in h or h in marker_label):
+            return True
+        if marker_key and (marker_key in h or h in marker_key):
+            return True
+        if category and (category in h or h in category):
+            return True
+
+    return False
+
+
+def _top_trend_evidence_for_product(product: dict, trend_summary: list[dict], limit: int = 3) -> list[dict]:
+    matches = []
+    for item in trend_summary or []:
+        if item.get("has_trend") is not True:
+            continue
+        if item.get("is_meaningful") is not True and item.get("band_changed") is not True:
+            continue
+        if _trend_matches_product(product, item):
+            matches.append(item)
+
+    def score(item: dict) -> float:
+        try:
+            delta_score = abs(float(item.get("delta") or 0))
+        except Exception:
+            delta_score = 0
+        if item.get("band_changed") is True:
+            delta_score += 1000
+        if item.get("is_meaningful") is True:
+            delta_score += 100
+        return delta_score
+
+    matches.sort(key=score, reverse=True)
+    return matches[:limit]
+
+
+def _score_product_with_trend(product: dict, evidence: list[dict]) -> tuple[int, list[str]]:
+    score = 0
+    flags = set()
+
+    for item in evidence:
+        if item.get("is_meaningful"):
+            score += 3
+            flags.add("meaningful_change")
+        if item.get("band_changed"):
+            score += 4
+            flags.add("band_shift")
+        if item.get("direction") in {"up", "down"}:
+            score += 1
+
+    if len(product.get("supporting_sections") or []) >= 2:
+        score += 2
+        flags.add("multi_system")
+
+    return score, sorted(flags)
+
+
+def _evidence_sentence(evidence: list[dict]) -> str:
+    if not evidence:
+        return ""
+
+    parts = []
+    for item in evidence[:3]:
+        label = _clean_trend_marker_label(item.get("label"))
+        category = _trend_item_category(item)
+        direction = _direction_phrase(item.get("direction"))
+        delta = _delta_text(item.get("delta"))
+
+        if delta:
+            parts.append(f"{label} ({category}) {direction} by {delta}")
+        else:
+            parts.append(f"{label} ({category}) {direction}")
+
+    return "Trend evidence: " + "; ".join(parts) + "."
+
+
+def _priority_sentence(priority: str, flags: list[str]) -> str:
+    flag_set = set(flags or [])
+
+    if priority == "high":
+        if "band_shift" in flag_set:
+            return (
+                "This deserves higher practitioner attention because one or more related markers "
+                "changed classification band across scans."
+            )
+        return (
+            "This deserves higher practitioner attention because related markers show meaningful "
+            "movement across the available scan history."
+        )
+
+    if priority == "medium":
+        return (
+            "This may be clinically relevant as a supporting consideration because related findings "
+            "show a measurable trend signal."
+        )
+
+    return (
+        "This remains a lower-priority support consideration unless it aligns with symptoms, history, "
+        "or practitioner assessment."
+    )
+
+
+def _safety_sentence(product: dict) -> str:
+    source = _safe_text(product.get("source_label") or product.get("source"))
+    label = f" {source}" if source else ""
+    return (
+        f"Review suitability, contraindications, allergies, current medicines, and clinical context "
+        f"before using this{label} recommendation."
+    )
+
+
+def _enhance_product_with_trend_narrative(product: dict, trend_summary: list[dict]) -> dict:
+    item = dict(product or {})
+    evidence = _top_trend_evidence_for_product(item, trend_summary)
+    trend_score, flags = _score_product_with_trend(item, evidence)
+
+    priority = "high" if trend_score >= 6 else "medium" if trend_score >= 3 else "low"
+
+    original_rationale = _safe_text(item.get("rationale"))
+    evidence_text = _evidence_sentence(evidence)
+    priority_text = _priority_sentence(priority, flags)
+
+    explanation_parts = []
+    if original_rationale:
+        explanation_parts.append(original_rationale)
+    if evidence_text:
+        explanation_parts.append(evidence_text)
+    explanation_parts.append(priority_text)
+
+    item["trend_priority"] = priority
+    item["trend_flags"] = flags
+    item["trend_narrative"] = {
+        "summary": " ".join(explanation_parts),
+        "why_now": priority_text,
+        "trend_evidence": evidence_text,
+        "safety_note": _safety_sentence(item),
+        "review_required": True,
+        "evidence_markers": [
+            {
+                "key": e.get("key"),
+                "label": _clean_trend_marker_label(e.get("label")),
+                "category": _trend_item_category(e),
+                "latest": e.get("latest"),
+                "delta": e.get("delta"),
+                "direction": e.get("direction"),
+                "status": e.get("status"),
+                "band_changed": bool(e.get("band_changed")),
+            }
+            for e in evidence
+        ],
+    }
+
+    return item
+
+
+def _add_trend_narratives_to_protocol(protocol: dict, enhanced_products: list[dict]) -> dict:
+    if not isinstance(protocol, dict):
+        return {}
+
+    by_name = {p.get("name"): p for p in enhanced_products or [] if p.get("name")}
+    protocol_out = dict(protocol)
+    phases = []
+
+    for phase in protocol.get("phases") or []:
+        if not isinstance(phase, dict):
+            continue
+        phase_out = dict(phase)
+        products = []
+        for product in phase.get("products") or []:
+            if not isinstance(product, dict):
+                continue
+            enriched = dict(product)
+            match = by_name.get(product.get("name"))
+            if match:
+                enriched["trend_priority"] = match.get("trend_priority")
+                enriched["trend_flags"] = match.get("trend_flags", [])
+                enriched["trend_narrative"] = match.get("trend_narrative")
+            products.append(enriched)
+        phase_out["products"] = products
+        phases.append(phase_out)
+
+    protocol_out["phases"] = phases
+    return protocol_out
+
+
+
+
+
+def _priority_level_from_trend(*, count: int = 0, band_changes: int = 0, largest_delta: float = 0.0) -> str:
+    """Convert deterministic trend strength into a practitioner-facing priority band."""
+    abs_delta = abs(_num(largest_delta))
+    if band_changes >= 3 or count >= 10 or abs_delta >= 25:
+        return "high"
+    if band_changes >= 1 or count >= 4 or abs_delta >= 5:
+        return "medium"
+    return "low"
+
+
+def _priority_tone(priority: str | None) -> str:
+    return {
+        "high": "warning",
+        "medium": "increase",
+        "low": "neutral",
+    }.get((priority or "").lower(), "neutral")
+
+
+def _priority_rank(priority: str | None) -> int:
+    return {"high": 0, "medium": 1, "low": 2}.get((priority or "").lower(), 3)
+
+
+def _priority_title_for_category(category: str | None) -> str:
+    category = _clean_category_name(category)
+    if category in {"Other", "Uncategorised"}:
+        return "Cross-system review"
+    return f"{category} review"
+
+
+def _build_top_clinical_priorities(
+    *,
+    trend_summary: list[dict],
+    trend_intelligence: dict | None = None,
+    trend_recommendations: dict | None = None,
+    limit: int = 5,
+) -> list[dict]:
+    """
+    Deterministic top-priority engine for the patient detail screen.
+
+    This does not prescribe. It ranks the areas that deserve practitioner attention
+    using the same trend evidence already shown in the UI:
+    - clustered category changes
+    - band changes
+    - largest directional movements
+    - existing mode-safe recommendation priorities, where available
+    """
+    trend_summary = trend_summary or []
+    trend_intelligence = trend_intelligence or {}
+    trend_recommendations = trend_recommendations or {}
+
+    priorities: list[dict] = []
+    seen_titles: set[str] = set()
+
+    def add_priority(item: dict) -> None:
+        title = (item.get("title") or "Clinical review").strip()
+        key = title.lower()
+        if not title or key in seen_titles:
+            return
+        seen_titles.add(key)
+        priorities.append(item)
+
+    # 1) Strongest clustered categories from trend intelligence / category hotspots.
+    hotspots = trend_intelligence.get("focus_areas") or _category_hotspots(trend_summary)
+    for hotspot in hotspots[:limit]:
+        category = hotspot.get("category") or "Other"
+        count = int(_num(hotspot.get("count"), 0))
+        band_changes = int(_num(hotspot.get("band_changes"), 0))
+        largest_marker = hotspot.get("largest_marker") or "key marker"
+        largest_delta = _num(hotspot.get("largest_delta"), 0)
+        priority = _priority_level_from_trend(
+            count=count,
+            band_changes=band_changes,
+            largest_delta=largest_delta,
+        )
+
+        reason = (
+            f"{count} significant marker change(s) cluster in {category}. "
+            f"Largest movement: {_humanize_key(largest_marker)} ({_signed(largest_delta)})."
+        )
+        if band_changes:
+            reason += f" {band_changes} marker(s) changed classification band."
+
+        add_priority({
+            "title": _priority_title_for_category(category),
+            "category": _clean_category_name(category),
+            "priority": priority,
+            "tone": _priority_tone(priority),
+            "reason": reason,
+            "evidence": {
+                "marker_count": count,
+                "band_changes": band_changes,
+                "largest_marker": _humanize_key(largest_marker),
+                "largest_delta": round(largest_delta, 3),
+            },
+            "source": "trend_cluster",
+        })
+
+    # 2) Add individual high-impact marker movements if they are not already represented.
+    meaningful = [
+        item for item in trend_summary
+        if item.get("has_trend") and item.get("is_meaningful")
+    ]
+    meaningful_sorted = sorted(meaningful, key=lambda x: abs(_num(x.get("delta"))), reverse=True)
+
+    for item in meaningful_sorted:
+        if len(priorities) >= limit:
+            break
+        category = _clean_category_name(item.get("category") or "Other")
+        label = _humanize_key(item.get("label") or item.get("key") or "Marker")
+        delta = _num(item.get("delta"), 0)
+        band_changed = bool(item.get("band_changed"))
+        priority = _priority_level_from_trend(
+            count=1,
+            band_changes=1 if band_changed else 0,
+            largest_delta=delta,
+        )
+        add_priority({
+            "title": f"{label} follow-up",
+            "category": category,
+            "priority": priority,
+            "tone": _priority_tone(priority),
+            "reason": (
+                f"{label} {_trend_direction_word(item.get('direction'))} by {_signed(delta)}. "
+                f"Current status: {item.get('status') or 'Unclear'}."
+            ),
+            "evidence": {
+                "marker": label,
+                "delta": round(delta, 3),
+                "direction": item.get("direction"),
+                "band_changed": band_changed,
+            },
+            "source": "marker_movement",
+        })
+
+    # 3) Fill remaining slots from existing trend-aware recommendations.
+    products = trend_recommendations.get("products") if isinstance(trend_recommendations, dict) else []
+    products = sorted(
+        [p for p in products or [] if isinstance(p, dict)],
+        key=lambda p: (_priority_rank(p.get("trend_priority")), p.get("name") or ""),
+    )
+    for product in products:
+        if len(priorities) >= limit:
+            break
+        focus = product.get("focus_area") or product.get("pattern_alignment") or product.get("source_label") or "Support consideration"
+        focus_label = _humanize_key(str(focus))
+        priority = product.get("trend_priority") or "low"
+        narrative = product.get("trend_narrative") or {}
+        add_priority({
+            "title": focus_label,
+            "category": focus_label,
+            "priority": priority,
+            "tone": _priority_tone(priority),
+            "product": product.get("name"),
+            "reason": narrative.get("summary") or product.get("rationale") or "Aligned with the current recommendation mode and scan context.",
+            "source": "recommendation_context",
+        })
+
+    priorities.sort(key=lambda item: (_priority_rank(item.get("priority")), item.get("title") or ""))
+    return priorities[:limit]
+
+def _extract_top_trend_recommendation_priorities(trend_recommendations: dict, limit: int = 3) -> list[dict]:
+    """Backward-compatible wrapper for recommendation-only priorities."""
+    return _build_top_clinical_priorities(
+        trend_summary=[],
+        trend_intelligence={},
+        trend_recommendations=trend_recommendations,
+        limit=limit,
+    )
+
+def _build_clinical_narrative_summary(
+    *,
+    trend_summary: list[dict],
+    trend_intelligence: dict,
+    trend_recommendations: dict,
+    report_count: int,
+    health_index_points: list[dict],
+) -> dict:
+    """
+    Deterministic practitioner-facing narrative summary.
+
+    This is intentionally not a treatment generator. It summarises the longitudinal
+    signal and points the practitioner toward existing, mode-safe support
+    considerations.
+    """
+    trend_summary = trend_summary or []
+    intelligence = trend_intelligence or {}
+    confidence = intelligence.get("confidence") or _trend_confidence(report_count, 0, 0)
+    focus_areas = intelligence.get("focus_areas") or []
+
+    meaningful = [x for x in trend_summary if x.get("has_trend") and x.get("is_meaningful")]
+    band_changes = [x for x in meaningful if x.get("band_changed")]
+
+    health_change = None
+    health_phrase = "Overall Health Index is not yet comparable."
+    health_short = "Health Index is not yet comparable."
+    if len(health_index_points or []) >= 2:
+        first = _num((health_index_points or [])[0].get("value"))
+        latest = _num((health_index_points or [])[-1].get("value"))
+        health_change = round(latest - first, 3)
+        if health_change > 0:
+            health_phrase = f"Overall Health Index improved by {_signed(health_change)} points."
+            health_short = f"Health Index improved by {_signed(health_change)} points."
+        elif health_change < 0:
+            health_phrase = f"Overall Health Index declined by {_signed(health_change)} points."
+            health_short = f"Health Index declined by {_signed(health_change)} points."
+        else:
+            health_phrase = "Overall Health Index remained broadly stable."
+            health_short = "Health Index remained broadly stable."
+
+    focus_names = [x.get("category") for x in focus_areas[:3] if x.get("category")]
+    focus_phrase = ", ".join(focus_names) if focus_names else "the available marker set"
+
+    priorities = _build_top_clinical_priorities(
+        trend_summary=trend_summary,
+        trend_intelligence=intelligence,
+        trend_recommendations=trend_recommendations,
+        limit=5,
+    )
+    priority_names = [p.get("category") or p.get("title") for p in priorities[:3] if p.get("category") or p.get("title")]
+    priority_phrase = ", ".join(priority_names) if priority_names else focus_phrase
+
+    if report_count < 2:
+        headline = "Baseline scan recorded. Trend interpretation will appear after a follow-up report."
+        details = (
+            "This patient currently has a baseline scan only. The system can record the current pattern, "
+            "but trend interpretation and trend-aware support considerations require at least one follow-up report."
+        )
+    else:
+        headline = (
+            f"Across {report_count} generated reports, {health_short} "
+            f"Priority review areas: {priority_phrase}."
+        )
+        details = (
+            f"Across {report_count} generated reports, {len(meaningful)} marker(s) show meaningful movement "
+            f"and {len(band_changes)} marker(s) changed classification band. {health_phrase} "
+            f"The strongest clustered changes are currently concentrated around {focus_phrase}. "
+            "These findings should be used to guide practitioner review and to prioritise, not replace, clinical judgement."
+        )
+
+    chart_context = "This chart provides visual confirmation of the longitudinal movement described above."
+    if focus_areas:
+        chart_context = (
+            f"This chart should be interpreted alongside the strongest clustered changes: "
+            f"{', '.join([x.get('category') for x in focus_areas[:3] if x.get('category')])}."
+        )
+    if health_change is not None and abs(health_change) >= 1:
+        chart_context += f" Health Index movement over the same period is {_signed(health_change)}."
+
+    return {
+        "title": "Clinical narrative summary",
+        "headline": headline,
+        "body": details,
+        "details": details,
+        "confidence": confidence,
+        "top_priorities": priorities,
+        "chart_context": chart_context,
+        "review_note": "AI-assisted summary for practitioner review only. Confirm against case history, symptoms, medications, allergies, and clinical judgement before making recommendations.",
+    }
+
+def _build_trend_recommendations(latest_report: ReportVersion | None, trend_summary: list[dict]) -> dict:
+    if not latest_report:
+        return {
+            "mode": "unknown",
+            "review_required": True,
+            "disclaimer": "No ready report is available yet for recommendation support.",
+            "products": [],
+            "protocol": {},
+        }
+
+    mode = _recommendation_mode_from_report(latest_report)
+    if not _recommendations_are_enabled(mode):
+        return {
+            "mode": mode,
+            "review_required": True,
+            "disclaimer": "Recommendations are disabled for the current recommendation mode.",
+            "products": [],
+            "protocol": {},
+        }
+
+    recs = _viewer_recommendations_from_report(latest_report)
+    products = recs.get("product_recommendations") or []
+    protocol = recs.get("protocol_plan") or {}
+
+    enhanced_products = [
+        _enhance_product_with_trend_narrative(product, trend_summary)
+        for product in products
+        if isinstance(product, dict)
+    ]
+
+    enhanced_products.sort(
+        key=lambda p: (
+            {"high": 0, "medium": 1, "low": 2}.get(p.get("trend_priority"), 3),
+            p.get("name") or "",
+        )
+    )
+
+    return {
+        "mode": mode,
+        "review_required": True,
+        "disclaimer": (
+            "Trend-aware support considerations are generated from existing mode-based recommendations "
+            "and longitudinal scan changes. Practitioner review is required before use."
+        ),
+        "products": enhanced_products,
+        "protocol": _add_trend_narratives_to_protocol(protocol, enhanced_products),
+    }
 
 
 @router.get("/{patient_id}/trends")
@@ -877,7 +1478,19 @@ def get_patient_trends(
                     _point(report, sum(values) / len(values))
                 )
     trend_summary = _compute_trend_summary(markers)
-    trend_intelligence = _build_trend_intelligence(trend_summary, health_index_points, system_group_averages)
+    trend_intelligence = _build_trend_intelligence(trend_summary, health_index_points, system_group_averages, report_count=len(reports))
+    latest_ready_report = reports[-1] if reports else None
+    trend_recommendations = _build_trend_recommendations(latest_ready_report, trend_summary)
+    clinical_narrative = _build_clinical_narrative_summary(
+        trend_summary=trend_summary,
+        trend_intelligence=trend_intelligence,
+        trend_recommendations=trend_recommendations,
+        report_count=len(reports),
+        health_index_points=health_index_points,
+    )
+    trend_intelligence["clinical_narrative"] = clinical_narrative
+    trend_intelligence["top_clinical_priorities"] = clinical_narrative.get("top_priorities", [])
+    trend_recommendations["clinical_priorities"] = clinical_narrative.get("top_priorities", [])
 
     return {
         "patient_id": str(patient.id),
@@ -891,6 +1504,7 @@ def get_patient_trends(
         "marker_options": [{"key": k, "label": _humanize_key(k)} for k in sorted(markers.keys())],
         "trend_summary": trend_summary,
         "trend_intelligence": trend_intelligence,
+        "trend_recommendations": trend_recommendations,
     }
 
 

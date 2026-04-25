@@ -703,6 +703,34 @@
     background: #f8fafc;
 }
 
+
+/* Final 100% trend intelligence polish */
+.trend-intelligence-panel {
+    border-color: #bfdbfe;
+    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
+}
+.trend-intel-card { position: relative; overflow: hidden; }
+.trend-intel-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #cbd5e1; }
+.trend-intel-card.trend-tone-increase::before { background: #b45309; }
+.trend-intel-card.trend-tone-decrease::before { background: #2563eb; }
+.trend-intel-card.trend-tone-warning::before { background: #dc2626; }
+.trend-intel-item.trend-tone-increase { border-left: 4px solid #b45309; }
+.trend-intel-item.trend-tone-decrease { border-left: 4px solid #2563eb; }
+.trend-intel-item.trend-tone-warning { border-left: 4px solid #dc2626; background: #fff7f7; }
+.trend-confidence-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 700; background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc; }
+.trend-focus-pill { cursor: pointer; transition: transform 120ms ease, background 120ms ease, border-color 120ms ease; }
+.trend-focus-pill:hover { transform: translateY(-1px); background: #eef2ff; border-color: #c7d2fe; }
+.trend-focus-pill.is-active { background: #dbeafe; border-color: #60a5fa; color: #1e3a8a; }
+.trend-focus-pill-clear { background: #ffffff; border-style: dashed; }
+.trend-chart-panel { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #cbd5e1; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06); }
+.trend-chart-toolbar { background: #f8fbff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; }
+.trend-chart-content { margin-top: 14px; border: 1px solid #e5e7eb; border-radius: 14px; background: #ffffff; padding: 14px; }
+.trend-top-card { cursor: pointer; transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease; text-align: left; width: 100%; }
+.trend-top-card:hover { transform: translateY(-1px); border-color: #93c5fd; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06); }
+.trend-row-pulse td { animation: trendPulse 1.2s ease-out 1; }
+@keyframes trendPulse { 0% { background: #dbeafe; } 100% { background: inherit; } }
+
+
 @media (max-width: 900px) {
     .trend-intelligence-cards {
         grid-template-columns: 1fr;
@@ -754,6 +782,283 @@
         grid-template-columns: 1fr;
     }
 }
+
+.trend-rec-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    padding: 14px;
+    margin-bottom: 12px;
+    background: #ffffff;
+}
+
+.trend-rec-card.priority-high {
+    border-left: 5px solid #dc2626;
+}
+
+.trend-rec-card.priority-medium {
+    border-left: 5px solid #f59e0b;
+}
+
+.trend-rec-card.priority-low {
+    border-left: 5px solid #94a3b8;
+}
+
+.trend-rec-header {
+    display: flex;
+    justify-content: space-between;
+    gap: 12px;
+    align-items: flex-start;
+    flex-wrap: wrap;
+}
+
+.trend-rec-title {
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 3px;
+}
+
+.trend-rec-source {
+    font-size: 12px;
+    color: #64748b;
+}
+
+.trend-rec-priority {
+    font-size: 11px;
+    font-weight: 800;
+    border-radius: 999px;
+    padding: 4px 8px;
+    background: #f1f5f9;
+    color: #334155;
+    text-transform: uppercase;
+}
+
+.trend-rec-narrative {
+    margin-top: 10px;
+    color: #334155;
+    line-height: 1.55;
+}
+
+.trend-rec-evidence {
+    margin-top: 10px;
+    padding: 10px 12px;
+    border-radius: 12px;
+    background: #f8fafc;
+    color: #475569;
+    font-size: 13px;
+}
+
+.trend-rec-safety {
+    margin-top: 10px;
+    color: #92400e;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    border-radius: 12px;
+    padding: 9px 11px;
+    font-size: 12px;
+}
+
+.trend-rec-flags {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+    margin-top: 8px;
+}
+
+.trend-rec-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 3px 7px;
+    background: #eef2ff;
+    color: #475569;
+    font-size: 11px;
+    font-weight: 700;
+}
+
+
+
+/* Clinical narrative summary and final recommendation polish */
+.clinical-narrative-panel {
+    border: 1px solid #bfdbfe;
+    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
+    border-radius: 16px;
+    padding: 14px;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
+}
+.clinical-narrative-title {
+    font-weight: 900;
+    color: #0f172a;
+    margin-bottom: 6px;
+}
+.clinical-narrative-body {
+    color: #334155;
+    line-height: 1.55;
+    font-size: 14px;
+}
+.clinical-narrative-footer {
+    margin-top: 10px;
+    padding: 9px 10px;
+    background: #fffbeb;
+    border: 1px solid #fde68a;
+    color: #92400e;
+    border-radius: 12px;
+    font-size: 12px;
+}
+.clinical-priority-strip {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin: 12px 0 14px;
+}
+.clinical-priority-card {
+    border: 1px solid #e5e7eb;
+    border-radius: 14px;
+    background: #ffffff;
+    padding: 11px 12px;
+    min-height: 82px;
+}
+.clinical-priority-card.priority-high { border-left: 5px solid #dc2626; }
+.clinical-priority-card.priority-medium { border-left: 5px solid #f59e0b; }
+.clinical-priority-card.priority-low { border-left: 5px solid #94a3b8; }
+.clinical-priority-label {
+    font-size: 10px;
+    font-weight: 900;
+    letter-spacing: .06em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 5px;
+}
+.clinical-priority-title {
+    font-weight: 850;
+    color: #0f172a;
+    margin-bottom: 4px;
+}
+.clinical-priority-detail {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.35;
+}
+.trend-recommendations-intro {
+    border: 1px solid #e2e8f0;
+    background: #f8fafc;
+    border-radius: 14px;
+    padding: 12px;
+    margin-bottom: 12px;
+}
+.trend-rec-card {
+    box-shadow: none;
+    border-left-width: 4px;
+}
+.trend-rec-evidence {
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.trend-rec-safety {
+    background: #fffdf5;
+}
+.trend-chart-context {
+    border: 1px solid #bfdbfe;
+    background: #eff6ff;
+    color: #1e3a8a;
+    border-radius: 14px;
+    padding: 11px 12px;
+    margin-bottom: 12px;
+    line-height: 1.45;
+    font-size: 13px;
+}
+@media (max-width: 900px) {
+    .clinical-priority-strip { grid-template-columns: 1fr; }
+}
+
+
+/* Final top-priorities / 100% decision-support polish */
+.clinical-narrative-headline {
+    font-size: 15px;
+    line-height: 1.45;
+    font-weight: 800;
+    color: #0f172a;
+    margin-bottom: 8px;
+}
+.clinical-narrative-details {
+    margin-top: 10px;
+}
+.clinical-narrative-details summary {
+    cursor: pointer;
+    color: #1d4ed8;
+    font-weight: 750;
+    font-size: 13px;
+}
+.clinical-narrative-details[open] summary {
+    margin-bottom: 8px;
+}
+.clinical-priority-section {
+    border: 1px solid #e2e8f0;
+    background: #ffffff;
+    border-radius: 16px;
+    padding: 14px;
+    margin: 12px 0 4px;
+}
+.clinical-priority-section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+.clinical-priority-section-title {
+    font-weight: 900;
+    color: #0f172a;
+    margin: 0;
+}
+.clinical-priority-section-note {
+    color: #64748b;
+    font-size: 12px;
+    margin-top: 3px;
+}
+.clinical-priority-card {
+    cursor: pointer;
+    transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
+}
+.clinical-priority-card:hover {
+    transform: translateY(-1px);
+    border-color: #93c5fd;
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
+}
+.clinical-priority-meta {
+    margin-top: 7px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+.clinical-priority-chip {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 2px 7px;
+    font-size: 10px;
+    font-weight: 800;
+    background: #f1f5f9;
+    color: #475569;
+}
+.confidence-badge-strong {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 900;
+    border: 1px solid #bbf7d0;
+    background: #f0fdf4;
+    color: #166534;
+}
+.confidence-badge-strong.confidence-medium { border-color: #fde68a; background:#fffbeb; color:#92400e; }
+.confidence-badge-strong.confidence-low,
+.confidence-badge-strong.confidence-baseline { border-color: #e5e7eb; background:#f8fafc; color:#475569; }
+.trend-row-band-change td { background: #fffafa !important; }
+.trend-row-significant td { background: transparent !important; }
+.trend-recommendations-intro { background: #ffffff; }
+
 </style>
 
 <div id="patient-error" class="error" style="display:none;"></div>
@@ -812,6 +1117,8 @@
         </div>
 
         <div class="trend-intelligence-content" id="trend-intelligence-content">
+            <div id="clinical-narrative-summary" class="clinical-narrative-panel" style="display:none;"></div>
+            <div id="top-clinical-priorities" class="clinical-priority-section" style="display:none;"></div>
             <div id="trend-intelligence-cards" class="trend-intelligence-cards"></div>
             <div id="trend-intelligence-insights" class="trend-intel-list"></div>
             <div id="trend-intelligence-focus" class="trend-intel-focus"></div>
@@ -881,6 +1188,27 @@
         </div>
     </div>
 
+    <div class="trend-summary-panel is-collapsed" id="trend-recommendations-panel" style="display:none;">
+        <div class="section-toolbar">
+            <div>
+                <div class="trend-section-label">Clinical support</div>
+                <h3 style="margin:0;">Clinical Support Recommendations</h3>
+                <div class="muted" style="margin-top:4px;">
+                    Trend-aware support considerations from the existing recommendation mode. Practitioner review required.
+                </div>
+            </div>
+            <button class="trend-collapse-btn" type="button" id="trend-recommendations-collapse-btn">
+                Expand recommendations
+            </button>
+        </div>
+
+        <div class="trend-summary-content" id="trend-recommendations-content">
+            <div id="trend-recommendations-priorities" class="clinical-priority-strip" style="display:none;"></div>
+            <div id="trend-recommendations-list"></div>
+        </div>
+    </div>
+
+
     <div class="trend-chart-panel" id="trend-chart-panel">
         <div class="trend-chart-toolbar">
             <div>
@@ -894,6 +1222,7 @@
         </div>
 
         <div class="trend-chart-content" id="trend-chart-content">
+            <div id="trend-chart-context" class="trend-chart-context" style="display:none;"></div>
             <div class="trend-controls" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
                 <select id="trend-type">
                     <option value="health">Health Index</option>
@@ -1070,6 +1399,7 @@
     let currentReports = [];
     let currentTrends = { health_index: [], weight_kg: [], trend_summary: [], trend_intelligence: null };
     let trendSummarySort = { key: "change", dir: "desc" };
+    let trendIntelligenceCategoryFilter = null;
 
     function showPatientError(message) {
         const box = document.getElementById("patient-error");
@@ -1336,13 +1666,17 @@
             const category = categoryFromTrendItem(item);
 
             return `
-                <div class="trend-top-card">
+                <button type="button" class="trend-top-card" data-top-marker="${safeText(label)}">
                     <div class="trend-top-label">Top change ${index + 1}</div>
                     <div class="trend-top-value" title="${safeText(label)}">${direction} ${safeText(label)}</div>
                     <div class="trend-top-meta">${safeText(changeText)} · ${safeText(category)}</div>
-                </div>
+                </button>
             `;
         }).join("");
+
+        box.querySelectorAll("[data-top-marker]").forEach(button => {
+            button.addEventListener("click", () => scrollToTrendMarker(button.getAttribute("data-top-marker")));
+        });
     }
 
 
@@ -1738,6 +2072,7 @@
         renderSimpleLineChart("main-trend-chart", "main-trend-empty", selected.points, selected.min, selected.max);
         setMainTrendStats(selected.points);
         showTrendMeta(selected.points);
+        renderChartContext();
     }
 
 
@@ -1749,6 +2084,152 @@
         return "";
     }
 
+    function normaliseTrendCategory(value) {
+        return String(value || "Other").trim().toLowerCase();
+    }
+
+    function scrollToTrendMarker(label) {
+        const target = normaliseTrendCategory(label);
+        const row = Array.from(document.querySelectorAll("[data-trend-marker]")).find(el =>
+            normaliseTrendCategory(el.getAttribute("data-trend-marker")) === target
+        );
+        if (!row) return;
+        row.scrollIntoView({ behavior: "smooth", block: "center" });
+        row.classList.add("trend-row-pulse");
+        window.setTimeout(() => row.classList.remove("trend-row-pulse"), 1400);
+    }
+
+    function applyTrendCategoryFilter(category) {
+        trendIntelligenceCategoryFilter = category || null;
+        renderTrendSummary(currentTrends.trend_summary || []);
+        const summaryPanel = document.querySelector(".trend-summary-panel");
+        if (summaryPanel) summaryPanel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+
+    function confidenceClass(label) {
+        const value = String(label || "").toLowerCase();
+        if (value === "high") return "confidence-high";
+        if (value === "medium") return "confidence-medium";
+        if (value === "low") return "confidence-low";
+        if (value === "baseline") return "confidence-baseline";
+        return "confidence-low";
+    }
+
+    function renderClinicalNarrativeSummary(narrative) {
+        const box = document.getElementById("clinical-narrative-summary");
+        if (!box) return;
+        const headline = narrative?.headline || narrative?.summary || narrative?.body || "";
+        const details = narrative?.details || narrative?.body || "";
+        if (!narrative || !headline) {
+            box.style.display = "none";
+            box.innerHTML = "";
+            renderTopClinicalPriorities([]);
+            return;
+        }
+
+        const confidence = narrative.confidence || {};
+        const confidenceText = confidence.label
+            ? `<span class="confidence-badge-strong ${confidenceClass(confidence.label)}">Confidence: ${safeText(confidence.label)}${confidence.reason ? ` · ${safeText(confidence.reason)}` : ""}</span>`
+            : "";
+
+        const showDetails = details && details !== headline;
+
+        box.style.display = "block";
+        box.innerHTML = `
+            <div class="clinical-narrative-title">${safeText(narrative.title || "Clinical narrative summary")}</div>
+            <div class="clinical-narrative-headline">${safeText(headline)}</div>
+            ${confidenceText}
+            ${showDetails ? `
+                <details class="clinical-narrative-details">
+                    <summary>Expand clinical interpretation</summary>
+                    <div class="clinical-narrative-body">${safeText(details)}</div>
+                </details>
+            ` : ""}
+            ${narrative.review_note ? `<div class="clinical-narrative-footer">${safeText(narrative.review_note)}</div>` : ""}
+        `;
+
+        renderTopClinicalPriorities(narrative.top_priorities || []);
+    }
+
+    function renderTopClinicalPriorities(priorities) {
+        const box = document.getElementById("top-clinical-priorities");
+        if (!box) return;
+        const items = Array.isArray(priorities) ? priorities.slice(0, 5) : [];
+        if (!items.length) {
+            box.style.display = "none";
+            box.innerHTML = "";
+            return;
+        }
+
+        box.style.display = "block";
+        box.innerHTML = `
+            <div class="clinical-priority-section-header">
+                <div>
+                    <h4 class="clinical-priority-section-title">Top Clinical Priorities</h4>
+                    <div class="clinical-priority-section-note">Ranked from trend clusters, band changes, directional movement, and mode-safe recommendation context.</div>
+                </div>
+            </div>
+            <div class="clinical-priority-strip">
+                ${items.slice(0, 3).map((item, index) => `
+                    <button type="button" class="clinical-priority-card priority-${safeText(item.priority || "low")}" data-priority-category="${safeText(item.category || item.title || "")}">
+                        <div class="clinical-priority-label">Priority ${index + 1} · ${safeText(item.priority || "low")}</div>
+                        <div class="clinical-priority-title">${safeText(item.title || item.category || "Clinical review")}</div>
+                        <div class="clinical-priority-detail">${safeText(item.reason || "Review this area in context of symptoms, case history, and current recommendations.")}</div>
+                        <div class="clinical-priority-meta">
+                            ${item.category ? `<span class="clinical-priority-chip">${safeText(item.category)}</span>` : ""}
+                            ${item.product ? `<span class="clinical-priority-chip">${safeText(item.product)}</span>` : ""}
+                            ${item.source ? `<span class="clinical-priority-chip">${safeText(String(item.source).replaceAll("_", " "))}</span>` : ""}
+                        </div>
+                    </button>
+                `).join("")}
+            </div>
+        `;
+
+        box.querySelectorAll("[data-priority-category]").forEach(button => {
+            button.addEventListener("click", () => {
+                const category = button.getAttribute("data-priority-category") || null;
+                if (category) applyTrendCategoryFilter(category);
+            });
+        });
+    }
+
+    function renderChartContext() {
+        const box = document.getElementById("trend-chart-context");
+        if (!box) return;
+        const narrative = currentTrends?.trend_intelligence?.clinical_narrative || null;
+        const text = narrative?.chart_context || "";
+        if (!text) {
+            box.style.display = "none";
+            box.textContent = "";
+            return;
+        }
+        box.style.display = "block";
+        box.textContent = text;
+    }
+
+    function renderRecommendationPriorities(priorities) {
+        const box = document.getElementById("trend-recommendations-priorities");
+        if (!box) return;
+        const items = Array.isArray(priorities) ? priorities.slice(0, 3) : [];
+        if (!items.length) {
+            box.style.display = "none";
+            box.innerHTML = "";
+            return;
+        }
+        box.style.display = "grid";
+        box.innerHTML = items.map((item, index) => `
+            <div class="clinical-priority-card priority-${safeText(item.priority || "low")}">
+                <div class="clinical-priority-label">Recommendation priority ${index + 1}</div>
+                <div class="clinical-priority-title">${safeText(item.title || "Support priority")}</div>
+                <div class="clinical-priority-detail">
+                    ${item.product ? `<strong>${safeText(item.product)}</strong><br>` : ""}
+                    ${safeText(item.reason || "Aligned with the current recommendation mode and trend context.")}
+                </div>
+            </div>
+        `).join("");
+    }
+
     function renderTrendIntelligence(intelligence) {
         const note = document.getElementById("trend-intelligence-note");
         const cardsBox = document.getElementById("trend-intelligence-cards");
@@ -1756,6 +2237,7 @@
         const focusBox = document.getElementById("trend-intelligence-focus");
 
         if (!cardsBox || !insightsBox || !focusBox) return;
+        renderClinicalNarrativeSummary(intelligence ? intelligence.clinical_narrative : null);
 
         if (!intelligence) {
             if (note) note.textContent = "Trend intelligence will appear once trend data is available.";
@@ -1774,30 +2256,119 @@
 
         const cards = Array.isArray(intelligence.cards) ? intelligence.cards : [];
         cardsBox.innerHTML = cards.map(card => `
-            <div class="trend-intel-card">
+            <div class="trend-intel-card ${trendToneClass(card.tone)}">
                 <div class="trend-intel-label">${safeText(card.label || "")}</div>
                 <div class="trend-intel-value ${trendToneClass(card.tone)}">${safeText(card.value ?? "—")}</div>
                 <div class="trend-intel-detail">${safeText(card.detail || "")}</div>
+                ${card.confidence ? `<div class="trend-confidence-pill">Confidence: ${safeText(card.confidence)}</div>` : ""}
             </div>
         `).join("");
 
         const insights = Array.isArray(intelligence.insights) ? intelligence.insights : [];
         insightsBox.innerHTML = insights.map(item => `
-            <div class="trend-intel-item">
+            <div class="trend-intel-item ${trendToneClass(item.tone)}">
                 <div class="trend-intel-item-title ${trendToneClass(item.tone)}">${safeText(item.title || "Trend insight")}</div>
                 <div class="trend-intel-item-body">${safeText(item.body || "")}</div>
             </div>
         `).join("");
 
         const focusAreas = Array.isArray(intelligence.focus_areas) ? intelligence.focus_areas : [];
-        focusBox.innerHTML = focusAreas.map(item => `
-            <span class="trend-focus-pill" title="${safeText(item.largest_marker || "")}">
-                ${safeText(item.category || "Other")}
-                <strong>${safeText(item.count ?? 0)}</strong>
-                ${item.band_changes ? `<span class="trend-tone-warning">${safeText(item.band_changes)} band</span>` : ""}
-            </span>
-        `).join("");
+        const clearPill = trendIntelligenceCategoryFilter
+            ? `<button type="button" class="trend-focus-pill trend-focus-pill-clear" data-focus-category="">Clear category filter</button>`
+            : "";
+        focusBox.innerHTML = clearPill + focusAreas.map(item => {
+            const category = item.category || "Other";
+            const active = trendIntelligenceCategoryFilter && normaliseTrendCategory(trendIntelligenceCategoryFilter) === normaliseTrendCategory(category);
+            return `
+                <button type="button" class="trend-focus-pill ${active ? "is-active" : ""}" data-focus-category="${safeText(category)}" title="Filter trend table by ${safeText(category)}">
+                    ${safeText(category)}
+                    <strong>${safeText(item.count ?? 0)}</strong>
+                    ${item.band_changes ? `<span class="trend-tone-warning">${safeText(item.band_changes)} band</span>` : ""}
+                </button>
+            `;
+        }).join("");
+
+        focusBox.querySelectorAll("[data-focus-category]").forEach(button => {
+            button.addEventListener("click", () => {
+                const category = button.getAttribute("data-focus-category") || null;
+                applyTrendCategoryFilter(category);
+                renderTrendIntelligence(currentTrends.trend_intelligence || null);
+            });
+        });
     }
+
+
+    function formatTrendFlag(flag) {
+        return String(flag || "")
+            .replaceAll("_", " ")
+            .replace(/\b\w/g, c => c.toUpperCase());
+    }
+
+    function renderTrendRecommendationProduct(product) {
+        const narrative = product.trend_narrative || {};
+        const priority = product.trend_priority || "low";
+        const flags = product.trend_flags || [];
+
+        const summary = narrative.summary || product.rationale || "Support consideration generated from the current recommendation mode and scan context.";
+        const evidence = narrative.trend_evidence || "";
+        const safety = narrative.safety_note || "Practitioner review is required before use.";
+
+        return `
+            <div class="trend-rec-card priority-${safeText(priority)}">
+                <div class="trend-rec-header">
+                    <div>
+                        <div class="trend-rec-title">${safeText(product.name)}</div>
+                        <div class="trend-rec-source">${safeText(product.source_label || product.source || "Recommendation")}</div>
+                    </div>
+                    <div class="trend-rec-priority">${safeText(priority)} priority</div>
+                </div>
+
+                <div class="trend-rec-flags">
+                    ${flags.map(flag => `<span class="trend-rec-chip">${safeText(formatTrendFlag(flag))}</span>`).join("")}
+                    ${narrative.review_required ? `<span class="trend-rec-chip">Practitioner review</span>` : ""}
+                </div>
+
+                <div class="trend-rec-narrative">${safeText(summary)}</div>
+
+                ${evidence ? `<div class="trend-rec-evidence">${safeText(evidence)}</div>` : ""}
+
+                <div class="trend-rec-safety">${safeText(safety)}</div>
+            </div>
+        `;
+    }
+
+    function renderTrendRecommendations(recommendations) {
+        const container = document.getElementById("trend-recommendations-list");
+        const wrapper = document.getElementById("trend-recommendations-panel");
+
+        if (!container) return;
+
+        const data = recommendations || currentTrends.trend_recommendations || {};
+        const products = data.products || [];
+
+        if (!products.length) {
+            renderRecommendationPriorities([]);
+            container.innerHTML = `
+                <div class="trend-empty-state">
+                    No trend-aware support considerations are available for the current recommendation mode.
+                </div>
+            `;
+            if (wrapper) wrapper.style.display = "block";
+            return;
+        }
+
+        renderRecommendationPriorities(data.clinical_priorities || []);
+        container.innerHTML = `
+            <div class="trend-recommendations-intro">
+                <strong>Practitioner review required.</strong><br>
+                ${safeText(data.disclaimer || "Trend-aware support considerations require practitioner review before use.")}
+            </div>
+            ${products.map(renderTrendRecommendationProduct).join("")}
+        `;
+
+        if (wrapper) wrapper.style.display = "block";
+    }
+
 
     function renderTrends(trends) {
         currentTrends = trends || {
@@ -1810,10 +2381,12 @@
             marker_options: [],
             trend_summary: [],
             trend_intelligence: null,
+            trend_recommendations: {},
         };
 
         populateTrendControls();
         renderTrendIntelligence(currentTrends.trend_intelligence || null);
+        renderTrendRecommendations(currentTrends.trend_recommendations || {});
         renderTrendSummary(currentTrends.trend_summary || []);
         renderSelectedTrend();
 
@@ -1953,6 +2526,10 @@
 
         let rows = summary.slice();
 
+        if (trendIntelligenceCategoryFilter) {
+            rows = rows.filter(item => normaliseTrendCategory(categoryFromTrendItem(item)) === normaliseTrendCategory(trendIntelligenceCategoryFilter));
+        }
+
         if (hasRealTrend && !showAll) {
             rows = rows.filter(item => item.is_meaningful === true);
         }
@@ -1971,10 +2548,14 @@
             if (!hasRealTrend) {
                 note.textContent = "Baseline scan only. Trend changes will appear after another scan.";
             } else if (showAll) {
-                note.textContent = `Showing all tracked markers (${totalCount}). Significant: ${meaningfulCount}; band changes: ${bandChangeCount}.`;
+                note.textContent = `Showing all tracked markers (${totalCount} markers tracked). Significant: ${meaningfulCount}; band changes: ${bandChangeCount}.`;
             } else {
-                note.textContent = `Showing significant changes only (${meaningfulCount} of ${totalCount}).`;
+                note.textContent = `Showing significant changes only (${meaningfulCount} of ${totalCount} markers tracked).`;
             }
+        }
+
+        if (note && trendIntelligenceCategoryFilter && hasRealTrend) {
+            note.textContent += ` Filtered by category: ${trendIntelligenceCategoryFilter}.`;
         }
 
         renderTopChanges(summary, showAll);
@@ -2041,7 +2622,7 @@
                     : "";
 
             return `
-                <tr class="${rowClasses}">
+                <tr class="${rowClasses}" data-trend-marker="${safeText(cleanLabel)}" data-trend-category="${safeText(category)}">
                     <td>
                         ${safeText(cleanLabel)}
                         ${badge}
@@ -2271,10 +2852,21 @@
     }
 
 
+
+    const trendRecommendationsCollapseBtn = document.getElementById("trend-recommendations-collapse-btn");
+    if (trendRecommendationsCollapseBtn) {
+        trendRecommendationsCollapseBtn.addEventListener("click", () => {
+            const panel = document.getElementById("trend-recommendations-panel");
+            if (!panel) return;
+            const collapsed = panel.classList.toggle("is-collapsed");
+            trendRecommendationsCollapseBtn.textContent = collapsed ? "Expand recommendations" : "Collapse recommendations";
+        });
+    }
+
     const trendSummaryCollapseBtn = document.getElementById("trend-summary-collapse-btn");
     if (trendSummaryCollapseBtn) {
         trendSummaryCollapseBtn.addEventListener("click", () => {
-            const panel = document.querySelector(".trend-summary-panel");
+            const panel = trendSummaryCollapseBtn.closest(".trend-summary-panel");
             if (!panel) return;
             const collapsed = panel.classList.toggle("is-collapsed");
             trendSummaryCollapseBtn.textContent = collapsed ? "Expand summary" : "Collapse summary";
