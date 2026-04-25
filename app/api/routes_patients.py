@@ -1332,10 +1332,93 @@ def _build_trend_recommendations(latest_report: ReportVersion | None, trend_summ
     }
 
 
+
+def _client_progress_cards(
+    trend_intelligence: dict,
+    clinical_narrative: dict,
+    health_index_points: list[dict],
+) -> list[dict]:
+    cards: list[dict] = []
+
+    confidence = (clinical_narrative or {}).get("confidence") or (trend_intelligence or {}).get("confidence") or {}
+    if confidence:
+        cards.append({
+            "label": "Confidence",
+            "value": confidence.get("label") or "—",
+            "detail": confidence.get("reason") or "Based on the available scan history.",
+        })
+
+    if len(health_index_points or []) >= 2:
+        first = _num(health_index_points[0].get("value"))
+        latest = _num(health_index_points[-1].get("value"))
+        change = latest - first
+        direction = "Improved" if change > 0 else "Declined" if change < 0 else "Stable"
+        cards.append({
+            "label": "Overall trend",
+            "value": direction,
+            "detail": f"Health Index movement: {_signed(change)}.",
+        })
+    else:
+        cards.append({
+            "label": "Overall trend",
+            "value": "Baseline",
+            "detail": "Add another scan to calculate progress over time.",
+        })
+
+    priorities = (clinical_narrative or {}).get("top_priorities") or []
+    if priorities:
+        cards.append({
+            "label": "Primary focus",
+            "value": priorities[0].get("title") or priorities[0].get("category") or "Priority review",
+            "detail": priorities[0].get("summary") or priorities[0].get("reason") or "Review with your practitioner.",
+        })
+
+    return cards[:3]
+
+
+def _build_client_view_payload(
+    *,
+    trend_intelligence: dict,
+    clinical_narrative: dict,
+    trend_recommendations: dict,
+    health_index_points: list[dict],
+) -> dict:
+    """
+    Client-safe presentation layer.
+
+    This does not change the underlying clinical engine. It provides a simplified
+    shape for the frontend so patient/client views can avoid raw marker noise and
+    practitioner-only interpretation density.
+    """
+    priorities = (clinical_narrative or {}).get("top_priorities") or []
+    recommendations = (trend_recommendations or {}).get("products") or []
+
+    client_recommendations = []
+    for item in recommendations[:5]:
+        narrative = item.get("trend_narrative") or {}
+        client_recommendations.append({
+            "name": item.get("name"),
+            "priority": item.get("trend_priority") or "review",
+            "summary": narrative.get("summary") or item.get("rationale") or "Discuss this support option with your practitioner.",
+            "review_note": "This is for practitioner-guided discussion, not self-prescribing advice.",
+        })
+
+    summary = (clinical_narrative or {}).get("headline") or (clinical_narrative or {}).get("body") or "Your practitioner can use this view to explain the key changes across your scans."
+
+    return {
+        "summary": summary,
+        "progress_cards": _client_progress_cards(trend_intelligence, clinical_narrative, health_index_points),
+        "top_priorities": priorities[:3],
+        "recommendations": client_recommendations,
+        "review_note": "Client-safe summary. Detailed marker interpretation should be reviewed with your practitioner.",
+    }
+
+
 @router.get("/{patient_id}/trends")
 def get_patient_trends(
     patient_id: UUID,
     include_archived: bool = False,
+    view_mode: str = "practitioner",
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
@@ -1492,8 +1575,18 @@ def get_patient_trends(
     trend_intelligence["top_clinical_priorities"] = clinical_narrative.get("top_priorities", [])
     trend_recommendations["clinical_priorities"] = clinical_narrative.get("top_priorities", [])
 
+    final_view_mode = "client" if str(view_mode or "").lower() == "client" else "practitioner"
+    client_view = _build_client_view_payload(
+        trend_intelligence=trend_intelligence,
+        clinical_narrative=clinical_narrative,
+        trend_recommendations=trend_recommendations,
+        health_index_points=health_index_points,
+    )
+
     return {
         "patient_id": str(patient.id),
+        "view_mode": final_view_mode,
+        "client_view": client_view,
         "health_index": health_index_points,
         "weight_kg": weight_points,
         "systems": systems,

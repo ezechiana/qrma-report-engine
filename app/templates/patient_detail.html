@@ -1059,6 +1059,43 @@
 .trend-row-significant td { background: transparent !important; }
 .trend-recommendations-intro { background: #ffffff; }
 
+
+/* Client view mode */
+.view-mode-switch { display:inline-flex; align-items:center; gap:4px; border:1px solid #dbe7f3; background:#fff; border-radius:999px; padding:4px; }
+.view-mode-btn { border:0; background:transparent; border-radius:999px; padding:7px 11px; font-size:12px; font-weight:800; color:#64748b; cursor:pointer; }
+.view-mode-btn.is-active { background:#dbeafe; color:#1e3a8a; }
+.client-view-banner { display:none; border:1px solid #bfdbfe; background:linear-gradient(180deg,#eff6ff 0%,#fff 100%); color:#1e3a8a; border-radius:16px; padding:14px 16px; margin-bottom:16px; }
+.client-view-title { font-weight:900; margin-bottom:4px; }
+.client-view-body { color:#334155; line-height:1.45; font-size:14px; }
+.client-progress-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
+.client-progress-card { border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:10px 12px; }
+.client-progress-label { font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
+.client-progress-value { margin-top:4px; font-size:18px; font-weight:900; color:#0f172a; }
+body.client-view-mode #edit-patient-toggle-btn,
+body.client-view-mode #delete-patient-btn,
+body.client-view-mode #edit-patient-card,
+body.client-view-mode #cases-content-section,
+body.client-view-mode #reports-content-section,
+body.client-view-mode #activity-content-section,
+body.client-view-mode #show-all-trend-summary,
+body.client-view-mode label.trend-toggle-pill,
+body.client-view-mode #trend-key-wrap,
+body.client-view-mode #trend-group,
+body.client-view-mode .trend-sort-header,
+body.client-view-mode .trend-summary-table-wrap,
+body.client-view-mode .summary-grid,
+body.client-view-mode .trend-controls { display:none !important; }
+body.client-view-mode .client-view-banner { display:block; }
+body.client-view-mode #trend-summary-content::before { content:"Detailed marker evidence is available to your practitioner and can be reviewed together during consultation."; display:block; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; color:#475569; font-style:italic; }
+body.client-view-mode .trend-intelligence-panel.is-collapsed .trend-intelligence-content,
+body.client-view-mode .trend-summary-panel.is-collapsed .trend-summary-content,
+body.client-view-mode .trend-chart-panel.is-collapsed .trend-chart-content { display:grid; }
+body.client-view-mode #trend-chart-collapse-btn,
+body.client-view-mode #trend-summary-collapse-btn,
+body.client-view-mode #trend-intelligence-collapse-btn,
+body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
+@media (max-width:900px){ .client-progress-grid{grid-template-columns:1fr;} }
+
 </style>
 
 <div id="patient-error" class="error" style="display:none;"></div>
@@ -1072,6 +1109,10 @@
         </div>
 
         <div class="btn-row">
+            <div class="view-mode-switch" aria-label="View mode">
+                <button class="view-mode-btn" type="button" id="view-mode-practitioner-btn">Practitioner</button>
+                <button class="view-mode-btn" type="button" id="view-mode-client-btn">Client view</button>
+            </div>
             <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
             <a class="btn" href="/app/cases/new?patient_id={{ patient_id }}">New case</a>
             <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
@@ -1104,6 +1145,12 @@
 <div class="card">
     <div class="section-toolbar">
         <h3 style="margin:0;">Trend overview</h3>
+    </div>
+
+    <div class="client-view-banner" id="client-view-banner">
+        <div class="client-view-title">Your progress overview</div>
+        <div class="client-view-body" id="client-view-summary">This client-safe view highlights the main changes, priorities, and next steps without showing the full technical marker table.</div>
+        <div class="client-progress-grid" id="client-progress-grid"></div>
     </div>
 
     <div class="trend-intelligence-panel" id="trend-intelligence-panel">
@@ -1397,9 +1444,51 @@
     let currentPatient = null;
     let currentCases = [];
     let currentReports = [];
-    let currentTrends = { health_index: [], weight_kg: [], trend_summary: [], trend_intelligence: null };
+    let currentTrends = { health_index: [], weight_kg: [], trend_summary: [], trend_intelligence: null, client_view: null, view_mode: "practitioner" };
+    let currentViewMode = new URLSearchParams(window.location.search).get("view") === "client" ? "client" : "practitioner";
     let trendSummarySort = { key: "change", dir: "desc" };
     let trendIntelligenceCategoryFilter = null;
+
+    function isClientViewMode() { return currentViewMode === "client"; }
+
+    function setViewMode(mode, updateUrl = true) {
+        currentViewMode = mode === "client" ? "client" : "practitioner";
+        document.body.classList.toggle("client-view-mode", isClientViewMode());
+        document.body.classList.toggle("practitioner-view-mode", !isClientViewMode());
+
+        const practitionerBtn = document.getElementById("view-mode-practitioner-btn");
+        const clientBtn = document.getElementById("view-mode-client-btn");
+        if (practitionerBtn) practitionerBtn.classList.toggle("is-active", !isClientViewMode());
+        if (clientBtn) clientBtn.classList.toggle("is-active", isClientViewMode());
+
+        if (updateUrl) {
+            const url = new URL(window.location.href);
+            if (isClientViewMode()) url.searchParams.set("view", "client");
+            else url.searchParams.delete("view");
+            window.history.replaceState({}, "", url.toString());
+        }
+
+        renderClientView(currentTrends.client_view || null);
+    }
+
+    function renderClientView(clientView) {
+        const summaryEl = document.getElementById("client-view-summary");
+        const grid = document.getElementById("client-progress-grid");
+        if (!summaryEl || !grid) return;
+
+        const view = clientView || {};
+        summaryEl.textContent = view.summary || "This client-safe view highlights the main changes, priorities, and next steps without showing the full technical marker table.";
+
+        const cards = Array.isArray(view.progress_cards) ? view.progress_cards : [];
+        grid.innerHTML = cards.map(card => `
+            <div class="client-progress-card">
+                <div class="client-progress-label">${safeText(card.label || "")}</div>
+                <div class="client-progress-value">${safeText(card.value ?? "—")}</div>
+                <div class="trend-intel-detail">${safeText(card.detail || "")}</div>
+            </div>
+        `).join("");
+    }
+
 
     function showPatientError(message) {
         const box = document.getElementById("patient-error");
@@ -2382,6 +2471,8 @@
             trend_summary: [],
             trend_intelligence: null,
             trend_recommendations: {},
+            client_view: null,
+            view_mode: currentViewMode,
         };
 
         populateTrendControls();
@@ -2659,7 +2750,7 @@
                 apiFetch(`/api/patients/${patientId}`),
                 apiFetch(`/api/patients/${patientId}/cases`),
                 apiFetch(`/api/patients/${patientId}/reports`),
-                apiFetch(`/api/patients/${patientId}/trends`)
+                apiFetch(`/api/patients/${patientId}/trends?view_mode=${currentViewMode}`)
             ]);
 
             const patientData = await patientRes.json().catch(() => ({}));
@@ -2924,6 +3015,23 @@
     });
 
 
+    const practitionerViewBtn = document.getElementById("view-mode-practitioner-btn");
+    if (practitionerViewBtn) {
+        practitionerViewBtn.addEventListener("click", () => {
+            setViewMode("practitioner");
+            loadPatientDetail();
+        });
+    }
+
+    const clientViewBtn = document.getElementById("view-mode-client-btn");
+    if (clientViewBtn) {
+        clientViewBtn.addEventListener("click", () => {
+            setViewMode("client");
+            loadPatientDetail();
+        });
+    }
+
+    setViewMode(currentViewMode, false);
     loadPatientDetail();
 </script>
 {% endblock %}
