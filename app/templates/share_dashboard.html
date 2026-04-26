@@ -1,0 +1,86 @@
+
+{% extends "base.html" %}
+{% block content %}
+
+<h2>Client Share Links</h2>
+
+<div class="card">
+  <table class="table">
+    <thead>
+      <tr>
+        <th>Patient</th>
+        <th>Type</th>
+        <th>Status</th>
+        <th>Actions</th>
+      </tr>
+    </thead>
+    <tbody id="share-table"></tbody>
+  </table>
+</div>
+
+<script>
+async function loadShares() {
+  const res = await fetch("/api/share/list");
+  const data = await res.json();
+
+  const table = document.getElementById("share-table");
+  table.innerHTML = "";
+
+  data.items.forEach(item => {
+    const status = item.is_active ? item.payment_status : "revoked";
+
+    const row = `
+      <tr>
+        <td>${item.patient}</td>
+        <td>${item.type}</td>
+        <td>${status}</td>
+        <td>
+          <button onclick="openLink('${item.url}')">Open</button>
+          <button onclick="copyLink('${item.url}')">Copy</button>
+          <button onclick="sendWhatsApp('${item.url}', '${item.patient}')">WhatsApp</button>
+          <button onclick="sendEmail('${item.url}', '${item.patient}')">Email</button>
+          <button onclick="revoke('${item.id}')">Revoke</button>
+        </td>
+      </tr>
+    `;
+
+    table.innerHTML += row;
+  });
+}
+
+function openLink(url) {
+  window.open(url, "_blank");
+}
+
+function copyLink(url) {
+  navigator.clipboard.writeText(url);
+  alert("Copied");
+}
+
+function sendWhatsApp(url, patient) {
+  const msg = encodeURIComponent(
+    `Hi ${patient}, here is your health report:\n\n${url}`
+  );
+  window.open(`https://wa.me/?text=${msg}`, "_blank");
+}
+
+function sendEmail(url, patient) {
+  const subject = encodeURIComponent("Your Health Report");
+  const body = encodeURIComponent(
+    `Hi ${patient},\n\nHere is your report:\n${url}`
+  );
+  window.location.href = `mailto:?subject=${subject}&body=${body}`;
+}
+
+async function revoke(id) {
+  if (!confirm("Revoke this link?")) return;
+
+  await fetch(`/api/share/revoke/${id}`, {method: "POST"});
+  loadShares();
+}
+
+loadShares();
+</script>
+
+{% endblock %}
+

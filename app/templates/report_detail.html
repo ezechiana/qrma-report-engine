@@ -1,183 +1,298 @@
-
 {% extends "base.html" %}
 
 {% block content %}
+<style>
+.report-hero { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+.report-kicker { font-size:12px; text-transform:uppercase; letter-spacing:.06em; color:var(--muted); font-weight:900; margin-bottom:8px; display:flex; gap:8px; align-items:center; flex-wrap:wrap; }
+.report-type-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #e5e7eb; white-space:nowrap; }
+.report-type-assessment { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+.report-type-trend { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+.meta-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:12px; }
+.meta-card { border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#fff; }
+.meta-label { color:#64748b; font-size:12px; margin-bottom:4px; }
+.meta-value { color:#0f172a; font-weight:800; }
+.action-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.action-card { border:1px solid #e5e7eb; border-radius:14px; padding:14px; background:#fff; }
+.action-card h4 { margin:0 0 6px; }
+.action-card p { color:#64748b; margin:0 0 12px; line-height:1.4; }
+.share-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.source-list { display:grid; gap:8px; margin-top:10px; }
+.source-item { border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; background:#f8fafc; }
+@media(max-width:900px){ .meta-grid,.action-grid,.share-grid{grid-template-columns:1fr;} }
+</style>
+
 <div id="error-box" class="error" style="display:none;"></div>
 <div id="success-box" class="success" style="display:none;"></div>
 
 <div class="card">
-    <div style="margin-bottom:10px;">
-        <div style="font-size:12px; text-transform:uppercase; letter-spacing:.05em; color:var(--muted); font-weight:700; margin-bottom:8px;">
-            Generated report
+    <div class="report-hero">
+        <div>
+            <div class="report-kicker">
+                <span id="report-kicker-text">Generated report</span>
+                <span id="report-type-pill" class="report-type-pill">Loading</span>
+            </div>
+            <h2 id="report-page-title" style="margin:0 0 8px; font-size:28px; line-height:1.15;">Loading report…</h2>
+            <div class="muted" id="report-description" style="font-size:15px; line-height:1.6;">Please wait…</div>
         </div>
-        <h2 id="report-page-title" style="margin:0 0 8px; font-size:28px; line-height:1.15;">Loading report…</h2>
-        <div class="muted" style="font-size:15px; line-height:1.6;">
-            Open the full report, download the PDF, or create a secure share link for the client.
+        <div class="btn-row">
+            <a class="btn secondary" href="/app/reports">All reports</a>
         </div>
     </div>
 
-    <details style="border-top:1px solid var(--line); padding-top:12px;">
-        <summary style="cursor:pointer; font-weight:700;">Report metadata</summary>
-        <div id="report-summary" class="muted" style="margin-top:12px;">Loading report…</div>
+    <details open style="border-top:1px solid var(--line); padding-top:12px; margin-top:16px;">
+        <summary style="cursor:pointer; font-weight:800;">Report metadata</summary>
+        <div id="report-summary" class="meta-grid">Loading report…</div>
     </details>
 </div>
 
 <div class="card">
-    <h3>Actions</h3>
-    <div class="btn-row">
-        <a class="btn" id="open-full-report-btn" href="#">Open full report</a>
-        <a class="btn secondary" id="download-pdf-btn" href="#" target="_blank">Download PDF</a>
-        <button class="btn secondary" id="generate-new-version-btn" type="button">Generate new version</button>
-    </div>
+    <h3 id="actions-heading">Report actions</h3>
+    <div class="action-grid" id="actions-grid"></div>
 </div>
 
 <div class="card">
-    <h3>Share report</h3>
-    <div class="field">
-        <label>Optional password</label>
-        <input id="share-password" placeholder="Leave blank for no password" />
+    <h3 id="share-heading">Share report</h3>
+    <p class="muted" id="share-description" style="margin-top:0;">Create a secure client link.</p>
+
+    <div class="share-grid">
+        <div class="field">
+            <label>Price (£)</label>
+            <input id="share-price-gbp" type="number" min="0" step="0.01" placeholder="Leave empty for free" />
+        </div>
+        <div class="field">
+            <label>Expires in days</label>
+            <input id="share-expires-days" type="number" min="1" step="1" value="7" />
+        </div>
+        <div class="field">
+            <label>Optional password</label>
+            <input id="share-password" placeholder="Leave blank for no password" />
+        </div>
     </div>
+
     <div class="btn-row">
         <button class="btn" id="create-share-link-btn" type="button">Create share link</button>
     </div>
     <div id="share-result" class="muted" style="margin-top:12px;"></div>
 </div>
 
+<div class="card" id="source-reports-card" style="display:none;">
+    <h3>Source assessments</h3>
+    <p class="muted" style="margin-top:0;">Assessment reports used to generate this trend report.</p>
+    <div class="source-list" id="source-report-list"></div>
+</div>
+
 <script>
-    const reportId = "{{ report_id }}";
+const reportId = "{{ report_id }}";
+let currentReport = null;
 
-    function setError(msg) {
-        const box = document.getElementById("error-box");
-        box.style.display = "block";
-        box.textContent = msg;
+function setError(msg) {
+    const box = document.getElementById("error-box");
+    box.style.display = "block";
+    box.textContent = msg;
+}
+function clearError() { const box = document.getElementById("error-box"); box.style.display = "none"; box.textContent = ""; }
+function setSuccess(msg) { const box = document.getElementById("success-box"); box.style.display = "block"; box.textContent = msg; }
+function clearSuccess() { const box = document.getElementById("success-box"); box.style.display = "none"; box.textContent = ""; }
+
+function isTrend(data) { return data.report_type === "trend"; }
+
+function renderType(data) {
+    const pill = document.getElementById("report-type-pill");
+    pill.textContent = isTrend(data) ? "Trend" : "Assessment";
+    pill.className = `report-type-pill ${isTrend(data) ? "report-type-trend" : "report-type-assessment"}`;
+    document.getElementById("report-kicker-text").textContent = isTrend(data) ? "Generated trend report" : "Generated assessment report";
+}
+
+function renderMetadata(data) {
+    const trend = isTrend(data);
+    const summary = document.getElementById("report-summary");
+    if (trend) {
+        summary.innerHTML = `
+            <div class="meta-card"><div class="meta-label">Report type</div><div class="meta-value">Trend report</div></div>
+            <div class="meta-card"><div class="meta-label">Patient</div><div class="meta-value">${safeText(data.patient_display_name || "—")}</div></div>
+            <div class="meta-card"><div class="meta-label">Source assessments</div><div class="meta-value">${safeText(data.source_count || (data.source_report_ids || []).length || 0)}</div></div>
+            <div class="meta-card"><div class="meta-label">Source range</div><div class="meta-value">${safeText(data.source_scan_range || "—")}</div></div>
+            <div class="meta-card"><div class="meta-label">Health Index</div><div class="meta-value">${safeText(data.health_index ?? "—")}${data.health_index_change !== null && data.health_index_change !== undefined ? ` (${Number(data.health_index_change) > 0 ? "+" : ""}${safeText(data.health_index_change)})` : ""}</div></div>
+            <div class="meta-card"><div class="meta-label">Generated</div><div class="meta-value">${formatDate(data.generated_at)}</div></div>
+        `;
+    } else {
+        summary.innerHTML = `
+            <div class="meta-card"><div class="meta-label">Report type</div><div class="meta-value">Assessment report</div></div>
+            <div class="meta-card"><div class="meta-label">Patient</div><div class="meta-value">${safeText(data.patient_display_name || "—")}</div></div>
+            <div class="meta-card"><div class="meta-label">Version</div><div class="meta-value">v${safeText(data.version_number || "1")}</div></div>
+            <div class="meta-card"><div class="meta-label">Scan date/time</div><div class="meta-value">${safeText(data.scan_datetime_display || "—")}</div></div>
+            <div class="meta-card"><div class="meta-label">Generated</div><div class="meta-value">${formatDate(data.generated_at)}</div></div>
+            <div class="meta-card"><div class="meta-label">Status</div><div class="meta-value">${safeText(data.is_archived ? "Archived" : "Active")}</div></div>
+        `;
     }
+}
 
-    function clearError() {
-        const box = document.getElementById("error-box");
-        box.style.display = "none";
-        box.textContent = "";
+function renderActions(data) {
+    const grid = document.getElementById("actions-grid");
+    if (isTrend(data)) {
+        document.getElementById("actions-heading").textContent = "Trend report actions";
+        grid.innerHTML = `
+            <div class="action-card">
+                <h4>Open trend report</h4>
+                <p>View the full trend intelligence dashboard, marker changes, charts, priorities, and recommendations.</p>
+                <a class="btn" href="/trend-reports/${reportId}">Open trend report</a>
+            </div>
+            <div class="action-card">
+                <h4>Review source assessments</h4>
+                <p>Open the assessment reports used to generate this trend report.</p>
+                <button class="btn secondary" type="button" onclick="document.getElementById('source-reports-card').scrollIntoView({behavior:'smooth'})">View sources</button>
+            </div>
+            <div class="action-card">
+                <h4>Bundle for client</h4>
+                <p>Use share bundles to share this trend report together with one or more assessment reports.</p>
+                <a class="btn secondary" href="/app/reports">Go to reports list</a>
+            </div>
+        `;
+        document.getElementById("share-heading").textContent = "Share trend report";
+        document.getElementById("share-description").textContent = "Create a secure client link for this stored trend report.";
+    } else {
+        document.getElementById("actions-heading").textContent = "Assessment report actions";
+        grid.innerHTML = `
+            <div class="action-card">
+                <h4>Open assessment report</h4>
+                <p>View the full QRMA assessment with marker detail, recommendations, and system balance.</p>
+                <a class="btn" href="/app/reports/${reportId}/view">Open full report</a>
+            </div>
+            <div class="action-card">
+                <h4>Download PDF</h4>
+                <p>Download the generated PDF output for this assessment report.</p>
+                <a class="btn secondary" href="/api/reports/${reportId}/pdf" target="_blank">Download PDF</a>
+            </div>
+            <div class="action-card">
+                <h4>Generate new version</h4>
+                <p>Create a new generated version from the same case data.</p>
+                <button class="btn secondary" id="generate-new-version-btn" type="button">Generate new version</button>
+            </div>
+        `;
+        document.getElementById("share-heading").textContent = "Share assessment report";
+        document.getElementById("share-description").textContent = "Create a secure client link for this single assessment report.";
+        const generateBtn = document.getElementById("generate-new-version-btn");
+        if (generateBtn) generateBtn.addEventListener("click", generateNewVersion);
     }
+}
 
-    function setSuccess(msg) {
-        const box = document.getElementById("success-box");
-        box.style.display = "block";
-        box.textContent = msg;
+async function renderSourceReports(data) {
+    const card = document.getElementById("source-reports-card");
+    const box = document.getElementById("source-report-list");
+    const ids = data.source_report_ids || [];
+    if (!isTrend(data) || !ids.length) {
+        card.style.display = "none";
+        return;
     }
+    card.style.display = "block";
+    box.innerHTML = `<div class="muted">Loading source assessments…</div>`;
 
-    function clearSuccess() {
-        const box = document.getElementById("success-box");
-        box.style.display = "none";
-        box.textContent = "";
-    }
-
-    async function loadReport() {
-        clearError();
-
-        const authed = await requireAuthOrRedirect();
-        if (!authed) return;
-
+    const rows = [];
+    for (const id of ids) {
         try {
-            const response = await apiFetch(`/api/reports/${reportId}`);
-            const data = await response.json().catch(() => ({}));
+            const res = await apiFetch(`/api/reports/${id}`);
+            const item = await res.json().catch(() => ({}));
+            if (res.ok) rows.push(item);
+        } catch (e) {}
+    }
 
-            if (!response.ok) {
-                setError(data.detail || "Could not load report.");
-                return;
-            }
+    box.innerHTML = rows.length ? rows.map(item => `
+        <div class="source-item">
+            <strong>${safeText(item.display_name || "Assessment report")}</strong>
+            <div class="muted">Scan: ${safeText(item.scan_datetime_display || "—")} · Generated: ${formatDate(item.generated_at)} · <a class="link" href="/app/reports/${item.id}">Open source</a></div>
+        </div>
+    `).join("") : `<div class="muted">${ids.length} source assessment IDs recorded.</div>`;
+}
 
-            document.getElementById("report-page-title").textContent =
-                data.display_name || "Personalised Wellness Scan Report";
+async function loadReport() {
+    clearError();
+    const authed = await requireAuthOrRedirect();
+    if (!authed) return;
 
-            document.getElementById("report-summary").innerHTML = `
-                <strong>${safeText(data.display_name)}</strong><br>
-                Patient: ${safeText(data.patient_display_name)}<br>
-                Version: v${safeText(data.version_number)}<br>
-                Scan date: ${safeText(data.scan_datetime_display || "?")}<br>
-                Generated: ${formatDate(data.generated_at)}
-            `;
-
-            document.getElementById("open-full-report-btn").href = `/app/reports/${reportId}/view`;
-            document.getElementById("download-pdf-btn").href = `/api/reports/${reportId}/pdf`;
-        } catch (err) {
-            console.error(err);
-            setError("Unexpected error while loading report.");
+    try {
+        const response = await apiFetch(`/api/reports/${reportId}`);
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            setError(data.detail || "Could not load report.");
+            return;
         }
+
+        currentReport = data;
+        renderType(data);
+        document.getElementById("report-page-title").textContent = data.display_name || (isTrend(data) ? "Trend report" : "Assessment report");
+        document.getElementById("report-description").textContent = isTrend(data)
+            ? "This trend report represents longitudinal change across selected QRMA assessment reports."
+            : "This assessment report represents one QRMA scan and the generated clinical-style report output.";
+        renderMetadata(data);
+        renderActions(data);
+        renderSourceReports(data);
+    } catch (err) {
+        console.error(err);
+        setError("Unexpected error while loading report.");
     }
+}
 
-    async function createShareLink() {
-        clearError();
-        clearSuccess();
+async function createShareLink() {
+    clearError();
+    clearSuccess();
 
-        try {
-            const payload = {
-                password: document.getElementById("share-password").value || null,
-                expires_at: null
-            };
+    try {
+        const expiresDays = Number(document.getElementById("share-expires-days").value || 7);
+        const priceValue = document.getElementById("share-price-gbp").value;
+        const payload = {
+            password: document.getElementById("share-password").value || null,
+            expires_in_days: Number.isFinite(expiresDays) ? expiresDays : 7,
+            price_gbp: priceValue === "" ? null : Number(priceValue),
+            share_type: isTrend(currentReport) ? "trend" : "assessment",
+        };
 
-            const response = await apiFetch(`/api/reports/${reportId}/share-links`, {
-                method: "POST",
-                body: JSON.stringify(payload),
-            });
-
-            const data = await response.json().catch(() => ({}));
-
-            if (!response.ok) {
-                setError(data.detail || "Could not create share link.");
-                return;
-            }
-
-            document.getElementById("share-result").innerHTML = `
-                <strong>Share link:</strong><br>
-                <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
-            `;
-
-            setSuccess("Share link created.");
-        } catch (err) {
-            console.error(err);
-            setError("Unexpected error while creating share link.");
-        }
-    }
-
-
-    const shareBtn = document.getElementById("create-share-link-btn");
-    if (shareBtn) {
-        shareBtn.addEventListener("click", createShareLink);
-    }
-
-    const generateBtn = document.getElementById("generate-new-version-btn");
-
-    if (generateBtn) {
-        generateBtn.addEventListener("click", async () => {
-            clearError();
-            clearSuccess();
-
-            try {
-                generateBtn.disabled = true;
-                generateBtn.textContent = "Generating...";
-
-                const res = await apiFetch(`/api/reports/${reportId}/generate-new-version`, {
-                    method: "POST"
-                });
-
-                const data = await res.json().catch(() => ({}));
-
-                if (!res.ok) {
-                    setError(data.detail || "Failed to generate new version.");
-                    return;
-                }
-
-                setSuccess("New report version generated.");
-                await loadReport();
-
-            } catch (err) {
-                console.error(err);
-                setError("Unexpected error while generating report.");
-            } finally {
-                generateBtn.disabled = false;
-                generateBtn.textContent = "Generate new version";
-            }
+        const response = await apiFetch(`/api/reports/${reportId}/share-links`, {
+            method: "POST",
+            body: JSON.stringify(payload),
         });
+
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) {
+            setError(data.detail || "Could not create share link. Use bundle sharing if this endpoint is not enabled for this report type.");
+            return;
+        }
+
+        document.getElementById("share-result").innerHTML = `
+            <strong>Share link:</strong><br>
+            <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
+        `;
+        setSuccess("Share link created.");
+    } catch (err) {
+        console.error(err);
+        setError("Unexpected error while creating share link.");
     }
-    loadReport();
+}
+
+async function generateNewVersion() {
+    clearError();
+    clearSuccess();
+    const btn = document.getElementById("generate-new-version-btn");
+    try {
+        btn.disabled = true;
+        btn.textContent = "Generating…";
+        const res = await apiFetch(`/api/reports/${reportId}/generate-new-version`, { method: "POST" });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            setError(data.detail || "Failed to generate new version.");
+            return;
+        }
+        setSuccess("New report version generated.");
+        await loadReport();
+    } catch (err) {
+        console.error(err);
+        setError("Unexpected error while generating report.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Generate new version";
+    }
+}
+
+document.getElementById("create-share-link-btn").addEventListener("click", createShareLink);
+loadReport();
 </script>
 {% endblock %}

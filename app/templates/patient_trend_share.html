@@ -1,0 +1,325 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{{ tenant.tenant_name if tenant else 'Progress Dashboard' }}</title>
+  <style>
+    :root {
+      --primary: {{ tenant.primary_color if tenant else '#2f4f2f' }};
+      --accent: {{ tenant.accent_color if tenant else '#d97706' }};
+      --bg: {{ tenant.background_color if tenant else '#f6f8f5' }};
+      --surface: {{ tenant.surface_color if tenant else '#ffffff' }};
+      --soft: {{ tenant.surface_soft_color if tenant else '#f9fbf8' }};
+      --border: {{ tenant.border_color if tenant else '#dfe7e1' }};
+      --text: {{ tenant.text_color if tenant else '#183028' }};
+      --muted: {{ tenant.muted_color if tenant else '#5f7269' }};
+    }
+    * { box-sizing: border-box; }
+    body { margin:0; font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; background: var(--bg); color: var(--text); }
+    .shell { max-width: 1040px; margin: 0 auto; padding: 24px 16px 44px; }
+    .hero { background: linear-gradient(135deg, var(--surface) 0%, var(--soft) 100%); border:1px solid var(--border); border-radius: 22px; padding: 22px; margin-bottom: 18px; box-shadow: 0 12px 32px rgba(15,23,42,.06); }
+    .brand { display:flex; align-items:center; gap:12px; margin-bottom:14px; }
+    .brand img { max-height:44px; max-width:160px; object-fit:contain; }
+    .brand-name { font-weight:900; color:var(--primary); font-size:16px; }
+    .eyebrow { font-size: 11px; letter-spacing:.08em; text-transform:uppercase; color: var(--muted); font-weight:800; margin-bottom:8px; }
+    h1 { margin:0; font-size: 30px; line-height:1.15; color: var(--primary); }
+    h2 { font-size:18px; margin:0; color:var(--primary); }
+    .lead { margin-top:10px; color: var(--muted); line-height:1.55; max-width:780px; }
+    .card { background: var(--surface); border:1px solid var(--border); border-radius:18px; padding:18px; margin-bottom:16px; }
+    .section-head { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; margin-bottom:12px; }
+    .section-icon { margin-right:6px; }
+    .muted { color: var(--muted); }
+    .grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; }
+    .mini { border:1px solid var(--border); border-radius:14px; padding:13px; background: var(--soft); }
+    .mini-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:800; color:var(--muted); }
+    .mini-value { margin-top:5px; font-size:20px; font-weight:900; color:var(--primary); }
+    .badge { display:inline-flex; align-items:center; border-radius:999px; padding:4px 9px; font-size:12px; font-weight:800; background:#eef2ff; color:#334155; }
+    .confidence { background:#ecfeff; color:#155e75; border:1px solid #a5f3fc; }
+
+    .clinical-direction { border:1px solid #bfdbfe; background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); border-radius:18px; padding:18px; margin-bottom:16px; }
+    .direction-grid { display:grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap:12px; margin-top:12px; }
+    .direction-tile { border:1px solid #dbeafe; border-radius:14px; background:#ffffff; padding:13px; }
+    .direction-label { font-size:11px; text-transform:uppercase; letter-spacing:.06em; font-weight:900; color:#64748b; margin-bottom:5px; }
+    .direction-value { font-weight:900; color:var(--primary); font-size:16px; line-height:1.25; }
+    .direction-note { margin-top:10px; border-radius:12px; background:#fffbeb; border:1px solid #fde68a; color:#78350f; padding:10px 12px; font-size:13px; line-height:1.45; }
+
+    .priority-list, .insight-list, .rec-list { display:grid; gap:10px; }
+    .item { border:1px solid var(--border); border-radius:14px; padding:13px; background:#fff; }
+    .item-title { font-weight:900; color:#0f172a; margin-bottom:4px; }
+    .item-body { color:#475569; line-height:1.48; font-size:14px; }
+    .priority-list .item { border-left:4px solid var(--primary); }
+    .priority-list .item-title { color:var(--primary); }
+    .warning { border-left:4px solid #dc2626; background:#fff7f7; }
+    .increase { border-left:4px solid #b45309; }
+    .decrease { border-left:4px solid #2563eb; }
+
+    .rec-card { border:1px solid var(--border); border-radius:16px; padding:14px; background:#fff; display:grid; gap:8px; }
+    .rec-card.priority-high { border-left:5px solid #dc2626; }
+    .rec-card.priority-medium { border-left:5px solid #d97706; }
+    .rec-card.priority-low { border-left:5px solid #94a3b8; }
+    .rec-title-row { display:flex; justify-content:space-between; align-items:flex-start; gap:10px; }
+    .rec-title { font-weight:900; color:#0f172a; }
+    .rec-priority { font-size:11px; font-weight:900; text-transform:uppercase; border-radius:999px; padding:4px 8px; background:#f1f5f9; color:#334155; white-space:nowrap; }
+    .rec-explainer { color:#334155; line-height:1.5; font-size:14px; }
+    .rec-relevance { color:#475569; line-height:1.45; font-size:13px; background:#f8fafc; border-radius:12px; padding:9px 11px; }
+
+    .next-step { border:1px solid #bbf7d0; background:#f0fdf4; border-radius:18px; padding:18px; margin-bottom:16px; }
+    .next-step ul { margin:10px 0 0 20px; padding:0; color:#334155; line-height:1.55; }
+
+    details { border:1px solid var(--border); border-radius:16px; background:#fff; padding:12px 14px; margin-bottom:16px; }
+    summary { cursor:pointer; font-weight:900; color:var(--primary); }
+    .table-wrap { overflow:auto; margin-top:12px; border:1px solid var(--border); border-radius:12px; }
+    table { width:100%; border-collapse:collapse; min-width:680px; }
+    th, td { padding:10px 12px; border-bottom:1px solid #e5e7eb; text-align:left; font-size:13px; }
+    th { background:#f8fafc; color:#334155; font-size:12px; text-transform:uppercase; letter-spacing:.04em; }
+    .footer-note { margin-top:18px; color:var(--muted); font-size:13px; line-height:1.5; }
+    .loading, .error { padding:18px; border-radius:14px; background:#fff; border:1px solid var(--border); color:var(--muted); }
+    .error { border-color:#fecaca; background:#fff7f7; color:#991b1b; }
+    @media (max-width: 760px) { .grid, .direction-grid { grid-template-columns:1fr; } h1{font-size:25px;} }
+  </style>
+</head>
+<body>
+  <main class="shell">
+    <section class="hero">
+      <div class="brand">
+        {% if tenant and tenant.logo_url %}<img src="{{ tenant.logo_url }}" alt="{{ tenant.tenant_name }} logo">{% endif %}
+        <div>
+          <div class="brand-name">{{ tenant.tenant_name if tenant else 'Health Portal' }}</div>
+          <div class="muted">{{ tenant.tagline if tenant else 'Secure progress dashboard' }}</div>
+        </div>
+      </div>
+      <div class="eyebrow">Client progress view</div>
+      <h1 id="page-title">Your progress overview</h1>
+      <div class="lead" id="page-summary">Loading your progress dashboard…</div>
+    </section>
+
+    <div id="loading" class="loading">Loading progress data…</div>
+    <div id="error" class="error" style="display:none;"></div>
+
+    <section id="content" style="display:none;">
+      <div class="clinical-direction" id="clinical-direction-card" style="display:none;">
+        <div class="section-head">
+          <div>
+            <h2><span class="section-icon">→</span>Clinical direction</h2>
+            <div class="muted">A clearer summary of what the trend pattern is pointing toward.</div>
+          </div>
+        </div>
+        <div class="direction-grid">
+          <div class="direction-tile"><div class="direction-label">Primary focus</div><div class="direction-value" id="direction-primary">—</div></div>
+          <div class="direction-tile"><div class="direction-label">Secondary focus</div><div class="direction-value" id="direction-secondary">—</div></div>
+          <div class="direction-tile"><div class="direction-label">Overall direction</div><div class="direction-value" id="direction-overall">—</div></div>
+        </div>
+        <div class="direction-note" id="direction-interpretation"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <h2><span class="section-icon">◉</span>Progress snapshot</h2>
+            <div class="muted">A simplified view of the main changes across your available scans.</div>
+          </div>
+          <span id="confidence" class="badge confidence" style="display:none;"></span>
+        </div>
+        <div id="progress-grid" class="grid"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <h2><span class="section-icon">1.</span>Top clinical priorities</h2>
+            <div class="muted">These are the most important areas to discuss next, based on your trend pattern.</div>
+          </div>
+        </div>
+        <div id="priorities" class="priority-list"></div>
+      </div>
+
+      <div class="card">
+        <div class="section-head">
+          <div>
+            <h2><span class="section-icon">↕</span>Key trend insights</h2>
+            <div class="muted">What changed and why it may matter.</div>
+          </div>
+        </div>
+        <div id="insights" class="insight-list"></div>
+      </div>
+
+      <div class="card" id="recommendations-card" style="display:none;">
+        <div class="section-head">
+          <div>
+            <h2><span class="section-icon">+</span>Suggested clinical support</h2>
+            <div class="muted">For discussion with your practitioner. This is not a standalone prescription.</div>
+          </div>
+        </div>
+        <div id="recommendations" class="rec-list"></div>
+      </div>
+
+      <div class="next-step">
+        <h2><span class="section-icon">✓</span>Next step</h2>
+        <div class="muted">Use this page as a discussion guide with your practitioner.</div>
+        <ul>
+          <li>Confirm which priority areas match your symptoms and history.</li>
+          <li>Agree which recommendations are appropriate for your current context.</li>
+          <li>Define the next phase of your plan and when to review progress again.</li>
+        </ul>
+      </div>
+
+      <details>
+        <summary>View simplified marker evidence</summary>
+        <div class="table-wrap">
+          <table>
+            <thead><tr><th>Marker</th><th>Category</th><th>Change</th><th>Status</th></tr></thead>
+            <tbody id="marker-table"></tbody>
+          </table>
+        </div>
+      </details>
+
+      <div class="footer-note">
+        This dashboard is intended to support your consultation and does not replace professional medical advice, diagnosis, or treatment. Please discuss findings and next steps with your practitioner.
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const token = "{{ token }}";
+    const safe = (v) => (v === null || v === undefined || v === "") ? "—" : String(v)
+      .replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;");
+    const signed = (v) => {
+      const n = Number(v); if (!Number.isFinite(n)) return safe(v || "—");
+      return `${n > 0 ? "+" : ""}${String(Math.round(n * 1000) / 1000)}`;
+    };
+
+    function itemClass(tone) {
+      if (tone === "warning") return "item warning";
+      if (tone === "increase") return "item increase";
+      if (tone === "decrease") return "item decrease";
+      return "item";
+    }
+
+    function stripReviewSuffix(text) {
+      return String(text || "").replace(/\s+review$/i, "").replace(/\s+follow-up$/i, "").trim();
+    }
+
+    function getPriorityNames(priorities) {
+      return (priorities || []).map(p => stripReviewSuffix(p.category || p.title || p.label)).filter(Boolean);
+    }
+
+    function renderClinicalDirection(client, intel, priorities) {
+      const card = document.getElementById("clinical-direction-card");
+      const names = getPriorityNames(priorities);
+      const primary = names[0] || "Priority pattern review";
+      const secondary = names.slice(1, 3).join(" + ") || "To be confirmed with your practitioner";
+      const cards = client.progress_cards || intel.cards || [];
+      const healthCard = cards.find(c => String(c.label || "").toLowerCase().includes("trend") || String(c.label || "").toLowerCase().includes("health index"));
+      const overall = healthCard ? `${safe(healthCard.value)} — ${safe(healthCard.detail)}` : "Review with practitioner";
+      document.getElementById("direction-primary").textContent = primary;
+      document.getElementById("direction-secondary").textContent = secondary;
+      document.getElementById("direction-overall").textContent = overall;
+      document.getElementById("direction-interpretation").textContent = names.length
+        ? `The current pattern suggests focusing first on ${primary}${secondary !== "To be confirmed with your practitioner" ? `, while also reviewing ${secondary}` : ""}. This should be interpreted alongside your symptoms, history, and practitioner assessment.`
+        : "The current pattern is ready to review with your practitioner. Priorities should be confirmed against symptoms, history, and clinical context.";
+      card.style.display = "block";
+    }
+
+    function upgradedRecommendationText(r) {
+      const rawNarrative = r.trend_narrative;
+      const summary = typeof rawNarrative === "object" ? rawNarrative.summary : rawNarrative;
+      const base = r.client_narrative || summary || r.rationale || r.summary || "Support consideration for practitioner discussion.";
+      const focus = stripReviewSuffix(r.focus_area || r.pattern_alignment || r.category || "the current trend pattern").replaceAll("_", " ");
+      if (/^Aligned with/i.test(base)) {
+        return `Supports the ${focus} pattern identified in your results. This may help your practitioner consider ways to stabilise underlying drivers linked to your current priority areas.`;
+      }
+      return base;
+    }
+
+    function renderRecommendationCard(r) {
+      const priority = (r.trend_priority || r.priority || "low").toLowerCase();
+      const narrative = r.trend_narrative || {};
+      const relevance = typeof narrative === "object" ? (narrative.trend_evidence || narrative.why_now || "") : "";
+      return `
+        <div class="rec-card priority-${safe(priority)}">
+          <div class="rec-title-row"><div class="rec-title">${safe(r.name || r.title)}</div><div class="rec-priority">${safe(priority)} priority</div></div>
+          <div class="rec-explainer">${safe(upgradedRecommendationText(r))}</div>
+          ${relevance ? `<div class="rec-relevance">Why it may matter now: ${safe(relevance)}</div>` : ""}
+        </div>
+      `;
+    }
+
+    function render(data) {
+      const trend = data.trend || {};
+      const client = trend.client_view || {};
+      const intel = trend.trend_intelligence || {};
+      const summary = client.summary || intel.clinical_narrative || "Your progress overview is ready for review with your practitioner.";
+
+      document.getElementById("page-title").textContent = `${safe(data.patient?.display_name || "Your")} progress overview`;
+      document.getElementById("page-summary").textContent = summary;
+
+      const confidence = intel.confidence || client.confidence;
+      if (confidence && confidence.label) {
+        const el = document.getElementById("confidence");
+        el.style.display = "inline-flex";
+        el.textContent = `Confidence: ${confidence.label}`;
+        el.title = confidence.reason || "";
+      }
+
+      const cards = client.progress_cards || intel.cards || [];
+      document.getElementById("progress-grid").innerHTML = cards.slice(0, 3).map(c => `
+        <div class="mini">
+          <div class="mini-label">${safe(c.label)}</div>
+          <div class="mini-value">${safe(c.value)}</div>
+          <div class="muted" style="margin-top:4px;font-size:13px;">${safe(c.detail)}</div>
+        </div>
+      `).join("") || `<div class="muted">No progress cards available yet.</div>`;
+
+      const priorities = client.top_priorities || intel.top_priorities || [];
+      renderClinicalDirection(client, intel, priorities);
+      document.getElementById("priorities").innerHTML = priorities.slice(0, 5).map((p, idx) => `
+        <div class="item">
+          <div class="item-title">${idx + 1}. ${safe(p.title || p.category || p.label)}</div>
+          <div class="item-body">${safe(p.summary || p.body || p.reason || p.detail)}</div>
+        </div>
+      `).join("") || `<div class="muted">No top priorities available yet.</div>`;
+
+      const insights = intel.insights || client.insights || [];
+      document.getElementById("insights").innerHTML = insights.slice(0, 6).map(i => `
+        <div class="${itemClass(i.tone)}">
+          <div class="item-title">${safe(i.title)}</div>
+          <div class="item-body">${safe(i.body)}</div>
+        </div>
+      `).join("") || `<div class="muted">No trend insights available yet.</div>`;
+
+      const recs = client.recommendations || trend.trend_recommendations?.products || [];
+      if (recs.length) {
+        document.getElementById("recommendations-card").style.display = "block";
+        document.getElementById("recommendations").innerHTML = recs.slice(0, 6).map(renderRecommendationCard).join("");
+      }
+
+      const rows = (trend.trend_summary || []).filter(r => r.is_meaningful === true).slice(0, 20);
+      document.getElementById("marker-table").innerHTML = rows.map(r => `
+        <tr>
+          <td>${safe(r.label)}</td>
+          <td>${safe(r.category)}</td>
+          <td>${signed(r.delta)}</td>
+          <td>${safe(r.status)}</td>
+        </tr>
+      `).join("") || `<tr><td colspan="4" class="muted">No significant marker evidence available yet.</td></tr>`;
+
+      document.getElementById("loading").style.display = "none";
+      document.getElementById("content").style.display = "block";
+    }
+
+    fetch(`/share/${token}/trend-data`, { credentials: "include" })
+      .then(res => {
+        if (!res.ok) throw new Error("Could not load this shared progress view.");
+        return res.json();
+      })
+      .then(render)
+      .catch(err => {
+        document.getElementById("loading").style.display = "none";
+        const box = document.getElementById("error");
+        box.style.display = "block";
+        box.textContent = err.message || "Could not load this shared progress view.";
+      });
+  </script>
+</body>
+</html>

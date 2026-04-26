@@ -208,6 +208,10 @@ class ReportVersion(Base):
     pdf_path: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
     build_version: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
     is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False, index=True)
+    trend_payload_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
+    report_type: Mapped[str] = mapped_column(String(30), default="assessment", nullable=False)
+    source_report_ids: Mapped[Optional[list]] = mapped_column(JSONB, nullable=True, default=list)
+    trend_options: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True, default=dict)
 
 
     # execution lifecycle
@@ -273,6 +277,30 @@ class ShareLink(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     report_version: Mapped["ReportVersion"] = relationship(back_populates="share_links")
+    patient_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    share_type: Mapped[str] = mapped_column(String(30), default="report_bundle", nullable=False)
+    bundle_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    price_pence: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+
+
+class ShareLinkItem(Base):
+    __tablename__ = "share_link_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    share_link_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("share_links.id", ondelete="CASCADE"),
+        index=True,
+    )
+    report_version_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("report_versions.id", ondelete="CASCADE"),
+        index=True,
+    )
+    item_order: Mapped[int] = mapped_column(Integer, default=0)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 
 
 class SubscriptionStatus(str, enum.Enum):
@@ -360,3 +388,45 @@ class FeedbackItem(Base):
     report_version: Mapped["ReportVersion"] = relationship(back_populates="feedback_items")
 
 
+class ShareBundle(Base):
+    __tablename__ = "share_bundles"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    token: Mapped[str] = mapped_column(String(255), unique=True, nullable=False, index=True)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    patient_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), nullable=True, index=True)
+
+    title: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    access_label: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    password_hash: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    expires_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    is_active: Mapped[bool] = mapped_column(Boolean, default=True, nullable=False)
+
+    requires_payment: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    payment_status: Mapped[str] = mapped_column(String(40), default="not_required", nullable=False)
+    price_amount: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    price_currency: Mapped[str] = mapped_column(String(10), default="gbp", nullable=False)
+    stripe_session_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+    items: Mapped[list["ShareBundleItem"]] = relationship(
+        back_populates="bundle",
+        cascade="all, delete-orphan",
+        order_by="ShareBundleItem.position",
+    )
+
+
+class ShareBundleItem(Base):
+    __tablename__ = "share_bundle_items"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    share_bundle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("share_bundles.id", ondelete="CASCADE"), index=True)
+    report_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("report_versions.id", ondelete="CASCADE"), index=True)
+    position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+    bundle: Mapped["ShareBundle"] = relationship(back_populates="items")
+    report_version: Mapped["ReportVersion"] = relationship()

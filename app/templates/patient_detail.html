@@ -175,607 +175,14 @@
     border: 1px solid #e5e7eb;
     background: #ffffff;
     border-radius: 16px;
-    padding: 18px;
-    box-shadow: 0 4px 14px rgba(15, 23, 42, 0.04);
-}
-
-.trend-section-label {
-    font-size: 10px;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-    color: #94a3b8;
-    margin-bottom: 8px;
-}
-
-.trend-toggle-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    background: #ffffff;
-    border: 1px solid #dbe7f3;
-    border-radius: 999px;
-    padding: 7px 11px;
-    font-size: 13px;
-    color: #334155;
-}
-
-.trend-empty-state {
-    color: #64748b;
-    font-style: italic;
-    padding: 16px 12px;
+    padding: 16px;
 }
 
 .trend-controls {
-    border: 1px solid #e5e7eb;
-    background: #f8fafc;
-    border-radius: 14px;
-    padding: 12px;
-    margin: 0 0 16px;
+    border-top: 1px solid #e5e7eb;
+    padding-top: 14px;
+    margin-top: 14px;
 }
-
-.trend-summary-panel .table td,
-.trend-summary-panel .table th {
-    background: transparent;
-}
-
-.trend-toggle-pill.is-disabled {
-    opacity: 0.62;
-    cursor: not-allowed;
-    background: #f8fafc;
-}
-
-.trend-toggle-pill input:disabled {
-    cursor: not-allowed;
-}
-
-.baseline-badge {
-    display: inline-block;
-    font-size: 11px;
-    font-weight: 700;
-    line-height: 1;
-    padding: 4px 8px;
-    border-radius: 999px;
-    background: #e0f2fe;
-    color: #0369a1;
-    margin-left: 8px;
-    vertical-align: middle;
-}
-
-.trend-row-significant {
-    background: #fffaf3;
-    border-left: 3px solid #f59e0b;
-}
-
-.trend-row-band-change {
-    background: #fff5f5;
-    border-left: 4px solid #dc2626;
-}
-
-.trend-change-up {
-    color: #c2410c;
-    font-weight: 700;
-}
-
-.trend-change-down {
-    color: #0369a1;
-    font-weight: 700;
-}
-
-.trend-change-neutral {
-    color: #64748b;
-}
-
-.trend-badge {
-    margin-left: 6px;
-    padding: 2px 6px;
-    font-size: 10px;
-    border-radius: 999px;
-    font-weight: 600;
-    white-space: nowrap;
-}
-
-.trend-badge-meaningful {
-    background: #ffedd5;
-    color: #c2410c;
-}
-
-.trend-badge-band {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-
-
-.trend-row-meaningful {
-    background: #fff7ed !important;
-    border-left: 4px solid #f97316;
-}
-
-.trend-row-band-changed {
-    background: #fef2f2 !important;
-    border-left: 4px solid #dc2626;
-}
-
-.trend-direction-up {
-    color: #16a34a;
-    font-weight: 700;
-}
-
-.trend-direction-down {
-    color: #dc2626;
-    font-weight: 700;
-}
-
-.trend-change-value {
-    font-weight: 700;
-}
-
-.trend-change-badge {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    background: #ffedd5;
-    color: #c2410c;
-}
-
-.trend-band-badge {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 3px 8px;
-    font-size: 11px;
-    font-weight: 700;
-    background: #fee2e2;
-    color: #b91c1c;
-    margin-left: 6px;
-}
-
-
-
-.trend-summary-panel .table td {
-    padding: 10px 8px;
-}
-
-.trend-summary-panel .table tr:hover td {
-    background: #f1f5f9;
-}
-
-.trend-row-significant td {
-    background: #fff7ed !important;
-}
-
-.trend-row-band-change td {
-    border-left: 4px solid #f97316;
-}
-
-.trend-change-up {
-    color: #b45309;
-    font-weight: 700;
-}
-
-.trend-change-down {
-    color: #0369a1;
-    font-weight: 700;
-}
-
-.trend-change-neutral {
-    color: #64748b;
-}
-
-
-/* Final trend-summary polish */
-.trend-summary-actions {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-}
-
-.trend-collapse-btn {
-    border: 1px solid #dbe7f3;
-    background: #ffffff;
-    color: #334155;
-    border-radius: 999px;
-    padding: 7px 11px;
-    font-size: 13px;
-    cursor: pointer;
-}
-
-.trend-collapse-btn:hover {
-    background: #f8fafc;
-}
-
-.trend-summary-panel.is-collapsed .trend-summary-content {
-    display: none;
-}
-
-.trend-top-changes {
-    display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 10px;
-    margin: 12px 0 14px;
-}
-
-.trend-top-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    padding: 10px 12px;
-    min-height: 58px;
-}
-
-.trend-top-label {
-    font-size: 11px;
-    color: #64748b;
-    margin-bottom: 4px;
-}
-
-.trend-top-value {
-    font-weight: 700;
-    color: #0f172a;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.trend-top-meta {
-    margin-top: 3px;
-    font-size: 12px;
-    color: #64748b;
-}
-
-.trend-summary-table-wrap {
-    max-height: 680px;
-    overflow: auto;
-    border: 1px solid #e5e7eb;
-    border-radius: 12px;
-    background: #ffffff;
-}
-
-.trend-summary-table-wrap table {
-    margin: 0;
-    table-layout: fixed;
-    width: 100%;
-}
-
-.trend-summary-table-wrap th:nth-child(1),
-.trend-summary-table-wrap td:nth-child(1) {
-    width: 36%;
-}
-
-.trend-summary-table-wrap th:nth-child(2),
-.trend-summary-table-wrap td:nth-child(2) {
-    width: 18%;
-}
-
-.trend-summary-table-wrap th:nth-child(3),
-.trend-summary-table-wrap td:nth-child(3),
-.trend-summary-table-wrap th:nth-child(4),
-.trend-summary-table-wrap td:nth-child(4),
-.trend-summary-table-wrap th:nth-child(5),
-.trend-summary-table-wrap td:nth-child(5) {
-    width: 11%;
-}
-
-.trend-summary-table-wrap th:nth-child(6),
-.trend-summary-table-wrap td:nth-child(6) {
-    width: 13%;
-}
-
-.trend-summary-panel .table th {
-    position: sticky;
-    top: 0;
-    z-index: 1;
-    background: #f8fbff !important;
-}
-
-.trend-summary-panel .table td {
-    padding: 10px 10px;
-    vertical-align: middle;
-}
-
-.trend-category-pill {
-    display: inline-flex;
-    align-items: center;
-    max-width: 210px;
-    border-radius: 999px;
-    padding: 2px 7px;
-    background: #eef2ff;
-    color: #475569;
-    font-size: 10px;
-    font-weight: 700;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-.trend-row-significant td {
-    background: transparent !important;
-    font-weight: 600;
-}
-
-.trend-row-band-change td {
-    background: #fff7f7 !important;
-    font-weight: 700;
-}
-
-.trend-row-significant td:first-child,
-.trend-row-significant td:nth-child(2) {
-    border-left: 3px solid #f59e0b;
-}
-
-.trend-row-band-change td:first-child,
-.trend-row-band-change td:nth-child(2) {
-    border-left: 5px solid #dc2626;
-}
-
-.trend-row-normal-in-all td {
-    opacity: 0.58;
-}
-
-.trend-row-normal-in-all:hover td,
-.trend-row-significant:hover td,
-.trend-row-band-change:hover td {
-    opacity: 1;
-    background: #f8fafc !important;
-}
-
-.trend-change-up::before {
-    content: "▲ ";
-}
-
-.trend-change-down::before {
-    content: "▼ ";
-}
-
-.trend-badge {
-    margin-left: 6px;
-    padding: 2px 6px;
-    font-size: 10px;
-    border-radius: 999px;
-    font-weight: 700;
-    white-space: nowrap;
-}
-
-.trend-badge-meaningful {
-    background: #ffedd5;
-    color: #c2410c;
-}
-
-.trend-badge-band {
-    background: #fee2e2;
-    color: #b91c1c;
-}
-
-.trend-summary-footer-note {
-    color: #64748b;
-    font-style: italic;
-    padding: 12px;
-    background: #ffffff;
-}
-
-/* Trend intelligence and collapsible cards */
-.trend-intelligence-panel {
-    border: 1px solid #dbeafe;
-    background: linear-gradient(180deg, #f8fbff 0%, #ffffff 100%);
-    border-radius: 16px;
-    padding: 16px;
-    margin-bottom: 18px;
-}
-
-.trend-intelligence-content {
-    display: grid;
-    gap: 14px;
-}
-
-.trend-intelligence-panel.is-collapsed .trend-intelligence-content,
-.trend-chart-panel.is-collapsed .trend-chart-content,
-.collapsible-section.is-collapsed .collapsible-content {
-    display: none;
-}
-
-.trend-intelligence-cards {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 10px;
-}
-
-.trend-intel-card {
-    background: #ffffff;
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 12px;
-    min-height: 72px;
-}
-
-.trend-intel-label {
-    font-size: 11px;
-    color: #64748b;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    font-weight: 800;
-    margin-bottom: 6px;
-}
-
-.trend-intel-value {
-    font-size: 20px;
-    font-weight: 800;
-    color: #0f172a;
-}
-
-.trend-intel-detail {
-    margin-top: 4px;
-    font-size: 12px;
-    color: #64748b;
-    line-height: 1.35;
-}
-
-.trend-intel-list {
-    display: grid;
-    gap: 8px;
-}
-
-.trend-intel-item {
-    border: 1px solid #e5e7eb;
-    background: #ffffff;
-    border-radius: 12px;
-    padding: 10px 12px;
-}
-
-.trend-intel-item-title {
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 3px;
-}
-
-.trend-intel-item-body {
-    color: #475569;
-    line-height: 1.45;
-    font-size: 13px;
-}
-
-.trend-intel-focus {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 8px;
-}
-
-.trend-focus-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: 6px;
-    border: 1px solid #e5e7eb;
-    background: #f8fafc;
-    border-radius: 999px;
-    padding: 6px 9px;
-    font-size: 12px;
-    color: #334155;
-}
-
-.trend-tone-increase {
-    color: #b45309;
-}
-
-.trend-tone-decrease {
-    color: #0369a1;
-}
-
-.trend-tone-warning {
-    color: #b91c1c;
-}
-
-.trend-chart-panel {
-    margin-top: 16px;
-}
-
-.trend-chart-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 12px;
-}
-
-.trend-chart-content {
-    border-top: 1px solid #eef2f7;
-    padding-top: 12px;
-}
-
-.collapsible-section .section-toolbar {
-    margin-bottom: 12px;
-}
-
-.collapse-mini-btn {
-    border: 1px solid #dbe7f3;
-    background: #ffffff;
-    color: #334155;
-    border-radius: 999px;
-    padding: 6px 10px;
-    font-size: 12px;
-    cursor: pointer;
-}
-
-.collapse-mini-btn:hover {
-    background: #f8fafc;
-}
-
-
-/* Final 100% trend intelligence polish */
-.trend-intelligence-panel {
-    border-color: #bfdbfe;
-    box-shadow: 0 8px 22px rgba(15, 23, 42, 0.04);
-}
-.trend-intel-card { position: relative; overflow: hidden; }
-.trend-intel-card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 4px; background: #cbd5e1; }
-.trend-intel-card.trend-tone-increase::before { background: #b45309; }
-.trend-intel-card.trend-tone-decrease::before { background: #2563eb; }
-.trend-intel-card.trend-tone-warning::before { background: #dc2626; }
-.trend-intel-item.trend-tone-increase { border-left: 4px solid #b45309; }
-.trend-intel-item.trend-tone-decrease { border-left: 4px solid #2563eb; }
-.trend-intel-item.trend-tone-warning { border-left: 4px solid #dc2626; background: #fff7f7; }
-.trend-confidence-pill { display: inline-flex; align-items: center; gap: 6px; margin-top: 6px; border-radius: 999px; padding: 5px 9px; font-size: 12px; font-weight: 700; background: #ecfeff; color: #155e75; border: 1px solid #a5f3fc; }
-.trend-focus-pill { cursor: pointer; transition: transform 120ms ease, background 120ms ease, border-color 120ms ease; }
-.trend-focus-pill:hover { transform: translateY(-1px); background: #eef2ff; border-color: #c7d2fe; }
-.trend-focus-pill.is-active { background: #dbeafe; border-color: #60a5fa; color: #1e3a8a; }
-.trend-focus-pill-clear { background: #ffffff; border-style: dashed; }
-.trend-chart-panel { background: linear-gradient(180deg, #ffffff 0%, #f8fafc 100%); border: 1px solid #cbd5e1; box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06); }
-.trend-chart-toolbar { background: #f8fbff; border: 1px solid #e2e8f0; border-radius: 14px; padding: 12px; }
-.trend-chart-content { margin-top: 14px; border: 1px solid #e5e7eb; border-radius: 14px; background: #ffffff; padding: 14px; }
-.trend-top-card { cursor: pointer; transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease; text-align: left; width: 100%; }
-.trend-top-card:hover { transform: translateY(-1px); border-color: #93c5fd; box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06); }
-.trend-row-pulse td { animation: trendPulse 1.2s ease-out 1; }
-@keyframes trendPulse { 0% { background: #dbeafe; } 100% { background: inherit; } }
-
-
-@media (max-width: 900px) {
-    .trend-intelligence-cards {
-        grid-template-columns: 1fr;
-    }
-}
-
-.trend-sort-header {
-    display: inline-flex;
-    align-items: center;
-    gap: 5px;
-    border: 0;
-    background: transparent;
-    padding: 0;
-    margin: 0;
-    color: inherit;
-    font: inherit;
-    font-weight: 800;
-    cursor: pointer;
-}
-
-.trend-sort-header:hover {
-    color: #1d4ed8;
-}
-
-.trend-sort-indicator {
-    font-size: 10px;
-    color: #64748b;
-    min-width: 10px;
-}
-
-.trend-summary-panel .table th.is-sorted {
-    color: #1d4ed8;
-}
-
-
-@media (max-width: 900px) {
-    .trend-top-changes {
-        grid-template-columns: 1fr;
-    }
-
-    .trend-summary-table-wrap {
-        max-height: 540px;
-    }
-}
-
 @media (max-width: 900px) {
     .summary-grid,
     .edit-grid {
@@ -783,318 +190,94 @@
     }
 }
 
-.trend-rec-card {
-    border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    padding: 14px;
-    margin-bottom: 12px;
-    background: #ffffff;
-}
 
-.trend-rec-card.priority-high {
-    border-left: 5px solid #dc2626;
-}
-
-.trend-rec-card.priority-medium {
-    border-left: 5px solid #f59e0b;
-}
-
-.trend-rec-card.priority-low {
-    border-left: 5px solid #94a3b8;
-}
-
-.trend-rec-header {
+/* Report architecture: assessment/trend creation */
+.report-action-bar {
     display: flex;
     justify-content: space-between;
+    align-items: center;
     gap: 12px;
-    align-items: flex-start;
     flex-wrap: wrap;
 }
-
-.trend-rec-title {
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 3px;
+.report-bulk-actions {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
 }
-
-.trend-rec-source {
-    font-size: 12px;
-    color: #64748b;
-}
-
-.trend-rec-priority {
+.report-type-pill {
+    display: inline-flex;
+    border-radius: 999px;
+    padding: 3px 8px;
     font-size: 11px;
     font-weight: 800;
-    border-radius: 999px;
-    padding: 4px 8px;
-    background: #f1f5f9;
+    border: 1px solid #e5e7eb;
+    background: #f8fafc;
     color: #334155;
-    text-transform: uppercase;
+    white-space: nowrap;
 }
-
-.trend-rec-narrative {
-    margin-top: 10px;
-    color: #334155;
-    line-height: 1.55;
+.report-type-assessment {
+    background: #ecfdf5;
+    color: #065f46;
+    border-color: #bbf7d0;
 }
-
-.trend-rec-evidence {
-    margin-top: 10px;
-    padding: 10px 12px;
+.report-type-trend {
+    background: #eef2ff;
+    color: #3730a3;
+    border-color: #c7d2fe;
+}
+.modal-backdrop {
+    position: fixed;
+    inset: 0;
+    background: rgba(15, 23, 42, 0.45);
+    display: none;
+    align-items: center;
+    justify-content: center;
+    padding: 24px;
+    z-index: 1000;
+}
+.modal-backdrop.is-open {
+    display: flex;
+}
+.modal-card {
+    width: min(760px, 100%);
+    max-height: 90vh;
+    overflow: auto;
+    background: #fff;
+    border: 1px solid #e5e7eb;
+    border-radius: 18px;
+    box-shadow: 0 24px 80px rgba(15, 23, 42, 0.22);
+    padding: 18px;
+}
+.modal-report-list {
+    display: grid;
+    gap: 8px;
+    margin: 12px 0;
+}
+.modal-report-item {
+    border: 1px solid #e5e7eb;
     border-radius: 12px;
     background: #f8fafc;
-    color: #475569;
-    font-size: 13px;
+    padding: 10px 12px;
 }
-
-.trend-rec-safety {
-    margin-top: 10px;
-    color: #92400e;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    border-radius: 12px;
-    padding: 9px 11px;
-    font-size: 12px;
-}
-
-.trend-rec-flags {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 8px;
-}
-
-.trend-rec-chip {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 3px 7px;
-    background: #eef2ff;
-    color: #475569;
-    font-size: 11px;
-    font-weight: 700;
-}
-
-
-
-/* Clinical narrative summary and final recommendation polish */
-.clinical-narrative-panel {
-    border: 1px solid #bfdbfe;
-    background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-    border-radius: 16px;
-    padding: 14px;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.04);
-}
-.clinical-narrative-title {
-    font-weight: 900;
-    color: #0f172a;
-    margin-bottom: 6px;
-}
-.clinical-narrative-body {
-    color: #334155;
-    line-height: 1.55;
-    font-size: 14px;
-}
-.clinical-narrative-footer {
-    margin-top: 10px;
-    padding: 9px 10px;
-    background: #fffbeb;
-    border: 1px solid #fde68a;
-    color: #92400e;
-    border-radius: 12px;
-    font-size: 12px;
-}
-.clinical-priority-strip {
+.option-grid {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 10px;
-    margin: 12px 0 14px;
 }
-.clinical-priority-card {
+.option-grid label {
+    display: flex;
+    gap: 8px;
+    align-items: flex-start;
     border: 1px solid #e5e7eb;
-    border-radius: 14px;
-    background: #ffffff;
-    padding: 11px 12px;
-    min-height: 82px;
-}
-.clinical-priority-card.priority-high { border-left: 5px solid #dc2626; }
-.clinical-priority-card.priority-medium { border-left: 5px solid #f59e0b; }
-.clinical-priority-card.priority-low { border-left: 5px solid #94a3b8; }
-.clinical-priority-label {
-    font-size: 10px;
-    font-weight: 900;
-    letter-spacing: .06em;
-    text-transform: uppercase;
-    color: #64748b;
-    margin-bottom: 5px;
-}
-.clinical-priority-title {
-    font-weight: 850;
-    color: #0f172a;
-    margin-bottom: 4px;
-}
-.clinical-priority-detail {
-    color: #64748b;
-    font-size: 12px;
+    border-radius: 12px;
+    padding: 10px;
+    background: #fff;
     line-height: 1.35;
 }
-.trend-recommendations-intro {
-    border: 1px solid #e2e8f0;
-    background: #f8fafc;
-    border-radius: 14px;
-    padding: 12px;
-    margin-bottom: 12px;
-}
-.trend-rec-card {
-    box-shadow: none;
-    border-left-width: 4px;
-}
-.trend-rec-evidence {
-    background: #f8fafc;
-    border: 1px solid #e2e8f0;
-}
-.trend-rec-safety {
-    background: #fffdf5;
-}
-.trend-chart-context {
-    border: 1px solid #bfdbfe;
-    background: #eff6ff;
-    color: #1e3a8a;
-    border-radius: 14px;
-    padding: 11px 12px;
-    margin-bottom: 12px;
-    line-height: 1.45;
-    font-size: 13px;
-}
 @media (max-width: 900px) {
-    .clinical-priority-strip { grid-template-columns: 1fr; }
+    .option-grid { grid-template-columns: 1fr; }
 }
-
-
-/* Final top-priorities / 100% decision-support polish */
-.clinical-narrative-headline {
-    font-size: 15px;
-    line-height: 1.45;
-    font-weight: 800;
-    color: #0f172a;
-    margin-bottom: 8px;
-}
-.clinical-narrative-details {
-    margin-top: 10px;
-}
-.clinical-narrative-details summary {
-    cursor: pointer;
-    color: #1d4ed8;
-    font-weight: 750;
-    font-size: 13px;
-}
-.clinical-narrative-details[open] summary {
-    margin-bottom: 8px;
-}
-.clinical-priority-section {
-    border: 1px solid #e2e8f0;
-    background: #ffffff;
-    border-radius: 16px;
-    padding: 14px;
-    margin: 12px 0 4px;
-}
-.clinical-priority-section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: 12px;
-    margin-bottom: 10px;
-}
-.clinical-priority-section-title {
-    font-weight: 900;
-    color: #0f172a;
-    margin: 0;
-}
-.clinical-priority-section-note {
-    color: #64748b;
-    font-size: 12px;
-    margin-top: 3px;
-}
-.clinical-priority-card {
-    cursor: pointer;
-    transition: transform 120ms ease, border-color 120ms ease, box-shadow 120ms ease;
-}
-.clinical-priority-card:hover {
-    transform: translateY(-1px);
-    border-color: #93c5fd;
-    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.06);
-}
-.clinical-priority-meta {
-    margin-top: 7px;
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-}
-.clinical-priority-chip {
-    display: inline-flex;
-    align-items: center;
-    border-radius: 999px;
-    padding: 2px 7px;
-    font-size: 10px;
-    font-weight: 800;
-    background: #f1f5f9;
-    color: #475569;
-}
-.confidence-badge-strong {
-    display: inline-flex;
-    align-items: center;
-    gap: 7px;
-    border-radius: 999px;
-    padding: 7px 11px;
-    font-size: 12px;
-    font-weight: 900;
-    border: 1px solid #bbf7d0;
-    background: #f0fdf4;
-    color: #166534;
-}
-.confidence-badge-strong.confidence-medium { border-color: #fde68a; background:#fffbeb; color:#92400e; }
-.confidence-badge-strong.confidence-low,
-.confidence-badge-strong.confidence-baseline { border-color: #e5e7eb; background:#f8fafc; color:#475569; }
-.trend-row-band-change td { background: #fffafa !important; }
-.trend-row-significant td { background: transparent !important; }
-.trend-recommendations-intro { background: #ffffff; }
-
-
-/* Client view mode */
-.view-mode-switch { display:inline-flex; align-items:center; gap:4px; border:1px solid #dbe7f3; background:#fff; border-radius:999px; padding:4px; }
-.view-mode-btn { border:0; background:transparent; border-radius:999px; padding:7px 11px; font-size:12px; font-weight:800; color:#64748b; cursor:pointer; }
-.view-mode-btn.is-active { background:#dbeafe; color:#1e3a8a; }
-.client-view-banner { display:none; border:1px solid #bfdbfe; background:linear-gradient(180deg,#eff6ff 0%,#fff 100%); color:#1e3a8a; border-radius:16px; padding:14px 16px; margin-bottom:16px; }
-.client-view-title { font-weight:900; margin-bottom:4px; }
-.client-view-body { color:#334155; line-height:1.45; font-size:14px; }
-.client-progress-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; margin-top:12px; }
-.client-progress-card { border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:10px 12px; }
-.client-progress-label { font-size:11px; font-weight:800; color:#64748b; text-transform:uppercase; letter-spacing:.04em; }
-.client-progress-value { margin-top:4px; font-size:18px; font-weight:900; color:#0f172a; }
-body.client-view-mode #edit-patient-toggle-btn,
-body.client-view-mode #delete-patient-btn,
-body.client-view-mode #edit-patient-card,
-body.client-view-mode #cases-content-section,
-body.client-view-mode #reports-content-section,
-body.client-view-mode #activity-content-section,
-body.client-view-mode #show-all-trend-summary,
-body.client-view-mode label.trend-toggle-pill,
-body.client-view-mode #trend-key-wrap,
-body.client-view-mode #trend-group,
-body.client-view-mode .trend-sort-header,
-body.client-view-mode .trend-summary-table-wrap,
-body.client-view-mode .summary-grid,
-body.client-view-mode .trend-controls { display:none !important; }
-body.client-view-mode .client-view-banner { display:block; }
-body.client-view-mode #trend-summary-content::before { content:"Detailed marker evidence is available to your practitioner and can be reviewed together during consultation."; display:block; background:#fff; border:1px solid #e5e7eb; border-radius:12px; padding:14px; color:#475569; font-style:italic; }
-body.client-view-mode .trend-intelligence-panel.is-collapsed .trend-intelligence-content,
-body.client-view-mode .trend-summary-panel.is-collapsed .trend-summary-content,
-body.client-view-mode .trend-chart-panel.is-collapsed .trend-chart-content { display:grid; }
-body.client-view-mode #trend-chart-collapse-btn,
-body.client-view-mode #trend-summary-collapse-btn,
-body.client-view-mode #trend-intelligence-collapse-btn,
-body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
-@media (max-width:900px){ .client-progress-grid{grid-template-columns:1fr;} }
 
 </style>
 
@@ -1109,10 +292,6 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
         </div>
 
         <div class="btn-row">
-            <div class="view-mode-switch" aria-label="View mode">
-                <button class="view-mode-btn" type="button" id="view-mode-practitioner-btn">Practitioner</button>
-                <button class="view-mode-btn" type="button" id="view-mode-client-btn">Client view</button>
-            </div>
             <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
             <a class="btn" href="/app/cases/new?patient_id={{ patient_id }}">New case</a>
             <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
@@ -1147,169 +326,81 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
         <h3 style="margin:0;">Trend overview</h3>
     </div>
 
-    <div class="client-view-banner" id="client-view-banner">
-        <div class="client-view-title">Your progress overview</div>
-        <div class="client-view-body" id="client-view-summary">This client-safe view highlights the main changes, priorities, and next steps without showing the full technical marker table.</div>
-        <div class="client-progress-grid" id="client-progress-grid"></div>
-    </div>
-
-    <div class="trend-intelligence-panel" id="trend-intelligence-panel">
-        <div class="section-toolbar">
-            <div>
-                <div class="trend-section-label">Trend intelligence</div>
-                <h3 style="margin:0;">Clinical trend insights</h3>
-                <div class="muted" id="trend-intelligence-note" style="margin-top:4px;">Loading trend intelligence…</div>
-            </div>
-            <button class="trend-collapse-btn" type="button" id="trend-intelligence-collapse-btn">Collapse insights</button>
-        </div>
-
-        <div class="trend-intelligence-content" id="trend-intelligence-content">
-            <div id="clinical-narrative-summary" class="clinical-narrative-panel" style="display:none;"></div>
-            <div id="top-clinical-priorities" class="clinical-priority-section" style="display:none;"></div>
-            <div id="trend-intelligence-cards" class="trend-intelligence-cards"></div>
-            <div id="trend-intelligence-insights" class="trend-intel-list"></div>
-            <div id="trend-intelligence-focus" class="trend-intel-focus"></div>
-        </div>
-    </div>
-
     <div class="trend-summary-panel">
         <div class="section-toolbar">
             <div>
-                <div class="trend-section-label">Marker changes</div>
-                <h3 style="margin:0;">Trend summary <span id="baseline-badge" class="baseline-badge" style="display:none;">Baseline</span></h3>
+                <h3 style="margin:0;">Trend summary</h3>
                 <div class="muted" id="trend-summary-note" style="margin-top:4px;"></div>
             </div>
 
-            <div class="trend-summary-actions">
-                <button class="trend-collapse-btn" type="button" id="trend-summary-collapse-btn">Collapse summary</button>
-                <label class="trend-toggle-pill">
-                    <input type="checkbox" id="show-all-trend-summary">
-                    Show all tracked markers
-                </label>
-            </div>
+            <label class="muted" style="display:flex; align-items:center; gap:6px;">
+                <input type="checkbox" id="show-all-trend-summary">
+                Show all tracked markers
+            </label>
         </div>
 
-        <div class="trend-summary-content" id="trend-summary-content">
-            <div id="trend-top-changes" class="trend-top-changes" style="display:none;"></div>
-            <div class="trend-summary-table-wrap">
-                <table class="table">
-                    <thead>
-                        <tr>
-                            <th data-sort-column="label">
-                                <button type="button" class="trend-sort-header" data-trend-sort="label">
-                                    Marker <span class="trend-sort-indicator" data-sort-indicator="label"></span>
-                                </button>
-                            </th>
-                            <th data-sort-column="category">
-                                <button type="button" class="trend-sort-header" data-trend-sort="category">
-                                    Category <span class="trend-sort-indicator" data-sort-indicator="category"></span>
-                                </button>
-                            </th>
-                            <th data-sort-column="latest">
-                                <button type="button" class="trend-sort-header" data-trend-sort="latest">
-                                    Latest <span class="trend-sort-indicator" data-sort-indicator="latest"></span>
-                                </button>
-                            </th>
-                            <th data-sort-column="change">
-                                <button type="button" class="trend-sort-header" data-trend-sort="change">
-                                    Change <span class="trend-sort-indicator" data-sort-indicator="change">▼</span>
-                                </button>
-                            </th>
-                            <th data-sort-column="direction">
-                                <button type="button" class="trend-sort-header" data-trend-sort="direction">
-                                    Direction <span class="trend-sort-indicator" data-sort-indicator="direction"></span>
-                                </button>
-                            </th>
-                            <th data-sort-column="status">
-                                <button type="button" class="trend-sort-header" data-trend-sort="status">
-                                    Status <span class="trend-sort-indicator" data-sort-indicator="status"></span>
-                                </button>
-                            </th>
-                        </tr>
-                    </thead>
-                    <tbody id="trend-summary-body">
-                        <tr><td colspan="6" class="muted">Loading…</td></tr>
-                    </tbody>
-                </table>
-            </div>
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Marker</th>
+                    <th>Latest</th>
+                    <th>Change</th>
+                    <th>Direction</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody id="trend-summary-body">
+                <tr><td colspan="5" class="muted">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="trend-controls" style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+    <div style="display:flex; gap:12px; margin-bottom:16px; flex-wrap:wrap;">
+        <select id="trend-type">
+            <option value="health">Health Index</option>
+            <option value="group">Clinical area</option>
+            <option value="system">Individual system</option>
+            <option value="marker">Marker</option>
+        </select>
+        </div>
+        <select id="trend-group" style="display:none;"></select>
+
+        <div id="trend-key-wrap" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
+            <input id="trend-key-search" list="trend-key-list" placeholder="Type marker or system name…" style="min-width:260px;">
+            <datalist id="trend-key-list"></datalist>
+            <select id="trend-key"></select>
         </div>
     </div>
 
-    <div class="trend-summary-panel is-collapsed" id="trend-recommendations-panel" style="display:none;">
-        <div class="section-toolbar">
+    <div class="trend-chart-panel">
+        <div class="trend-header">
             <div>
-                <div class="trend-section-label">Clinical support</div>
-                <h3 style="margin:0;">Clinical Support Recommendations</h3>
-                <div class="muted" style="margin-top:4px;">
-                    Trend-aware support considerations from the existing recommendation mode. Practitioner review required.
-                </div>
-            </div>
-            <button class="trend-collapse-btn" type="button" id="trend-recommendations-collapse-btn">
-                Expand recommendations
-            </button>
-        </div>
-
-        <div class="trend-summary-content" id="trend-recommendations-content">
-            <div id="trend-recommendations-priorities" class="clinical-priority-strip" style="display:none;"></div>
-            <div id="trend-recommendations-list"></div>
-        </div>
-    </div>
-
-
-    <div class="trend-chart-panel" id="trend-chart-panel">
-        <div class="trend-chart-toolbar">
-            <div>
-                <div class="trend-section-label">Trend visualization</div>
                 <div class="trend-title" id="trend-title">Health Index</div>
                 <div class="trend-subtitle" id="trend-subtitle">Longitudinal scan trend.</div>
             </div>
-            <div class="trend-summary-actions">
-                <button class="trend-collapse-btn" type="button" id="trend-chart-collapse-btn">Collapse chart</button>
+
+            <div class="trend-stats">
+                <div class="trend-stat">
+                    <div class="trend-stat-label">First</div>
+                    <div class="trend-stat-value" id="trend-first">—</div>
+                </div>
+                <div class="trend-stat">
+                    <div class="trend-stat-label">Latest</div>
+                    <div class="trend-stat-value" id="trend-latest">—</div>
+                </div>
+                <div class="trend-stat">
+                    <div class="trend-stat-label">Change</div>
+                    <div class="trend-stat-value" id="trend-change">—</div>
+                </div>
             </div>
         </div>
 
-        <div class="trend-chart-content" id="trend-chart-content">
-            <div id="trend-chart-context" class="trend-chart-context" style="display:none;"></div>
-            <div class="trend-controls" style="display:flex; gap:12px; flex-wrap:wrap; align-items:center;">
-                <select id="trend-type">
-                    <option value="health">Health Index</option>
-                    <option value="group">Clinical area</option>
-                    <option value="system">Individual system</option>
-                    <option value="marker">Marker</option>
-                </select>
-                <select id="trend-group" style="display:none;"></select>
+        <div id="trend-meta-panel" class="muted" style="margin:12px 0; display:none;"></div>
 
-                <div id="trend-key-wrap" style="display:none; gap:8px; align-items:center; flex-wrap:wrap;">
-                    <input id="trend-key-search" list="trend-key-list" placeholder="Type marker or system name…" style="min-width:260px;">
-                    <datalist id="trend-key-list"></datalist>
-                    <select id="trend-key"></select>
-                </div>
-            </div>
-
-            <div class="trend-header">
-                <div></div>
-                <div class="trend-stats">
-                    <div class="trend-stat">
-                        <div class="trend-stat-label">First</div>
-                        <div class="trend-stat-value" id="trend-first">—</div>
-                    </div>
-                    <div class="trend-stat">
-                        <div class="trend-stat-label">Latest</div>
-                        <div class="trend-stat-value" id="trend-latest">—</div>
-                    </div>
-                    <div class="trend-stat">
-                        <div class="trend-stat-label">Change</div>
-                        <div class="trend-stat-value" id="trend-change">—</div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="trend-meta-panel" class="muted" style="margin:12px 0; display:none;"></div>
-
-            <div class="chart-wrap">
-                <svg id="main-trend-chart" class="chart-svg" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
-                <div id="main-trend-empty" class="chart-empty" style="display:none;">No trend data yet.</div>
-            </div>
+        <div class="chart-wrap">
+            <svg id="main-trend-chart" class="chart-svg" viewBox="0 0 760 280" preserveAspectRatio="none"></svg>
+            <div id="main-trend-empty" class="chart-empty" style="display:none;">No trend data yet.</div>
         </div>
     </div>
 
@@ -1378,14 +469,12 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
     </div>
 </div>
 
-<div class="card collapsible-section" id="cases-content-section">
+<div class="card">
     <div class="section-toolbar">
         <h3 style="margin:0;">Cases</h3>
-        <button class="collapse-mini-btn" type="button" data-collapse-target="cases-content">Collapse</button>
         <a class="btn secondary" href="/app/cases">View all cases</a>
     </div>
 
-    <div class="collapsible-content" id="cases-content">
     <table class="table">
         <thead>
             <tr>
@@ -1399,20 +488,25 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
             <tr><td colspan="4" class="muted">Loading…</td></tr>
         </tbody>
     </table>
-    </div>
 </div>
 
-<div class="card collapsible-section" id="reports-content-section">
+<div class="card" id="reports-content-section">
     <div class="section-toolbar">
-        <h3 style="margin:0;">Reports</h3>
-        <button class="collapse-mini-btn" type="button" data-collapse-target="reports-content">Collapse</button>
-        <a class="btn secondary" href="/app/reports">View all reports</a>
+        <div>
+            <h3 style="margin:0;">Reports</h3>
+            <div class="muted" style="margin-top:4px;">Assessment reports are single QRMA scans. Trend reports are generated from two or more assessment reports.</div>
+        </div>
+        <div class="report-bulk-actions">
+            <button class="btn secondary" type="button" id="create-trend-report-btn">Create Trend Report</button>
+            <a class="btn secondary" href="/app/reports">View all reports</a>
+        </div>
     </div>
 
-    <div class="collapsible-content" id="reports-content">
     <table class="table">
         <thead>
             <tr>
+                <th style="width:34px;"><input type="checkbox" id="select-all-assessment-reports" aria-label="Select all assessment reports"></th>
+                <th>Type</th>
                 <th>Report</th>
                 <th>Version</th>
                 <th>Generated</th>
@@ -1420,22 +514,59 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
             </tr>
         </thead>
         <tbody id="patient-reports-body">
-            <tr><td colspan="4" class="muted">Loading…</td></tr>
+            <tr><td colspan="6" class="muted">Loading…</td></tr>
         </tbody>
     </table>
-    </div>
 </div>
 
-<div class="card collapsible-section" id="activity-content-section">
+<div class="card">
     <div class="section-toolbar">
         <h3 style="margin:0;">Activity timeline</h3>
-        <button class="collapse-mini-btn" type="button" data-collapse-target="activity-content">Collapse</button>
     </div>
 
-    <div class="collapsible-content" id="activity-content">
     <div id="patient-timeline" class="timeline">
         <div class="muted">Loading…</div>
     </div>
+</div>
+
+
+<div class="modal-backdrop" id="trend-report-modal">
+    <div class="modal-card">
+        <div class="section-toolbar">
+            <div>
+                <h3 style="margin:0;">Create Trend Report</h3>
+                <div class="muted" style="margin-top:4px;">Select two or more assessment reports, then choose what the trend report should include.</div>
+            </div>
+            <button class="btn secondary" type="button" id="close-trend-report-modal-btn">Close</button>
+        </div>
+
+        <div class="field">
+            <label>Trend report title</label>
+            <input id="trend-report-title" placeholder="Leave blank to auto-generate">
+        </div>
+
+        <div class="modal-report-list" id="trend-report-selected-list"></div>
+
+        <div class="field">
+            <label>Trend basis</label>
+            <select id="trend-report-compare-mode">
+                <option value="all_selected">Include all selected reports</option>
+                <option value="first_vs_latest">Compare first vs latest only</option>
+            </select>
+        </div>
+
+        <div class="option-grid">
+            <label><input type="checkbox" id="trend-opt-clinical-narrative" checked> Include clinical narrative</label>
+            <label><input type="checkbox" id="trend-opt-top-priorities" checked> Include top priorities</label>
+            <label><input type="checkbox" id="trend-opt-support-recommendations" checked> Include support recommendations</label>
+            <label><input type="checkbox" id="trend-opt-simplified-evidence" checked> Include simplified marker evidence</label>
+            <label><input type="checkbox" id="trend-opt-full-marker-table" checked> Include full marker table</label>
+            <label><input type="checkbox" id="trend-opt-charts" checked> Include chart visualisations</label>
+        </div>
+
+        <div class="btn-row" style="margin-top:16px;">
+            <button class="btn" type="button" id="confirm-create-trend-report-btn">Create Trend Report</button>
+        </div>
     </div>
 </div>
 
@@ -1444,51 +575,7 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
     let currentPatient = null;
     let currentCases = [];
     let currentReports = [];
-    let currentTrends = { health_index: [], weight_kg: [], trend_summary: [], trend_intelligence: null, client_view: null, view_mode: "practitioner" };
-    let currentViewMode = new URLSearchParams(window.location.search).get("view") === "client" ? "client" : "practitioner";
-    let trendSummarySort = { key: "change", dir: "desc" };
-    let trendIntelligenceCategoryFilter = null;
-
-    function isClientViewMode() { return currentViewMode === "client"; }
-
-    function setViewMode(mode, updateUrl = true) {
-        currentViewMode = mode === "client" ? "client" : "practitioner";
-        document.body.classList.toggle("client-view-mode", isClientViewMode());
-        document.body.classList.toggle("practitioner-view-mode", !isClientViewMode());
-
-        const practitionerBtn = document.getElementById("view-mode-practitioner-btn");
-        const clientBtn = document.getElementById("view-mode-client-btn");
-        if (practitionerBtn) practitionerBtn.classList.toggle("is-active", !isClientViewMode());
-        if (clientBtn) clientBtn.classList.toggle("is-active", isClientViewMode());
-
-        if (updateUrl) {
-            const url = new URL(window.location.href);
-            if (isClientViewMode()) url.searchParams.set("view", "client");
-            else url.searchParams.delete("view");
-            window.history.replaceState({}, "", url.toString());
-        }
-
-        renderClientView(currentTrends.client_view || null);
-    }
-
-    function renderClientView(clientView) {
-        const summaryEl = document.getElementById("client-view-summary");
-        const grid = document.getElementById("client-progress-grid");
-        if (!summaryEl || !grid) return;
-
-        const view = clientView || {};
-        summaryEl.textContent = view.summary || "This client-safe view highlights the main changes, priorities, and next steps without showing the full technical marker table.";
-
-        const cards = Array.isArray(view.progress_cards) ? view.progress_cards : [];
-        grid.innerHTML = cards.map(card => `
-            <div class="client-progress-card">
-                <div class="client-progress-label">${safeText(card.label || "")}</div>
-                <div class="client-progress-value">${safeText(card.value ?? "—")}</div>
-                <div class="trend-intel-detail">${safeText(card.detail || "")}</div>
-            </div>
-        `).join("");
-    }
-
+    let currentTrends = { health_index: [], weight_kg: [] };
 
     function showPatientError(message) {
         const box = document.getElementById("patient-error");
@@ -1596,178 +683,145 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
         `).join("");
     }
 
+    function reportTypeLabel(report) {
+        const type = (report && report.report_type) || "assessment";
+        return type === "trend" ? "Trend" : "Assessment";
+    }
+
+    function reportTypeClass(report) {
+        const type = (report && report.report_type) || "assessment";
+        return type === "trend" ? "report-type-trend" : "report-type-assessment";
+    }
+
+    function selectedAssessmentReportIds() {
+        return Array.from(document.querySelectorAll(".assessment-report-checkbox:checked"))
+            .map(cb => cb.value);
+    }
+
+    function selectedAssessmentReports() {
+        const ids = new Set(selectedAssessmentReportIds().map(String));
+        return (currentReports || []).filter(report => ids.has(String(report.id)));
+    }
+
     function renderReports(reportsData) {
         const reportsBody = document.getElementById("patient-reports-body");
+        const selectAll = document.getElementById("select-all-assessment-reports");
         const reportRows = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
 
         if (!reportRows.length) {
-            reportsBody.innerHTML = `<tr><td colspan="4" class="muted">No reports yet.</td></tr>`;
+            reportsBody.innerHTML = `<tr><td colspan="6" class="muted">No reports yet.</td></tr>`;
+            if (selectAll) selectAll.checked = false;
             return;
         }
 
-        reportsBody.innerHTML = reportRows.map(item => `
-            <tr>
-                <td>${safeText(item.display_name || item.case_title)}</td>
-                <td>v${safeText(item.version_number)}</td>
-                <td>${formatDate(item.generated_at)}</td>
-                <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
-            </tr>
-        `).join("");
-    }
-
-
-    function cleanTrendLabel(label) {
-        return String(label || "")
-            .replace(/\s+Significant\s+Band$/i, "")
-            .replace(/\s+Significant$/i, "")
-            .replace(/\s+Coefficient$/i, "")
-            .replace(/\s+Index$/i, "")
-            .replace(/\s+/g, " ")
-            .trim();
-    }
-
-    function isBandChangeFromLabel(label) {
-        return /Significant\s+Band$/i.test(String(label || ""));
-    }
-
-    function categoryFromTrendItem(item) {
-        return (
-            item.category ||
-            item.category_name ||
-            item.qrma_category ||
-            item.system_category ||
-            item.system_group ||
-            item.group ||
-            item.clinical_area ||
-            item.area ||
-            item.system ||
-            item.source_category ||
-            "Uncategorised"
-        );
-    }
-
-    function absoluteDelta(item) {
-        const n = Number(item && item.delta);
-        return Number.isFinite(n) ? Math.abs(n) : 0;
-    }
-
-    function trendString(value) {
-        return String(value || "").toLowerCase();
-    }
-
-    function trendNumber(value) {
-        const n = Number(value);
-        return Number.isFinite(n) ? n : 0;
-    }
-
-    function trendDirectionRank(item) {
-        if (!item || item.has_trend !== true) return 0;
-        if (item.direction === "up") return 2;
-        if (item.direction === "down") return 1;
-        return 0;
-    }
-
-    function compareTrendItems(a, b, key) {
-        if (key === "label") {
-            return cleanTrendLabel(a.label).localeCompare(cleanTrendLabel(b.label));
-        }
-
-        if (key === "category") {
-            return categoryFromTrendItem(a).localeCompare(categoryFromTrendItem(b));
-        }
-
-        if (key === "latest") {
-            return trendNumber(a.latest) - trendNumber(b.latest);
-        }
-
-        if (key === "change") {
-            return absoluteDelta(a) - absoluteDelta(b);
-        }
-
-        if (key === "direction") {
-            return trendDirectionRank(a) - trendDirectionRank(b);
-        }
-
-        if (key === "status") {
-            return trendString(a.status).localeCompare(trendString(b.status));
-        }
-
-        return absoluteDelta(a) - absoluteDelta(b);
-    }
-
-    function sortTrendRows(rows) {
-        const key = trendSummarySort?.key || "change";
-        const dir = trendSummarySort?.dir || "desc";
-        const sorted = (rows || []).slice().sort((a, b) => {
-            const bandA = (a.band_changed === true || isBandChangeFromLabel(a.label)) ? 1 : 0;
-            const bandB = (b.band_changed === true || isBandChangeFromLabel(b.label)) ? 1 : 0;
-            const sigA = a.is_meaningful === true ? 1 : 0;
-            const sigB = b.is_meaningful === true ? 1 : 0;
-
-            // Keep clinically important rows above routine rows unless the user explicitly sorts alphabetically/category/status.
-            if (!["label", "category", "status"].includes(key)) {
-                if (bandA !== bandB) return bandB - bandA;
-                if (sigA !== sigB) return sigB - sigA;
-            }
-
-            const base = compareTrendItems(a, b, key);
-            return dir === "asc" ? base : -base;
-        });
-
-        return sorted;
-    }
-
-    function updateTrendSortIndicators() {
-        document.querySelectorAll("[data-sort-indicator]").forEach(el => {
-            const key = el.getAttribute("data-sort-indicator");
-            el.textContent = key === trendSummarySort.key
-                ? (trendSummarySort.dir === "asc" ? "▲" : "▼")
+        reportsBody.innerHTML = reportRows.map(report => {
+            const type = report.report_type || "assessment";
+            const isAssessment = type === "assessment";
+            const sourceCount = Array.isArray(report.source_report_ids) ? report.source_report_ids.length : 0;
+            const subText = type === "trend" && sourceCount
+                ? `<div class="muted" style="font-size:12px; margin-top:3px;">Generated from ${sourceCount} assessment report${sourceCount === 1 ? "" : "s"}</div>`
                 : "";
-        });
-
-        document.querySelectorAll("[data-sort-column]").forEach(th => {
-            th.classList.toggle("is-sorted", th.getAttribute("data-sort-column") === trendSummarySort.key);
-        });
-    }
-
-    function renderTopChanges(rows, showAll) {
-        const box = document.getElementById("trend-top-changes");
-        if (!box) return;
-
-        const candidates = (rows || [])
-            .filter(item => item && item.has_trend === true && item.is_meaningful === true)
-            .slice()
-            .sort((a, b) => absoluteDelta(b) - absoluteDelta(a))
-            .slice(0, 3);
-
-        if (!candidates.length) {
-            box.style.display = "none";
-            box.innerHTML = "";
-            return;
-        }
-
-        box.style.display = "grid";
-        box.innerHTML = candidates.map((item, index) => {
-            const delta = Number(item.delta);
-            const direction = item.direction === "up" ? "▲" : item.direction === "down" ? "▼" : "→";
-            const changeText = Number.isFinite(delta) ? `${delta > 0 ? "+" : ""}${delta}` : safeText(item.delta || "—");
-            const label = cleanTrendLabel(item.label);
-            const category = categoryFromTrendItem(item);
 
             return `
-                <button type="button" class="trend-top-card" data-top-marker="${safeText(label)}">
-                    <div class="trend-top-label">Top change ${index + 1}</div>
-                    <div class="trend-top-value" title="${safeText(label)}">${direction} ${safeText(label)}</div>
-                    <div class="trend-top-meta">${safeText(changeText)} · ${safeText(category)}</div>
-                </button>
+                <tr>
+                    <td>
+                        ${isAssessment ? `<input type="checkbox" class="assessment-report-checkbox" value="${safeText(report.id)}" aria-label="Select ${safeText(report.display_name || "assessment report")}">` : ""}
+                    </td>
+                    <td><span class="report-type-pill ${reportTypeClass(report)}">${reportTypeLabel(report)}</span></td>
+                    <td>${safeText(report.display_name || report.case_title || "Report")}${subText}</td>
+                    <td>v${safeText(report.version_number || "1")}</td>
+                    <td>${formatDate(report.generated_at)}</td>
+                    <td><a class="link" href="/app/reports/${report.id}">Open</a></td>
+                </tr>
             `;
         }).join("");
 
-        box.querySelectorAll("[data-top-marker]").forEach(button => {
-            button.addEventListener("click", () => scrollToTrendMarker(button.getAttribute("data-top-marker")));
-        });
+        if (selectAll) {
+            selectAll.checked = false;
+            selectAll.disabled = !reportRows.some(report => (report.report_type || "assessment") === "assessment");
+        }
     }
 
+    function openTrendReportModal() {
+        clearPatientError();
+        clearPatientSuccess();
+
+        const selected = selectedAssessmentReports();
+        if (selected.length < 2) {
+            showPatientError("Select at least two assessment reports to create a trend report.");
+            return;
+        }
+
+        const list = document.getElementById("trend-report-selected-list");
+        list.innerHTML = selected.map(report => `
+            <div class="modal-report-item">
+                <strong>${safeText(report.display_name || report.case_title || "Assessment Report")}</strong><br>
+                <span class="muted">Generated: ${formatDate(report.generated_at)} · Version: v${safeText(report.version_number || "1")}</span>
+            </div>
+        `).join("");
+
+        document.getElementById("trend-report-modal").classList.add("is-open");
+    }
+
+    function closeTrendReportModal() {
+        const modal = document.getElementById("trend-report-modal");
+        if (modal) modal.classList.remove("is-open");
+    }
+
+    async function createTrendReportFromSelection() {
+        clearPatientError();
+        clearPatientSuccess();
+
+        const ids = selectedAssessmentReportIds();
+        if (ids.length < 2) {
+            showPatientError("Select at least two assessment reports.");
+            return;
+        }
+
+        const btn = document.getElementById("confirm-create-trend-report-btn");
+        if (btn) {
+            btn.disabled = true;
+            btn.textContent = "Creating…";
+        }
+
+        try {
+            const payload = {
+                patient_id: patientId,
+                source_report_ids: ids,
+                title: document.getElementById("trend-report-title").value || null,
+                compare_mode: document.getElementById("trend-report-compare-mode").value,
+                include_clinical_narrative: document.getElementById("trend-opt-clinical-narrative").checked,
+                include_top_priorities: document.getElementById("trend-opt-top-priorities").checked,
+                include_support_recommendations: document.getElementById("trend-opt-support-recommendations").checked,
+                include_simplified_marker_evidence: document.getElementById("trend-opt-simplified-evidence").checked,
+                include_full_marker_table: document.getElementById("trend-opt-full-marker-table").checked,
+                include_charts: document.getElementById("trend-opt-charts").checked,
+            };
+
+            const res = await apiFetch("/api/trend-reports", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                showPatientError(data.detail || "Could not create trend report.");
+                return;
+            }
+
+            closeTrendReportModal();
+            showPatientSuccess("Trend report created.");
+            window.location.href = data.detail_url || `/app/reports/${data.id}`;
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while creating trend report.");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = "Create Trend Report";
+            }
+        }
+    }
 
     function renderTimeline() {
     const timeline = document.getElementById("patient-timeline");
@@ -1898,14 +952,10 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
 
         let min = markerMode ? 0 : Math.min(...plottedValues);
         let max = markerMode ? 100 : Math.max(...plottedValues);
-        const hasExactScale = !markerMode && minFloor !== null && maxCeil !== null;
 
-        if (hasExactScale) {
-            min = Number(minFloor);
-            max = Number(maxCeil);
-        } else if (!markerMode) {
-            if (minFloor !== null) min = Math.min(min, Number(minFloor));
-            if (maxCeil !== null) max = Math.max(max, Number(maxCeil));
+        if (!markerMode) {
+            if (minFloor !== null) min = Math.min(min, minFloor);
+            if (maxCeil !== null) max = Math.max(max, maxCeil);
 
             if (min === max) {
                 min -= 1;
@@ -1915,11 +965,6 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
             const padding = (max - min) * 0.08;
             min -= padding;
             max += padding;
-        }
-
-        if (min === max) {
-            min -= 1;
-            max += 1;
         }
 
         const xSpan = width - padLeft - padRight;
@@ -2005,10 +1050,6 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
             return `<text x="${p.x}" y="${height - 10}" text-anchor="middle" font-size="11" fill="#64748b">${label}</text>`;
         }).join("");
 
-        const line = coords.length > 1
-            ? `<path d="${linePath}" fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>`
-            : "";
-
         const circles = coords.map(p => {
             const color = p.color || severityToColor(p.severity);
             const unit = p.unit ? ` ${p.unit}` : "";
@@ -2027,7 +1068,7 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
             <rect x="0" y="0" width="${width}" height="${height}" fill="white"></rect>
             ${backgroundBands}
             ${grid}
-            ${line}
+            <path d="${linePath}" fill="none" stroke="#1d4ed8" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"></path>
             ${circles}
             ${labels}
         `;
@@ -2161,301 +1202,6 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
         renderSimpleLineChart("main-trend-chart", "main-trend-empty", selected.points, selected.min, selected.max);
         setMainTrendStats(selected.points);
         showTrendMeta(selected.points);
-        renderChartContext();
-    }
-
-
-
-    function trendToneClass(tone) {
-        if (tone === "increase") return "trend-tone-increase";
-        if (tone === "decrease") return "trend-tone-decrease";
-        if (tone === "warning") return "trend-tone-warning";
-        return "";
-    }
-
-    function normaliseTrendCategory(value) {
-        return String(value || "Other").trim().toLowerCase();
-    }
-
-    function scrollToTrendMarker(label) {
-        const target = normaliseTrendCategory(label);
-        const row = Array.from(document.querySelectorAll("[data-trend-marker]")).find(el =>
-            normaliseTrendCategory(el.getAttribute("data-trend-marker")) === target
-        );
-        if (!row) return;
-        row.scrollIntoView({ behavior: "smooth", block: "center" });
-        row.classList.add("trend-row-pulse");
-        window.setTimeout(() => row.classList.remove("trend-row-pulse"), 1400);
-    }
-
-    function applyTrendCategoryFilter(category) {
-        trendIntelligenceCategoryFilter = category || null;
-        renderTrendSummary(currentTrends.trend_summary || []);
-        const summaryPanel = document.querySelector(".trend-summary-panel");
-        if (summaryPanel) summaryPanel.scrollIntoView({ behavior: "smooth", block: "start" });
-    }
-
-
-    function confidenceClass(label) {
-        const value = String(label || "").toLowerCase();
-        if (value === "high") return "confidence-high";
-        if (value === "medium") return "confidence-medium";
-        if (value === "low") return "confidence-low";
-        if (value === "baseline") return "confidence-baseline";
-        return "confidence-low";
-    }
-
-    function renderClinicalNarrativeSummary(narrative) {
-        const box = document.getElementById("clinical-narrative-summary");
-        if (!box) return;
-        const headline = narrative?.headline || narrative?.summary || narrative?.body || "";
-        const details = narrative?.details || narrative?.body || "";
-        if (!narrative || !headline) {
-            box.style.display = "none";
-            box.innerHTML = "";
-            renderTopClinicalPriorities([]);
-            return;
-        }
-
-        const confidence = narrative.confidence || {};
-        const confidenceText = confidence.label
-            ? `<span class="confidence-badge-strong ${confidenceClass(confidence.label)}">Confidence: ${safeText(confidence.label)}${confidence.reason ? ` · ${safeText(confidence.reason)}` : ""}</span>`
-            : "";
-
-        const showDetails = details && details !== headline;
-
-        box.style.display = "block";
-        box.innerHTML = `
-            <div class="clinical-narrative-title">${safeText(narrative.title || "Clinical narrative summary")}</div>
-            <div class="clinical-narrative-headline">${safeText(headline)}</div>
-            ${confidenceText}
-            ${showDetails ? `
-                <details class="clinical-narrative-details">
-                    <summary>Expand clinical interpretation</summary>
-                    <div class="clinical-narrative-body">${safeText(details)}</div>
-                </details>
-            ` : ""}
-            ${narrative.review_note ? `<div class="clinical-narrative-footer">${safeText(narrative.review_note)}</div>` : ""}
-        `;
-
-        renderTopClinicalPriorities(narrative.top_priorities || []);
-    }
-
-    function renderTopClinicalPriorities(priorities) {
-        const box = document.getElementById("top-clinical-priorities");
-        if (!box) return;
-        const items = Array.isArray(priorities) ? priorities.slice(0, 5) : [];
-        if (!items.length) {
-            box.style.display = "none";
-            box.innerHTML = "";
-            return;
-        }
-
-        box.style.display = "block";
-        box.innerHTML = `
-            <div class="clinical-priority-section-header">
-                <div>
-                    <h4 class="clinical-priority-section-title">Top Clinical Priorities</h4>
-                    <div class="clinical-priority-section-note">Ranked from trend clusters, band changes, directional movement, and mode-safe recommendation context.</div>
-                </div>
-            </div>
-            <div class="clinical-priority-strip">
-                ${items.slice(0, 3).map((item, index) => `
-                    <button type="button" class="clinical-priority-card priority-${safeText(item.priority || "low")}" data-priority-category="${safeText(item.category || item.title || "")}">
-                        <div class="clinical-priority-label">Priority ${index + 1} · ${safeText(item.priority || "low")}</div>
-                        <div class="clinical-priority-title">${safeText(item.title || item.category || "Clinical review")}</div>
-                        <div class="clinical-priority-detail">${safeText(item.reason || "Review this area in context of symptoms, case history, and current recommendations.")}</div>
-                        <div class="clinical-priority-meta">
-                            ${item.category ? `<span class="clinical-priority-chip">${safeText(item.category)}</span>` : ""}
-                            ${item.product ? `<span class="clinical-priority-chip">${safeText(item.product)}</span>` : ""}
-                            ${item.source ? `<span class="clinical-priority-chip">${safeText(String(item.source).replaceAll("_", " "))}</span>` : ""}
-                        </div>
-                    </button>
-                `).join("")}
-            </div>
-        `;
-
-        box.querySelectorAll("[data-priority-category]").forEach(button => {
-            button.addEventListener("click", () => {
-                const category = button.getAttribute("data-priority-category") || null;
-                if (category) applyTrendCategoryFilter(category);
-            });
-        });
-    }
-
-    function renderChartContext() {
-        const box = document.getElementById("trend-chart-context");
-        if (!box) return;
-        const narrative = currentTrends?.trend_intelligence?.clinical_narrative || null;
-        const text = narrative?.chart_context || "";
-        if (!text) {
-            box.style.display = "none";
-            box.textContent = "";
-            return;
-        }
-        box.style.display = "block";
-        box.textContent = text;
-    }
-
-    function renderRecommendationPriorities(priorities) {
-        const box = document.getElementById("trend-recommendations-priorities");
-        if (!box) return;
-        const items = Array.isArray(priorities) ? priorities.slice(0, 3) : [];
-        if (!items.length) {
-            box.style.display = "none";
-            box.innerHTML = "";
-            return;
-        }
-        box.style.display = "grid";
-        box.innerHTML = items.map((item, index) => `
-            <div class="clinical-priority-card priority-${safeText(item.priority || "low")}">
-                <div class="clinical-priority-label">Recommendation priority ${index + 1}</div>
-                <div class="clinical-priority-title">${safeText(item.title || "Support priority")}</div>
-                <div class="clinical-priority-detail">
-                    ${item.product ? `<strong>${safeText(item.product)}</strong><br>` : ""}
-                    ${safeText(item.reason || "Aligned with the current recommendation mode and trend context.")}
-                </div>
-            </div>
-        `).join("");
-    }
-
-    function renderTrendIntelligence(intelligence) {
-        const note = document.getElementById("trend-intelligence-note");
-        const cardsBox = document.getElementById("trend-intelligence-cards");
-        const insightsBox = document.getElementById("trend-intelligence-insights");
-        const focusBox = document.getElementById("trend-intelligence-focus");
-
-        if (!cardsBox || !insightsBox || !focusBox) return;
-        renderClinicalNarrativeSummary(intelligence ? intelligence.clinical_narrative : null);
-
-        if (!intelligence) {
-            if (note) note.textContent = "Trend intelligence will appear once trend data is available.";
-            cardsBox.innerHTML = "";
-            insightsBox.innerHTML = `
-                <div class="trend-intel-item">
-                    <div class="trend-intel-item-title">No trend intelligence yet</div>
-                    <div class="trend-intel-item-body">Generate at least two reports for this patient to calculate movement, clusters, and follow-up priorities.</div>
-                </div>
-            `;
-            focusBox.innerHTML = "";
-            return;
-        }
-
-        if (note) note.textContent = intelligence.summary || "Trend intelligence is based on available scan history.";
-
-        const cards = Array.isArray(intelligence.cards) ? intelligence.cards : [];
-        cardsBox.innerHTML = cards.map(card => `
-            <div class="trend-intel-card ${trendToneClass(card.tone)}">
-                <div class="trend-intel-label">${safeText(card.label || "")}</div>
-                <div class="trend-intel-value ${trendToneClass(card.tone)}">${safeText(card.value ?? "—")}</div>
-                <div class="trend-intel-detail">${safeText(card.detail || "")}</div>
-                ${card.confidence ? `<div class="trend-confidence-pill">Confidence: ${safeText(card.confidence)}</div>` : ""}
-            </div>
-        `).join("");
-
-        const insights = Array.isArray(intelligence.insights) ? intelligence.insights : [];
-        insightsBox.innerHTML = insights.map(item => `
-            <div class="trend-intel-item ${trendToneClass(item.tone)}">
-                <div class="trend-intel-item-title ${trendToneClass(item.tone)}">${safeText(item.title || "Trend insight")}</div>
-                <div class="trend-intel-item-body">${safeText(item.body || "")}</div>
-            </div>
-        `).join("");
-
-        const focusAreas = Array.isArray(intelligence.focus_areas) ? intelligence.focus_areas : [];
-        const clearPill = trendIntelligenceCategoryFilter
-            ? `<button type="button" class="trend-focus-pill trend-focus-pill-clear" data-focus-category="">Clear category filter</button>`
-            : "";
-        focusBox.innerHTML = clearPill + focusAreas.map(item => {
-            const category = item.category || "Other";
-            const active = trendIntelligenceCategoryFilter && normaliseTrendCategory(trendIntelligenceCategoryFilter) === normaliseTrendCategory(category);
-            return `
-                <button type="button" class="trend-focus-pill ${active ? "is-active" : ""}" data-focus-category="${safeText(category)}" title="Filter trend table by ${safeText(category)}">
-                    ${safeText(category)}
-                    <strong>${safeText(item.count ?? 0)}</strong>
-                    ${item.band_changes ? `<span class="trend-tone-warning">${safeText(item.band_changes)} band</span>` : ""}
-                </button>
-            `;
-        }).join("");
-
-        focusBox.querySelectorAll("[data-focus-category]").forEach(button => {
-            button.addEventListener("click", () => {
-                const category = button.getAttribute("data-focus-category") || null;
-                applyTrendCategoryFilter(category);
-                renderTrendIntelligence(currentTrends.trend_intelligence || null);
-            });
-        });
-    }
-
-
-    function formatTrendFlag(flag) {
-        return String(flag || "")
-            .replaceAll("_", " ")
-            .replace(/\b\w/g, c => c.toUpperCase());
-    }
-
-    function renderTrendRecommendationProduct(product) {
-        const narrative = product.trend_narrative || {};
-        const priority = product.trend_priority || "low";
-        const flags = product.trend_flags || [];
-
-        const summary = narrative.summary || product.rationale || "Support consideration generated from the current recommendation mode and scan context.";
-        const evidence = narrative.trend_evidence || "";
-        const safety = narrative.safety_note || "Practitioner review is required before use.";
-
-        return `
-            <div class="trend-rec-card priority-${safeText(priority)}">
-                <div class="trend-rec-header">
-                    <div>
-                        <div class="trend-rec-title">${safeText(product.name)}</div>
-                        <div class="trend-rec-source">${safeText(product.source_label || product.source || "Recommendation")}</div>
-                    </div>
-                    <div class="trend-rec-priority">${safeText(priority)} priority</div>
-                </div>
-
-                <div class="trend-rec-flags">
-                    ${flags.map(flag => `<span class="trend-rec-chip">${safeText(formatTrendFlag(flag))}</span>`).join("")}
-                    ${narrative.review_required ? `<span class="trend-rec-chip">Practitioner review</span>` : ""}
-                </div>
-
-                <div class="trend-rec-narrative">${safeText(summary)}</div>
-
-                ${evidence ? `<div class="trend-rec-evidence">${safeText(evidence)}</div>` : ""}
-
-                <div class="trend-rec-safety">${safeText(safety)}</div>
-            </div>
-        `;
-    }
-
-    function renderTrendRecommendations(recommendations) {
-        const container = document.getElementById("trend-recommendations-list");
-        const wrapper = document.getElementById("trend-recommendations-panel");
-
-        if (!container) return;
-
-        const data = recommendations || currentTrends.trend_recommendations || {};
-        const products = data.products || [];
-
-        if (!products.length) {
-            renderRecommendationPriorities([]);
-            container.innerHTML = `
-                <div class="trend-empty-state">
-                    No trend-aware support considerations are available for the current recommendation mode.
-                </div>
-            `;
-            if (wrapper) wrapper.style.display = "block";
-            return;
-        }
-
-        renderRecommendationPriorities(data.clinical_priorities || []);
-        container.innerHTML = `
-            <div class="trend-recommendations-intro">
-                <strong>Practitioner review required.</strong><br>
-                ${safeText(data.disclaimer || "Trend-aware support considerations require practitioner review before use.")}
-            </div>
-            ${products.map(renderTrendRecommendationProduct).join("")}
-        `;
-
-        if (wrapper) wrapper.style.display = "block";
     }
 
 
@@ -2469,15 +1215,9 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
             system_group_averages: {},
             marker_options: [],
             trend_summary: [],
-            trend_intelligence: null,
-            trend_recommendations: {},
-            client_view: null,
-            view_mode: currentViewMode,
         };
 
         populateTrendControls();
-        renderTrendIntelligence(currentTrends.trend_intelligence || null);
-        renderTrendRecommendations(currentTrends.trend_recommendations || {});
         renderTrendSummary(currentTrends.trend_summary || []);
         renderSelectedTrend();
 
@@ -2570,173 +1310,66 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
     function renderTrendSummary(summary) {
         const body = document.getElementById("trend-summary-body");
         const note = document.getElementById("trend-summary-note");
-        const toggle = document.getElementById("show-all-trend-summary");
-        const toggleLabel = toggle ? toggle.closest("label") : null;
-        const baselineBadge = document.getElementById("baseline-badge");
-        const topChangesBox = document.getElementById("trend-top-changes");
-
-        updateTrendSortIndicators();
+        const showAll = document.getElementById("show-all-trend-summary")?.checked || false;
 
         if (!summary || !summary.length) {
             if (note) note.textContent = "No baseline markers available yet.";
-            if (baselineBadge) baselineBadge.style.display = "none";
-            if (topChangesBox) {
-                topChangesBox.style.display = "none";
-                topChangesBox.innerHTML = "";
-            }
-
-            if (toggle) {
-                toggle.checked = false;
-                toggle.disabled = true;
-            }
-
-            if (toggleLabel) toggleLabel.classList.add("is-disabled");
-
-            body.innerHTML = `<tr><td colspan="6" class="trend-empty-state">No marker data yet.</td></tr>`;
+            body.innerHTML = `<tr><td colspan="5" class="muted">No marker data yet.</td></tr>`;
             return;
         }
 
         const hasRealTrend = summary.some(item => item.has_trend === true);
 
-        if (!hasRealTrend && toggle) {
-            toggle.checked = false;
-            toggle.disabled = true;
-        } else if (toggle) {
-            toggle.disabled = false;
+        if (note) {
+            note.textContent = hasRealTrend
+                ? (showAll ? "Showing all tracked markers." : "Showing meaningful changes only.")
+                : "Baseline snapshot only. Add another scan to calculate trend changes.";
         }
 
-        if (toggleLabel) {
-            toggleLabel.classList.toggle("is-disabled", !hasRealTrend);
-        }
-
-        if (baselineBadge) {
-            baselineBadge.style.display = hasRealTrend ? "none" : "inline-block";
-        }
-
-        const showAll = hasRealTrend && toggle ? toggle.checked : false;
-
-        let rows = summary.slice();
-
-        if (trendIntelligenceCategoryFilter) {
-            rows = rows.filter(item => normaliseTrendCategory(categoryFromTrendItem(item)) === normaliseTrendCategory(trendIntelligenceCategoryFilter));
-        }
+        let rows = summary;
 
         if (hasRealTrend && !showAll) {
-            rows = rows.filter(item => item.is_meaningful === true);
+            rows = summary.filter(item => item.is_meaningful === true);
         }
 
         if (!hasRealTrend) {
-            rows = rows.filter(item => item.is_baseline === true || item.has_trend !== true);
+            rows = summary.filter(item => item.is_baseline === true || item.has_trend === false);
         }
-
-        rows = sortTrendRows(rows);
-
-        const meaningfulCount = summary.filter(item => item.is_meaningful === true).length;
-        const bandChangeCount = summary.filter(item => item.band_changed === true || isBandChangeFromLabel(item.label)).length;
-        const totalCount = summary.length;
-
-        if (note) {
-            if (!hasRealTrend) {
-                note.textContent = "Baseline scan only. Trend changes will appear after another scan.";
-            } else if (showAll) {
-                note.textContent = `Showing all tracked markers (${totalCount} markers tracked). Significant: ${meaningfulCount}; band changes: ${bandChangeCount}.`;
-            } else {
-                note.textContent = `Showing significant changes only (${meaningfulCount} of ${totalCount} markers tracked).`;
-            }
-        }
-
-        if (note && trendIntelligenceCategoryFilter && hasRealTrend) {
-            note.textContent += ` Filtered by category: ${trendIntelligenceCategoryFilter}.`;
-        }
-
-        renderTopChanges(summary, showAll);
 
         if (!rows.length) {
-            const emptyMessage = hasRealTrend
-                ? "No significant changes detected across the available scan history."
-                : "Only one scan is available. This scan is being used as the baseline; trends will appear after a future scan.";
-
-            body.innerHTML = `<tr><td colspan="6" class="trend-empty-state">${emptyMessage}</td></tr>`;
+            body.innerHTML = `<tr><td colspan="5" class="muted">No meaningful changes detected.</td></tr>`;
             return;
         }
 
-        const visibleLimit = showAll ? 120 : 30;
-        const visibleRows = rows.slice(0, visibleLimit);
+        body.innerHTML = rows.slice(0, 20).map(item => {
+            const isBaseline = item.has_trend !== true;
 
-        body.innerHTML = visibleRows.map(item => {
-            const hasComparison = item.has_trend === true;
-            const deltaNumber = Number(item.delta);
-
-            const isUp = hasComparison && item.direction === "up";
-            const isDown = hasComparison && item.direction === "down";
-
-            const labelBandChanged = isBandChangeFromLabel(item.label);
-            const isMeaningful = item.is_meaningful === true;
-            const bandChanged = item.band_changed === true || labelBandChanged;
-
-            const directionText = !hasComparison
+            const directionText = isBaseline
                 ? "—"
-                : isUp
+                : item.direction === "up"
                     ? "↑"
-                    : isDown
+                    : item.direction === "down"
                         ? "↓"
                         : "→";
 
-            const changeText = !hasComparison
+            const changeText = isBaseline
                 ? "—"
-                : Number.isFinite(deltaNumber)
-                    ? `${deltaNumber > 0 ? "+" : ""}${deltaNumber}`
-                    : safeText(item.delta || "—");
+                : `${item.delta > 0 ? "+" : ""}${item.delta}`;
 
-            const changeClass = !hasComparison
-                ? "trend-change-neutral"
-                : isUp
-                    ? "trend-change-up"
-                    : isDown
-                        ? "trend-change-down"
-                        : "trend-change-neutral";
-
-            const rowClasses = [
-                isMeaningful ? "trend-row-significant" : "",
-                bandChanged ? "trend-row-band-change" : "",
-                showAll && !isMeaningful ? "trend-row-normal-in-all" : ""
-            ].filter(Boolean).join(" ");
-
-            const latestText = item.latest ?? "—";
-            const cleanLabel = cleanTrendLabel(item.label);
-            const category = categoryFromTrendItem(item);
-
-            const badge = bandChanged
-                ? `<span class="trend-badge trend-badge-band">Band changed</span>`
-                : isMeaningful
-                    ? `<span class="trend-badge trend-badge-meaningful">Significant</span>`
-                    : "";
+            const rowStyle = item.band_changed ? "background:#f8fafc;" : "";
 
             return `
-                <tr class="${rowClasses}" data-trend-marker="${safeText(cleanLabel)}" data-trend-category="${safeText(category)}">
-                    <td>
-                        ${safeText(cleanLabel)}
-                        ${badge}
-                    </td>
-                    <td><span class="trend-category-pill" title="${safeText(category)}">${safeText(category)}</span></td>
-                    <td>${safeText(latestText)}</td>
-                    <td class="${changeClass}">${changeText}</td>
-                    <td class="${changeClass}">${directionText}</td>
+                <tr style="${rowStyle}">
+                    <td>${safeText(item.label)}</td>
+                    <td>${item.latest ?? "—"}</td>
+                    <td>${changeText}</td>
+                    <td>${directionText}</td>
                     <td>${safeText(item.status || "—")}</td>
                 </tr>
             `;
         }).join("");
-
-        if (rows.length > visibleRows.length) {
-            body.innerHTML += `
-                <tr>
-                    <td colspan="6" class="trend-summary-footer-note">
-                        Showing ${visibleRows.length} of ${rows.length} markers. Use “Show all tracked markers” to review the full tracked marker set.
-                    </td>
-                </tr>
-            `;
-        }
     }
+
 
     async function loadPatientDetail() {
         clearPatientError();
@@ -2750,7 +1383,7 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
                 apiFetch(`/api/patients/${patientId}`),
                 apiFetch(`/api/patients/${patientId}/cases`),
                 apiFetch(`/api/patients/${patientId}/reports`),
-                apiFetch(`/api/patients/${patientId}/trends?view_mode=${currentViewMode}`)
+                apiFetch(`/api/patients/${patientId}/trends`)
             ]);
 
             const patientData = await patientRes.json().catch(() => ({}));
@@ -2762,10 +1395,7 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
                 systems: {},
                 markers: {},
                 system_groups: {},
-                system_group_averages: {},
-                marker_options: [],
-                trend_summary: [],
-                trend_intelligence: null
+                system_group_averages: {}
             }));
 
             if (!patientRes.ok) {
@@ -2942,96 +1572,31 @@ body.client-view-mode #trend-recommendations-collapse-btn { display:none; }
         });
     }
 
+    const createTrendReportBtn = document.getElementById("create-trend-report-btn");
+    if (createTrendReportBtn) createTrendReportBtn.addEventListener("click", openTrendReportModal);
 
+    const closeTrendReportModalBtn = document.getElementById("close-trend-report-modal-btn");
+    if (closeTrendReportModalBtn) closeTrendReportModalBtn.addEventListener("click", closeTrendReportModal);
 
-    const trendRecommendationsCollapseBtn = document.getElementById("trend-recommendations-collapse-btn");
-    if (trendRecommendationsCollapseBtn) {
-        trendRecommendationsCollapseBtn.addEventListener("click", () => {
-            const panel = document.getElementById("trend-recommendations-panel");
-            if (!panel) return;
-            const collapsed = panel.classList.toggle("is-collapsed");
-            trendRecommendationsCollapseBtn.textContent = collapsed ? "Expand recommendations" : "Collapse recommendations";
+    const confirmCreateTrendReportBtn = document.getElementById("confirm-create-trend-report-btn");
+    if (confirmCreateTrendReportBtn) confirmCreateTrendReportBtn.addEventListener("click", createTrendReportFromSelection);
+
+    const selectAllAssessmentReports = document.getElementById("select-all-assessment-reports");
+    if (selectAllAssessmentReports) {
+        selectAllAssessmentReports.addEventListener("change", () => {
+            document.querySelectorAll(".assessment-report-checkbox").forEach(cb => {
+                cb.checked = selectAllAssessmentReports.checked;
+            });
         });
     }
 
-    const trendSummaryCollapseBtn = document.getElementById("trend-summary-collapse-btn");
-    if (trendSummaryCollapseBtn) {
-        trendSummaryCollapseBtn.addEventListener("click", () => {
-            const panel = trendSummaryCollapseBtn.closest(".trend-summary-panel");
-            if (!panel) return;
-            const collapsed = panel.classList.toggle("is-collapsed");
-            trendSummaryCollapseBtn.textContent = collapsed ? "Expand summary" : "Collapse summary";
+    const trendReportModal = document.getElementById("trend-report-modal");
+    if (trendReportModal) {
+        trendReportModal.addEventListener("click", (event) => {
+            if (event.target === trendReportModal) closeTrendReportModal();
         });
     }
 
-
-    document.querySelectorAll("[data-trend-sort]").forEach(button => {
-        button.addEventListener("click", () => {
-            const key = button.getAttribute("data-trend-sort");
-            if (!key) return;
-
-            if (trendSummarySort.key === key) {
-                trendSummarySort.dir = trendSummarySort.dir === "asc" ? "desc" : "asc";
-            } else {
-                trendSummarySort.key = key;
-                trendSummarySort.dir = ["label", "category", "status"].includes(key) ? "asc" : "desc";
-            }
-
-            renderTrendSummary(currentTrends.trend_summary || []);
-        });
-    });
-
-
-    const trendIntelligenceCollapseBtn = document.getElementById("trend-intelligence-collapse-btn");
-    if (trendIntelligenceCollapseBtn) {
-        trendIntelligenceCollapseBtn.addEventListener("click", () => {
-            const panel = document.getElementById("trend-intelligence-panel");
-            if (!panel) return;
-            const collapsed = panel.classList.toggle("is-collapsed");
-            trendIntelligenceCollapseBtn.textContent = collapsed ? "Expand insights" : "Collapse insights";
-        });
-    }
-
-    const trendChartCollapseBtn = document.getElementById("trend-chart-collapse-btn");
-    if (trendChartCollapseBtn) {
-        trendChartCollapseBtn.addEventListener("click", () => {
-            const panel = document.getElementById("trend-chart-panel");
-            if (!panel) return;
-            const collapsed = panel.classList.toggle("is-collapsed");
-            trendChartCollapseBtn.textContent = collapsed ? "Expand chart" : "Collapse chart";
-        });
-    }
-
-    document.querySelectorAll("[data-collapse-target]").forEach(button => {
-        button.addEventListener("click", () => {
-            const targetId = button.getAttribute("data-collapse-target");
-            const content = document.getElementById(targetId);
-            if (!content) return;
-            const section = content.closest(".collapsible-section");
-            if (!section) return;
-            const collapsed = section.classList.toggle("is-collapsed");
-            button.textContent = collapsed ? "Expand" : "Collapse";
-        });
-    });
-
-
-    const practitionerViewBtn = document.getElementById("view-mode-practitioner-btn");
-    if (practitionerViewBtn) {
-        practitionerViewBtn.addEventListener("click", () => {
-            setViewMode("practitioner");
-            loadPatientDetail();
-        });
-    }
-
-    const clientViewBtn = document.getElementById("view-mode-client-btn");
-    if (clientViewBtn) {
-        clientViewBtn.addEventListener("click", () => {
-            setViewMode("client");
-            loadPatientDetail();
-        });
-    }
-
-    setViewMode(currentViewMode, false);
     loadPatientDetail();
 </script>
 {% endblock %}

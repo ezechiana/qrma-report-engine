@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Client report bundle</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <style>
+    body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f6f8f5;color:#183028}
+    .wrap{max-width:1040px;margin:0 auto;padding:24px 16px 44px}
+    .card{background:#fff;border:1px solid #dfe7e1;border-radius:18px;padding:18px;margin-bottom:16px}
+    h1,h2{color:#2f4f2f;margin:0 0 8px}.muted{color:#5f7269}
+    .btn{display:inline-block;border:1px solid #dfe7e1;border-radius:999px;padding:8px 12px;text-decoration:none;color:#2f4f2f;font-weight:800}
+    .item{border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin-top:12px}
+    .badge{font-size:12px;font-weight:800;border-radius:999px;background:#eef2ff;padding:3px 8px}
+  </style>
+</head>
+<body>
+<div class="wrap">
+  <div class="card">
+    <h1>Your shared health reports</h1>
+    <p class="muted">Your practitioner has shared one or more reports with you.</p>
+  </div>
+  <div id="items" class="card">Loading…</div>
+</div>
+<script>
+const token = "{{ token }}";
+function esc(v){return String(v ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
+async function loadBundle(){
+  const box = document.getElementById("items");
+  try{
+    const res = await fetch(`/share/${token}/bundle-data`);
+    if(!res.ok) throw new Error(await res.text());
+    const data = await res.json();
+    const items = data.items || [];
+    if(!items.length){ box.innerHTML = "<p>No reports were found in this bundle.</p>"; return; }
+    box.innerHTML = `<h2>Shared items</h2>` + items.map((it, idx) => {
+      if(it.type === "trend"){
+        const summary = it.trend?.clinical_narrative?.headline || it.trend?.client_view?.summary || "Progress trend report";
+        return `<div class="item"><span class="badge">Trend report</span><h3>${idx+1}. Progress dashboard</h3><p>${esc(summary)}</p><a class="btn" href="/share/${token}/trend">Open trend view</a></div>`;
+      }
+      const name = it.report?.viewer?.case_title || it.report?.viewer?.tenant?.report_title || "Assessment report";
+      return `<div class="item"><span class="badge">Assessment report</span><h3>${idx+1}. ${esc(name)}</h3><p class="muted">Generated: ${esc(it.generated_at || "")}</p><a class="btn" href="/share/${token}">Open report</a></div>`;
+    }).join("");
+  }catch(e){
+    box.innerHTML = `<p style="color:#b91c1c">Could not load shared reports.</p>`;
+  }
+}
+loadBundle();
+</script>
+</body>
+</html>

@@ -26,8 +26,17 @@ class ReportVersionRead(BaseModel):
     patient_display_name: Optional[str] = None
     case_title: Optional[str] = None
     scan_datetime: Optional[datetime] = None
-    scan_datetime_display: str | None = None
+    scan_datetime_display: Optional[str] = None
     is_archived: bool = False
+
+    report_type: str = "assessment"
+    source_report_ids: list[str] = []
+    trend_options: dict[str, Any] = {}
+
+    source_count: int = 0
+    source_scan_range: Optional[str] = None
+    health_index: Optional[float] = None
+    health_index_change: Optional[float] = None
 
 
 class ReportOverrideUpdate(BaseModel):

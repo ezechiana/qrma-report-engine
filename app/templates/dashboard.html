@@ -1,232 +1,213 @@
-
 {% extends "base.html" %}
 
 {% block content %}
 <style>
-.dashboard-subtitle {
-    color: #64748b;
-    margin-bottom: 24px;
-}
-
-.dashboard-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: 18px;
-    margin-bottom: 28px;
-}
-
-.dashboard-card {
-    background: white;
-    border-radius: 18px;
-    padding: 20px;
-    border: 1px solid #e2e8f0;
-}
-
-.card-title {
-    font-size: 14px;
-    color: #64748b;
-    margin-bottom: 6px;
-}
-
-.card-value {
-    font-size: 26px;
-    font-weight: 700;
-}
-
-.dashboard-section {
-    margin-top: 20px;
-}
-
-.section-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 14px;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.reports-table {
-    width: 100%;
-    border-collapse: collapse;
-}
-
-.reports-table th {
-    text-align: left;
-    font-size: 13px;
-    color: #64748b;
-    padding: 10px;
-}
-
-.reports-table td {
-    padding: 12px 10px;
-    border-top: 1px solid #f1f5f9;
-    vertical-align: top;
-}
-
-.reports-table tr:hover {
-    background: #f8fafc;
-}
-
-.dashboard-error {
-    display: none;
-    margin-bottom: 16px;
-}
-
-.search-input {
-    max-width: 320px;
-}
+.dashboard-subtitle { color:#64748b; margin-bottom:24px; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:28px; }
+.dashboard-card { background:white; border-radius:18px; padding:20px; border:1px solid #e2e8f0; }
+.card-title { font-size:14px; color:#64748b; margin-bottom:6px; }
+.card-value { font-size:26px; font-weight:800; }
+.dashboard-section { margin-top:20px; }
+.section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap; }
+.reports-table { width:100%; border-collapse:collapse; }
+.reports-table th { text-align:left; font-size:13px; color:#64748b; padding:10px; }
+.reports-table td { padding:12px 10px; border-top:1px solid #f1f5f9; vertical-align:top; }
+.reports-table tr:hover { background:#f8fafc; }
+.dashboard-error { display:none; margin-bottom:16px; }
+.search-input { max-width:320px; }
+.report-type-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #e5e7eb; white-space:nowrap; }
+.report-type-assessment { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+.report-type-trend { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+.report-secondary { color:#64748b; font-size:12px; margin-top:3px; line-height:1.35; }
+.report-title-text { font-weight:600; color:#0f172a; }
+.dashboard-tabs { display:flex; gap:8px; flex-wrap:wrap; }
+.dashboard-tab { border:1px solid #dbe7f3; background:#fff; border-radius:999px; padding:7px 11px; font-weight:800; color:#475569; cursor:pointer; }
+.dashboard-tab.is-active { background:#dbeafe; color:#1e3a8a; border-color:#93c5fd; }
+@media(max-width:900px){ .dashboard-grid{grid-template-columns:1fr;} }
 </style>
 
 <div id="dashboard-error" class="error dashboard-error"></div>
 
-<p class="dashboard-subtitle">Overview of your recent activity</p>
+<p class="dashboard-subtitle">Overview of your recent assessment and trend-report activity.</p>
 
 <div class="dashboard-grid">
     <div class="dashboard-card">
         <div class="card-title">Total Reports</div>
-        <div class="card-value" id="total-reports">?</div>
+        <div class="card-value" id="total-reports">—</div>
     </div>
-
     <div class="dashboard-card">
-        <div class="card-title">Recent Cases</div>
-        <div class="card-value" id="total-cases">?</div>
+        <div class="card-title">Assessments</div>
+        <div class="card-value" id="total-assessments">—</div>
     </div>
-
+    <div class="dashboard-card">
+        <div class="card-title">Trend Reports</div>
+        <div class="card-value" id="total-trends">—</div>
+    </div>
     <div class="dashboard-card">
         <div class="card-title">Last Activity</div>
-        <div class="card-value" id="last-activity">?</div>
+        <div class="card-value" id="last-activity" style="font-size:20px;">—</div>
     </div>
 </div>
 
 <div class="dashboard-section">
     <div class="section-header">
-        <h2>Recent Reports</h2>
-        <div class="btn-row">
-            <input class="search-input" id="dashboard-search" placeholder="Search patient or case name" />
+        <div>
+            <h2 style="margin:0;">Recent Reports</h2>
+            <div class="muted" style="margin-top:4px;">Assessments and trend reports are shown together, with type-specific context.</div>
         </div>
+        <div class="btn-row">
+            <input class="search-input" id="dashboard-search" placeholder="Search patient, report or date" />
+            <a class="btn secondary" href="/app/reports">View all reports</a>
+        </div>
+    </div>
+
+    <div class="dashboard-tabs" style="margin-bottom:12px;">
+        <button class="dashboard-tab is-active" data-dashboard-tab="all">All</button>
+        <button class="dashboard-tab" data-dashboard-tab="assessment">Assessments</button>
+        <button class="dashboard-tab" data-dashboard-tab="trend">Trends</button>
     </div>
 
     <div class="card">
         <table class="reports-table">
             <thead>
                 <tr>
+                    <th>Type</th>
                     <th>Report</th>
-                    <th>Scan date/time</th>
+                    <th>Clinical basis</th>
                     <th>Status</th>
                     <th>Generated</th>
                     <th></th>
                 </tr>
             </thead>
             <tbody id="reports-table-body">
-                <tr><td colspan="5">Loading?</td></tr>
+                <tr><td colspan="6">Loading…</td></tr>
             </tbody>
         </table>
     </div>
 </div>
 
 <script>
-    let dashboardRows = [];
+let dashboardRows = [];
+let activeDashboardTab = "all";
 
-    function showDashboardError(message) {
-        const box = document.getElementById("dashboard-error");
-        box.textContent = message;
-        box.style.display = "block";
-    }
+function reportType(item) { return item.report_type === "trend" ? "trend" : "assessment"; }
+function isTrend(item) { return reportType(item) === "trend"; }
+function reportTypeLabel(item) { return isTrend(item) ? "Trend" : "Assessment"; }
+function reportTypeClass(item) { return isTrend(item) ? "report-type-trend" : "report-type-assessment"; }
 
-    function clearDashboardError() {
-        const box = document.getElementById("dashboard-error");
-        box.textContent = "";
-        box.style.display = "none";
-    }
+function showDashboardError(message) {
+    const box = document.getElementById("dashboard-error");
+    box.textContent = message;
+    box.style.display = "block";
+}
 
-    function renderDashboardRows() {
-        const tbody = document.getElementById("reports-table-body");
-        const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
+function clearDashboardError() {
+    const box = document.getElementById("dashboard-error");
+    box.textContent = "";
+    box.style.display = "none";
+}
 
-        const filtered = dashboardRows.filter(item => {
-            const hay = `${item.display_name || ""} ${item.patient_display_name || ""} ${item.generated_at || ""} ${item.scan_datetime_display || ""}`.toLowerCase();
+function updateDashboardTabs() {
+    document.querySelectorAll("[data-dashboard-tab]").forEach(btn => {
+        btn.classList.toggle("is-active", btn.dataset.dashboardTab === activeDashboardTab);
+    });
+}
+
+function renderDashboardRows() {
+    const tbody = document.getElementById("reports-table-body");
+    const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
+
+    updateDashboardTabs();
+
+    const filtered = dashboardRows
+        .filter(item => activeDashboardTab === "all" || reportType(item) === activeDashboardTab)
+        .filter(item => {
+            const hay = [
+                item.display_name, item.patient_display_name, item.generated_at,
+                item.scan_datetime_display, item.source_scan_range, item.status, reportTypeLabel(item)
+            ].join(" ").toLowerCase();
             return !query || hay.includes(query);
         });
 
-        if (!filtered.length) {
-            tbody.innerHTML = `<tr><td colspan="5">No matching reports.</td></tr>`;
+    if (!filtered.length) {
+        tbody.innerHTML = `<tr><td colspan="6">No matching reports.</td></tr>`;
+        return;
+    }
+
+    tbody.innerHTML = filtered.slice(0, 20).map(item => {
+        const trend = isTrend(item);
+        const basis = trend
+            ? `${safeText(item.source_count || (item.source_report_ids || []).length || 0)} source assessment${(item.source_count || (item.source_report_ids || []).length) === 1 ? "" : "s"}`
+            : safeText(item.scan_datetime_display || "—");
+
+        const health = trend && item.health_index !== null && item.health_index !== undefined
+            ? `<div class="report-secondary">Health Index: ${safeText(item.health_index)}${item.health_index_change !== null && item.health_index_change !== undefined ? ` (${Number(item.health_index_change) > 0 ? "+" : ""}${safeText(item.health_index_change)})` : ""}</div>`
+            : "";
+
+        return `
+            <tr>
+                <td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td>
+                <td>
+                    <span class="report-title-text">${safeText(item.display_name || "Untitled report")}</span>
+                    <div class="report-secondary">${safeText(item.patient_display_name || "")}</div>
+                </td>
+                <td>
+                    ${basis}
+                    ${trend && item.source_scan_range ? `<div class="report-secondary">${safeText(item.source_scan_range)}</div>` : ""}
+                    ${health}
+                </td>
+                <td>${safeText(item.status)}</td>
+                <td>${formatDate(item.generated_at)}</td>
+                <td><a class="link" href="${trend ? `/trend-reports/${item.id}` : `/app/reports/${item.id}`}">Open</a></td>
+            </tr>
+        `;
+    }).join("");
+}
+
+async function loadDashboard() {
+    clearDashboardError();
+    const authed = await requireAuthOrRedirect();
+    if (!authed) return;
+
+    try {
+        const response = await apiFetch("/api/reports?include_archived=false");
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            showDashboardError(errorData.detail || "Could not load dashboard data.");
+            document.getElementById("reports-table-body").innerHTML = `<tr><td colspan="6">Could not load reports.</td></tr>`;
             return;
         }
 
-        tbody.innerHTML = filtered.map(item => `
-            <tr>
-                <td>${safeText(item.display_name)}</td>
-                <td>${safeText(item.scan_datetime_display || "?")}</td>
-                <td>${safeText(item.status)}</td>
-                <td>${formatDate(item.generated_at)}</td>
-                <td><a class="link" href="/app/reports/${item.id}">Open</a></td>
-            </tr>
-        `).join("");
+        const reports = await response.json();
+        dashboardRows = (Array.isArray(reports) ? reports : (reports.items || []))
+            .slice()
+            .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0));
+
+        const assessments = dashboardRows.filter(r => reportType(r) === "assessment");
+        const trends = dashboardRows.filter(r => reportType(r) === "trend");
+
+        document.getElementById("total-reports").textContent = dashboardRows.length;
+        document.getElementById("total-assessments").textContent = assessments.length;
+        document.getElementById("total-trends").textContent = trends.length;
+        document.getElementById("last-activity").textContent =
+            dashboardRows.length && dashboardRows[0].generated_at ? formatDate(dashboardRows[0].generated_at) : "—";
+
+        renderDashboardRows();
+    } catch (err) {
+        console.error(err);
+        showDashboardError("Unexpected error while loading dashboard.");
+        document.getElementById("reports-table-body").innerHTML = `<tr><td colspan="6">Unexpected error.</td></tr>`;
     }
+}
 
-    async function loadDashboard() {
-        clearDashboardError();
+document.getElementById("dashboard-search").addEventListener("input", renderDashboardRows);
+document.querySelectorAll("[data-dashboard-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        activeDashboardTab = btn.dataset.dashboardTab;
+        renderDashboardRows();
+    });
+});
 
-        const authed = await requireAuthOrRedirect();
-        if (!authed) return;
-
-        try {
-            const [reportsRes, casesRes] = await Promise.all([
-                apiFetch("/api/reports"),
-                apiFetch("/api/cases"),
-            ]);
-
-            if (!reportsRes.ok) {
-                const errorData = await reportsRes.json().catch(() => ({}));
-                showDashboardError(errorData.detail || "Could not load dashboard data.");
-                document.getElementById("reports-table-body").innerHTML =
-                    `<tr><td colspan="5">Could not load reports.</td></tr>`;
-                return;
-            }
-
-            const reports = await reportsRes.json();
-            const reportList = Array.isArray(reports) ? reports : (reports.items || []);
-
-            const cases = casesRes.ok ? await casesRes.json() : [];
-            const caseList = Array.isArray(cases) ? cases : (cases.items || []);
-            const caseMap = {};
-            caseList.forEach(c => { caseMap[String(c.id)] = c; });
-
-            dashboardRows = reportList
-                .slice()
-                .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0))
-                .map(r => {
-                    const linkedCase = caseMap[String(r.case_id)] || {};
-                    return {
-                        ...r,
-                        display_name: r.display_name || linkedCase.display_name || linkedCase.title || `Case ${safeText(r.case_id)}`,
-                        patient_display_name: r.patient_display_name || linkedCase.patient_display_name || "",
-                        scan_datetime_display: r.scan_datetime_display || (linkedCase.scan_datetime ? formatDate(linkedCase.scan_datetime) : null),
-                    };
-                });
-
-            document.getElementById("total-reports").textContent = dashboardRows.length;
-
-            const caseIds = new Set(dashboardRows.map(r => r.case_id).filter(Boolean));
-            document.getElementById("total-cases").textContent = caseIds.size;
-
-            document.getElementById("last-activity").textContent =
-                dashboardRows.length && dashboardRows[0].generated_at
-                    ? formatDate(dashboardRows[0].generated_at)
-                    : "?";
-
-            renderDashboardRows();
-        } catch (err) {
-            console.error(err);
-            showDashboardError("Unexpected error while loading dashboard.");
-            document.getElementById("reports-table-body").innerHTML =
-                `<tr><td colspan="5">Unexpected error.</td></tr>`;
-        }
-    }
-
-    document.getElementById("dashboard-search").addEventListener("input", renderDashboardRows);
-
-    loadDashboard();
+loadDashboard();
 </script>
 {% endblock %}

@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 from contextlib import asynccontextmanager
 
+from app.api import routes_share
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -17,7 +18,8 @@ from app.api.routes_ui import router as ui_router
 from app.api.routes_settings import router as settings_router
 from app.db.base import Base
 from app.db.session import engine
-
+from app.api.routes_trend_reports import router as trend_reports_router
+from app.api.routes_share_bundles import router as share_bundle_router
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
 APP_ENV = os.getenv("APP_ENV", "development")
@@ -81,6 +83,8 @@ def create_app() -> FastAPI:
     app.include_router(share_router)
     app.include_router(settings_router)
     app.include_router(ui_router)
+    app.include_router(trend_reports_router)
+    app.include_router(share_bundle_router)
 
     # Legacy engine/debug routes
     app.include_router(engine_router)

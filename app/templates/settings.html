@@ -172,7 +172,20 @@
         </div>
     </div>
 </div>
+<div class="card">
+  <h3>Stripe payouts</h3>
+  <p class="muted">
+    Connect your Stripe account to receive patient report and progress-view payments directly.
+    The platform fee is deducted automatically.
+  </p>
 
+  <div id="stripe-connect-status" class="muted">Checking Stripe status…</div>
+
+  <div class="btn-row">
+    <button class="btn" type="button" id="stripe-connect-btn">Connect / update Stripe</button>
+    <button class="btn secondary" type="button" id="stripe-refresh-btn">Refresh status</button>
+  </div>
+</div>
 <div class="card">
     <h3 class="section-title">Contact details</h3>
 
@@ -302,6 +315,42 @@
         setSuccess("Settings saved.");
         await loadSettings();
     }
+    async function loadStripeConnectStatus() {
+        const box = document.getElementById("stripe-connect-status");
+        if (!box) return;
+
+        const res = await fetch("/api/billing/stripe-connect/status");
+        if (!res.ok) {
+            box.textContent = "Could not load Stripe status.";
+            return;
+        }
+
+        const data = await res.json();
+        if (!data.connected) {
+            box.textContent = "Stripe is not connected yet.";
+        } else if (data.can_receive_destination_charges) {
+            box.textContent = "Stripe connected. Payments can be routed directly to your account.";
+        } else {
+            box.textContent = "Stripe connected, but onboarding is not complete yet.";
+        }
+        }
+
+        document.getElementById("stripe-connect-btn")?.addEventListener("click", async () => {
+        const res = await fetch("/api/billing/stripe-connect/account-link", { method: "POST" });
+        const data = await res.json();
+        if (!res.ok) {
+            alert(data.detail || "Could not create Stripe onboarding link.");
+            return;
+        }
+        window.location.href = data.url;
+        });
+
+        document.getElementById("stripe-refresh-btn")?.addEventListener("click", async () => {
+        await fetch("/api/billing/stripe-connect/refresh", { method: "POST" });
+        await loadStripeConnectStatus();
+        });
+
+        loadStripeConnectStatus();
 
     async function uploadBrandAsset(fileInputId, endpoint, hiddenInputId, previewImgId, previewMetaId) {
         clearError();

@@ -1,0 +1,277 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.trend-shell { max-width:1180px; margin:0 auto; }
+.trend-hero { display:flex; justify-content:space-between; gap:16px; align-items:flex-start; flex-wrap:wrap; }
+.trend-badge { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #c7d2fe; background:#eef2ff; color:#3730a3; margin-bottom:8px; }
+.trend-title-main { font-size:30px; line-height:1.1; margin:0 0 8px; }
+.trend-meta, .report-secondary { color:#64748b; line-height:1.5; }
+.trend-section { border:1px solid #e2e8f0; background:#fff; border-radius:18px; padding:16px; margin-top:16px; }
+.trend-section.soft { background:linear-gradient(180deg,#f8fbff 0%,#fff 100%); border-color:#bfdbfe; }
+.trend-section-header { display:flex; justify-content:space-between; align-items:flex-start; gap:12px; flex-wrap:wrap; margin-bottom:12px; }
+.trend-section-label { font-size:10px; font-weight:900; letter-spacing:.08em; text-transform:uppercase; color:#94a3b8; margin-bottom:6px; }
+.trend-section-title { margin:0; font-size:20px; color:#0f172a; }
+.trend-subtitle { color:#64748b; margin-top:4px; line-height:1.4; }
+.trend-collapse-btn { border:1px solid #dbe7f3; background:#fff; color:#334155; border-radius:999px; padding:7px 11px; font-size:13px; cursor:pointer; }
+.trend-section.is-collapsed .trend-section-body { display:none; }
+.metric-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.metric-card { border:1px solid #e5e7eb; border-radius:14px; padding:12px; background:#fff; position:relative; overflow:hidden; }
+.metric-card::before { content:""; position:absolute; left:0; top:0; bottom:0; width:4px; background:#cbd5e1; }
+.metric-label { font-size:11px; color:#64748b; font-weight:900; text-transform:uppercase; letter-spacing:.04em; margin-bottom:6px; }
+.metric-value { font-size:24px; font-weight:900; color:#0f172a; }
+.metric-detail { color:#64748b; font-size:12px; line-height:1.35; margin-top:4px; }
+.clinical-narrative { border:1px solid #bfdbfe; background:#fff; border-radius:14px; padding:14px; margin-bottom:12px; }
+.clinical-narrative-headline { font-weight:900; color:#0f172a; line-height:1.45; margin-bottom:8px; }
+.clinical-warning { margin-top:10px; padding:9px 10px; background:#fffbeb; border:1px solid #fde68a; color:#92400e; border-radius:12px; font-size:12px; }
+.priority-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.priority-card { border:1px solid #e5e7eb; border-left:5px solid #dc2626; border-radius:14px; background:#fff; padding:12px; }
+.priority-card.medium { border-left-color:#f59e0b; }
+.priority-card.low { border-left-color:#94a3b8; }
+.priority-title { font-weight:900; margin-bottom:5px; }
+.priority-detail { color:#475569; font-size:13px; line-height:1.45; }
+.insight-list { display:grid; gap:8px; }
+.insight-item { border:1px solid #e5e7eb; border-left:4px solid #2563eb; background:#fff; border-radius:12px; padding:10px 12px; }
+.insight-item.warning { border-left-color:#dc2626; background:#fff7f7; }
+.insight-title { font-weight:900; color:#0f172a; margin-bottom:4px; }
+.insight-body { color:#475569; font-size:13px; line-height:1.45; }
+.rec-card { border:1px solid #e5e7eb; border-left:5px solid #94a3b8; border-radius:14px; padding:14px; margin-bottom:10px; background:#fff; }
+.rec-card.high { border-left-color:#dc2626; }
+.rec-card.medium { border-left-color:#f59e0b; }
+.rec-title { font-weight:900; color:#0f172a; margin-bottom:4px; }
+.rec-meta { color:#64748b; font-size:12px; margin-bottom:8px; }
+.rec-text { color:#334155; line-height:1.5; }
+.rec-safety { margin-top:10px; color:#92400e; background:#fffbeb; border:1px solid #fde68a; border-radius:12px; padding:9px 11px; font-size:12px; }
+.trend-controls { border:1px solid #e5e7eb; background:#f8fafc; border-radius:14px; padding:12px; margin-bottom:12px; display:grid; grid-template-columns:160px minmax(180px,1fr) minmax(220px,1.2fr) minmax(220px,1.2fr) auto auto; gap:10px; align-items:center; }
+.trend-controls select, .trend-controls input { min-height:34px; border:1px solid #cbd5e1; border-radius:8px; padding:6px 8px; background:#fff; }
+#chart-search { width:100%; }
+#chart-category, #chart-key, #chart-search, #save-marker-btn, #clear-marker-filter-btn { display:none; }
+.recent-marker-row, .top-marker-row { display:flex; gap:8px; flex-wrap:wrap; margin:8px 0 12px; }
+.marker-chip { border:1px solid #e5e7eb; background:#fff; border-radius:999px; padding:5px 9px; font-size:12px; cursor:pointer; }
+.marker-chip:hover { background:#eef2ff; border-color:#c7d2fe; }
+.top-marker-card { border:1px solid #e5e7eb; background:#fff; border-radius:12px; padding:8px 10px; font-size:12px; cursor:pointer; min-width:180px; text-align:left; }
+.top-marker-card strong { display:block; color:#0f172a; font-size:13px; }
+.top-marker-card:hover { border-color:#93c5fd; box-shadow:0 6px 16px rgba(15,23,42,.06); }
+.chart-context { border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; border-radius:14px; padding:11px 12px; margin-bottom:12px; line-height:1.45; font-size:13px; }
+.chart-wrap { width:100%; overflow-x:auto; }
+.chart-svg { width:100%; min-height:320px; display:block; }
+.chart-empty { color:#64748b; padding:18px 0; }
+.trend-table-wrap { max-height:680px; overflow:auto; border:1px solid #e5e7eb; border-radius:12px; }
+.table th { position:sticky; top:0; background:#f8fbff; z-index:1; }
+.sort-header { display:inline-flex; align-items:center; gap:5px; border:0; background:transparent; padding:0; font:inherit; font-weight:900; color:inherit; cursor:pointer; }
+.sort-header:hover { color:#1d4ed8; }
+.sort-indicator { min-width:10px; color:#64748b; font-size:10px; }
+.trend-change-up { color:#b45309; font-weight:800; }
+.trend-change-down { color:#0369a1; font-weight:800; }
+.status-pill { display:inline-flex; border-radius:999px; padding:3px 8px; background:#f1f5f9; color:#334155; font-size:11px; font-weight:800; margin-left:6px; }
+.row-band td { background:#fff7f7; font-weight:700; }
+.row-significant td { background:#fffaf3; }
+.row-muted td { opacity:.62; }
+.row-pulse td { animation: rowPulse 1.2s ease-out 1; }
+@keyframes rowPulse { 0%{ background:#dbeafe; } 100%{ background:inherit; } }
+.category-pill { display:inline-flex; max-width:230px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; border-radius:999px; padding:3px 8px; background:#eef2ff; color:#475569; font-size:11px; font-weight:800; border:0; cursor:pointer; }
+.evidence-note { color:#64748b; font-style:italic; padding:12px; background:#fff; }
+.source-list { display:grid; gap:8px; }
+.source-item { border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; background:#f8fafc; }
+@media(max-width:900px){ .metric-grid,.priority-grid{grid-template-columns:1fr;} .trend-controls{grid-template-columns:1fr;} }
+</style>
+
+<div id="trend-error" class="error" style="display:none;"></div>
+<div class="trend-shell">
+  <div class="card"><div class="trend-hero"><div><div class="trend-badge">Trend report</div><h2 class="trend-title-main" id="trend-title">Loading trend report…</h2><div class="trend-meta" id="trend-meta">Please wait…</div></div><div class="btn-row"><a class="btn secondary" href="/app/reports">All reports</a><a class="btn secondary" id="back-to-workspace" href="#">Report workspace</a></div></div></div>
+
+  <section class="trend-section soft" id="clinical-direction-section"><div class="trend-section-header"><div><div class="trend-section-label">Clinical direction</div><h3 class="trend-section-title">Clinical trend insights</h3><div class="trend-subtitle">A practitioner-first summary of what the trend pattern is pointing toward.</div></div><button class="trend-collapse-btn" data-collapse="clinical-direction-section">Collapse insights</button></div><div class="trend-section-body"><div id="clinical-narrative"></div><div id="top-priorities"></div><div class="metric-grid" id="trend-metrics"></div><div class="insight-list" id="trend-insights"></div></div></section>
+
+  <section class="trend-section" id="recommendations-section"><div class="trend-section-header"><div><div class="trend-section-label">Clinical support</div><h3 class="trend-section-title">Support recommendations</h3><div class="trend-subtitle">Trend-aware considerations based on the active recommendation mode. Practitioner review required.</div></div><button class="trend-collapse-btn" data-collapse="recommendations-section">Collapse recommendations</button></div><div class="trend-section-body" id="recommendations-list"></div></section>
+
+  <section class="trend-section" id="chart-section"><div class="trend-section-header"><div><div class="trend-section-label">Visualization</div><h3 class="trend-section-title" id="chart-title">Health Index trend</h3><div class="trend-subtitle" id="chart-subtitle">Overall functional balance movement across selected assessments.</div></div><button class="trend-collapse-btn" data-collapse="chart-section">Collapse chart</button></div><div class="trend-section-body"><div id="chart-context" class="chart-context">Select Health Index, a clinical area, a system, or a marker to review longitudinal movement.</div><div class="trend-controls"><select id="chart-type"><option value="health">Health Index</option><option value="area">Clinical area</option><option value="system">System</option><option value="marker">Marker</option></select><select id="chart-category"></select><input id="chart-search" list="chart-search-list" placeholder="Type to search…"><datalist id="chart-search-list"></datalist><select id="chart-key"></select><button class="btn secondary" id="save-marker-btn" type="button">Save marker</button><button class="btn secondary" id="clear-marker-filter-btn" type="button">Clear evidence filter</button></div><div id="recent-marker-row" class="recent-marker-row" style="display:none;"></div><div id="top-marker-row" class="top-marker-row" style="display:none;"></div><div class="metric-grid" style="margin-bottom:12px;"><div class="metric-card"><div class="metric-label">First</div><div class="metric-value" id="trend-first">—</div></div><div class="metric-card"><div class="metric-label">Latest</div><div class="metric-value" id="trend-latest">—</div></div><div class="metric-card"><div class="metric-label">Change</div><div class="metric-value" id="trend-change">—</div></div><div class="metric-card"><div class="metric-label">Scans shown</div><div class="metric-value" id="trend-point-count">—</div><div class="metric-detail">Number of assessments plotted</div></div></div><div id="trend-meta-panel" class="trend-meta" style="margin:12px 0; display:none;"></div><div class="chart-wrap"><svg id="trend-chart" class="chart-svg" viewBox="0 0 900 340" preserveAspectRatio="none"></svg><div id="trend-chart-empty" class="chart-empty" style="display:none;">No chart data available.</div></div></div></section>
+
+  <section class="trend-section" id="marker-section"><div class="trend-section-header"><div><div class="trend-section-label">Marker evidence</div><h3 class="trend-section-title">Marker change summary</h3><div class="trend-subtitle" id="marker-summary-note">Significant marker changes and classification-band movement.</div></div><div class="btn-row"><label class="muted" style="display:flex; gap:6px; align-items:center;"><input type="checkbox" id="show-all-markers">Show all tracked markers</label><button class="btn secondary" id="clear-evidence-filter-btn" type="button" style="display:none;">Clear filter</button><button class="trend-collapse-btn" data-collapse="marker-section">Collapse evidence</button></div></div><div class="trend-section-body"><div class="trend-table-wrap"><table class="table"><thead><tr><th><button class="sort-header" data-sort="label">Marker <span class="sort-indicator" data-sort-indicator="label"></span></button></th><th><button class="sort-header" data-sort="category">Category <span class="sort-indicator" data-sort-indicator="category"></span></button></th><th><button class="sort-header" data-sort="latest">Latest <span class="sort-indicator" data-sort-indicator="latest"></span></button></th><th><button class="sort-header" data-sort="delta">Change <span class="sort-indicator" data-sort-indicator="delta">▼</span></button></th><th><button class="sort-header" data-sort="direction">Direction <span class="sort-indicator" data-sort-indicator="direction"></span></button></th><th><button class="sort-header" data-sort="status">Status <span class="sort-indicator" data-sort-indicator="status"></span></button></th></tr></thead><tbody id="marker-summary-body"><tr><td colspan="6" class="muted">Loading…</td></tr></tbody></table></div></div></section>
+
+  <section class="trend-section is-collapsed" id="sources-section"><div class="trend-section-header"><div><div class="trend-section-label">Lineage</div><h3 class="trend-section-title">Source assessments</h3><div class="trend-subtitle">The assessment reports used to generate this trend report.</div></div><button class="trend-collapse-btn" data-collapse="sources-section">Expand sources</button></div><div class="trend-section-body"><div class="source-list" id="source-list"></div></div></section>
+</div>
+
+<script>
+const trendReportId = "{{ trend_report_id }}";
+let trendData = null;
+let chartRegistry = { health: [], areas: {}, systems: {}, markers: {}, markerMeta: {}, categories: {} };
+let markerRowsAll = [];
+let markerSort = { key: "delta", dir: "desc" };
+let markerFilter = { label: null, category: null };
+
+/* =========================
+   SAFE MARKER INDEX LAYER
+========================= */
+
+let markerIndex = {};
+
+function getMarkerIndex() {
+    return (trendData && trendData.trend && trendData.trend.marker_index) || {};
+}
+
+
+
+/* =========================
+   DROPDOWNS
+========================= */
+
+function populateMarkerDropdown() {
+    const select = document.getElementById("markerSelect");
+    if (!select) return;
+
+    select.innerHTML = "";
+
+    Object.values(markerIndex).forEach(m => {
+        const opt = document.createElement("option");
+        opt.value = m.key;
+        opt.textContent = m.label;
+        select.appendChild(opt);
+    });
+}
+
+
+function filterMarkersByCategory(category) {
+    const select = document.getElementById("markerSelect");
+    if (!select) return;
+
+    select.innerHTML = "";
+
+    Object.values(markerIndex)
+        .filter(m => category === "ALL" || m.category === category)
+        .forEach(m => {
+            const opt = document.createElement("option");
+            opt.value = m.key;
+            opt.textContent = m.label;
+            select.appendChild(opt);
+        });
+}
+
+
+/* =========================
+   MARKER DATA ACCESS
+========================= */
+
+function getMarkerData(key) {
+    if (!key) return null;
+
+    if (markerIndex[key]) {
+        return markerIndex[key];
+    }
+
+    console.warn("Missing marker:", key);
+    return null;
+}
+
+
+/* =========================
+   CHART RENDERING
+========================= */
+
+function renderMarkerChart(markerKey) {
+    const marker = getMarkerIndex()[key];
+
+    if (!marker || !marker.points || marker.points.length === 0) {
+        showNoData();
+        updateStats(null);
+        return;
+    }
+
+    renderChart(marker.points);
+    updateStats(marker);
+}
+
+
+function updateStats(marker) {
+    const firstEl = document.getElementById("stat-first");
+    const latestEl = document.getElementById("stat-latest");
+    const changeEl = document.getElementById("stat-change");
+    const pointsEl = document.getElementById("stat-points");
+
+    if (!marker) {
+        firstEl.textContent = "?";
+        latestEl.textContent = "?";
+        changeEl.textContent = "?";
+        pointsEl.textContent = "?";
+        return;
+    }
+
+    const pts = marker.points || [];
+
+    firstEl.textContent = pts[0]?.value ?? "?";
+    latestEl.textContent = pts[pts.length - 1]?.value ?? "?";
+
+    if (pts.length >= 2) {
+        const change = pts[pts.length - 1].value - pts[0].value;
+        changeEl.textContent = change.toFixed(3);
+    } else {
+        changeEl.textContent = "?";
+    }
+
+    // ? FIXED BUG (was always 2)
+    pointsEl.textContent = pts.length;
+}
+
+
+/* =========================
+   TABLE FILTER SYNC
+========================= */
+
+function filterMarkerTable(selectedKey) {
+    const rows = document.querySelectorAll(".marker-row");
+
+    rows.forEach(row => {
+        const key = row.dataset.markerKey;
+
+        if (!selectedKey || key === selectedKey) {
+            row.style.display = "";
+        } else {
+            row.style.display = "none";
+        }
+    });
+}
+
+
+/* =========================
+   EVENT HOOKS
+========================= */
+
+document.addEventListener("DOMContentLoaded", () => {
+    populateMarkerDropdown();
+
+    const select = document.getElementById("markerSelect");
+
+    if (select) {
+        select.addEventListener("change", (e) => {
+            const key = e.target.value;
+
+            renderMarkerChart(key);
+            filterMarkerTable(key);
+        });
+    }
+});
+function showTrendError(message){const box=document.getElementById("trend-error");box.textContent=message;box.style.display="block";}
+function safeValue(value,fallback="—"){if(value===null||value===undefined||value==="")return fallback;if(typeof value==="object"){const picked=value.label??value.title??value.name??value.value??value.level??value.summary??value.detail;if(picked!==null&&picked!==undefined&&picked!=="")return safeValue(picked,fallback);try{return safeText(JSON.stringify(value));}catch(e){return fallback;}}return safeText(value);}
+function formatNumber(v){const n=Number(v);if(!Number.isFinite(n))return safeValue(v??"—");return Number.isInteger(n)?String(n):n.toFixed(3).replace(/\.?0+$/,"");}
+function deltaText(v){const n=Number(v);if(!Number.isFinite(n))return safeValue(v??"—");return `${n>0?"+":""}${formatNumber(n)}`;}
+function extractArray(...candidates){for(const c of candidates)if(Array.isArray(c)&&c.length)return c;return [];}function cleanTrendLabel(label){return String(label||"").replace(/\s+Significant\s+Band$/i,"").replace(/\s+Significant$/i,"").replace(/\s+Coefficient$/i,"").replace(/\s+Index$/i,"").replace(/\s+/g," ").trim();}function slugish(value){return String(value||"").trim().toLowerCase().replace(/[^a-z0-9]+/g,"_").replace(/^_+|_+$/g,"");}
+function categoryFromTrendItem(item){return item?.category||item?.category_name||item?.qrma_category||item?.system_category||item?.system_group||item?.group||item?.clinical_area||item?.area||item?.system||item?.source_category||"Uncategorised";}function absoluteDelta(item){const n=Number(item?.delta);return Number.isFinite(n)?Math.abs(n):0;}function statusClass(item){if(item?.band_changed)return"row-band";if(item?.is_meaningful)return"row-significant";return"";}function severityToColor(severity){const s=String(severity||"").toLowerCase();if(s.includes("severe")||s.includes("marked"))return"#dc2626";if(s.includes("moderate"))return"#f97316";if(s.includes("mild")||s.includes("borderline"))return"#eab308";if(s.includes("within")||s.includes("normal")||s.includes("optimal"))return"#16a34a";return"#2563eb";}function numericValue(p){if(typeof p==="number")return p;if(!p||typeof p!=="object")return NaN;return Number(p.value??p.score??p.latest??p.y??p.health_index??p.healthIndex??p.avg??p.average??p.result??p.position);}function pointerValue(p){if(!p||typeof p!=="object")return null;const raw=p.status_pointer_position??p.pointer??p.status_position??p.band_position;if(raw===null||raw===undefined||raw==="")return null;const n=Number(String(raw).replace("%",""));return Number.isFinite(n)?n:null;}
+function renderClinicalDirection(data){const trend=data.trend||{};const intelligence=trend.trend_intelligence||trend.intelligence||{};const client=trend.client_view||{};const narrative=intelligence.clinical_narrative||intelligence.narrative||trend.clinical_narrative||{};const topPriorities=extractArray(intelligence.top_priorities,trend.top_clinical_priorities,trend.top_priorities);const insights=extractArray(intelligence.insights,trend.insights);const recommendations=extractArray(intelligence.recommendations,intelligence.support_recommendations,trend.recommendations,trend.support_recommendations,trend.ai_recommendations,trend.trend_recommendations);const summaryText=narrative.summary||narrative.headline||client.summary||data.summary||"Trend report generated from selected QRMA assessment reports.";document.getElementById("clinical-narrative").innerHTML=`<div class="clinical-narrative"><div class="clinical-narrative-headline">${safeValue(summaryText)}</div>${narrative.detail||narrative.details||narrative.body?`<div class="priority-detail">${safeValue(narrative.detail||narrative.details||narrative.body)}</div>`:""}<div class="clinical-warning">${safeValue(narrative.review_note||"AI-assisted trend summary for practitioner review only. Confirm against symptoms, history, medications, allergies, and clinical judgement before making recommendations.")}</div></div>`;document.getElementById("top-priorities").innerHTML=Array.isArray(topPriorities)&&topPriorities.length?`<div class="priority-grid" style="margin:12px 0;">${topPriorities.slice(0,3).map((p,i)=>`<div class="priority-card ${String(p.priority||"").toLowerCase()}"><div class="metric-label">Priority ${i+1}</div><div class="priority-title">${safeText(p.title||p.name||p.category||"Priority area")}</div><div class="priority-detail">${safeValue(p.reason||p.summary||p.detail||"")}</div></div>`).join("")}</div>`:"";const summary=trend.summary||{};const tracked=summary.tracked_markers||(trend.trend_summary||[]).length||"—";const significant=summary.significant_changes||(trend.trend_summary||[]).filter(x=>x.is_meaningful).length||"—";const bandChanges=summary.band_changes||(trend.trend_summary||[]).filter(x=>x.band_changed).length||"—";const hiPoints=Array.isArray(trend.health_index)?trend.health_index:[];const hiFirst=hiPoints[0]?.value;const hiLatest=hiPoints[hiPoints.length-1]?.value;const hiDelta=Number.isFinite(Number(hiLatest))&&Number.isFinite(Number(hiFirst))?Number(hiLatest)-Number(hiFirst):null;document.getElementById("trend-metrics").innerHTML=`<div class="metric-card"><div class="metric-label">Tracked markers</div><div class="metric-value">${safeText(tracked)}</div><div class="metric-detail">${safeText(significant)} significant · ${safeText(bandChanges)} band changes</div></div><div class="metric-card"><div class="metric-label">Source reports</div><div class="metric-value">${safeText((data.source_report_ids||[]).length)}</div><div class="metric-detail">Assessment reports used</div></div><div class="metric-card"><div class="metric-label">Health Index</div><div class="metric-value">${formatNumber(hiLatest)}</div><div class="metric-detail">Change ${hiDelta===null?"—":deltaText(hiDelta)}</div></div><div class="metric-card"><div class="metric-label">Confidence</div><div class="metric-value">${safeValue(intelligence.confidence?.label||intelligence.confidence||client.confidence||"Review")}</div><div class="metric-detail">${safeValue(intelligence.confidence_detail||intelligence.confidence?.detail||client.confidence_detail||"Pattern confidence should be confirmed clinically.")}</div></div>`;const insightRows=insights.length?insights:[{title:"Health Index movement",body:hiDelta===null?"Health Index movement is not available.":`Health Index changed by ${deltaText(hiDelta)} across the selected reports.`},{title:"Band changes",body:`${safeText(bandChanges)} marker classification-band change(s) require practitioner review.`,tone:"warning"}];document.getElementById("trend-insights").innerHTML=insightRows.slice(0,8).map(item=>`<div class="insight-item ${String(item.tone||item.priority||"").includes("warning")?"warning":""}"><div class="insight-title">${safeText(item.title||item.name||"Trend insight")}</div><div class="insight-body">${safeValue(item.body||item.summary||item.detail||item.reason||"")}</div></div>`).join("");renderRecommendations(recommendations,topPriorities);}
+function renderRecommendations(recommendations,priorities=[]){const list=Array.isArray(recommendations)?recommendations:[];const box=document.getElementById("recommendations-list");if(!list.length){if(priorities.length){box.innerHTML=`<div class="evidence-note">No product/protocol recommendations were stored with this trend report yet. The clinical priority areas below can still guide practitioner discussion.</div>${priorities.slice(0,5).map(p=>`<div class="rec-card ${String(p.priority||'medium').toLowerCase()}"><div class="rec-title">${safeText(p.title||p.name||p.category||'Clinical priority')}</div><div class="rec-text">${safeValue(p.reason||p.summary||p.detail||'')}</div><div class="rec-safety">For practitioner-guided discussion only, not self-prescribing advice.</div></div>`).join("")}`;return;}box.innerHTML=`<div class="evidence-note">No stored support recommendations were found for this trend report. Regenerate this trend report after the trend recommendation engine is enabled to store protocol-level suggestions.</div>`;return;}box.innerHTML=list.map(rec=>{const priority=String(rec.priority||"low").toLowerCase();return`<div class="rec-card ${priority}"><div class="rec-title">${safeText(rec.name||rec.title||"Support consideration")}</div><div class="rec-meta">${safeText((rec.priority||"review")+" priority")}</div><div class="rec-text">${safeValue(rec.narrative||rec.summary||rec.reason||rec.detail||"")}</div>${rec.evidence?`<div class="rec-meta" style="margin-top:8px;"><strong>Evidence:</strong> ${safeText(rec.evidence)}</div>`:""}<div class="rec-safety">${safeValue(rec.review_note||rec.safety_note||"For practitioner-guided discussion only, not self-prescribing advice.")}</div></div>`;}).join("");}
+function normalisePoints(points){return(points||[]).map((p,index)=>{if(typeof p==="number")return{label:String(index+1),value:p};if(!p||typeof p!=="object")return null;const v=numericValue(p);if(!Number.isFinite(v))return null;return{...p,label:p.label||p.scan_date||p.scan_datetime||p.generated_at||p.date||p.report_date||String(index+1),value:v};}).filter(Boolean);}function addSeries(target,key,points,meta={}){const clean=String(key||"").trim();if(!clean||!Array.isArray(points)||!points.length)return;target[clean]=points;chartRegistry.markerMeta[clean]={...(chartRegistry.markerMeta[clean]||{}),...meta};}function addObjectMapSeries(target,obj,metaBuilder=()=>({})){if(!obj||typeof obj!=="object"||Array.isArray(obj))return;Object.entries(obj).forEach(([key,value])=>{if(Array.isArray(value))addSeries(target,key,value,metaBuilder(key,value));else if(value&&typeof value==="object"){const points=value.points||value.values||value.series||value.trend||value.history||value.data;addSeries(target,value.label||value.name||key,points,{...metaBuilder(key,points),...value});}});}function buildChartRegistry(trend,data={}){chartRegistry={health:[],areas:{},systems:{},markers:{},markerMeta:{},categories:{}};chartRegistry.health=extractArray(trend.health_index,trend.healthIndex,trend.health_index_trend,trend.charts?.health_index,trend.chart_data?.health_index,data.health_index_points,data.health_index);addObjectMapSeries(chartRegistry.areas,trend.system_group_averages||trend.clinical_areas||trend.clinical_area_trends||trend.groups||trend.group_trends);addObjectMapSeries(chartRegistry.systems,trend.systems||trend.system_trends||{});addObjectMapSeries(chartRegistry.markers,trend.markers||trend.marker_trends||{},(key,value)=>({key}));extractArray(trend.trend_summary,trend.marker_changes,trend.marker_evidence).forEach(item=>{const label=cleanTrendLabel(item.label||item.key||item.marker||item.name);const key=Object.keys(chartRegistry.markers).find(k=>slugish(k)===slugish(label))||label;chartRegistry.markerMeta[key]={...(chartRegistry.markerMeta[key]||{}),...item,category:categoryFromTrendItem(item),label};const cat=categoryFromTrendItem(item);if(!chartRegistry.categories[cat])chartRegistry.categories[cat]=[];if(!chartRegistry.categories[cat].includes(key))chartRegistry.categories[cat].push(key);const points=item.points||item.values||item.series||item.trend||item.history||item.data;if(Array.isArray(points)&&points.length&&!chartRegistry.markers[key])addSeries(chartRegistry.markers,key,points,item);});Object.entries(chartRegistry.markers).forEach(([key,points])=>{const meta=chartRegistry.markerMeta[key]||{};const cat=meta.category||meta.qrma_category||meta.system_category||"Uncategorised";if(!chartRegistry.categories[cat])chartRegistry.categories[cat]=[];if(!chartRegistry.categories[cat].includes(key))chartRegistry.categories[cat].push(key);});}
+function sortedKeys(obj){return Object.keys(obj||{}).sort((a,b)=>cleanTrendLabel(a).localeCompare(cleanTrendLabel(b)));}function setSelectOptions(select,keys,labelFn=cleanTrendLabel){select.innerHTML=keys.map(k=>`<option value="${safeText(k)}">${safeText(labelFn(k))}</option>`).join("");}
+function populateChartControls(){const type=document.getElementById("chart-type").value;const category=document.getElementById("chart-category");const search=document.getElementById("chart-search");const key=document.getElementById("chart-key");const save=document.getElementById("save-marker-btn");const clear=document.getElementById("clear-marker-filter-btn");category.style.display=search.style.display=key.style.display=save.style.display=clear.style.display="none";if(type==="health"){drawChart(chartRegistry.health||[],{mode:"score",title:"Health Index trend",subtitle:"Overall functional balance movement across selected assessments."});return;}if(type==="area"){const keys=sortedKeys(chartRegistry.areas);setSelectOptions(key,keys);key.style.display="inline-block";drawSelectedChart();return;}if(type==="system"){const keys=sortedKeys(chartRegistry.systems);setSelectOptions(key,keys);key.style.display="inline-block";drawSelectedChart();return;}if(type==="marker"){const categories=["All QRMA categories",...Object.keys(chartRegistry.categories).sort()];setSelectOptions(category,categories,x=>x);category.style.display=search.style.display=key.style.display=save.style.display="inline-block";clear.style.display=markerFilter.label||markerFilter.category?"inline-block":"none";populateMarkerOptions();renderRecentMarkers();renderTopMarkerCards();drawSelectedChart();}}
+function markerKeysForCurrentCategory(){const selected=document.getElementById("chart-category").value;if(!selected||selected==="All QRMA categories")return sortedKeys(chartRegistry.markers);return(chartRegistry.categories[selected]||[]).slice().sort((a,b)=>cleanTrendLabel(a).localeCompare(cleanTrendLabel(b)));}function populateMarkerOptions(preferred=null){const keys=markerKeysForCurrentCategory();setSelectOptions(document.getElementById("chart-key"),keys);document.getElementById("chart-search-list").innerHTML=keys.map(k=>`<option value="${safeText(cleanTrendLabel(k))}">`).join("");if(preferred){const match=keys.find(k=>slugish(k)===slugish(preferred)||slugish(cleanTrendLabel(k))===slugish(preferred));if(match)document.getElementById("chart-key").value=match;}}
+function selectMarker(key,applyEvidence=true){document.getElementById("chart-type").value="marker";populateChartControls();populateMarkerOptions(key);const match=sortedKeys(chartRegistry.markers).find(k=>slugish(k)===slugish(key)||slugish(cleanTrendLabel(k))===slugish(key));if(match)document.getElementById("chart-key").value=match;drawSelectedChart();if(applyEvidence)applyMarkerEvidenceFilter(document.getElementById("chart-key").value);}function drawSelectedChart(){const type=document.getElementById("chart-type").value;const key=document.getElementById("chart-key").value;if(type==="area")return drawChart(chartRegistry.areas[key]||[],{mode:"score",title:cleanTrendLabel(key)||"Clinical area",subtitle:"Average score movement for this clinical area."});if(type==="system")return drawChart(chartRegistry.systems[key]||[],{mode:"score",title:cleanTrendLabel(key)||"System",subtitle:"System score movement across selected scans."});if(type==="marker")return drawChart(chartRegistry.markers[key]||[],{mode:"marker",title:cleanTrendLabel(key)||"Marker",subtitle:"Marker position/status movement across selected scans.",key});drawChart(chartRegistry.health||[],{mode:"score",title:"Health Index trend",subtitle:"Overall functional balance movement across selected assessments."});}
+function renderRecentMarkers(){const row=document.getElementById("recent-marker-row");const saved=JSON.parse(localStorage.getItem("trend_recent_markers")||"[]").filter(k=>chartRegistry.markers[k]);if(!saved.length){row.style.display="none";row.innerHTML="";return;}row.style.display="flex";row.innerHTML=`<span class="muted" style="align-self:center;">Recent markers:</span>`+saved.slice(0,8).map(k=>`<button type="button" class="marker-chip" data-marker="${safeText(k)}">${safeText(cleanTrendLabel(k))}</button>`).join("");row.querySelectorAll("[data-marker]").forEach(btn=>btn.addEventListener("click",()=>selectMarker(btn.dataset.marker)));}function saveRecentMarker(key){if(!key)return;const saved=JSON.parse(localStorage.getItem("trend_recent_markers")||"[]").filter(k=>k!==key);saved.unshift(key);localStorage.setItem("trend_recent_markers",JSON.stringify(saved.slice(0,12)));renderRecentMarkers();}
+function renderTopMarkerCards(){const row=document.getElementById("top-marker-row");const top=markerRowsAll.filter(x=>x.has_trend&&(x.is_meaningful||x.band_changed)).sort((a,b)=>absoluteDelta(b)-absoluteDelta(a)).slice(0,3);if(!top.length){row.style.display="none";row.innerHTML="";return;}row.style.display="flex";row.innerHTML=top.map((item,i)=>{const label=cleanTrendLabel(item.label||item.key||item.marker||item.name);return`<button type="button" class="top-marker-card" data-marker="${safeText(label)}"><span class="muted">Top marker ${i+1}</span><strong>${safeText(label)}</strong><span>${deltaText(item.delta)} · ${safeText(categoryFromTrendItem(item))}</span></button>`;}).join("");row.querySelectorAll("[data-marker]").forEach(btn=>btn.addEventListener("click",()=>selectMarker(btn.dataset.marker)));}
+function applyMarkerEvidenceFilter(label){markerFilter.label=cleanTrendLabel(label||"");markerFilter.category=null;document.getElementById("clear-evidence-filter-btn").style.display="inline-block";document.getElementById("clear-marker-filter-btn").style.display="inline-block";renderMarkerSummary((trendData&&trendData.trend)||{});const section=document.getElementById("marker-section");if(section)section.scrollIntoView({behavior:"smooth",block:"start"});}function clearEvidenceFilter(){markerFilter={label:null,category:null};document.getElementById("clear-evidence-filter-btn").style.display="none";document.getElementById("clear-marker-filter-btn").style.display="none";renderMarkerSummary((trendData&&trendData.trend)||{});}
+function normalisePoints(points){return(points||[]).map((p,index)=>{if(typeof p==="number")return{label:String(index+1),value:p};if(!p||typeof p!=="object")return null;const v=numericValue(p);if(!Number.isFinite(v))return null;return{...p,label:p.label||p.scan_date||p.scan_datetime||p.generated_at||p.date||p.report_date||String(index+1),value:v};}).filter(Boolean);}
+function drawChart(points,options={}){const svg=document.getElementById("trend-chart");const empty=document.getElementById("trend-chart-empty");const mode=options.mode||"score";const normalized=normalisePoints(points);document.getElementById("chart-title").textContent=options.title||"Trend";document.getElementById("chart-subtitle").textContent=options.subtitle||"Longitudinal movement across selected assessments.";if(!normalized.length){svg.innerHTML="";empty.style.display="block";["trend-first","trend-latest","trend-change","trend-point-count"].forEach(id=>document.getElementById(id).textContent="—");document.getElementById("trend-meta-panel").style.display="none";return;}empty.style.display="none";const w=900,h=340,padL=70,padR=28,padT=28,padB=44;const plotValues=normalized.map(p=>mode==="marker"&&pointerValue(p)!==null?pointerValue(p):p.value);let min=mode==="marker"?0:Math.min(...plotValues,0);let max=mode==="marker"?100:Math.max(...plotValues,100);if(min===max){min-=1;max+=1;}const x=i=>padL+(normalized.length===1?(w-padL-padR)/2:(i/(normalized.length-1))*(w-padL-padR));const y=v=>padT+((max-v)/(max-min))*(h-padT-padB);const coords=normalized.map((p,i)=>({...p,plotValue:mode==="marker"&&pointerValue(p)!==null?pointerValue(p):p.value,x:x(i)}));coords.forEach(c=>c.y=y(c.plotValue));const path=coords.map((p,i)=>`${i===0?"M":"L"} ${p.x} ${p.y}`).join(" ");let bands="",grid="";if(mode==="marker"){const zones=[{from:100,to:88,color:"#fee2e2",label:"Markedly elevated"},{from:88,to:74,color:"#fef3c7",label:"Moderately elevated"},{from:74,to:58,color:"#dbeafe",label:"Mildly elevated"},{from:58,to:42,color:"#dcfce7",label:"Within range"},{from:42,to:26,color:"#dbeafe",label:"Mildly reduced"},{from:26,to:12,color:"#fef3c7",label:"Moderately reduced"},{from:12,to:0,color:"#fee2e2",label:"Markedly reduced"}];bands=zones.map(z=>{const y1=y(z.from),y2=y(z.to);const top=Math.min(y1,y2),height=Math.abs(y2-y1);return`<rect x="${padL}" y="${top}" width="${w-padL-padR}" height="${height}" fill="${z.color}" opacity="0.78"></rect><text x="${w-padR-8}" y="${top+17}" text-anchor="end" font-size="12" fill="#64748b">${z.label}</text>`;}).join("");const ticks=[{value:94,label:"High"},{value:82,label:"Moderate ↑"},{value:66,label:"Mild ↑"},{value:50,label:"Optimal"},{value:34,label:"Mild ↓"},{value:18,label:"Moderate ↓"},{value:6,label:"Low"}];grid=ticks.map(t=>`<line x1="${padL}" x2="${w-padR}" y1="${y(t.value)}" y2="${y(t.value)}" stroke="#cbd5e1" opacity=".5"/><text x="${padL-10}" y="${y(t.value)+4}" text-anchor="end" fill="#64748b" font-size="12">${t.label}</text>`).join("");}else{const gridVals=[max,min+(max-min)*0.75,min+(max-min)*0.5,min+(max-min)*0.25,min];grid=gridVals.map(g=>`<line x1="${padL}" x2="${w-padR}" y1="${y(g)}" y2="${y(g)}" stroke="#e5e7eb"/><text x="${padL-10}" y="${y(g)+4}" text-anchor="end" fill="#64748b" font-size="12">${formatNumber(g)}</text>`).join("");}svg.innerHTML=`<rect x="0" y="0" width="${w}" height="${h}" fill="white"></rect>${bands}${grid}<path d="${path}" fill="none" stroke="#2563eb" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>${coords.map(p=>{const color=mode==="marker"?(p.color||severityToColor(p.severity||p.status)):"#2563eb";return`<circle cx="${p.x}" cy="${p.y}" r="7" fill="${color}" stroke="white" stroke-width="2"><title>${safeText(p.label)}: ${formatNumber(p.value)}${p.severity?" · "+safeText(p.severity):""}</title></circle>`;}).join("")}`;const first=normalized[0].value;const latest=normalized[normalized.length-1].value;document.getElementById("trend-first").textContent=formatNumber(first);document.getElementById("trend-latest").textContent=formatNumber(latest);document.getElementById("trend-change").textContent=deltaText(latest-first);document.getElementById("trend-point-count").textContent=String(normalized.length);showTrendMeta(normalized,mode);if(mode==="marker"&&options.key)saveRecentMarker(options.key);}function showTrendMeta(points,mode){const panel=document.getElementById("trend-meta-panel");if(!points||!points.length||mode!=="marker"){panel.style.display="none";panel.innerHTML="";return;}const latest=points[points.length-1];const first=points[0];const ref=[...points].reverse().find(p=>p.range||p.severity||p.unit||p.status)||latest;const severity=latest.severity||latest.status||ref.severity||ref.status;const range=latest.range||ref.range;const unit=latest.unit||ref.unit;const color=latest.color||ref.color||severityToColor(severity);const change=Number(latest.value)-Number(first.value);const bits=[`<strong>Latest:</strong> ${formatNumber(latest.value)}${unit?" "+safeText(unit):""}`,range?`<strong>Range:</strong> ${safeText(range)}`:"",severity?`<strong>Status:</strong> <span style="color:${color}; font-weight:800;">${safeText(String(severity).replaceAll("_"," "))}</span>`:"",`<strong>Change:</strong> ${points.length>=2?deltaText(change):"baseline only"}`].filter(Boolean);panel.style.display="block";panel.innerHTML=bits.join(" &nbsp; · &nbsp; ");}
+function compareMarkerRows(a,b,key){if(key==="label")return cleanTrendLabel(a.label||a.key).localeCompare(cleanTrendLabel(b.label||b.key));if(key==="category")return categoryFromTrendItem(a).localeCompare(categoryFromTrendItem(b));if(key==="latest")return(Number(a.latest)||0)-(Number(b.latest)||0);if(key==="delta")return absoluteDelta(a)-absoluteDelta(b);if(key==="direction")return String(a.direction||"").localeCompare(String(b.direction||""));if(key==="status")return String(a.status||"").localeCompare(String(b.status||""));return absoluteDelta(a)-absoluteDelta(b);}function updateSortIndicators(){document.querySelectorAll("[data-sort-indicator]").forEach(el=>{const key=el.getAttribute("data-sort-indicator");el.textContent=key===markerSort.key?(markerSort.dir==="asc"?"▲":"▼"):"";});}
+function renderMarkerSummary(trend){const body=document.getElementById("marker-summary-body");const showAll=document.getElementById("show-all-markers").checked;markerRowsAll=extractArray(trend.trend_summary,trend.marker_changes,trend.marker_evidence).slice();let rows=markerRowsAll.slice();if(!showAll)rows=rows.filter(item=>item.is_meaningful||item.band_changed||item.has_trend);if(markerFilter.label)rows=rows.filter(item=>slugish(cleanTrendLabel(item.label||item.key||item.marker||item.name))===slugish(markerFilter.label));if(markerFilter.category)rows=rows.filter(item=>slugish(categoryFromTrendItem(item))===slugish(markerFilter.category));rows.sort((a,b)=>{const bandA=a.band_changed?1:0,bandB=b.band_changed?1:0;const sigA=a.is_meaningful?1:0,sigB=b.is_meaningful?1:0;if(markerSort.key==="delta"){if(bandA!==bandB)return bandB-bandA;if(sigA!==sigB)return sigB-sigA;}const base=compareMarkerRows(a,b,markerSort.key);return markerSort.dir==="asc"?base:-base;});updateSortIndicators();const filterText=markerFilter.label?` Filtered to marker: ${cleanTrendLabel(markerFilter.label)}.`:markerFilter.category?` Filtered to category: ${markerFilter.category}.`:"";document.getElementById("marker-summary-note").textContent=`Showing ${rows.length} of ${markerRowsAll.length} tracked markers.${filterText}`;if(!rows.length){body.innerHTML=`<tr><td colspan="6" class="muted">No marker trend evidence available.</td></tr>`;return;}body.innerHTML=rows.map(item=>{const label=cleanTrendLabel(item.label||item.key||item.marker||item.name);const category=categoryFromTrendItem(item);const direction=item.direction==="up"?"↑":item.direction==="down"?"↓":"→";const changeClass=item.direction==="up"?"trend-change-up":item.direction==="down"?"trend-change-down":"";const isMuted=showAll&&!(item.is_meaningful||item.band_changed||item.has_trend);return`<tr class="${statusClass(item)} ${isMuted?"row-muted":""}" data-marker="${safeText(label)}" data-category="${safeText(category)}"><td>${safeText(label)}${item.band_changed?` <span class="status-pill">Band changed</span>`:item.is_meaningful?` <span class="status-pill">Significant</span>`:""}</td><td><button type="button" class="category-pill" data-category-filter="${safeText(category)}">${safeText(category)}</button></td><td>${formatNumber(item.latest)}</td><td class="${changeClass}">${deltaText(item.delta)}</td><td class="${changeClass}">${direction}</td><td>${safeText(item.status||"—")}</td></tr>`;}).join("");body.querySelectorAll("[data-marker]").forEach(row=>row.addEventListener("click",e=>{if(e.target&&e.target.dataset.categoryFilter)return;selectMarker(row.dataset.marker,false);}));body.querySelectorAll("[data-category-filter]").forEach(btn=>btn.addEventListener("click",e=>{e.stopPropagation();markerFilter={label:null,category:btn.dataset.categoryFilter};document.getElementById("clear-evidence-filter-btn").style.display="inline-block";renderMarkerSummary((trendData&&trendData.trend)||{});}));}
+async function renderSources(ids){const box=document.getElementById("source-list");const list=Array.isArray(ids)?ids:[];if(!list.length){box.innerHTML=`<div class="evidence-note">No source reports recorded.</div>`;return;}const rows=[];for(const id of list){try{const res=await apiFetch(`/api/reports/${id}`);const item=await res.json();if(res.ok)rows.push(item);}catch(e){}}box.innerHTML=rows.length?rows.map(item=>`<div class="source-item"><strong>${safeText(item.display_name||"Assessment report")}</strong><div class="report-secondary">Scan: ${safeText(item.scan_datetime_display||"—")} · Generated: ${formatDate(item.generated_at)} · <a class="link" href="/app/reports/${item.id}">Open source</a></div></div>`).join(""):`<div class="evidence-note">${list.length} source report IDs recorded.</div>`;}
+async function loadTrendReport(){const authed=await requireAuthOrRedirect();if(!authed)return;try{const response=await apiFetch(`/api/trend-reports/${trendReportId}`);const data=await response.json().catch(()=>({}));if(!response.ok){showTrendError(data.detail||"Could not load trend report.");return;}trendData=data;const trend=data.trend||{};document.getElementById("trend-title").textContent=data.display_name||"Trend report";document.getElementById("trend-meta").textContent=`Generated ${formatDate(data.generated_at)} · ${(data.source_report_ids||[]).length} source assessment${(data.source_report_ids||[]).length===1?"":"s"}`;document.getElementById("back-to-workspace").href=`/app/reports/${data.id}`;try{renderClinicalDirection(data);}catch(err){console.error("Trend clinical section failed",err);}try{buildChartRegistry(trend,data);document.getElementById("chart-type").value="health";populateChartControls();}catch(err){console.error("Trend chart section failed",err);drawChart([]);}try{renderMarkerSummary(trend);renderTopMarkerCards();}catch(err){console.error("Trend marker evidence failed",err);document.getElementById("marker-summary-body").innerHTML=`<tr><td colspan="6" class="muted">Marker evidence could not be rendered.</td></tr>`;}try{renderSources(data.source_report_ids||[]);}catch(err){console.error("Trend source list failed",err);}}catch(err){console.error(err);showTrendError("Could not load trend report data. Please refresh and try again.");}}
+document.querySelectorAll("[data-collapse]").forEach(btn=>{btn.addEventListener("click",()=>{const section=document.getElementById(btn.dataset.collapse);const collapsed=section.classList.toggle("is-collapsed");btn.textContent=collapsed?btn.textContent.replace("Collapse","Expand"):btn.textContent.replace("Expand","Collapse");});});document.getElementById("chart-type").addEventListener("change",populateChartControls);document.getElementById("chart-category").addEventListener("change",()=>{populateMarkerOptions();drawSelectedChart();});document.getElementById("chart-key").addEventListener("change",()=>{drawSelectedChart();if(document.getElementById("chart-type").value==="marker")applyMarkerEvidenceFilter(document.getElementById("chart-key").value);});document.getElementById("chart-search").addEventListener("input",e=>{const typed=e.target.value.toLowerCase();const keys=document.getElementById("chart-type").value==="marker"?markerKeysForCurrentCategory():sortedKeys(chartRegistry.systems);document.getElementById("chart-search-list").innerHTML=keys.filter(k=>cleanTrendLabel(k).toLowerCase().includes(typed)||String(k).toLowerCase().includes(typed)).map(k=>`<option value="${safeText(cleanTrendLabel(k))}">`).join("");const match=keys.find(k=>cleanTrendLabel(k).toLowerCase()===typed||cleanTrendLabel(k).toLowerCase().includes(typed));if(match&&document.getElementById("chart-type").value==="marker"){document.getElementById("chart-key").value=match;drawSelectedChart();applyMarkerEvidenceFilter(match);}});document.getElementById("save-marker-btn").addEventListener("click",()=>saveRecentMarker(document.getElementById("chart-key").value));document.getElementById("clear-marker-filter-btn").addEventListener("click",clearEvidenceFilter);document.getElementById("clear-evidence-filter-btn").addEventListener("click",clearEvidenceFilter);document.getElementById("show-all-markers").addEventListener("change",()=>trendData&&renderMarkerSummary(trendData.trend||{}));document.querySelectorAll("[data-sort]").forEach(btn=>btn.addEventListener("click",()=>{const key=btn.dataset.sort;if(markerSort.key===key)markerSort.dir=markerSort.dir==="asc"?"desc":"asc";else markerSort={key,dir:key==="label"||key==="category"||key==="status"?"asc":"desc"};renderMarkerSummary((trendData&&trendData.trend)||{});}));
+loadTrendReport();
+</script>
+{% endblock %}

@@ -2,58 +2,27 @@
 
 {% block content %}
 <style>
-.reports-toolbar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-    margin-bottom: 14px;
-}
-
-.reports-left,
-.reports-right {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
-.reports-search {
-    max-width: 320px;
-}
-
-.reports-sort {
-    max-width: 180px;
-}
-
-.badge {
-    display: inline-block;
-    padding: 2px 8px;
-    font-size: 12px;
-    border-radius: 999px;
-    background: #e2e8f0;
-}
-
-.badge.latest {
-    background: #dcfce7;
-    color: #166534;
-}
-
-.badge.archived {
-    background: #fee2e2;
-    color: #991b1b;
-}
-
-.link-danger {
-    color: #dc2626;
-    cursor: pointer;
-}
-
-.link-secondary {
-    color: #475569;
-    cursor: pointer;
-}
+.report-tabs { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+.report-tab { border:1px solid #dbe7f3; background:#fff; border-radius:999px; padding:8px 12px; font-weight:800; color:#475569; cursor:pointer; }
+.report-tab.is-active { background:#dbeafe; color:#1e3a8a; border-color:#93c5fd; }
+.reports-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
+.reports-left,.reports-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+.reports-search { max-width:320px; }
+.reports-sort,.reports-filter { max-width:220px; }
+.reports-count { color:#64748b; font-size:13px; font-weight:700; }
+.badge { display:inline-block; padding:2px 8px; font-size:12px; border-radius:999px; background:#e2e8f0; }
+.badge.latest { background:#dcfce7; color:#166534; }
+.badge.archived { background:#fee2e2; color:#991b1b; }
+.report-type-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #e5e7eb; white-space:nowrap; }
+.report-type-assessment { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+.report-type-trend { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+.sort-btn { border:0; background:transparent; padding:0; font:inherit; font-weight:900; color:inherit; cursor:pointer; }
+.sort-btn:hover { color:#1d4ed8; }
+.report-primary { font-weight:600; color:#0f172a; }
+.report-secondary { color:#64748b; font-size:12px; margin-top:3px; line-height:1.35; }
+.link-danger { color:#dc2626; cursor:pointer; }
+.link-secondary { color:#475569; cursor:pointer; }
+.table td { vertical-align:top; }
 </style>
 
 <div id="reports-error" class="error" style="display:none;"></div>
@@ -61,22 +30,33 @@
 <div class="card" style="margin-bottom:16px;">
     <h2 style="margin:0 0 6px;">Reports</h2>
     <p class="muted" style="margin:0;">
-        Manage generated reports, versions, and archive old outputs.
+        Assessments show one QRMA scan. Trend reports show what changed across two or more assessments.
     </p>
 </div>
 
 <div class="card">
+    <div class="report-tabs" aria-label="Report filters">
+        <button type="button" class="report-tab is-active" data-type-tab="all">All</button>
+        <button type="button" class="report-tab" data-type-tab="assessment">Assessments</button>
+        <button type="button" class="report-tab" data-type-tab="trend">Trends</button>
+        <button type="button" class="report-tab" data-type-tab="archived">Archived</button>
+    </div>
+
     <div class="reports-toolbar">
         <div class="reports-left">
-            <input id="reports-search" class="reports-search" placeholder="Search patient or case" />
-
+            <input id="reports-search" class="reports-search" placeholder="Search patient, case, report, or source" />
             <select id="reports-sort" class="reports-sort">
-                <option value="newest">Newest first</option>
-                <option value="oldest">Oldest first</option>
+                <option value="generated_desc">Generated newest</option>
+                <option value="generated_asc">Generated oldest</option>
+                <option value="scan_desc">Scan/latest source newest</option>
+                <option value="scan_asc">Scan/latest source oldest</option>
+                <option value="patient_asc">Patient A-Z</option>
+                <option value="type_asc">Type</option>
             </select>
         </div>
 
         <div class="reports-right">
+            <span id="reports-count" class="reports-count">0 shown</span>
             <label style="display:flex; align-items:center; gap:6px;">
                 <input type="checkbox" id="show-archived">
                 Show archived
@@ -87,22 +67,24 @@
     <table class="table">
         <thead>
             <tr>
-                <th>Patient / Case</th>
-                <th>Scan date/time</th>
+                <th><button class="sort-btn" data-sort-set="type_asc">Type</button></th>
+                <th><button class="sort-btn" data-sort-set="patient_asc">Patient / Report</button></th>
+                <th><button class="sort-btn" data-sort-set="scan_desc">Clinical basis</button></th>
                 <th>Version</th>
-                <th>Generated</th>
+                <th><button class="sort-btn" data-sort-set="generated_desc">Generated</button></th>
                 <th>Status</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="reports-body">
-            <tr><td colspan="6" class="muted">Loading?</td></tr>
+            <tr><td colspan="7" class="muted">Loading…</td></tr>
         </tbody>
     </table>
 </div>
 
 <script>
 let allReports = [];
+let activeTypeTab = "all";
 
 function showReportsError(message) {
     const box = document.getElementById("reports-error");
@@ -110,72 +92,106 @@ function showReportsError(message) {
     box.textContent = message;
 }
 
-function getLatestVersions(reports) {
-    const latestMap = {};
-    reports.forEach(r => {
-        if (!latestMap[r.case_id] || r.version_number > latestMap[r.case_id]) {
-            latestMap[r.case_id] = r.version_number;
-        }
+function clearReportsError() {
+    const box = document.getElementById("reports-error");
+    box.style.display = "none";
+    box.textContent = "";
+}
+
+function reportType(r) { return r.report_type === "trend" ? "trend" : "assessment"; }
+function isTrend(r) { return reportType(r) === "trend"; }
+function reportTypeLabel(r) { return isTrend(r) ? "Trend" : "Assessment"; }
+function reportTypeClass(r) { return isTrend(r) ? "report-type-trend" : "report-type-assessment"; }
+
+function generatedDate(r) { return new Date(r.generated_at || 0); }
+function scanDate(r) { return new Date(r.scan_datetime || r.generated_at || 0); }
+
+function updateTabs() {
+    document.querySelectorAll("[data-type-tab]").forEach(btn => {
+        btn.classList.toggle("is-active", btn.dataset.typeTab === activeTypeTab);
     });
-    return latestMap;
+}
+
+function sortRows(rows, sort) {
+    const sorted = rows.slice();
+    sorted.sort((a, b) => {
+        if (sort === "generated_asc") return generatedDate(a) - generatedDate(b);
+        if (sort === "generated_desc") return generatedDate(b) - generatedDate(a);
+        if (sort === "scan_asc") return scanDate(a) - scanDate(b);
+        if (sort === "scan_desc") return scanDate(b) - scanDate(a);
+        if (sort === "patient_asc") {
+            return String(a.patient_display_name || a.display_name || "").localeCompare(String(b.patient_display_name || b.display_name || ""));
+        }
+        if (sort === "type_asc") {
+            return reportType(a).localeCompare(reportType(b)) || generatedDate(b) - generatedDate(a);
+        }
+        return generatedDate(b) - generatedDate(a);
+    });
+    return sorted;
 }
 
 function renderReports() {
     const tbody = document.getElementById("reports-body");
     const query = (document.getElementById("reports-search").value || "").toLowerCase();
     const sort = document.getElementById("reports-sort").value;
-    const showArchived = document.getElementById("show-archived").checked;
+    const showArchived = document.getElementById("show-archived").checked || activeTypeTab === "archived";
 
-    const latestMap = getLatestVersions(allReports);
+    updateTabs();
 
     let rows = allReports
         .filter(r => showArchived || !r.is_archived)
         .filter(r => {
-            const hay = `${r.display_name || ""} ${r.patient_display_name || ""} ${r.scan_datetime_display || ""}`.toLowerCase();
+            if (activeTypeTab === "assessment") return reportType(r) === "assessment";
+            if (activeTypeTab === "trend") return reportType(r) === "trend";
+            if (activeTypeTab === "archived") return r.is_archived;
+            return true;
+        })
+        .filter(r => {
+            const hay = [
+                r.display_name, r.patient_display_name, r.case_title, r.scan_datetime_display,
+                r.source_scan_range, r.status, reportTypeLabel(r)
+            ].join(" ").toLowerCase();
             return !query || hay.includes(query);
         });
 
-    rows.sort((a, b) => {
-        const ad = new Date(a.generated_at || 0);
-        const bd = new Date(b.generated_at || 0);
-        return sort === "oldest" ? ad - bd : bd - ad;
-    });
+    rows = sortRows(rows, sort);
+    document.getElementById("reports-count").textContent = `${rows.length} shown`;
 
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="6" class="muted">No reports found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="7" class="muted">No reports found.</td></tr>`;
         return;
     }
 
     tbody.innerHTML = rows.map(r => {
-        const isLatest = latestMap[r.case_id] === r.version_number;
+        const trend = isTrend(r);
+        const sourceText = trend
+            ? `${safeText(r.source_count || (r.source_report_ids || []).length || 0)} source assessment${(r.source_count || (r.source_report_ids || []).length) === 1 ? "" : "s"}`
+            : safeText(r.scan_datetime_display || "—");
+
+        const health = trend && r.health_index !== null && r.health_index !== undefined
+            ? `<div class="report-secondary">Health Index: ${safeText(r.health_index)}${r.health_index_change !== null && r.health_index_change !== undefined ? ` (${Number(r.health_index_change) > 0 ? "+" : ""}${safeText(r.health_index_change)})` : ""}</div>`
+            : "";
 
         return `
         <tr>
+            <td><span class="report-type-pill ${reportTypeClass(r)}">${reportTypeLabel(r)}</span></td>
             <td>
-                ${safeText(r.display_name)}
-                ${isLatest ? `<span class="badge latest">Latest</span>` : ""}
+                <div class="report-primary">${safeText(r.display_name || "Untitled report")}</div>
+                <div class="report-secondary">${safeText(r.patient_display_name || "")}</div>
+                ${r.is_archived ? `<span class="badge archived">Archived</span>` : ""}
             </td>
-
             <td>
-                ${safeText(r.scan_datetime_display || "-")}
+                <div>${sourceText}</div>
+                ${trend && r.source_scan_range ? `<div class="report-secondary">${safeText(r.source_scan_range)}</div>` : ""}
+                ${health}
             </td>
-
-            <td>v${safeText(r.version_number)}</td>
-
+            <td>${trend ? "—" : `v${safeText(r.version_number || "1")}`}</td>
             <td>${formatDate(r.generated_at)}</td>
-
+            <td>${r.is_archived ? `<span class="badge archived">Archived</span>` : `<span class="badge">Active</span>`}</td>
             <td>
-                ${r.is_archived
-                    ? `<span class="badge archived">Archived</span>`
-                    : `<span class="badge">Active</span>`
-                }
-            </td>
-
-            <td>
-                <a class="link" href="/app/reports/${r.id}">Open</a>
+                <a class="link" href="${trend ? `/trend-reports/${r.id}` : `/app/reports/${r.id}`}">Open</a>
                 &nbsp;|&nbsp;
-                ${
-                    r.is_archived
+                ${r.is_archived
                     ? `<span class="link-secondary" onclick="restoreReport('${r.id}')">Restore</span>`
                     : `<span class="link-danger" onclick="archiveReport('${r.id}')">Archive</span>`
                 }
@@ -186,20 +202,18 @@ function renderReports() {
 }
 
 async function loadReports() {
+    clearReportsError();
     const authed = await requireAuthOrRedirect();
     if (!authed) return;
 
     try {
         const response = await apiFetch("/api/reports?include_archived=true");
-
         if (!response.ok) {
             showReportsError("Could not load reports.");
             return;
         }
-
         const data = await response.json();
         allReports = Array.isArray(data) ? data : (data.items || []);
-
         renderReports();
     } catch (err) {
         console.error(err);
@@ -209,13 +223,11 @@ async function loadReports() {
 
 async function archiveReport(id) {
     if (!confirm("Archive this report?")) return;
-
     const res = await apiFetch(`/api/reports/${id}/archive`, { method: "POST" });
     if (!res.ok) {
         showReportsError("Failed to archive report.");
         return;
     }
-
     loadReports();
 }
 
@@ -225,10 +237,22 @@ async function restoreReport(id) {
         showReportsError("Failed to restore report.");
         return;
     }
-
     loadReports();
 }
 
+document.querySelectorAll("[data-type-tab]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        activeTypeTab = btn.dataset.typeTab;
+        document.getElementById("show-archived").checked = activeTypeTab === "archived";
+        renderReports();
+    });
+});
+document.querySelectorAll("[data-sort-set]").forEach(btn => {
+    btn.addEventListener("click", () => {
+        document.getElementById("reports-sort").value = btn.dataset.sortSet;
+        renderReports();
+    });
+});
 document.getElementById("reports-search").addEventListener("input", renderReports);
 document.getElementById("reports-sort").addEventListener("change", renderReports);
 document.getElementById("show-archived").addEventListener("change", renderReports);

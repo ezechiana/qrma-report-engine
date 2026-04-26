@@ -242,6 +242,13 @@ def list_patient_reports(
             "scan_datetime": getattr(report.case, "scan_datetime", None) if getattr(report, "case", None) else None,
             "is_archived": bool(getattr(report, "is_archived", False)),
             "health_index": _get_health_index_from_snapshot(report),
+
+            # Report architecture fields
+            "report_type": getattr(report, "report_type", "assessment") or "assessment",
+            "source_report_ids": [
+                str(item) for item in (getattr(report, "source_report_ids", None) or [])
+            ],
+            "trend_options": getattr(report, "trend_options", None) or {},
         }
         for report in reports
     ]
@@ -1419,9 +1426,11 @@ def get_patient_trends(
     patient_id: UUID,
     include_archived: bool = False,
     view_mode: str = "practitioner",
+    source_report_ids: list[str] | None = None,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+
     patient = (
         db.query(Patient)
         .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
@@ -1441,9 +1450,19 @@ def get_patient_trends(
         .order_by(ReportVersion.generated_at.desc())
     )
 
+    if source_report_ids:
+            source_uuid_ids = [UUID(str(x)) for x in source_report_ids]
+            query = query.filter(ReportVersion.id.in_(source_uuid_ids))
+
     if hasattr(ReportVersion, "is_archived") and not include_archived:
         query = query.filter(ReportVersion.is_archived == False)
 
+    if hasattr(ReportVersion, "report_type"):
+        query = query.filter(ReportVersion.report_type == "assessment")
+
+    if source_report_ids:
+        query = query.filter(ReportVersion.id.in_(source_report_ids))
+        
     reports = query.all()
 
     # ✅ Deduplicate per case
