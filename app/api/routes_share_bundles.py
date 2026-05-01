@@ -70,6 +70,35 @@ def _owned_reports(db: Session, current_user: User, ids: list[UUID]) -> list[Rep
 def _bundle_url(token: str) -> str:
     return f"{BASE_URL.rstrip('/')}/share/bundle/{token}"
 
+def _bundle_unavailable_reason(bundle: ShareBundle | None) -> str:
+    if not bundle:
+        return "missing"
+
+    if not getattr(bundle, "is_active", False):
+        return "revoked"
+
+    expires_at = getattr(bundle, "expires_at", None)
+    if expires_at:
+        expires = expires_at
+        if expires.tzinfo is None:
+            expires = expires.replace(tzinfo=timezone.utc)
+        if expires < datetime.now(timezone.utc):
+            return "expired"
+
+    return ""
+
+
+def _bundle_unavailable_response(request: Request, reason: str):
+    return templates.TemplateResponse(
+        request=request,
+        name="share_link_unavailable.html",
+        context={
+            "request": request,
+            "reason": reason or "missing",
+        },
+        status_code=404,
+    )
+
 
 def _bundle_is_valid(bundle: ShareBundle) -> bool:
     if not bundle.is_active:
