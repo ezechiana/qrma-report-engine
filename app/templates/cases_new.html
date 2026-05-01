@@ -36,10 +36,78 @@
     padding: 8px 12px;
     font-size: 0.9rem;
 }
+
+.duplicate-card {
+    display: none;
+    border: 1px solid #fed7aa;
+    background: #fff7ed;
+    color: #7c2d12;
+    border-radius: 14px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+
+.duplicate-card h3 {
+    margin: 0 0 6px;
+    color: #7c2d12;
+}
+
+.duplicate-card p {
+    margin: 0;
+}
+
+.duplicate-actions {
+    display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
+    margin-top: 14px;
+}
+
+.btn.warning {
+    background: #c2410c;
+    color: #fff;
+}
+
+.btn.warning:hover {
+    background: #9a3412;
+}
+
+.btn.linkish {
+    background: #ffffff;
+    color: #1f2937;
+    border: 1px solid #d1d5db;
+}
+
+.workflow-note {
+    margin-top: 8px;
+    color: #92400e;
+    font-size: 0.92rem;
+}
+
 </style>
 
 <div id="error-box" class="error" style="display:none;"></div>
 <div id="success-box" class="success" style="display:none;"></div>
+
+<div id="duplicate-panel" class="duplicate-card">
+    <h3>This scan has already been imported</h3>
+    <p id="duplicate-message">
+        This QRMA HTML appears to match an existing imported scan.
+    </p>
+    <div id="duplicate-meta" class="workflow-note"></div>
+    <div class="duplicate-actions">
+        <button type="button" id="duplicate-open-existing" class="btn linkish">
+            Open existing case/report
+        </button>
+        <button type="button" id="duplicate-import-anyway" class="btn warning">
+            Import anyway
+        </button>
+        <button type="button" id="duplicate-dismiss" class="btn secondary">
+            Review details
+        </button>
+    </div>
+</div>
+
 
 <div class="card">
     <h2>Upload QRMA HTML</h2>
@@ -199,6 +267,68 @@
     let allPatients = [];
     let selectedExistingPatientId = null;
     let isSubmittingCase = false;
+    let activeDuplicateDetail = null;
+
+    function hideDuplicatePanel() {
+        const panel = document.getElementById("duplicate-panel");
+        if (!panel) return;
+        panel.style.display = "none";
+        activeDuplicateDetail = null;
+    }
+
+    function showDuplicatePanel(detail) {
+        activeDuplicateDetail = detail || {};
+
+        const panel = document.getElementById("duplicate-panel");
+        const message = document.getElementById("duplicate-message");
+        const meta = document.getElementById("duplicate-meta");
+        const openBtn = document.getElementById("duplicate-open-existing");
+        const importBtn = document.getElementById("duplicate-import-anyway");
+        const dismissBtn = document.getElementById("duplicate-dismiss");
+
+        clearError();
+
+        message.textContent = activeDuplicateDetail.message || "This scan has already been imported.";
+
+        const bits = [];
+        if (activeDuplicateDetail.existing_patient_name) bits.push(`Patient: ${activeDuplicateDetail.existing_patient_name}`);
+        if (activeDuplicateDetail.scan_datetime) bits.push(`Scan: ${activeDuplicateDetail.scan_datetime}`);
+        if (activeDuplicateDetail.existing_report_id) bits.push("Existing report found");
+        else if (activeDuplicateDetail.existing_case_id) bits.push("Existing case found");
+        meta.textContent = bits.join(" · ");
+
+        panel.style.display = "block";
+
+        if (openBtn) {
+            openBtn.style.display = activeDuplicateDetail.existing_case_id || activeDuplicateDetail.existing_report_id ? "inline-flex" : "none";
+            openBtn.onclick = () => {
+                const url = activeDuplicateDetail.existing_report_id
+                    ? `/app/reports/${activeDuplicateDetail.existing_report_id}/view`
+                    : `/app/cases/${activeDuplicateDetail.existing_case_id}`;
+
+                window.open(url, "_blank", "noopener,noreferrer");
+            };
+        }
+
+        if (importBtn) {
+            importBtn.onclick = async () => {
+                hideDuplicatePanel();
+                await createCase(false, true);
+            };
+        }
+
+        if (dismissBtn) {
+            dismissBtn.onclick = () => {
+                panel.style.display = "none";
+                const confirmCard = document.getElementById("confirm-card");
+                if (confirmCard && confirmCard.style.display !== "none") {
+                    confirmCard.scrollIntoView({ behavior: "smooth", block: "start" });
+                }
+            };
+        }
+
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
 
     function showError(msg) {
         const box = document.getElementById("error-box");
@@ -224,21 +354,10 @@
 
         if (detail && typeof detail === "object") {
             if (detail.code === "duplicate_scan") {
-                box.innerHTML = `
-                    <div class="error-action-row">
-                        <div class="error-message-text">${safeText(detail.message || "This scan has already been imported.")}</div>
-                        ${detail.allow_duplicate_supported ? `<button type="button" id="force-import-btn" class="btn small">Import anyway</button>` : ""}
-                    </div>
-                `;
-
-                const btn = document.getElementById("force-import-btn");
-                if (btn) {
-                    btn.onclick = async () => {
-                        await createCase(false, true);
-                    };
-                }
+                showDuplicatePanel(detail);
                 return;
             }
+
 
             if (detail.message) {
                 box.textContent = detail.message;
@@ -476,6 +595,7 @@
     async function handleUploadSubmit(e) {
         e.preventDefault();
         clearError();
+        hideDuplicatePanel();
 
         if (!await requireAuthOrRedirect()) return;
 
@@ -555,6 +675,7 @@
 
         isSubmittingCase = true;
         clearError();
+        if (!forceDuplicate) hideDuplicatePanel();
 
         const createBtn = document.querySelector('#confirm-form button[type="submit"]');
         const createGenerateBtn = document.getElementById("create-and-generate");
@@ -595,14 +716,9 @@
                 return;
             }
 
-            const mismatchVisible = document.getElementById("patient-mismatch-warning").style.display !== "none";
-            if (linkMode === "existing" && mismatchVisible && !forceDuplicate) {
-                const confirmed = window.confirm(
-                    "The imported name or identity details do not fully match the selected patient record. Do you want to continue linking this scan?"
-                );
-                if (!confirmed) return;
-            }
-
+            // Identity/measurement differences are shown inline in the patient matching section.
+            // Do not add a second browser confirmation prompt here; the selected patient
+            // plus visible warning is the single decision point for the practitioner.
             const payload = {
                 temporary_upload_id: temporaryUploadId,
                 patient: {

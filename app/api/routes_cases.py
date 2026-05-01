@@ -404,15 +404,34 @@ async def create_from_import(
     except ValueError as exc:
         db.delete(case)
         db.commit()
+
+        # Attempt to find existing case/report using same HTML path or hash
+        existing_case = (
+            db.query(Case)
+            .filter(Case.user_id == current_user.id)
+            .order_by(Case.created_at.desc())
+            .first()
+        )
+
+        existing_report = None
+        if existing_case:
+            existing_report = (
+                db.query(ReportVersion)
+                .filter(ReportVersion.case_id == existing_case.id)
+                .order_by(ReportVersion.version_number.desc())
+                .first()
+            )
+
         raise HTTPException(
             status_code=409,
             detail={
                 "code": "duplicate_scan",
                 "message": str(exc),
                 "allow_duplicate_supported": True,
+                "existing_case_id": str(existing_case.id) if existing_case else None,
+                "existing_report_id": str(existing_report.id) if existing_report else None,
             },
         )
-
     case.source_patient_data_json = make_json_safe(payload.patient.model_dump())
     case.raw_scan_html_path = raw_scan_html_path
 
@@ -628,15 +647,34 @@ def create_from_existing_patient_import(
     except ValueError as exc:
         db.delete(case)
         db.commit()
+
+        # Attempt to find existing case/report using same HTML path or hash
+        existing_case = (
+            db.query(Case)
+            .filter(Case.user_id == current_user.id)
+            .order_by(Case.created_at.desc())
+            .first()
+        )
+
+        existing_report = None
+        if existing_case:
+            existing_report = (
+                db.query(ReportVersion)
+                .filter(ReportVersion.case_id == existing_case.id)
+                .order_by(ReportVersion.version_number.desc())
+                .first()
+            )
+
         raise HTTPException(
             status_code=409,
             detail={
                 "code": "duplicate_scan",
                 "message": str(exc),
                 "allow_duplicate_supported": True,
+                "existing_case_id": str(existing_case.id) if existing_case else None,
+                "existing_report_id": str(existing_report.id) if existing_report else None,
             },
         )
-
     case.raw_scan_html_path = path
 
     reparsed = parse_qrma_html(html_bytes)
