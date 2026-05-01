@@ -603,9 +603,22 @@ def revoke_share_bundle(
     return {"success": True}
 
 
+
 @router.get("/share/bundle/{token}", response_class=HTMLResponse)
 def view_share_bundle(token: str, request: Request, db: Session = Depends(get_db)):
-    bundle = _get_bundle_by_token_or_404(db, token)
+    bundle = (
+        db.query(ShareBundle)
+        .options(
+            joinedload(ShareBundle.items).joinedload(ShareBundleItem.report_version).joinedload(ReportVersion.case),
+            joinedload(ShareBundle.items).joinedload(ShareBundleItem.share_link),
+        )
+        .filter(ShareBundle.token == token)
+        .first()
+    )
+
+    unavailable_reason = _bundle_unavailable_reason(bundle)
+    if unavailable_reason:
+        return _bundle_unavailable_response(request, unavailable_reason)
 
     if bundle.requires_payment and bundle.payment_status != "paid":
         return templates.TemplateResponse(
@@ -643,8 +656,16 @@ def view_share_bundle(token: str, request: Request, db: Session = Depends(get_db
 
 
 @router.post("/share/bundle/{token}/checkout")
-def create_bundle_checkout_session(token: str, db: Session = Depends(get_db)):
-    bundle = _get_bundle_by_token_or_404(db, token)
+def create_bundle_checkout_session(token: str, request: Request, db: Session = Depends(get_db)):
+    bundle = (
+        db.query(ShareBundle)
+        .filter(ShareBundle.token == token)
+        .first()
+    )
+
+    unavailable_reason = _bundle_unavailable_reason(bundle)
+    if unavailable_reason:
+        return _bundle_unavailable_response(request, unavailable_reason)
 
     if not bundle.requires_payment:
         return RedirectResponse(url=f"/share/bundle/{token}", status_code=303)
@@ -715,7 +736,11 @@ def bundle_payment_success(token: str, request: Request, db: Session = Depends(g
     """
     UX redirect only. The webhook is authoritative for unlocking paid bundles.
     """
-    _get_bundle_by_token_or_404(db, token)
+    bundle = db.query(ShareBundle).filter(ShareBundle.token == token).first()
+    unavailable_reason = _bundle_unavailable_reason(bundle)
+    if unavailable_reason:
+        return _bundle_unavailable_response(request, unavailable_reason)
+
     return RedirectResponse(url=f"/share/bundle/{token}", status_code=303)
 
 
@@ -799,8 +824,21 @@ async def stripe_webhook_alias(request: Request, db: Session = Depends(get_db)):
 
 
 @router.get("/share/bundle/{token}/reports/{report_id}", response_class=HTMLResponse)
-def view_bundle_report(token: str, report_id: UUID, db: Session = Depends(get_db)):
-    bundle = _get_bundle_by_token_or_404(db, token)
+def view_bundle_report(token: str, report_id: UUID, request: Request, db: Session = Depends(get_db)):
+    bundle = (
+        db.query(ShareBundle)
+        .options(
+            joinedload(ShareBundle.items).joinedload(ShareBundleItem.report_version),
+            joinedload(ShareBundle.items).joinedload(ShareBundleItem.share_link),
+        )
+        .filter(ShareBundle.token == token)
+        .first()
+    )
+
+    unavailable_reason = _bundle_unavailable_reason(bundle)
+    if unavailable_reason:
+        return _bundle_unavailable_response(request, unavailable_reason)
+
     if bundle.requires_payment and bundle.payment_status != "paid":
         return RedirectResponse(f"/share/bundle/{token}", status_code=302)
 
@@ -808,4 +846,4 @@ def view_bundle_report(token: str, report_id: UUID, db: Session = Depends(get_db
         if item.report_version_id == report_id and item.share_link and item.share_link.is_active:
             return RedirectResponse(_item_viewer_url(item.share_link, item.report_version), status_code=302)
 
-    raise HTTPException(status_code=404, detail="Report not included in this bundle.")
+    return _bundle_unavailable_response(request, "missing")

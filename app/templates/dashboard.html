@@ -3,10 +3,11 @@
 {% block content %}
 <style>
 .dashboard-subtitle { color:#64748b; margin-bottom:24px; }
-.dashboard-grid { display:grid; grid-template-columns:repeat(4,1fr); gap:18px; margin-bottom:28px; }
-.dashboard-card { background:white; border-radius:18px; padding:20px; border:1px solid #e2e8f0; }
-.card-title { font-size:14px; color:#64748b; margin-bottom:6px; }
-.card-value { font-size:26px; font-weight:800; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; margin-bottom:28px; }
+.dashboard-card { background:white; border-radius:18px; padding:20px; border:1px solid #e2e8f0; min-height:108px; }
+.card-title { font-size:13px; color:#64748b; margin-bottom:6px; font-weight:750; }
+.card-value { font-size:26px; font-weight:900; line-height:1.15; }
+.card-subvalue { margin-top:6px; color:#64748b; font-size:12px; line-height:1.35; }
 .dashboard-section { margin-top:20px; }
 .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap; }
 .reports-table { width:100%; border-collapse:collapse; }
@@ -19,34 +20,70 @@
 .report-type-assessment { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
 .report-type-trend { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
 .report-secondary { color:#64748b; font-size:12px; margin-top:3px; line-height:1.35; }
-.report-title-text { font-weight:600; color:#0f172a; }
+.report-title-text { font-weight:700; color:#0f172a; }
 .dashboard-tabs { display:flex; gap:8px; flex-wrap:wrap; }
 .dashboard-tab { border:1px solid #dbe7f3; background:#fff; border-radius:999px; padding:7px 11px; font-weight:800; color:#475569; cursor:pointer; }
 .dashboard-tab.is-active { background:#dbeafe; color:#1e3a8a; border-color:#93c5fd; }
-@media(max-width:900px){ .dashboard-grid{grid-template-columns:1fr;} }
+.dashboard-insight { background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
+.dashboard-insight strong { color:#0f172a; }
+@media(max-width:1200px){ .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+@media(max-width:700px){ .dashboard-grid{grid-template-columns:1fr;} }
 </style>
 
 <div id="dashboard-error" class="error dashboard-error"></div>
 
-<p class="dashboard-subtitle">Overview of your recent assessment and trend-report activity.</p>
+<p class="dashboard-subtitle">Overview of your recent assessment, trend-report, share, and revenue activity.</p>
 
 <div class="dashboard-grid">
     <div class="dashboard-card">
+        <div class="card-title">Paid Bundle Revenue</div>
+        <div class="card-value" id="paid-revenue">—</div>
+        <div class="card-subvalue" id="paid-revenue-sub">Confirmed Stripe payments</div>
+    </div>
+    <div class="dashboard-card">
+        <div class="card-title">Practitioner Earnings</div>
+        <div class="card-value" id="practitioner-earnings">—</div>
+        <div class="card-subvalue">After platform commission</div>
+    </div>
+    <div class="dashboard-card">
+        <div class="card-title">Platform Net</div>
+        <div class="card-value" id="platform-net">—</div>
+        <div class="card-subvalue" id="platform-net-sub">Commission minus Stripe fees</div>
+    </div>
+    <div class="dashboard-card">
+        <div class="card-title">Needs Payment</div>
+        <div class="card-value" id="pending-payments">—</div>
+        <div class="card-subvalue">Unpaid paid-access bundles</div>
+    </div>
+    <div class="dashboard-card">
         <div class="card-title">Total Reports</div>
         <div class="card-value" id="total-reports">—</div>
+        <div class="card-subvalue">Assessments + trends</div>
     </div>
     <div class="dashboard-card">
         <div class="card-title">Assessments</div>
         <div class="card-value" id="total-assessments">—</div>
+        <div class="card-subvalue">Single-scan reports</div>
     </div>
     <div class="dashboard-card">
         <div class="card-title">Trend Reports</div>
         <div class="card-value" id="total-trends">—</div>
+        <div class="card-subvalue">Progress views</div>
     </div>
     <div class="dashboard-card">
         <div class="card-title">Last Activity</div>
         <div class="card-value" id="last-activity" style="font-size:20px;">—</div>
+        <div class="card-subvalue">Latest generated report</div>
     </div>
+</div>
+
+<div class="dashboard-insight" id="dashboard-revenue-insight" style="display:none;">
+    <div>
+        <strong>Revenue model:</strong>
+        <span id="fee-model-label">—</span>
+        <div class="muted" id="fee-model-note" style="margin-top:4px;">—</div>
+    </div>
+    <a class="btn secondary" href="/app/revenue">View revenue</a>
 </div>
 
 <div class="dashboard-section">
@@ -90,6 +127,18 @@
 let dashboardRows = [];
 let activeDashboardTab = "all";
 
+function safeTextLocal(value) {
+    if (typeof safeText === "function") return safeText(value);
+    return String(value ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+}
+
+function formatDateLocal(value) {
+    if (typeof formatDate === "function") return formatDate(value);
+    if (!value) return "—";
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString(undefined, {day:"2-digit", month:"short", year:"numeric"});
+}
+
 function reportType(item) { return item.report_type === "trend" ? "trend" : "assessment"; }
 function isTrend(item) { return reportType(item) === "trend"; }
 function reportTypeLabel(item) { return isTrend(item) ? "Trend" : "Assessment"; }
@@ -111,6 +160,72 @@ function updateDashboardTabs() {
     document.querySelectorAll("[data-dashboard-tab]").forEach(btn => {
         btn.classList.toggle("is-active", btn.dataset.dashboardTab === activeDashboardTab);
     });
+}
+
+function displayMoneyList(amountsByCurrency, emptyText="—") {
+    const entries = Object.entries(amountsByCurrency || {}).filter(([, value]) => Number(value || 0) !== 0);
+    if (!entries.length) return emptyText;
+    return entries.map(([currency, minor]) => moneyFromMinor(minor, currency)).join(" · ");
+}
+
+function moneyFromMinor(minor, currency) {
+    const code = String(currency || "gbp").toLowerCase();
+    const amount = Number(minor || 0);
+    const symbols = {gbp:"£", usd:"$", eur:"€", aed:"د.إ", jpy:"¥", krw:"₩"};
+    const symbol = symbols[code] || code.toUpperCase() + " ";
+    const zeroDecimal = new Set(["jpy", "krw"]);
+    if (zeroDecimal.has(code)) return `${symbol}${amount.toLocaleString()}`;
+    return `${symbol}${(amount / 100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
+}
+
+function addCurrency(target, currency, amount) {
+    const key = String(currency || "gbp").toLowerCase();
+    target[key] = Number(target[key] || 0) + Number(amount || 0);
+}
+
+function revenueFeeModelLabel(model) {
+    if (model === "practitioner_absorbs") return "Practitioner absorbs Stripe fees";
+    if (model === "split_proportional") return "Stripe fees are split proportionally";
+    return "Platform absorbs Stripe fees";
+}
+
+function revenueFeeModelNote(model) {
+    if (model === "practitioner_absorbs") return "Platform commission is preserved and processing fees reduce practitioner payout.";
+    if (model === "split_proportional") return "Processing fees are allocated proportionally between platform and practitioner.";
+    return "Practitioner payout is shown separately from platform revenue; Stripe fees reduce platform net.";
+}
+
+function renderRevenueSummary(summary, paymentsPayload) {
+    const currencies = summary.currencies || [];
+    const payments = paymentsPayload.items || [];
+    const feeModel = summary.fee_model || paymentsPayload.fee_model || "platform_absorbs";
+
+    const grossByCurrency = {};
+    const practitionerByCurrency = {};
+    const platformNetByCurrency = {};
+    let pending = Number(summary.unpaid_count || 0);
+
+    // Use the summary endpoint as source of truth for all-time cards.
+    currencies.forEach(c => {
+        const currency = String(c.currency || "gbp").toLowerCase();
+        addCurrency(grossByCurrency, currency, c.gross_minor);
+        addCurrency(practitionerByCurrency, currency, c.practitioner_payout_minor);
+        addCurrency(platformNetByCurrency, currency, c.platform_net_minor);
+    });
+
+    if (!pending && payments.length) {
+        pending = payments.filter(p => p.payment_status && p.payment_status !== "paid").length;
+    }
+
+    document.getElementById("paid-revenue").textContent = displayMoneyList(grossByCurrency);
+    document.getElementById("practitioner-earnings").textContent = displayMoneyList(practitionerByCurrency);
+    document.getElementById("platform-net").textContent = displayMoneyList(platformNetByCurrency);
+    document.getElementById("pending-payments").textContent = String(pending || 0);
+    document.getElementById("paid-revenue-sub").textContent = `${summary.paid_count || 0} paid bundle${Number(summary.paid_count || 0) === 1 ? "" : "s"}`;
+
+    document.getElementById("fee-model-label").textContent = revenueFeeModelLabel(feeModel);
+    document.getElementById("fee-model-note").textContent = revenueFeeModelNote(feeModel);
+    document.getElementById("dashboard-revenue-insight").style.display = "flex";
 }
 
 function renderDashboardRows() {
@@ -136,28 +251,29 @@ function renderDashboardRows() {
 
     tbody.innerHTML = filtered.slice(0, 20).map(item => {
         const trend = isTrend(item);
+        const sourceCount = item.source_count || (item.source_report_ids || []).length || 0;
         const basis = trend
-            ? `${safeText(item.source_count || (item.source_report_ids || []).length || 0)} source assessment${(item.source_count || (item.source_report_ids || []).length) === 1 ? "" : "s"}`
-            : safeText(item.scan_datetime_display || "—");
+            ? `${safeTextLocal(sourceCount)} source assessment${Number(sourceCount) === 1 ? "" : "s"}`
+            : safeTextLocal(item.scan_datetime_display || "—");
 
         const health = trend && item.health_index !== null && item.health_index !== undefined
-            ? `<div class="report-secondary">Health Index: ${safeText(item.health_index)}${item.health_index_change !== null && item.health_index_change !== undefined ? ` (${Number(item.health_index_change) > 0 ? "+" : ""}${safeText(item.health_index_change)})` : ""}</div>`
+            ? `<div class="report-secondary">Health Index: ${safeTextLocal(item.health_index)}${item.health_index_change !== null && item.health_index_change !== undefined ? ` (${Number(item.health_index_change) > 0 ? "+" : ""}${safeTextLocal(item.health_index_change)})` : ""}</div>`
             : "";
 
         return `
             <tr>
                 <td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td>
                 <td>
-                    <span class="report-title-text">${safeText(item.display_name || "Untitled report")}</span>
-                    <div class="report-secondary">${safeText(item.patient_display_name || "")}</div>
+                    <span class="report-title-text">${safeTextLocal(item.display_name || "Untitled report")}</span>
+                    <div class="report-secondary">${safeTextLocal(item.patient_display_name || "")}</div>
                 </td>
                 <td>
                     ${basis}
-                    ${trend && item.source_scan_range ? `<div class="report-secondary">${safeText(item.source_scan_range)}</div>` : ""}
+                    ${trend && item.source_scan_range ? `<div class="report-secondary">${safeTextLocal(item.source_scan_range)}</div>` : ""}
                     ${health}
                 </td>
-                <td>${safeText(item.status)}</td>
-                <td>${formatDate(item.generated_at)}</td>
+                <td>${safeTextLocal(item.status)}</td>
+                <td>${formatDateLocal(item.generated_at)}</td>
                 <td><a class="link" href="${trend ? `/trend-reports/${item.id}` : `/app/reports/${item.id}`}">Open</a></td>
             </tr>
         `;
@@ -170,15 +286,20 @@ async function loadDashboard() {
     if (!authed) return;
 
     try {
-        const response = await apiFetch("/api/reports?include_archived=false");
-        if (!response.ok) {
-            const errorData = await response.json().catch(() => ({}));
+        const [reportsResponse, revenueSummaryResponse, revenuePaymentsResponse] = await Promise.all([
+            apiFetch("/api/reports?include_archived=false"),
+            apiFetch("/api/revenue/summary"),
+            apiFetch("/api/revenue/payments"),
+        ]);
+
+        if (!reportsResponse.ok) {
+            const errorData = await reportsResponse.json().catch(() => ({}));
             showDashboardError(errorData.detail || "Could not load dashboard data.");
             document.getElementById("reports-table-body").innerHTML = `<tr><td colspan="6">Could not load reports.</td></tr>`;
             return;
         }
 
-        const reports = await response.json();
+        const reports = await reportsResponse.json();
         dashboardRows = (Array.isArray(reports) ? reports : (reports.items || []))
             .slice()
             .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0));
@@ -190,9 +311,20 @@ async function loadDashboard() {
         document.getElementById("total-assessments").textContent = assessments.length;
         document.getElementById("total-trends").textContent = trends.length;
         document.getElementById("last-activity").textContent =
-            dashboardRows.length && dashboardRows[0].generated_at ? formatDate(dashboardRows[0].generated_at) : "—";
+            dashboardRows.length && dashboardRows[0].generated_at ? formatDateLocal(dashboardRows[0].generated_at) : "—";
 
         renderDashboardRows();
+
+        if (revenueSummaryResponse.ok && revenuePaymentsResponse.ok) {
+            const revenueSummary = await revenueSummaryResponse.json();
+            const revenuePayments = await revenuePaymentsResponse.json();
+            renderRevenueSummary(revenueSummary, revenuePayments);
+        } else {
+            document.getElementById("paid-revenue").textContent = "—";
+            document.getElementById("practitioner-earnings").textContent = "—";
+            document.getElementById("platform-net").textContent = "—";
+            document.getElementById("pending-payments").textContent = "—";
+        }
     } catch (err) {
         console.error(err);
         showDashboardError("Unexpected error while loading dashboard.");

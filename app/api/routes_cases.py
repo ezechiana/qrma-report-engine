@@ -3,6 +3,7 @@ from datetime import date, datetime
 
 from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from sqlalchemy.orm import Session
+from sqlalchemy import text
 
 from app.api.deps import get_current_user, get_db
 from app.api.routes_reports import _format_scan_datetime
@@ -156,6 +157,29 @@ def _normalise_sex(value):
     }
 
     return mapping.get(v, None)
+
+
+def _ensure_report_source_hash_schema(db: Session) -> None:
+    """
+    Defensive safeguard for older local databases.
+
+    report_service.py uses report_versions.source_hash for report-generation
+    idempotency. The formal migration should still exist, but this prevents
+    desktop/laptop schema drift from crashing imports.
+    """
+    db.execute(text("""
+        ALTER TABLE report_versions
+        ADD COLUMN IF NOT EXISTS source_hash TEXT
+    """))
+    db.execute(text("""
+        CREATE INDEX IF NOT EXISTS idx_report_versions_case_source_hash
+        ON report_versions (case_id, source_hash)
+    """))
+    db.commit()
+
+
+def _enum_value(value) -> str:
+    return value.value if hasattr(value, "value") else str(value)
 
 
 @router.get("", response_model=list[CaseRead])
@@ -442,30 +466,72 @@ async def create_from_import(
     )
 
     # AUTO-GENERATE REPORT IMMEDIATELY
+    #
+    # Important behaviour:
+    # - Case creation remains successful even if report generation fails.
+    # - The frontend receives case_id and can redirect to the case workspace.
+    # - The detailed error is returned for debugging, but no red "failed" banner
+    #   is shown on the import page for an otherwise-created case.
     try:
+        _ensure_report_source_hash_schema(db)
+
+        case = _get_owned_case(db, current_user, case.id)
+        if not case:
+            raise HTTPException(status_code=404, detail="Case not found after import")
+
         report = await generate_report_version(db, case, current_user)
+
         db.refresh(case)
+        db.refresh(report)
 
         return {
-            "patient_id": patient.id,
-            "case_id": case.id,
-            "status": case.status.value if hasattr(case.status, "value") else str(case.status),
-            "report_version_id": report.id,
-            "report_status": report.status.value if hasattr(report.status, "value") else str(report.status),
+            "patient_id": str(patient.id),
+            "case_id": str(case.id),
+            "status": _enum_value(case.status),
+            "report_version_id": str(report.id),
+            "report_status": _enum_value(report.status),
             "auto_generated": True,
+            "warning": None,
         }
+
+    except HTTPException:
+        db.rollback()
+        raise
+
     except Exception as exc:
-        db.refresh(case)
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "code": "report_generation_failed",
-                "message": "Case was created, but automatic report generation failed.",
-                "case_id": str(case.id),
-                "status": case.status.value if hasattr(case.status, "value") else str(case.status),
-                "error": str(exc),
-            },
-        )
+        db.rollback()
+
+        safe_status = "unknown"
+        try:
+            clean_case = _get_owned_case(db, current_user, case.id)
+            if clean_case:
+                clean_case.status = CaseStatus.failed
+                db.commit()
+                safe_status = _enum_value(clean_case.status)
+
+                log_action(
+                    db,
+                    "report_auto_generation_failed",
+                    user_id=current_user.id,
+                    case_id=clean_case.id,
+                    metadata_json={
+                        "temporary_upload_id": payload.temporary_upload_id,
+                        "error": str(exc),
+                    },
+                )
+        except Exception:
+            db.rollback()
+
+        return {
+            "patient_id": str(patient.id),
+            "case_id": str(case.id),
+            "status": safe_status,
+            "report_version_id": None,
+            "report_status": "failed",
+            "auto_generated": False,
+            "warning": "Case was created, but automatic report generation failed. You can retry from the case workspace.",
+            "error": str(exc),
+        }
 
 @router.post("/{case_id}/generate-report", response_model=GenerateReportResponse)
 async def generate_report(
@@ -485,12 +551,29 @@ async def generate_report(
             detail="Case has no uploaded QRMA HTML file",
         )
 
-    report = await generate_report_version(db, case, current_user)
+    try:
+        _ensure_report_source_hash_schema(db)
+        case = _get_owned_case(db, current_user, case_id)
+        report = await generate_report_version(db, case, current_user)
+    except HTTPException:
+        db.rollback()
+        raise
+    except Exception as exc:
+        db.rollback()
+        raise HTTPException(
+            status_code=500,
+            detail={
+                "code": "report_generation_failed",
+                "message": "Report generation failed.",
+                "case_id": str(case_id),
+                "error": str(exc),
+            },
+        )
 
     return {
-        "report_version_id": report.id,
+        "report_version_id": str(report.id),
         "version_number": report.version_number,
-        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+        "status": _enum_value(report.status),
     }
 
 

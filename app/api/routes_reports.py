@@ -3,11 +3,11 @@ from uuid import UUID
 from fastapi import APIRouter, Depends, HTTPException, Request
 from fastapi.responses import JSONResponse, HTMLResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import Case, ReportOverride, ReportStatus, ReportVersion, User, PractitionerSettings
-from app.schemas.reports import ReportOverrideUpdate
+from app.schemas.reports import ReportOverrideUpdate, ReportVersionRead
 from app.services.audit_service import log_action
 from app.services.storage_service import object_exists, generate_presigned_url
 
@@ -19,177 +19,88 @@ router = APIRouter(prefix="/api/reports", tags=["reports"])
 def _patient_display_name_from_case(case: Case | None) -> str | None:
     if not case:
         return None
+
     patient = getattr(case, "patient", None)
     if patient:
         full_name = getattr(patient, "full_name", None)
         if full_name:
             return full_name
-        joined = " ".join(part for part in [getattr(patient, "first_name", None), getattr(patient, "last_name", None)] if part)
+
+        first_name = getattr(patient, "first_name", None)
+        last_name = getattr(patient, "last_name", None)
+        joined = " ".join(part for part in [first_name, last_name] if part)
         if joined:
             return joined
+
     source_data = case.source_patient_data_json or {}
-    if source_data.get("full_name"):
-        return source_data.get("full_name")
-    joined = " ".join(part for part in [source_data.get("first_name"), source_data.get("last_name")] if part)
+    full_name = source_data.get("full_name")
+    if full_name:
+        return full_name
+
+    first_name = source_data.get("first_name")
+    last_name = source_data.get("last_name")
+    joined = " ".join(part for part in [first_name, last_name] if part)
     return joined or None
 
 
 def _case_display_name(case: Case | None) -> str | None:
     if not case:
         return None
+
     patient_name = _patient_display_name_from_case(case)
-    date_text = None
     if case.scan_datetime:
         date_text = case.scan_datetime.strftime("%d %b %Y")
-    elif case.created_at:
-        date_text = case.created_at.strftime("%d %b %Y")
+    else:
+        date_text = case.created_at.strftime("%d %b %Y") if case.created_at else None
+
     if patient_name and date_text:
         return f"{patient_name} — {date_text}"
     if patient_name:
         return patient_name
-    return case.title or f"Case {str(case.id)[:8]}"
-
+    if case.title:
+        return case.title
+    return f"Case {str(case.id)[:8]}"
 
 def _format_scan_datetime(case: Case | None) -> str | None:
     if not case or not case.scan_datetime:
         return None
+    # Important: do NOT apply timezone conversion.
+    # Raw QRMA HTML has no timezone, so display the stored local wall time as-is.
     return case.scan_datetime.strftime("%d/%m/%Y, %H:%M")
 
 
-def _get_report_type(report: ReportVersion) -> str:
-    report_json = report.report_json or {}
-    return (
-        getattr(report, "report_type", None)
-        or (report_json.get("report_type") if isinstance(report_json, dict) else None)
-        or "assessment"
-    )
-
-
-def _get_source_report_ids(report: ReportVersion) -> list[str]:
-    report_json = report.report_json or {}
-    source_ids = (
-        getattr(report, "source_report_ids", None)
-        or (report_json.get("source_report_ids") if isinstance(report_json, dict) else None)
-        or []
-    )
-    return [str(x) for x in source_ids]
-
-
-def _get_trend_options(report: ReportVersion) -> dict:
-    report_json = report.report_json or {}
-    return (
-        getattr(report, "trend_options", None)
-        or (report_json.get("trend_options") if isinstance(report_json, dict) else None)
-        or {}
-    )
-
-
-def _extract_health_index(report: ReportVersion) -> float | None:
-    snapshot = getattr(report, "metrics_snapshot", None) or {}
-    if isinstance(snapshot, dict) and isinstance(snapshot.get("health_index"), (int, float)):
-        return float(snapshot["health_index"])
-
-    trend_payload = getattr(report, "trend_payload_json", None)
-    if not trend_payload and isinstance(report.report_json, dict):
-        trend_payload = report.report_json.get("trend")
-    if isinstance(trend_payload, dict):
-        points = trend_payload.get("health_index")
-        if isinstance(points, list) and points:
-            latest = points[-1]
-            if isinstance(latest, dict) and isinstance(latest.get("value"), (int, float)):
-                return float(latest["value"])
-
-    if isinstance(report.report_json, dict):
-        viewer = report.report_json.get("viewer") or {}
-        overview = viewer.get("overview") or {}
-        score = overview.get("overall_scan_score")
-        if isinstance(score, (int, float)):
-            return float(score)
-    return None
-
-
-def _extract_health_index_change(report: ReportVersion) -> float | None:
-    trend_payload = getattr(report, "trend_payload_json", None)
-    if not trend_payload and isinstance(report.report_json, dict):
-        trend_payload = report.report_json.get("trend")
-    if not isinstance(trend_payload, dict):
-        return None
-    points = trend_payload.get("health_index")
-    if not isinstance(points, list) or len(points) < 2:
-        return None
-    first = points[0].get("value") if isinstance(points[0], dict) else None
-    latest = points[-1].get("value") if isinstance(points[-1], dict) else None
-    if isinstance(first, (int, float)) and isinstance(latest, (int, float)):
-        return round(float(latest) - float(first), 3)
-    return None
-
-
-def _source_scan_range(db: Session, source_report_ids: list[str]) -> str | None:
-    uuids = []
-    for raw in source_report_ids or []:
-        try:
-            uuids.append(UUID(str(raw)))
-        except Exception:
-            continue
-    if not uuids:
-        return None
-    reports = (
-        db.query(ReportVersion)
-        .options(joinedload(ReportVersion.case))
-        .filter(ReportVersion.id.in_(uuids))
-        .all()
-    )
-    dates = []
-    for report in reports:
-        case = getattr(report, "case", None)
-        when = getattr(case, "scan_datetime", None) or getattr(report, "generated_at", None)
-        if when:
-            dates.append(when)
-    if not dates:
-        return None
-    dates = sorted(dates)
-    if len(dates) == 1:
-        return dates[0].strftime("%d %b %Y")
-    return f"{dates[0].strftime('%d %b %Y')} → {dates[-1].strftime('%d %b %Y')}"
-
-
-def _serialise_report(report: ReportVersion, db: Session | None = None) -> dict:
+def _serialise_report(report: ReportVersion) -> dict:
     case = getattr(report, "case", None)
-    report_type = _get_report_type(report)
-    source_ids = _get_source_report_ids(report)
-
-    display_name = _case_display_name(case)
-    if report_type == "trend" and isinstance(report.report_json, dict):
-        display_name = (report.report_json.get("viewer") or {}).get("case_title") or display_name
 
     return {
-        "id": str(report.id),
-        "case_id": str(report.case_id),
+        "id": report.id,
+        "case_id": report.case_id,
         "version_number": report.version_number,
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
         "build_version": getattr(report, "build_version", None),
-        "recommendation_mode": report.recommendation_mode.value if hasattr(report.recommendation_mode, "value") else str(report.recommendation_mode),
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
         "generated_at": report.generated_at,
-        "display_name": display_name,
+        "display_name": _case_display_name(case),
         "patient_display_name": _patient_display_name_from_case(case),
         "case_title": case.title if case else None,
         "scan_datetime": case.scan_datetime if case else None,
         "scan_datetime_display": _format_scan_datetime(case),
         "is_archived": bool(getattr(report, "is_archived", False)),
-        "report_type": report_type,
-        "source_report_ids": source_ids,
-        "trend_options": _get_trend_options(report),
-        "source_count": len(source_ids),
-        "source_scan_range": _source_scan_range(db, source_ids) if db and report_type == "trend" else None,
-        "health_index": _extract_health_index(report),
-        "health_index_change": _extract_health_index_change(report) if report_type == "trend" else None,
     }
 
 
 def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}
     stored_theme = report_json.get("tenant_theme", {}) if isinstance(report_json, dict) else {}
-    settings = getattr(report, "_practitioner_settings", None)
+
+    settings = None
+    if getattr(report, "created_by_user_id", None):
+        settings = getattr(report, "_practitioner_settings", None)
+
     return {
         "tenant_name": stored_theme.get("tenant_name") or (settings.clinic_name if settings and settings.clinic_name else "Health Portal"),
         "tagline": stored_theme.get("tagline") or (settings.report_subtitle if settings and settings.report_subtitle else "Secure wellness report viewer"),
@@ -212,19 +123,26 @@ def _get_viewer_payload_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}
     viewer = dict(report_json.get("viewer") or {})
     tenant = dict(viewer.get("tenant") or {})
+
     settings = getattr(report, "_practitioner_settings", None)
     if settings:
         if settings.report_title:
             tenant["report_title"] = settings.report_title
         if settings.report_subtitle:
             tenant["subtitle"] = settings.report_subtitle
+
     viewer["tenant"] = tenant
+
     return {
         "id": str(report.id),
         "case_id": str(report.case_id),
         "version_number": report.version_number,
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
-        "recommendation_mode": report.recommendation_mode.value if hasattr(report.recommendation_mode, "value") else str(report.recommendation_mode),
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
         "generated_at": report.generated_at.isoformat() if report.generated_at else None,
         "pdf_url": f"/api/reports/{report.id}/pdf",
         "html_url": f"/api/reports/{report.id}/html",
@@ -233,193 +151,362 @@ def _get_viewer_payload_for_report(report: ReportVersion) -> dict:
     }
 
 
-def _get_owned_report(db: Session, current_user: User, report_version_id: UUID) -> ReportVersion | None:
+def _get_owned_report(
+    db: Session,
+    current_user: User,
+    report_version_id: UUID,
+) -> ReportVersion | None:
     return (
         db.query(ReportVersion)
-        .options(joinedload(ReportVersion.case))
         .join(Case, Case.id == ReportVersion.case_id)
-        .filter(ReportVersion.id == report_version_id, Case.user_id == current_user.id)
+        .filter(
+            ReportVersion.id == report_version_id,
+            Case.user_id == current_user.id,
+        )
         .first()
     )
 
 
-@router.get("")
-def list_reports(include_archived: bool = False, report_type: str | None = None, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("", response_model=list[ReportVersionRead])
+def list_reports(
+    include_archived: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     query = (
         db.query(ReportVersion)
-        .options(joinedload(ReportVersion.case))
         .join(Case, Case.id == ReportVersion.case_id)
         .filter(Case.user_id == current_user.id)
     )
+
     if not include_archived:
         query = query.filter(ReportVersion.is_archived == False)
-    if report_type and report_type != "all":
-        query = query.filter(ReportVersion.report_type == report_type)
+
     reports = query.order_by(ReportVersion.generated_at.desc()).all()
-    return [_serialise_report(report, db=db) for report in reports]
+    return [_serialise_report(report) for report in reports]
 
 
-@router.get("/case/{case_id}")
-def list_case_reports(case_id: UUID, include_archived: bool = False, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    case = db.query(Case).filter(Case.id == case_id, Case.user_id == current_user.id).first()
+@router.get("/case/{case_id}", response_model=list[ReportVersionRead])
+def list_case_reports(
+    case_id: UUID,
+    include_archived: bool = False,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    case = (
+        db.query(Case)
+        .filter(Case.id == case_id, Case.user_id == current_user.id)
+        .first()
+    )
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-    query = db.query(ReportVersion).options(joinedload(ReportVersion.case)).filter(ReportVersion.case_id == case.id)
+
+    query = db.query(ReportVersion).filter(ReportVersion.case_id == case.id)
+
     if not include_archived:
         query = query.filter(ReportVersion.is_archived == False)
+
     reports = query.order_by(ReportVersion.version_number.desc()).all()
-    return [_serialise_report(report, db=db) for report in reports]
+    return [_serialise_report(report) for report in reports]
 
 
-@router.get("/{report_version_id}")
-def get_report_metadata(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/{report_version_id}", response_model=ReportVersionRead)
+def get_report_metadata(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    return _serialise_report(report, db=db)
+    return _serialise_report(report)
 
 
 @router.get("/{report_version_id}/viewer", response_class=HTMLResponse)
-def get_report_viewer(report_version_id: UUID, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
-    report = _get_owned_report(db, current_user, report_version_id)
+def get_report_viewer(
+    report_version_id: UUID,
+    request: Request,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    report = (
+        db.query(ReportVersion)
+        .join(Case, Case.id == ReportVersion.case_id)
+        .filter(ReportVersion.id == report_version_id, Case.user_id == current_user.id)
+        .first()
+    )
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    if _get_report_type(report) == "trend":
-        raise HTTPException(status_code=409, detail="Trend reports use the trend viewer, not the assessment viewer.")
 
-    settings = db.query(PractitionerSettings).filter(PractitionerSettings.user_id == current_user.id).first()
+    settings = (
+        db.query(PractitionerSettings)
+        .filter(PractitionerSettings.user_id == current_user.id)
+        .first()
+    )
     report._practitioner_settings = settings
+
     payload = _get_viewer_payload_for_report(report)
     tenant = _get_tenant_theme_for_report(report)
-    return templates.TemplateResponse(request=request, name="report_viewer.html", context={"request": request, "report": payload, "tenant": tenant, "viewer_mode": "practitioner"})
+
+    return templates.TemplateResponse(
+        request=request,
+        name="report_viewer.html",
+        context={
+            "request": request,
+            "report": payload,
+            "tenant": tenant,
+            "viewer_mode": "practitioner",
+        },
+    )
 
 
 @router.get("/{report_version_id}/status")
-def get_report_status(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_report_status(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    row = _serialise_report(report, db=db)
-    row.update({
+
+    return {
         "report_version_id": str(report.id),
+        "case_id": str(report.case_id),
+        "display_name": _case_display_name(getattr(report, "case", None)),
+        "version_number": report.version_number,
+        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
         "started_at": getattr(report, "started_at", None),
         "completed_at": getattr(report, "completed_at", None),
         "failed_at": getattr(report, "failed_at", None),
         "error_message": getattr(report, "error_message", None),
-    })
-    return row
+        "generated_at": report.generated_at,
+    }
 
 
 @router.get("/{report_version_id}/json")
-def get_report_json(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_report_json(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
     if report.report_json is None:
-        raise HTTPException(status_code=409, detail=f"Report is not ready yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Report is not ready yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}",
+        )
+
     return JSONResponse(report.report_json)
 
 
-@router.get("/{report_version_id}/viewer-data")
-def get_report_viewer_payload(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+@router.get("/{report_version_id}/viewer")
+def get_report_viewer_payload(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
     if report.report_json is None:
-        raise HTTPException(status_code=409, detail=f"Report is not ready yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Report is not ready yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}",
+        )
+
     report_json = report.report_json or {}
+
     return {
         "report_version_id": str(report.id),
         "case_id": str(report.case_id),
         "display_name": _case_display_name(getattr(report, "case", None)),
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
-        "recommendation_mode": report.recommendation_mode.value if hasattr(report.recommendation_mode, "value") else str(report.recommendation_mode),
+        "recommendation_mode": (
+            report.recommendation_mode.value
+            if hasattr(report.recommendation_mode, "value")
+            else str(report.recommendation_mode)
+        ),
         "viewer": report_json.get("viewer"),
         "html_path": report.html_path,
         "pdf_path": report.pdf_path,
-        "report_type": _get_report_type(report),
-        "source_report_ids": _get_source_report_ids(report),
     }
 
 
 @router.get("/{report_version_id}/pdf")
-def get_report_pdf(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_report_pdf(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    if _get_report_type(report) == "trend":
-        raise HTTPException(status_code=409, detail="PDF export for trend reports is not available yet.")
+
     if not report.pdf_path:
-        raise HTTPException(status_code=409, detail=f"PDF is not available yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"PDF is not available yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}",
+        )
+
     if not object_exists(report.pdf_path):
-        raise HTTPException(status_code=404, detail="PDF file not found. Please regenerate the report.")
-    return RedirectResponse(url=generate_presigned_url(report.pdf_path), status_code=302)
+        raise HTTPException(
+            status_code=404,
+            detail="PDF file not found. Please regenerate the report.",
+        )
+
+    signed_url = generate_presigned_url(report.pdf_path)
+    return RedirectResponse(url=signed_url, status_code=302)
 
 
 @router.get("/{report_version_id}/html")
-def get_report_html(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_report_html(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
-    if _get_report_type(report) == "trend":
-        raise HTTPException(status_code=409, detail="Raw HTML is only available for assessment reports.")
+
     if not report.html_path:
-        raise HTTPException(status_code=409, detail=f"HTML is not available yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"HTML is not available yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}",
+        )
+
     if not object_exists(report.html_path):
-        raise HTTPException(status_code=404, detail="HTML file not found. Please regenerate the report.")
-    return RedirectResponse(url=generate_presigned_url(report.html_path), status_code=302)
+        raise HTTPException(
+            status_code=404,
+            detail="HTML file not found. Please regenerate the report.",
+        )
+
+    signed_url = generate_presigned_url(report.html_path)
+    return RedirectResponse(url=signed_url, status_code=302)
 
 
 @router.patch("/{report_version_id}/overrides")
-def update_report_overrides(report_version_id: UUID, payload: ReportOverrideUpdate, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def update_report_overrides(
+    report_version_id: UUID,
+    payload: ReportOverrideUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
     overrides = report.overrides
     if not overrides:
         overrides = ReportOverride(report_version_id=report.id)
         db.add(overrides)
+
     for field, value in payload.model_dump(exclude_unset=True).items():
         setattr(overrides, field, value)
+
     db.commit()
     db.refresh(overrides)
-    log_action(db, "report_overrides_updated", user_id=current_user.id, case_id=report.case_id, report_version_id=report.id)
+
+    log_action(
+        db,
+        "report_overrides_updated",
+        user_id=current_user.id,
+        case_id=report.case_id,
+        report_version_id=report.id,
+    )
+
     return {"ok": True}
 
 
 @router.post("/{report_version_id}/finalise")
-def finalise_report(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def finalise_report(
+    report_version_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
     current_status = report.status.value if hasattr(report.status, "value") else str(report.status)
     if current_status not in {"ready", "final"}:
-        raise HTTPException(status_code=409, detail=f"Only ready reports can be finalised. Current status: {current_status}")
+        raise HTTPException(
+            status_code=409,
+            detail=f"Only ready reports can be finalised. Current status: {current_status}",
+        )
+
     report.status = ReportStatus.final
     report.case.status = "final"
     db.commit()
     db.refresh(report)
-    log_action(db, "report_finalised", user_id=current_user.id, case_id=report.case_id, report_version_id=report.id)
-    return {"ok": True, "report_version_id": str(report.id), "status": report.status.value if hasattr(report.status, "value") else str(report.status)}
+
+    log_action(
+        db,
+        "report_finalised",
+        user_id=current_user.id,
+        case_id=report.case_id,
+        report_version_id=report.id,
+    )
+
+    return {
+        "ok": True,
+        "report_version_id": str(report.id),
+        "status": report.status.value if hasattr(report.status, "value") else str(report.status),
+    }
 
 
 @router.post("/{report_id}/archive")
-def archive_report(report_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def archive_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
     report.is_archived = True
     db.commit()
-    log_action(db, "report_archived", user_id=current_user.id, case_id=report.case_id, report_version_id=report.id)
+
+    log_action(
+        db,
+        "report_archived",
+        user_id=current_user.id,
+        case_id=report.case_id,
+        report_version_id=report.id,
+    )
+
     return {"ok": True}
 
 
 @router.post("/{report_id}/restore")
-def restore_report(report_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def restore_report(
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
     report = _get_owned_report(db, current_user, report_id)
     if not report:
         raise HTTPException(status_code=404, detail="Report not found")
+
     report.is_archived = False
     db.commit()
-    log_action(db, "report_restored", user_id=current_user.id, case_id=report.case_id, report_version_id=report.id)
+
+    log_action(
+        db,
+        "report_restored",
+        user_id=current_user.id,
+        case_id=report.case_id,
+        report_version_id=report.id,
+    )
+
     return {"ok": True}

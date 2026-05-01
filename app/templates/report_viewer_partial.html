@@ -1,11 +1,15 @@
-
 {% set viewer = report.viewer or {} %}
-{% set ov = viewer.overview or {} %}
-{% set systems = viewer.systems or {} %}
-{% set recs = viewer.recommendations or {} %}
-{% set detail = viewer.detail or {} %}
-{% set patient = ov.patient or {} %}
-{% set body = detail.body_composition_block or {} %}
+{% set ov = viewer.get('overview', {}) if viewer is mapping else {} %}
+{% set systems = viewer.get('systems', {}) if viewer is mapping else {} %}
+{% set recs = viewer.get('recommendations', {}) if viewer is mapping else {} %}
+{% set detail = viewer.get('detail', {}) if viewer is mapping else {} %}
+{% set viewer_tenant = viewer.get('tenant', {}) if viewer is mapping else {} %}
+{% set patient = ov.get('patient', {}) if ov is mapping else {} %}
+{% set body = detail.get('body_composition_block', {}) if detail is mapping else {} %}
+{% set primary_pattern = ov.get('primary_pattern') if ov is mapping else none %}
+{% set contributing_patterns = ov.get('contributing_patterns', []) if ov is mapping else [] %}
+{% set priority_actions = ov.get('priority_actions', []) if ov is mapping else [] %}
+{% set clinical_summary_v3 = ov.get('clinical_summary_v3', {}) if ov is mapping else {} %}
 
 {% macro section_slug(value) -%}
     {{- (value or '')
@@ -35,20 +39,20 @@
 
             <div class="report-command-grid">
                 <div class="report-command-copy">
-                    <div class="report-patient-name">{{ patient.full_name or "Unnamed patient" }}</div>
+                    <div class="report-patient-name">{{ patient.get("full_name") or "Unnamed patient" }}</div>
 
                     <div class="report-patient-meta">
-                        <span>{{ patient.sex or "—" }}</span>
+                        <span>{{ patient.get("sex") or "—" }}</span>
                         <span>•</span>
-                        <span>{{ patient.age or "—" }}</span>
+                        <span>{{ patient.get("age") or "—" }}</span>
                         <span>•</span>
-                        <span>{{ patient.scan_datetime or "—" }}</span>
+                        <span>{{ patient.get("scan_datetime") or "—" }}</span>
                     </div>
 
-                    <h1 class="report-command-title">{{ viewer.tenant.report_title or "Personalised Wellness Scan Report" }}</h1>
+                    <h1 class="report-command-title">{{ viewer_tenant.get("report_title") or "Personalised Wellness Scan Report" }}</h1>
 
                     <p class="report-command-subtitle">
-                        {{ viewer.tenant.subtitle or "Structured practitioner view of system balance, dominant patterns, recommendations, and marker detail." }}
+                        {{ viewer_tenant.get("subtitle") or "Structured practitioner view of system balance, dominant patterns, recommendations, and marker detail." }}
                     </p>
                 </div>
 
@@ -56,11 +60,11 @@
                     <div class="report-health-index-card">
                         <div class="report-health-index-label">Health Index</div>
                         <div class="report-health-index-main">
-                            <div class="report-health-index-score">{{ ov.overall_scan_score or "—" }}</div>
-                            <div class="report-health-index-band">{{ ov.overall_scan_band_label or "Not available" }}</div>
+                            <div class="report-health-index-score">{{ ov.get("overall_scan_score") or "—" }}</div>
+                            <div class="report-health-index-band">{{ ov.get("overall_scan_band_label") or "Not available" }}</div>
                         </div>
 
-                        {% set header_score = ov.overall_scan_score or 0 %}
+                        {% set header_score = ov.get("overall_scan_score") or 0 %}
                         <div class="score-bar report-health-index-bar">
                             <div class="score-indicator" style="left: {{ header_score }}%;"></div>
                         </div>
@@ -118,33 +122,26 @@
                 <p class="subtle">The core story of the scan, prioritised for fast understanding.</p>
 
                 <div class="overview-layout" style="margin-top:14px;">
-
-                    <div class="summary-card">
-                        <h3>Clinical snapshot</h3>
-                    
-                        {% set overall_summary = ov.get("overall_summary") if ov is mapping else none %}
-                    
-                        {% if overall_summary is mapping %}
-                            <div>
-                                {{ overall_summary.get("clinical_snapshot")
-                                   or overall_summary.get("summary")
-                                   or "Not available yet." }}
-                            </div>
-                        {% elif overall_summary %}
-                            <div>{{ overall_summary }}</div>
-                        {% else %}
-                            <div>Not available yet.</div>
-                        {% endif %}
-                    
-                    </div>
+                    <div class="summary-stack">
+                        <div class="summary-card">
+                            <h3>Clinical snapshot</h3>
+                            {% set overall_summary = ov.get("overall_summary") if ov is mapping else none %}
+                            {% if overall_summary is mapping %}
+                                <div>{{ overall_summary.get("clinical_snapshot") or overall_summary.get("summary") or "Not available yet." }}</div>
+                            {% elif overall_summary %}
+                                <div>{{ overall_summary }}</div>
+                            {% else %}
+                                <div>Not available yet.</div>
+                            {% endif %}
+                        </div>
 
                         <div class="summary-card">
                             <h3>Primary pattern</h3>
-                            {% if ov.primary_pattern %}
-                                <p><strong>{{ ov.primary_pattern.title }}</strong></p>
-                                <p>{{ ov.primary_pattern.clinical_summary or ov.primary_pattern.summary or "" }}</p>
-                                {% if ov.primary_pattern.follow_up_focus %}
-                                    <p class="subtle">Focus: {{ ov.primary_pattern.follow_up_focus | join(", ") }}</p>
+                            {% if primary_pattern %}
+                                <p><strong>{{ primary_pattern.get("title") or "Primary pattern" }}</strong></p>
+                                <p>{{ primary_pattern.get("clinical_summary") or primary_pattern.get("summary") or "" }}</p>
+                                {% if primary_pattern.get("follow_up_focus") %}
+                                    <p class="subtle">Focus: {{ primary_pattern.get("follow_up_focus") | join(", ") }}</p>
                                 {% endif %}
                             {% else %}
                                 <p>Not available yet.</p>
@@ -153,21 +150,22 @@
 
                         <div class="summary-card">
                             <h3>Practitioner overview</h3>
-                            <div>{{ ov.practitioner_summary or "Not available yet." }}</div>
+                            <div>{{ ov.get("practitioner_summary") or "Not available yet." }}</div>
                         </div>
 
-                        {% if ov.why_this_matters or ov.clinical_summary_v3.why_this_matters %}
+                        {% set why_this_matters = ov.get("why_this_matters") or clinical_summary_v3.get("why_this_matters") %}
+                        {% if why_this_matters %}
                         <div class="summary-card insight-callout">
                             <h3>Why this matters</h3>
-                            <div>{{ ov.why_this_matters or ov.clinical_summary_v3.why_this_matters }}</div>
+                            <div>{{ why_this_matters }}</div>
                         </div>
                         {% endif %}
 
-                        {% if ov.priority_actions %}
+                        {% if priority_actions %}
                         <div class="summary-card">
                             <h3>Immediate priorities for follow-up</h3>
                             <ul>
-                                {% for item in ov.priority_actions %}
+                                {% for item in priority_actions %}
                                     <li>{{ item }}</li>
                                 {% endfor %}
                             </ul>
@@ -178,12 +176,12 @@
                     <div class="overview-sidebar">
                         <div class="summary-card">
                             <h3>Supporting patterns</h3>
-                            {% if ov.contributing_patterns %}
+                            {% if contributing_patterns %}
                                 <ul class="compact-list">
-                                    {% for p in ov.contributing_patterns[:3] %}
+                                    {% for p in contributing_patterns[:3] %}
                                         <li>
-                                            <strong>{{ p.title }}</strong>
-                                            {% if p.clinical_summary %}<br><span class="subtle">{{ p.clinical_summary }}</span>{% endif %}
+                                            <strong>{{ p.get("title") or "Supporting pattern" }}</strong>
+                                            {% if p.get("clinical_summary") %}<br><span class="subtle">{{ p.get("clinical_summary") }}</span>{% endif %}
                                         </li>
                                     {% endfor %}
                                 </ul>
@@ -553,7 +551,7 @@
 
             <div class="right-card">
                 <div class="right-card-title">Primary pattern</div>
-                <div>{{ ov.primary_pattern.title or "—" }}</div>
+                <div>{{ primary_pattern.get("title") if primary_pattern else "—" }}</div>
             </div>
 
             {% if systems.priority_overview %}

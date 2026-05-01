@@ -1894,22 +1894,73 @@ async def build_report(
     pdf_filename: str = "wellness_report.pdf",
     recommendation_mode: str | None = None,
 ) -> dict[str, str]:
-    report_html = render_report_html(
-        report,
-        overrides=overrides,
-        recommendation_mode=recommendation_mode,
-    )
-    html_path = save_html(report_html, html_filename)
-    pdf_path = await save_pdf(report_html, pdf_filename)
+    """
+    Build the SaaS viewer payload and printable artefacts.
+
+    The application viewer depends on viewer_payload, so we build and validate
+    that first. HTML/PDF failures are captured as warnings instead of creating
+    a failed/empty report, because the interactive report can still be useful
+    while a local PDF/template issue is being resolved.
+    """
+    build_warnings = []
+
     viewer_payload = build_viewer_payload(
         report,
         overrides=overrides,
         recommendation_mode=recommendation_mode,
     )
 
+    if not isinstance(viewer_payload, dict) or not viewer_payload:
+        raise ValueError("Report builder produced an empty viewer_payload.")
+
+    overview = viewer_payload.get("overview") or {}
+    systems = viewer_payload.get("systems") or {}
+    recommendations = viewer_payload.get("recommendations") or {}
+    detail = viewer_payload.get("detail") or {}
+
+    has_content = any([
+        overview.get("overall_scan_score") is not None,
+        overview.get("overall_summary"),
+        overview.get("primary_pattern"),
+        overview.get("practitioner_summary"),
+        systems.get("system_score_cards"),
+        systems.get("priority_overview"),
+        recommendations.get("clinical_recommendations"),
+        recommendations.get("protocol_plan"),
+        detail.get("full_marker_tables"),
+        detail.get("body_composition_block"),
+    ])
+    if not has_content:
+        raise ValueError("Report builder produced viewer_payload without usable report content.")
+
+    try:
+        report_html = render_report_html(
+            report,
+            overrides=overrides,
+            recommendation_mode=recommendation_mode,
+        )
+    except Exception as exc:
+        build_warnings.append(f"HTML render failed: {exc}")
+        report_html = """<!doctype html>
+<html><head><meta charset="utf-8"><title>Report generated</title></head>
+<body><h1>Report generated</h1><p>The interactive viewer data was generated successfully, but the printable HTML template failed to render.</p></body></html>"""
+
+    try:
+        html_path = save_html(report_html, html_filename)
+    except Exception as exc:
+        build_warnings.append(f"HTML save failed: {exc}")
+        html_path = None
+
+    try:
+        pdf_path = await save_pdf(report_html, pdf_filename)
+    except Exception as exc:
+        build_warnings.append(f"PDF generation failed: {exc}")
+        pdf_path = None
+
     return {
         "html": report_html,
         "html_path": html_path,
         "pdf_path": pdf_path,
         "viewer_payload": viewer_payload,
+        "build_warnings": build_warnings,
     }

@@ -198,6 +198,7 @@
     let parsedPatientData = null;
     let allPatients = [];
     let selectedExistingPatientId = null;
+    let isSubmittingCase = false;
 
     function showError(msg) {
         const box = document.getElementById("error-box");
@@ -550,101 +551,133 @@
     }
 
     async function createCase(generateAfter = false, forceDuplicate = false) {
+        if (isSubmittingCase) return;
+
+        isSubmittingCase = true;
         clearError();
 
-        if (!temporaryUploadId) {
-            showError("Please upload and parse a scan first.");
-            return;
-        }
+        const createBtn = document.querySelector('#confirm-form button[type="submit"]');
+        const createGenerateBtn = document.getElementById("create-and-generate");
+        const originalCreateText = createBtn ? createBtn.textContent : "";
+        const originalGenerateText = createGenerateBtn ? createGenerateBtn.textContent : "";
 
-        let recommendationMode = "natural_approaches_clinical";
+        if (createBtn) {
+            createBtn.disabled = true;
+            createBtn.textContent = "Processing...";
+        }
+        if (createGenerateBtn) {
+            createGenerateBtn.disabled = true;
+            createGenerateBtn.textContent = "Processing...";
+        }
 
         try {
-            const settingsResponse = await apiFetch("/api/settings");
-            if (settingsResponse.ok) {
-                const settings = await settingsResponse.json();
-                recommendationMode = settings.recommendation_mode_default || recommendationMode;
+            if (!temporaryUploadId) {
+                showError("Please upload and parse a scan first.");
+                return;
             }
-        } catch (e) {
-            console.warn("Could not load recommendation mode from settings", e);
-        }
 
-        const linkMode = document.querySelector('input[name="patient-link-mode"]:checked')?.value || "new";
+            let recommendationMode = "natural_approaches_clinical";
 
-        if (linkMode === "existing" && !selectedExistingPatientId) {
-            showError("Please select an existing patient to link this scan to.");
-            return;
-        }
+            try {
+                const settingsResponse = await apiFetch("/api/settings");
+                if (settingsResponse.ok) {
+                    const settings = await settingsResponse.json();
+                    recommendationMode = settings.recommendation_mode_default || recommendationMode;
+                }
+            } catch (e) {
+                console.warn("Could not load recommendation mode from settings", e);
+            }
 
-        const mismatchVisible = document.getElementById("patient-mismatch-warning").style.display !== "none";
-        if (linkMode === "existing" && mismatchVisible) {
-            const confirmed = window.confirm(
-                "The imported name or identity details do not fully match the selected patient record. Do you want to continue linking this scan?"
-            );
-            if (!confirmed) return;
-        }
+            const linkMode = document.querySelector('input[name="patient-link-mode"]:checked')?.value || "new";
 
-        const payload = {
-            temporary_upload_id: temporaryUploadId,
-            patient: {
-                first_name: document.getElementById("first_name").value || "",
-                last_name: document.getElementById("last_name").value || "",
-                date_of_birth: document.getElementById("date_of_birth").value || null,
-                age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
-                sex: document.getElementById("sex").value || null,
-                height_cm: safeNumber(document.getElementById("height_cm").value),
-                weight_kg: safeNumber(document.getElementById("weight_kg").value),
-                full_name: [
-                    document.getElementById("first_name").value || "",
-                    document.getElementById("last_name").value || ""
-                ].join(" ").trim() || null
-            },
-            scan_metadata: parsedScanMetadata,
-            case: {
-                title: document.getElementById("case_title").value || "QRMA scan case",
-                recommendation_mode: recommendationMode,
-                clinical_context_json: null
-            },
-            existing_patient_id: linkMode === "existing" ? selectedExistingPatientId : null,
-            update_patient_measurements: (
-                linkMode === "existing" &&
-                document.getElementById("update-patient-measurements").checked
-            ),
-            allow_duplicate: forceDuplicate
-        };
+            if (linkMode === "existing" && !selectedExistingPatientId) {
+                showError("Please select an existing patient to link this scan to.");
+                return;
+            }
 
-        const response = await apiFetch("/api/cases/create-from-import", {
-            method: "POST",
-            body: JSON.stringify(payload),
-        });
+            const mismatchVisible = document.getElementById("patient-mismatch-warning").style.display !== "none";
+            if (linkMode === "existing" && mismatchVisible && !forceDuplicate) {
+                const confirmed = window.confirm(
+                    "The imported name or identity details do not fully match the selected patient record. Do you want to continue linking this scan?"
+                );
+                if (!confirmed) return;
+            }
 
-        const data = await response.json().catch(() => ({}));
+            const payload = {
+                temporary_upload_id: temporaryUploadId,
+                patient: {
+                    first_name: document.getElementById("first_name").value || "",
+                    last_name: document.getElementById("last_name").value || "",
+                    date_of_birth: document.getElementById("date_of_birth").value || null,
+                    age: document.getElementById("age").value ? Number(document.getElementById("age").value) : null,
+                    sex: document.getElementById("sex").value || null,
+                    height_cm: safeNumber(document.getElementById("height_cm").value),
+                    weight_kg: safeNumber(document.getElementById("weight_kg").value),
+                    full_name: [
+                        document.getElementById("first_name").value || "",
+                        document.getElementById("last_name").value || ""
+                    ].join(" ").trim() || null
+                },
+                scan_metadata: parsedScanMetadata,
+                case: {
+                    title: document.getElementById("case_title").value || "QRMA scan case",
+                    recommendation_mode: recommendationMode,
+                    clinical_context_json: null
+                },
+                existing_patient_id: linkMode === "existing" ? selectedExistingPatientId : null,
+                update_patient_measurements: (
+                    linkMode === "existing" &&
+                    document.getElementById("update-patient-measurements").checked
+                ),
+                allow_duplicate: forceDuplicate
+            };
 
-        if (!response.ok) {
-            showError(data);
-            return;
-        }
+            const response = await apiFetch("/api/cases/create-from-import", {
+                method: "POST",
+                body: JSON.stringify(payload),
+            });
 
-        const caseId = data.case_id;
+            const data = await response.json().catch(() => ({}));
 
-        if (!generateAfter) {
+            if (!response.ok) {
+                const detail = unwrapErrorPayload(data);
+
+                if (detail && typeof detail === "object" && detail.code === "report_generation_failed" && detail.case_id) {
+                    showSuccess("Case was created. Opening the case workspace so you can retry report generation.");
+                    window.location.href = `/app/cases/${detail.case_id}`;
+                    return;
+                }
+
+                showError(data);
+                return;
+            }
+
+            const caseId = data.case_id;
+
+            if (!caseId) {
+                showError("Case was created but no case ID was returned.");
+                return;
+            }
+
+            // Backend now owns auto-generation. Do not call /generate-report here,
+            // otherwise one click can create duplicate versions.
+            if (data.auto_generated === false) {
+                showSuccess(data.warning || "Case was created. Report generation can be retried from the case workspace.");
+            }
+
             window.location.href = `/app/cases/${caseId}`;
-            return;
+
+        } finally {
+            isSubmittingCase = false;
+            if (createBtn) {
+                createBtn.disabled = false;
+                createBtn.textContent = originalCreateText || "Create case";
+            }
+            if (createGenerateBtn) {
+                createGenerateBtn.disabled = false;
+                createGenerateBtn.textContent = originalGenerateText || "Create and generate report";
+            }
         }
-
-        const genResponse = await apiFetch(`/api/cases/${caseId}/generate-report`, {
-            method: "POST"
-        });
-
-        const genData = await genResponse.json().catch(() => ({}));
-
-        if (!genResponse.ok) {
-            showError(genData);
-            window.location.href = `/app/cases/${caseId}`;
-            return;
-        }
-
-        window.location.href = `/app/cases/${caseId}`;
     }
 
     document.getElementById("upload-form").addEventListener("submit", handleUploadSubmit);
