@@ -1,0 +1,218 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+
+/* Shares page-specific styles only. App shell/account/sidebar come from base.html. */
+.shares-hero,
+.shares-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.shares-hero h2 {
+    font-size: 24px;
+    margin: 0 0 5px;
+}
+
+.shares-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.shares-stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.shares-stat .label {
+    font-size: 12px;
+    color: var(--muted);
+}
+
+.shares-stat .value {
+    font-size: 26px;
+    font-weight: 900;
+    margin-top: 4px;
+}
+
+.shares-toolbar {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.shares-filters {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.shares-filters input,
+.shares-filters select {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: #fff;
+}
+
+.shares-pill {
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: #fff;
+    padding: 9px 13px;
+    font-weight: 850;
+    cursor: pointer;
+}
+
+.shares-pill.active {
+    background: #eff6ff;
+    border-color: #bfdbfe;
+    color: #1d4ed8;
+}
+
+.shares-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.shares-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.shares-table th,
+.shares-table td {
+    border-bottom: 1px solid #edf0f2;
+    padding: 13px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.shares-table th {
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+
+.shares-table tr:hover td {
+    background: #fafafa;
+}
+
+.shares-title {
+    font-weight: 750;
+}
+
+.shares-small {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 3px;
+}
+
+.shares-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.shares-badge.assessment { background: #ecfdf5; color: #065f46; border: 1px solid #bbf7d0; }
+.shares-badge.trend { background: #eef2ff; color: #3730a3; border: 1px solid #c7d2fe; }
+.shares-badge.bundle { background: #f5f3ff; color: #5b21b6; border: 1px solid #ddd6fe; }
+.shares-badge.active { background: #ecfdf5; color: #166534; }
+.shares-badge.expired { background: #fff7ed; color: #9a3412; }
+.shares-badge.revoked { background: #fef2f2; color: #991b1b; }
+.shares-badge.paid { background: #ecfdf5; color: #166534; }
+.shares-badge.unpaid { background: #fff7ed; color: #92400e; }
+.shares-badge.not_required { background: #f1f5f9; color: #475569; }
+
+.shares-actions {
+    display: flex;
+    gap: 7px;
+    flex-wrap: wrap;
+}
+
+.shares-btn {
+    border: 1px solid var(--line);
+    background: #fff;
+    border-radius: 999px;
+    padding: 7px 10px;
+    font-weight: 800;
+    text-decoration: none;
+    color: #1f2937;
+    cursor: pointer;
+    font-size: 13px;
+}
+
+.shares-btn.primary {
+    background: #3158d4;
+    border-color: #3158d4;
+    color: #fff;
+}
+
+.shares-btn.danger {
+    color: #991b1b;
+}
+
+.shares-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px;
+}
+
+.shares-toast {
+    position: fixed;
+    right: 18px;
+    bottom: 18px;
+    background: #111827;
+    color: #fff;
+    padding: 12px 14px;
+    border-radius: 12px;
+    display: none;
+    z-index: 1200;
+}
+
+@media(max-width:900px) {
+    .shares-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+</style>
+
+<div class="shares-hero"><h2>Shares and bundles</h2><div class="muted">Manage single report shares, trend shares, and client report bundles from one place.</div></div>
+<div class="shares-stats"><div class="shares-stat"><div class="label">Total shares</div><div class="value" id="stat-total">—</div></div><div class="shares-stat"><div class="label">Bundles</div><div class="value" id="stat-bundles">—</div></div><div class="shares-stat"><div class="label">Paid</div><div class="value" id="stat-paid">—</div></div><div class="shares-stat"><div class="label">Needs payment</div><div class="value" id="stat-unpaid">—</div></div></div>
+<div class="shares-card"><div class="shares-toolbar"><div class="shares-filters"><button class="shares-pill active" data-kind="all">All</button><button class="shares-pill" data-kind="single">Single shares</button><button class="shares-pill" data-kind="bundle">Bundles</button><button class="shares-pill" data-status="active">Active</button><button class="shares-pill" data-payment="unpaid">Unpaid</button><input id="search" placeholder="Search patient, report, token…"><select id="sort"><option value="created_desc">Created newest</option><option value="created_asc">Created oldest</option><option value="expires_asc">Expires soonest</option><option value="title_asc">Title A–Z</option></select></div><div class="muted"><span id="shown-count">0</span> shown</div></div>
+<div class="shares-table-wrap"><table class="shares-table"><thead><tr><th>Type</th><th>Client / Report</th><th>Items</th><th>Created</th><th>Expires</th><th>Price</th><th>Payment</th><th>Access</th><th>Actions</th></tr></thead><tbody id="rows"><tr><td colspan="9" class="shares-empty">Loading…</td></tr></tbody></table></div></div>
+<script>
+
+let shareItems=[];let filters={kind:"all",status:"",payment:"",search:"",sort:"created_desc"};
+function cls(v){return String(v||"").replaceAll(" ","_").toLowerCase()}function toast(msg){const t=document.getElementById("toast");t.textContent=msg;t.style.display="block";setTimeout(()=>t.style.display="none",2200)}
+async function loadShares(){const res=await fetch("/api/share-links");if(!res.ok)throw new Error("Could not load share links");const data=await res.json();shareItems=data.items||[];stats(data.counts||{});render()}
+function stats(c){document.getElementById("stat-total").textContent=c.all||0;document.getElementById("stat-bundles").textContent=c.bundle||0;document.getElementById("stat-paid").textContent=c.paid||0;document.getElementById("stat-unpaid").textContent=c.unpaid||0}
+function rows(){const q=filters.search.trim().toLowerCase();let r=shareItems.filter(i=>{if(filters.kind!="all"&&i.kind!==filters.kind)return false;if(filters.status&&i.access_status!==filters.status)return false;if(filters.payment&&i.payment_status!==filters.payment)return false;if(q&&!([i.title,i.patient,i.token,i.type,i.items,i.payment_status,i.access_status].join(" ").toLowerCase().includes(q)))return false;return true});r.sort((a,b)=>{if(filters.sort==="created_asc")return String(a.created_at||"").localeCompare(String(b.created_at||""));if(filters.sort==="expires_asc")return String(a.expires_at||"9999").localeCompare(String(b.expires_at||"9999"));if(filters.sort==="title_asc")return String(a.title||"").localeCompare(String(b.title||""));return String(b.created_at||"").localeCompare(String(a.created_at||""))});return r}
+function render(){const tbody=document.getElementById("rows");const r=rows();document.getElementById("shown-count").textContent=r.length;if(!r.length){tbody.innerHTML='<tr><td colspan="9" class="shares-empty">No shares found.</td></tr>';return}tbody.innerHTML=r.map(i=>`<tr><td><span class="shares-badge ${i.type_key==="assessment"?"assessment":i.type_key==="trend"?"trend":"bundle"}">${esc(i.type)}</span></td><td><div class="shares-title">${esc(i.title||"Untitled")}</div><div class="shares-small">${esc(i.patient||"—")}</div><div class="shares-small">${esc(i.token||"")}</div></td><td>${esc(i.items||"—")}</td><td>${esc(i.created_display||"—")}</td><td>${esc(i.expires_display||"—")}</td><td>${esc(i.price||"Free")}</td><td><span class="shares-badge ${cls(i.payment_status)}">${esc(i.payment_status||"—")}</span></td><td><span class="shares-badge ${cls(i.access_status)}">${esc(i.access_status||"—")}</span></td><td><div class="shares-actions"><a class="shares-btn primary" href="${attr(i.url)}" target="_blank">Open</a><button class="shares-btn" onclick="copyLink('${attr(i.url)}')">Copy</button><a class="shares-btn" target="_blank" href="${wa(i)}">WhatsApp</a><a class="shares-btn" href="${mail(i)}">Email</a>${i.access_status!=="revoked"?`<button class="shares-btn danger" onclick="revokeItem('${i.kind}','${i.id}')">Revoke</button>`:""}</div></td></tr>`).join("")}
+function wa(i){return `https://wa.me/?text=${encodeURIComponent("Your secure health report link: "+i.url)}`}function mail(i){return `mailto:?subject=${encodeURIComponent(i.kind==="bundle"?"Your shared health report bundle":"Your shared health report")}&body=${encodeURIComponent("Hello,\n\nYour secure link is:\n"+i.url+"\n\n")}`}async function copyLink(url){await navigator.clipboard.writeText(url);toast("Link copied")}async function revokeItem(kind,id){if(!confirm("Revoke this share?"))return;const path=kind==="bundle"?`/api/share-bundles/${id}/revoke`:`/api/share-links/${id}/revoke`;const res=await fetch(path,{method:"POST"});if(!res.ok){toast("Could not revoke share");return}toast("Share revoked");await loadShares()}
+function esc(s){return String(s??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]))}function attr(s){return esc(s).replaceAll("`","&#96;")}
+document.querySelectorAll(".shares-pill").forEach(b=>b.addEventListener("click",()=>{if(b.dataset.kind)filters.kind=b.dataset.kind;if(b.dataset.status)filters.status=filters.status===b.dataset.status?"":b.dataset.status;if(b.dataset.payment)filters.payment=filters.payment===b.dataset.payment?"":b.dataset.payment;document.querySelectorAll(".shares-pill[data-kind]").forEach(x=>x.classList.toggle("active",x.dataset.kind===filters.kind));document.querySelectorAll(".shares-pill[data-status]").forEach(x=>x.classList.toggle("active",filters.status===x.dataset.status));document.querySelectorAll(".shares-pill[data-payment]").forEach(x=>x.classList.toggle("active",filters.payment===x.dataset.payment));render()}));document.getElementById("search").addEventListener("input",e=>{filters.search=e.target.value;render()});document.getElementById("sort").addEventListener("change",e=>{filters.sort=e.target.value;render()});loadShares().catch(e=>{console.error(e);document.getElementById("rows").innerHTML='<tr><td colspan="9" class="shares-empty">Could not load shares.</td></tr>'});
+
+</script>
+{% endblock %}

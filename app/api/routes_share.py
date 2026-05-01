@@ -12,6 +12,7 @@ import urllib.request
 from types import SimpleNamespace
 from uuid import UUID
 from pydantic import BaseModel, Field
+from datetime import datetime
 
 from fastapi import APIRouter, Body, Depends, HTTPException, Request, Form
 from fastapi.responses import HTMLResponse, JSONResponse, FileResponse, RedirectResponse
@@ -30,6 +31,7 @@ from app.services.share_link_service import (
     is_share_link_valid,
     validate_share_link_password,
 )
+from app.services.subscription_service import require_subscription_feature
 
 router = APIRouter(tags=["share"])
 templates = Jinja2Templates(directory="app/templates")
@@ -572,6 +574,8 @@ def create_report_share_link(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "share_link")
+
     report = (
         db.query(ReportVersion)
         .join(Case, Case.id == ReportVersion.case_id)
@@ -626,6 +630,10 @@ def access_shared_report(
 ):
     link = _get_share_link_or_404(db, token)
     report = _get_report_for_share_or_404(db, link)
+
+    if getattr(report, "report_type", "assessment") == "trend":
+        return RedirectResponse(url=f"/share/{token}/trend", status_code=302)
+
 
     if link.password_hash and not _has_valid_share_cookie(request, token):
         response = templates.TemplateResponse(
@@ -945,6 +953,8 @@ def create_patient_trend_share_link(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "share_link")
+
     patient = (
         db.query(Patient)
         .filter(Patient.id == patient_id, Patient.user_id == current_user.id)
@@ -1271,17 +1281,7 @@ def get_shared_patient_trend_data(
 
 @router.post("/api/share/create")
 def create_share(payload: dict, db: Session = Depends(get_db), user=Depends(get_current_user)):
-    """
-    payload:
-    {
-        "report_version_id": "...",
-        "patient_id": "...",
-        "share_type": "report" | "trend",
-        "price": 25,
-        "expires_days": 7,
-        "password": ""
-    }
-    """
+    require_subscription_feature(db, user, "share_link")
 
     share = create_share_link(
         db=db,
@@ -1290,7 +1290,7 @@ def create_share(payload: dict, db: Session = Depends(get_db), user=Depends(get_
         share_type=payload.get("share_type", "report"),
         price=payload.get("price"),
         expires_days=payload.get("expires_days"),
-        password=payload.get("password")
+        password=payload.get("password"),
     )
 
     base = os.getenv("BASE_URL", "http://127.0.0.1:8000")
@@ -1304,7 +1304,7 @@ def create_share(payload: dict, db: Session = Depends(get_db), user=Depends(get_
         "success": True,
         "url": url,
         "price": share.price_pence,
-        "type": share.share_type
+        "type": share.share_type,
     }
 
 
@@ -1386,6 +1386,8 @@ def create_share_bundle(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "share_bundle")
+
     reports = (
         db.query(ReportVersion)
         .join(Case, Case.id == ReportVersion.case_id)
@@ -1458,7 +1460,6 @@ def create_share_bundle(
         "report_count": len(payload.report_version_ids),
         "requires_payment": payload.requires_payment,
     }
-
 
 @router.get("/share/{token}/bundle", response_class=HTMLResponse)
 def access_shared_bundle(

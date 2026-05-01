@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block content %}
+<style>
+.revenue-hero,
+.revenue-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 18px;
+    margin-bottom: 16px;
+}
+
+.revenue-hero h2,
+.revenue-card h2 {
+    font-size: 24px;
+    margin: 0 0 5px;
+}
+
+.revenue-notice {
+    background: #eff6ff;
+    border: 1px solid #bfdbfe;
+    color: #1e3a8a;
+    padding: 12px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+    font-size: 13px;
+    line-height: 1.45;
+}
+
+.revenue-notice.success {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+    color: #065f46;
+}
+
+.revenue-stats {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+
+.revenue-stat {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+}
+
+.revenue-stat .label {
+    font-size: 12px;
+    color: var(--muted);
+    font-weight: 750;
+}
+
+.revenue-stat .value {
+    font-size: 26px;
+    font-weight: 950;
+    margin-top: 4px;
+}
+
+.revenue-stat .subv {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+}
+
+.revenue-currency-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 12px;
+}
+
+.revenue-currency-card {
+    border: 1px solid var(--line);
+    border-radius: 14px;
+    padding: 14px;
+    background: #fbfdff;
+}
+
+.revenue-currency-card h3 {
+    margin: 0 0 8px;
+    font-size: 15px;
+}
+
+.revenue-money {
+    font-weight: 950;
+    font-size: 20px;
+}
+
+.revenue-small {
+    font-size: 12px;
+    color: var(--muted);
+    margin-top: 4px;
+    line-height: 1.35;
+}
+
+.revenue-toolbar {
+    display: flex;
+    gap: 10px;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.revenue-toolbar input,
+.revenue-toolbar select {
+    border: 1px solid #d1d5db;
+    border-radius: 10px;
+    padding: 9px 10px;
+    background: #fff;
+}
+
+.revenue-table-wrap {
+    max-width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.revenue-table {
+    width: 100%;
+    border-collapse: collapse;
+    background: #fff;
+}
+
+.revenue-table th,
+.revenue-table td {
+    border-bottom: 1px solid #edf0f2;
+    padding: 13px 10px;
+    text-align: left;
+    vertical-align: top;
+}
+
+.revenue-table th {
+    font-size: 12px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    white-space: nowrap;
+}
+
+.revenue-table tr:hover td {
+    background: #fafafa;
+}
+
+.revenue-title {
+    font-weight: 850;
+}
+
+.revenue-badge {
+    display: inline-flex;
+    align-items: center;
+    border-radius: 999px;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 900;
+    white-space: nowrap;
+}
+
+.revenue-badge.paid { background: #ecfdf5; color: #166534; }
+.revenue-badge.unpaid,
+.revenue-badge.checkout_started { background: #fff7ed; color: #92400e; }
+.revenue-badge.failed,
+.revenue-badge.revoked { background: #fef2f2; color: #991b1b; }
+.revenue-badge.destination_charge { background: #eef2ff; color: #3730a3; }
+.revenue-badge.platform_only,
+.revenue-badge.platform_fallback,
+.revenue-badge.platform { background: #f1f5f9; color: #475569; }
+
+.revenue-empty {
+    text-align: center;
+    color: var(--muted);
+    padding: 30px;
+}
+
+.revenue-detail {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 11px;
+    color: #64748b;
+    max-width: 260px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+@media(max-width:1100px) {
+    .revenue-stats,
+    .revenue-currency-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media(max-width:900px) {
+    .revenue-stats,
+    .revenue-currency-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<div class="revenue-hero">
+    <h2>Revenue and payouts</h2>
+    <div class="muted">Track paid bundles, practitioner income, platform commission, Stripe fees, and Stripe Connect routing.</div>
+</div>
+
+<div class="revenue-notice success" id="fee-model-banner">
+    Loading revenue model…
+</div>
+
+<div class="revenue-notice">
+    Stripe fees are shown separately from the platform commission so practitioner payout, platform commission, and true platform net revenue remain clear.
+</div>
+
+<div class="revenue-stats">
+    <div class="revenue-stat"><div class="label">Paid bundles</div><div class="value" id="paid-count">—</div></div>
+    <div class="revenue-stat"><div class="label">Needs payment</div><div class="value" id="unpaid-count">—</div></div>
+    <div class="revenue-stat"><div class="label">Currencies</div><div class="value" id="currency-count">—</div></div>
+    <div class="revenue-stat"><div class="label">Connect routed</div><div class="value" id="connect-count">—</div><div class="subv">Destination charges</div></div>
+</div>
+
+<div class="revenue-card">
+    <h2 style="margin:0 0 12px">Summary by currency</h2>
+    <div class="revenue-currency-grid" id="currency-grid"><div class="muted">Loading…</div></div>
+</div>
+
+<div class="revenue-card">
+    <div class="revenue-toolbar">
+        <div>
+            <h2 style="margin:0">Payments</h2>
+            <div class="muted">Paid and unpaid client bundle payments.</div>
+        </div>
+        <div>
+            <input id="search" placeholder="Search patient, bundle, Stripe ID…">
+            <select id="status">
+                <option value="">All statuses</option>
+                <option value="paid">Paid</option>
+                <option value="checkout_started">Checkout started</option>
+                <option value="unpaid">Unpaid</option>
+            </select>
+        </div>
+    </div>
+
+    <div class="revenue-table-wrap">
+        <table class="revenue-table">
+            <thead>
+                <tr>
+                    <th>Bundle</th>
+                    <th>Paid</th>
+                    <th>Gross</th>
+                    <th>Platform commission</th>
+                    <th>Stripe fee</th>
+                    <th>Platform net</th>
+                    <th>Practitioner payout</th>
+                    <th>Connect</th>
+                    <th>Stripe refs</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody id="rows">
+                <tr><td colspan="10" class="revenue-empty">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+
+<script>
+let payments = [];
+let filters = { q: "", status: "" };
+
+function esc(s) {
+    return String(s ?? "").replace(/[&<>"']/g, m => ({
+        "&": "&amp;",
+        "<": "&lt;",
+        ">": "&gt;",
+        "\"": "&quot;",
+        "'": "&#39;"
+    }[m]));
+}
+
+function cls(v) {
+    return String(v || "").replaceAll(" ", "_").toLowerCase();
+}
+
+function feeModelLabel(model) {
+    if (model === "practitioner_absorbs") {
+        return "Fee model: Stripe fees are deducted from practitioner payouts. Platform commission is preserved.";
+    }
+    if (model === "split_proportional") {
+        return "Fee model: Stripe fees are shared proportionally between practitioner payout and platform commission.";
+    }
+    return "Fee model: Platform absorbs Stripe fees. Practitioner payout is calculated from gross minus platform commission.";
+}
+
+async function loadRevenue() {
+    const [s, p] = await Promise.all([
+        fetch("/api/revenue/summary"),
+        fetch("/api/revenue/payments")
+    ]);
+
+    if (!s.ok || !p.ok) throw new Error("Could not load revenue");
+
+    const summary = await s.json();
+    const data = await p.json();
+
+    payments = data.items || [];
+    renderSummary(summary);
+    renderPayments();
+}
+
+function renderSummary(summary) {
+    document.getElementById("paid-count").textContent = summary.paid_count || 0;
+    document.getElementById("unpaid-count").textContent = summary.unpaid_count || 0;
+    document.getElementById("currency-count").textContent = (summary.currencies || []).length;
+    document.getElementById("connect-count").textContent = payments.filter(p => p.connect_mode === "destination_charge").length;
+    document.getElementById("fee-model-banner").textContent = feeModelLabel(summary.fee_model || "platform_absorbs");
+
+    const grid = document.getElementById("currency-grid");
+    const rows = summary.currencies || [];
+
+    if (!rows.length) {
+        grid.innerHTML = '<div class="muted">No paid bundle revenue yet.</div>';
+        return;
+    }
+
+    grid.innerHTML = rows.map(c => `
+        <div class="revenue-currency-card">
+            <h3>${esc(c.currency)}</h3>
+            <div class="revenue-small">Gross client payments</div>
+            <div class="revenue-money">${esc(c.gross)}</div>
+            <div class="revenue-small">Platform commission: <strong>${esc(c.platform_fee)}</strong></div>
+            <div class="revenue-small">Stripe fees: <strong>${esc(c.stripe_fee)}</strong></div>
+            <div class="revenue-small">Platform net: <strong>${esc(c.platform_net)}</strong></div>
+            <div class="revenue-small">Practitioner payout: <strong>${esc(c.practitioner_payout)}</strong></div>
+            <div class="revenue-small">${esc(c.paid_count)} paid · ${esc(c.unpaid_count)} unpaid</div>
+        </div>
+    `).join("");
+}
+
+function filtered() {
+    const q = filters.q.toLowerCase().trim();
+
+    return payments.filter(p => {
+        if (filters.status && p.payment_status !== filters.status) return false;
+        if (q && !([
+            p.title,
+            p.patient,
+            p.token,
+            p.stripe_session_id,
+            p.stripe_payment_intent_id,
+            p.stripe_charge_id,
+            p.connected_account
+        ].join(" ").toLowerCase().includes(q))) return false;
+        return true;
+    });
+}
+
+function renderPayments() {
+    const tbody = document.getElementById("rows");
+    const rows = filtered();
+
+    if (!rows.length) {
+        tbody.innerHTML = '<tr><td colspan="10" class="revenue-empty">No payments found.</td></tr>';
+        return;
+    }
+
+    tbody.innerHTML = rows.map(p => `
+        <tr>
+            <td>
+                <div class="revenue-title">${esc(p.title)}</div>
+                <div class="revenue-small">${esc(p.patient)} · ${esc(p.item_summary)}</div>
+                <div class="revenue-detail">${esc(p.token)}</div>
+            </td>
+            <td>
+                <span class="revenue-badge ${cls(p.payment_status)}">${esc(p.payment_status)}</span>
+                <div class="revenue-small">${esc(p.paid_display)}</div>
+            </td>
+            <td><strong>${esc(p.gross)}</strong><div class="revenue-small">${esc(p.currency)}</div></td>
+            <td>${esc(p.platform_fee)}</td>
+            <td>${esc(p.stripe_fee)}</td>
+            <td><strong>${esc(p.platform_net)}</strong></td>
+            <td>${esc(p.practitioner_payout)}</td>
+            <td>
+                <span class="revenue-badge ${cls(p.connect_mode)}">${esc(p.connect_mode)}</span>
+                <div class="revenue-detail">${esc(p.connected_account)}</div>
+            </td>
+            <td>
+                <div class="revenue-detail">session: ${esc(p.stripe_session_id)}</div>
+                <div class="revenue-detail">pi: ${esc(p.stripe_payment_intent_id)}</div>
+                <div class="revenue-detail">charge: ${esc(p.stripe_charge_id)}</div>
+                <div class="revenue-detail">transfer: ${esc(p.stripe_transfer_id)}</div>
+            </td>
+            <td><a class="btn primary" href="${esc(p.bundle_url)}" target="_blank">Open</a></td>
+        </tr>
+    `).join("");
+}
+
+document.getElementById("search").addEventListener("input", e => {
+    filters.q = e.target.value;
+    renderPayments();
+});
+
+document.getElementById("status").addEventListener("change", e => {
+    filters.status = e.target.value;
+    renderPayments();
+});
+
+loadRevenue().catch(e => {
+    console.error(e);
+    document.getElementById("rows").innerHTML = '<tr><td colspan="10" class="revenue-empty">Could not load revenue.</td></tr>';
+    document.getElementById("currency-grid").innerHTML = '<div class="muted">Could not load summary.</div>';
+    document.getElementById("fee-model-banner").textContent = "Could not load revenue model.";
+});
+</script>
+{% endblock %}

@@ -2,50 +2,81 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <title>Client report bundle</title>
+  <title>{{ bundle.title or "Shared reports" }}</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <style>
-    body{margin:0;font-family:Inter,system-ui,sans-serif;background:#f6f8f5;color:#183028}
-    .wrap{max-width:1040px;margin:0 auto;padding:24px 16px 44px}
-    .card{background:#fff;border:1px solid #dfe7e1;border-radius:18px;padding:18px;margin-bottom:16px}
-    h1,h2{color:#2f4f2f;margin:0 0 8px}.muted{color:#5f7269}
-    .btn{display:inline-block;border:1px solid #dfe7e1;border-radius:999px;padding:8px 12px;text-decoration:none;color:#2f4f2f;font-weight:800}
-    .item{border:1px solid #e5e7eb;border-radius:14px;padding:14px;margin-top:12px}
-    .badge{font-size:12px;font-weight:800;border-radius:999px;background:#eef2ff;padding:3px 8px}
+    :root{--green:#2f4f2f;--text:#183028;--muted:#5f7269;--bg:#f6f8f5;--card:#ffffff;--line:#dfe7e1;--blue:#3730a3;--blue-bg:#eef2ff;--emerald:#065f46;--emerald-bg:#ecfdf5}
+    *{box-sizing:border-box}
+    body{margin:0;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;background:var(--bg);color:var(--text)}
+    .wrap{max-width:1040px;margin:0 auto;padding:28px 16px 48px}
+    .hero,.card{background:var(--card);border:1px solid var(--line);border-radius:20px;padding:20px;margin-bottom:16px;box-shadow:0 8px 24px rgba(15,23,42,.04)}
+    .hero{display:flex;justify-content:space-between;align-items:flex-start;gap:18px;flex-wrap:wrap}
+    .eyebrow{display:inline-flex;border:1px solid #cbd5e1;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px}
+    h1{font-size:30px;line-height:1.1;color:var(--green);margin:0 0 8px}
+    h2{font-size:20px;color:var(--green);margin:0 0 10px}
+    h3{margin:0 0 6px;color:#0f172a}
+    .muted{color:var(--muted);line-height:1.5}
+    .bundle-meta{font-size:13px;color:var(--muted);margin-top:6px}
+    .grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px}
+    .item{border:1px solid #e5e7eb;border-radius:16px;padding:15px;background:#fff}
+    .item:hover{border-color:#cbd5e1;box-shadow:0 8px 22px rgba(15,23,42,.06)}
+    .badge{display:inline-flex;align-items:center;border-radius:999px;padding:4px 9px;font-size:11px;font-weight:900;margin-bottom:10px}
+    .badge.assessment{background:var(--emerald-bg);color:var(--emerald);border:1px solid #bbf7d0}
+    .badge.trend{background:var(--blue-bg);color:var(--blue);border:1px solid #c7d2fe}
+    .btn{display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line);border-radius:999px;padding:9px 13px;text-decoration:none;color:var(--green);font-weight:850;background:#fff}
+    .btn.primary{background:var(--green);color:#fff;border-color:var(--green)}
+    .btn-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:12px}
+    .empty{padding:20px;color:var(--muted);text-align:center}
+    .footer{font-size:12px;color:var(--muted);text-align:center;margin-top:22px}
   </style>
 </head>
 <body>
 <div class="wrap">
-  <div class="card">
-    <h1>Your shared health reports</h1>
-    <p class="muted">Your practitioner has shared one or more reports with you.</p>
-  </div>
-  <div id="items" class="card">Loading…</div>
+  <section class="hero">
+    <div>
+      <div class="eyebrow">Secure bundle</div>
+      <h1>{{ bundle.title or "Your shared health reports" }}</h1>
+      <div class="muted">{{ bundle.access_label or "Your practitioner has shared one or more reports with you." }}</div>
+      <div class="bundle-meta">
+        {% if bundle.expires_at %}Expires: {{ bundle.expires_at.strftime("%d %b %Y") }} · {% endif %}
+        {{ reports|length }} shared item{{ "" if reports|length == 1 else "s" }}
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>Shared items</h2>
+    {% if reports %}
+      <div class="grid">
+        {% for item in reports %}
+          <article class="item">
+            {% if item.report_type == "trend" %}
+              <div class="badge trend">Trend report</div>
+              <h3>{{ item.title or "Progress trend report" }}</h3>
+              <div class="muted">A progress view showing what changed across multiple assessments.</div>
+              <div class="btn-row">
+                <a class="btn primary" href="{{ item.viewer_url }}">Open progress view</a>
+              </div>
+            {% else %}
+              <div class="badge assessment">Assessment report</div>
+              <h3>{{ item.title or "Assessment report" }}</h3>
+              <div class="muted">A single QRMA assessment report shared by your practitioner.</div>
+              <div class="btn-row">
+                <a class="btn primary" href="{{ item.viewer_url }}">Open assessment</a>
+              </div>
+            {% endif %}
+            <div class="bundle-meta">
+              {% if item.generated_at %}Generated: {{ item.generated_at.strftime("%d %b %Y") }}{% endif %}
+            </div>
+          </article>
+        {% endfor %}
+      </div>
+    {% else %}
+      <div class="empty">No active reports were found in this bundle.</div>
+    {% endif %}
+  </section>
+
+  <div class="footer">This secure link was created by your practitioner. Do not forward it unless your practitioner has advised you to.</div>
 </div>
-<script>
-const token = "{{ token }}";
-function esc(v){return String(v ?? "").replace(/[&<>"']/g, m => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]));}
-async function loadBundle(){
-  const box = document.getElementById("items");
-  try{
-    const res = await fetch(`/share/${token}/bundle-data`);
-    if(!res.ok) throw new Error(await res.text());
-    const data = await res.json();
-    const items = data.items || [];
-    if(!items.length){ box.innerHTML = "<p>No reports were found in this bundle.</p>"; return; }
-    box.innerHTML = `<h2>Shared items</h2>` + items.map((it, idx) => {
-      if(it.type === "trend"){
-        const summary = it.trend?.clinical_narrative?.headline || it.trend?.client_view?.summary || "Progress trend report";
-        return `<div class="item"><span class="badge">Trend report</span><h3>${idx+1}. Progress dashboard</h3><p>${esc(summary)}</p><a class="btn" href="/share/${token}/trend">Open trend view</a></div>`;
-      }
-      const name = it.report?.viewer?.case_title || it.report?.viewer?.tenant?.report_title || "Assessment report";
-      return `<div class="item"><span class="badge">Assessment report</span><h3>${idx+1}. ${esc(name)}</h3><p class="muted">Generated: ${esc(it.generated_at || "")}</p><a class="btn" href="/share/${token}">Open report</a></div>`;
-    }).join("");
-  }catch(e){
-    box.innerHTML = `<p style="color:#b91c1c">Could not load shared reports.</p>`;
-  }
-}
-loadBundle();
-</script>
 </body>
 </html>

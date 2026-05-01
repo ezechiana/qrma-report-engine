@@ -14,7 +14,7 @@ from app.db.models import Case, Patient, RecommendationMode, ReportStatus, Repor
 from app.services.audit_service import log_action
 from app.services.trend_payload_enrichment import enrich_trend_payload
 from app.services.trend_marker_index import build_marker_index
-
+from app.services.subscription_service import require_subscription_feature
 
 router = APIRouter(prefix="/api/trend-reports", tags=["trend-reports"])
 
@@ -116,6 +116,8 @@ def create_trend_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "report_generation")
+
     patient = (
         db.query(Patient)
         .filter(Patient.id == payload.patient_id, Patient.user_id == current_user.id)
@@ -131,7 +133,6 @@ def create_trend_report(
         report_ids=payload.source_report_ids,
     )
 
-    # Keep using the existing patient trend engine, but stabilise its output afterwards.
     from app.api.routes_patients import get_patient_trends
 
     raw_trend_payload = get_patient_trends(
@@ -141,10 +142,8 @@ def create_trend_report(
         current_user=current_user,
     )
 
-    # Constrain client-side lineage to the selected reports, and add stable chart/hierarchy keys.
     trend_payload = enrich_trend_payload(raw_trend_payload)
 
-    # Build a canonical marker index
     if isinstance(trend_payload, dict):
         trend_payload["marker_index"] = build_marker_index(trend_payload)
     else:
@@ -223,7 +222,6 @@ def create_trend_report(
         "detail_url": f"/app/reports/{trend_report.id}",
         "viewer_url": f"/trend-reports/{trend_report.id}",
     }
-
 
 @router.get("/{trend_report_id}")
 def get_trend_report(

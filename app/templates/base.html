@@ -18,6 +18,9 @@
             --success-bg: #ecfdf5;
             --success-line: #a7f3d0;
             --success-text: #065f46;
+            --info-bg: #eff6ff;
+            --info-line: #bfdbfe;
+            --info-text: #1e3a8a;
             --error-bg: #fef2f2;
             --error-line: #fecaca;
             --error-text: #991b1b;
@@ -98,6 +101,7 @@
             display: flex;
             flex-direction: column;
             min-width: 0;
+            overflow-x: hidden;
         }
 
         .topbar {
@@ -108,11 +112,19 @@
             justify-content: space-between;
             align-items: center;
             gap: 16px;
+            min-width: 0;
+            position: sticky;
+            top: 0;
+            z-index: 40;
         }
 
         .topbar-title {
             font-size: 22px;
             font-weight: 700;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
         }
 
         .topbar-actions {
@@ -120,6 +132,7 @@
             align-items: center;
             gap: 12px;
             position: relative;
+            flex: 0 0 auto;
         }
 
         .account-trigger {
@@ -190,6 +203,9 @@
 
         .content {
             padding: 24px;
+            min-width: 0;
+            max-width: 100%;
+            overflow-x: hidden;
         }
 
         .card {
@@ -198,18 +214,24 @@
             border-radius: var(--radius);
             padding: 16px;
             margin-bottom: 16px;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .grid-3 {
             display: grid;
             grid-template-columns: repeat(3, minmax(0, 1fr));
             gap: 16px;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .grid-2 {
             display: grid;
             grid-template-columns: repeat(2, minmax(0, 1fr));
             gap: 16px;
+            max-width: 100%;
+            min-width: 0;
         }
 
         .btn {
@@ -232,6 +254,15 @@
             background: white;
             color: var(--text);
             border: 1px solid var(--line);
+        }
+
+        .btn.danger {
+            background: #991b1b;
+            color: white;
+        }
+
+        .btn.danger:hover {
+            background: #7f1d1d;
         }
 
         .btn-row {
@@ -263,6 +294,13 @@
         .table {
             width: 100%;
             border-collapse: collapse;
+        }
+
+        .table-wrap,
+        .scroll-x {
+            max-width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
         }
 
         .table th,
@@ -366,8 +404,187 @@
             display: none;
         }
 
+        /* Multipurpose global app banner */
+        .app-banner-region {
+            padding: 16px 24px 0;
+        }
 
-        
+        .app-banner-region:empty {
+            display: none;
+        }
+
+        .app-banner {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 14px;
+            padding: 12px 14px;
+            border-radius: 14px;
+            border: 1px solid var(--line);
+            background: white;
+            margin-bottom: 14px;
+            box-shadow: 0 1px 2px rgba(15,23,42,0.04);
+        }
+
+        .app-banner-main {
+            display: flex;
+            align-items: flex-start;
+            gap: 10px;
+            min-width: 0;
+        }
+
+        .app-banner-icon {
+            width: 28px;
+            height: 28px;
+            flex: 0 0 28px;
+            border-radius: 999px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 900;
+            margin-top: 1px;
+        }
+
+        .app-banner-title {
+            font-weight: 800;
+            margin-bottom: 2px;
+        }
+
+        .app-banner-body {
+            color: var(--muted);
+            font-size: 13px;
+            line-height: 1.4;
+        }
+
+        .app-banner-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+            flex-wrap: wrap;
+            flex: 0 0 auto;
+        }
+
+        .app-banner.info {
+            background: var(--info-bg);
+            border-color: var(--info-line);
+            color: var(--info-text);
+        }
+
+        .app-banner.info .app-banner-body { color: #1e40af; }
+        .app-banner.info .app-banner-icon { background: #dbeafe; color: #1d4ed8; }
+
+        .app-banner.success {
+            background: var(--success-bg);
+            border-color: var(--success-line);
+            color: var(--success-text);
+        }
+
+        .app-banner.success .app-banner-body { color: var(--success-text); }
+        .app-banner.success .app-banner-icon { background: #d1fae5; color: var(--success-text); }
+
+        .app-banner.warning {
+            background: var(--warn-bg);
+            border-color: var(--warn-line);
+            color: var(--warn-text);
+        }
+
+        .app-banner.warning .app-banner-body { color: var(--warn-text); }
+        .app-banner.warning .app-banner-icon { background: #ffedd5; color: var(--warn-text); }
+
+        .app-banner.danger {
+            background: var(--error-bg);
+            border-color: var(--error-line);
+            color: var(--error-text);
+        }
+
+        .app-banner.danger .app-banner-body { color: var(--error-text); }
+        .app-banner.danger .app-banner-icon { background: #fee2e2; color: var(--error-text); }
+
+        .app-banner.compact {
+            padding: 10px 12px;
+        }
+
+        .banner-close {
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: inherit;
+            font-size: 18px;
+            line-height: 1;
+            opacity: .65;
+            padding: 4px;
+        }
+
+        .banner-close:hover {
+            opacity: 1;
+        }
+
+        /* Global modal system */
+        .app-modal-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(15, 23, 42, 0.55);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+            padding: 18px;
+        }
+
+        .app-modal-backdrop.open {
+            display: flex;
+        }
+
+        .app-modal {
+            width: min(520px, 100%);
+            background: white;
+            border-radius: 18px;
+            border: 1px solid var(--line);
+            box-shadow: 0 24px 70px rgba(15,23,42,0.30);
+            overflow: hidden;
+        }
+
+        .app-modal-header {
+            padding: 18px 20px 12px;
+            border-bottom: 1px solid #eef2f7;
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 16px;
+        }
+
+        .app-modal-title {
+            font-size: 20px;
+            font-weight: 900;
+            margin: 0;
+        }
+
+        .app-modal-close {
+            border: 1px solid var(--line);
+            background: white;
+            width: 34px;
+            height: 34px;
+            border-radius: 999px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+        }
+
+        .app-modal-body {
+            padding: 16px 20px;
+            color: var(--muted);
+            line-height: 1.55;
+        }
+
+        .app-modal-actions {
+            padding: 0 20px 18px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 10px;
+            flex-wrap: wrap;
+        }
+
         @media (max-width: 960px) {
             .app { grid-template-columns: 1fr; }
 
@@ -415,6 +632,23 @@
             .grid-3, .grid-2 {
                 grid-template-columns: 1fr;
             }
+
+            .app-banner-region {
+                padding: 12px 12px 0;
+            }
+
+            .app-banner {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+            .app-banner-actions {
+                width: 100%;
+            }
+
+            .app-banner-actions .btn {
+                width: 100%;
+            }
         }
 
         @media (max-width: 640px) {
@@ -444,10 +678,24 @@
             localStorage.setItem("current_user", JSON.stringify(payload.user || null));
         }
 
+        function clearSessionBannerDismissals() {
+            try {
+                const keysToRemove = [];
+                for (let i = 0; i < sessionStorage.length; i += 1) {
+                    const key = sessionStorage.key(i);
+                    if (key && key.startsWith("app_banner_dismissed:")) {
+                        keysToRemove.push(key);
+                    }
+                }
+                keysToRemove.forEach(key => sessionStorage.removeItem(key));
+            } catch (e) {}
+        }
+
         function clearAuthSession() {
             localStorage.removeItem("access_token");
             localStorage.removeItem("refresh_token");
             localStorage.removeItem("current_user");
+            clearSessionBannerDismissals();
         }
 
         function getRedirectTarget() {
@@ -521,18 +769,364 @@
                 });
             } catch (e) {}
             clearAuthSession();
+            clearSessionBannerDismissals();
             window.location.href = "/login";
         }
 
         function formatDate(value) {
             if (!value) return "—";
-            try { return new Date(value).toLocaleString(); } catch { return value; }
+            try {
+                return new Date(value).toLocaleDateString(undefined, {
+                    year: "numeric",
+                    month: "short",
+                    day: "numeric",
+                });
+            } catch {
+                return value;
+            }
         }
 
         function safeText(value, fallback = "—") {
             if (value === null || value === undefined || value === "") return fallback;
             return String(value);
         }
+
+        function calculateDaysRemaining(value) {
+            if (!value) return null;
+            const target = new Date(value);
+            if (Number.isNaN(target.getTime())) return null;
+            const diff = target.getTime() - Date.now();
+            return Math.max(0, Math.ceil(diff / (1000 * 60 * 60 * 24)));
+        }
+
+        function isAuthenticatedAppPage() {
+            const path = window.location.pathname || "";
+            return path.startsWith("/app");
+        }
+
+        function isSettingsPage() {
+            return (window.location.pathname || "") === "/app/settings";
+        }
+
+        function isPublicOrAuthPage() {
+            const path = window.location.pathname || "";
+            return (
+                path.startsWith("/login") ||
+                path.startsWith("/register") ||
+                path.startsWith("/share") ||
+                path.startsWith("/static")
+            );
+        }
+
+        window.AppState = {
+            subscription: null,
+            banners: [],
+        };
+
+        window.AppBus = {
+            listeners: {},
+            on(eventName, handler) {
+                if (!this.listeners[eventName]) this.listeners[eventName] = [];
+                this.listeners[eventName].push(handler);
+            },
+            emit(eventName, payload) {
+                (this.listeners[eventName] || []).forEach(handler => {
+                    try { handler(payload); } catch (e) { console.error(e); }
+                });
+            }
+        };
+
+        async function startSubscriptionCheckout(voucherCode = "") {
+            const body = { voucher_code: voucherCode || "" };
+            const response = await apiFetch("/api/subscription/checkout", {
+                method: "POST",
+                body: JSON.stringify(body),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.detail || "Could not start subscription checkout.");
+            }
+            if (!data.url) {
+                throw new Error("Subscription checkout URL was not returned.");
+            }
+            window.location.href = data.url;
+        }
+
+        async function openSubscriptionPortal() {
+            const response = await apiFetch("/api/subscription/customer-portal", {
+                method: "POST",
+                body: JSON.stringify({}),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                throw new Error(data.detail || "Could not open billing portal.");
+            }
+            if (!data.url) {
+                throw new Error("Billing portal URL was not returned.");
+            }
+            window.location.href = data.url;
+        }
+
+        async function refreshSubscriptionState() {
+            if (!isAuthenticatedAppPage()) return null;
+
+            const response = await apiFetch("/api/subscription/status", { method: "GET" });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                AppState.subscription = null;
+                AppBus.emit("subscription:error", data);
+                return null;
+            }
+
+            const periodEnd = data.current_period_end || data.trial_ends_at || null;
+            const trialEnd = data.trial_ends_at || data.current_period_end || null;
+            const daysRemaining = data.days_remaining !== undefined && data.days_remaining !== null
+                ? Number(data.days_remaining)
+                : calculateDaysRemaining(periodEnd);
+
+            AppState.subscription = {
+                ...data,
+                period_end: periodEnd,
+                trial_end: trialEnd,
+                days_remaining: daysRemaining,
+                is_active: ["trialing", "active"].includes(String(data.status || "").toLowerCase()),
+            };
+
+            AppBus.emit("subscription:updated", AppState.subscription);
+            return AppState.subscription;
+        }
+
+        function isSubscriptionActive() {
+            const sub = AppState.subscription;
+            if (!sub) return true;
+            return ["trialing", "active"].includes(String(sub.status || "").toLowerCase());
+        }
+
+        function subscriptionRequiresUpgrade() {
+            const sub = AppState.subscription;
+            if (!sub) return false;
+            return !["trialing", "active"].includes(String(sub.status || "").toLowerCase());
+        }
+
+        function bannerDismissStorageKey(config, id) {
+            const rawKey = config.dismissKey || id || "app-banner";
+            return `app_banner_dismissed:${rawKey}`;
+        }
+
+        function isBannerDismissed(config, id) {
+            if (config.dismissible === false) return false;
+            try {
+                return sessionStorage.getItem(bannerDismissStorageKey(config, id)) === "1";
+            } catch (e) {
+                return false;
+            }
+        }
+
+        function rememberBannerDismissed(config, id) {
+            if (config.dismissible === false) return;
+            try {
+                sessionStorage.setItem(bannerDismissStorageKey(config, id), "1");
+            } catch (e) {}
+        }
+
+        function showAppBanner(config) {
+            const region = document.getElementById("app-banner-region");
+            if (!region || !config) return null;
+
+            const id = config.id || `banner-${Date.now()}`;
+            const variant = config.variant || "info";
+            const icon = config.icon || (variant === "danger" ? "!" : variant === "warning" ? "!" : "i");
+            const dismissible = config.dismissible !== false;
+            const compact = config.compact ? " compact" : "";
+
+            const existing = document.getElementById(id);
+            if (existing) existing.remove();
+
+            if (isBannerDismissed(config, id)) {
+                return null;
+            }
+
+            const banner = document.createElement("div");
+            banner.className = `app-banner ${variant}${compact}`;
+            banner.id = id;
+
+            const actionsHtml = (config.actions || []).map((action, index) => {
+                const klass = action.variant === "secondary" ? "btn secondary" : "btn";
+                return `<button type="button" class="${klass}" data-banner-action="${index}">${action.label}</button>`;
+            }).join("");
+
+            banner.innerHTML = `
+                <div class="app-banner-main">
+                    <div class="app-banner-icon">${icon}</div>
+                    <div>
+                        <div class="app-banner-title">${config.title || ""}</div>
+                        <div class="app-banner-body">${config.body || ""}</div>
+                    </div>
+                </div>
+                <div class="app-banner-actions">
+                    ${actionsHtml}
+                    ${dismissible ? '<button type="button" class="banner-close" aria-label="Dismiss">×</button>' : ""}
+                </div>
+            `;
+
+            banner.querySelectorAll("[data-banner-action]").forEach(btn => {
+                btn.addEventListener("click", () => {
+                    const action = (config.actions || [])[Number(btn.getAttribute("data-banner-action"))];
+                    if (action && typeof action.onClick === "function") action.onClick();
+                });
+            });
+
+            banner.querySelector(".banner-close")?.addEventListener("click", () => {
+                rememberBannerDismissed(config, id);
+                banner.remove();
+            });
+
+            region.appendChild(banner);
+            return banner;
+        }
+
+        function clearAppBanner(id) {
+            if (!id) return;
+            document.getElementById(id)?.remove();
+        }
+
+        function showAppModal(config) {
+            const backdrop = document.getElementById("app-modal-backdrop");
+            const title = document.getElementById("app-modal-title");
+            const body = document.getElementById("app-modal-body");
+            const actions = document.getElementById("app-modal-actions");
+
+            if (!backdrop || !title || !body || !actions) return;
+
+            title.textContent = config.title || "Notice";
+            body.innerHTML = config.body || "";
+            actions.innerHTML = "";
+
+            (config.actions || [{ label: "Close", variant: "secondary", onClick: closeAppModal }]).forEach(action => {
+                const btn = document.createElement("button");
+                btn.type = "button";
+                btn.className = action.variant === "primary" ? "btn" : action.variant === "danger" ? "btn danger" : "btn secondary";
+                btn.textContent = action.label;
+                btn.addEventListener("click", () => {
+                    if (typeof action.onClick === "function") action.onClick();
+                });
+                actions.appendChild(btn);
+            });
+
+            backdrop.classList.add("open");
+            document.body.style.overflow = "hidden";
+        }
+
+        function closeAppModal() {
+            const backdrop = document.getElementById("app-modal-backdrop");
+            if (backdrop) backdrop.classList.remove("open");
+            document.body.style.overflow = "";
+        }
+
+        function showSubscriptionGateModal(contextLabel) {
+            const label = contextLabel || "continue";
+            showAppModal({
+                title: "Subscription required",
+                body: `
+                    <p>Your trial or subscription is not active, so ${label} is currently paused.</p>
+                    <p>You can still view existing reports, shares, and revenue. Upgrade to resume creating new reports and paid bundles.</p>
+                `,
+                actions: [
+                    { label: "Not now", variant: "secondary", onClick: closeAppModal },
+                    { label: "Upgrade now", variant: "primary", onClick: () => startSubscriptionCheckout().catch(err => alert(err.message)) },
+                ],
+            });
+        }
+
+        async function ensureSubscriptionCanCreate(contextLabel) {
+            if (!AppState.subscription) {
+                await refreshSubscriptionState();
+            }
+
+            if (subscriptionRequiresUpgrade()) {
+                showSubscriptionGateModal(contextLabel || "this action");
+                return false;
+            }
+
+            return true;
+        }
+
+        function wireSubscriptionGates() {
+            document.addEventListener("click", async function (event) {
+                const target = event.target.closest("[data-requires-subscription]");
+                if (!target) return;
+
+                const ok = await ensureSubscriptionCanCreate(target.dataset.subscriptionContext || "this action");
+                if (!ok) {
+                    event.preventDefault();
+                    event.stopPropagation();
+                    return false;
+                }
+            }, true);
+        }
+
+        function renderSubscriptionBanner(sub) {
+            if (!sub || !isAuthenticatedAppPage() || isSettingsPage()) {
+                clearAppBanner("subscription-global-banner");
+                return;
+            }
+
+            const status = String(sub.status || "").toLowerCase();
+            const days = sub.days_remaining;
+            const periodEnd = sub.period_end || sub.trial_end;
+            const endLabel = formatDate(periodEnd);
+
+            if (status === "active") {
+                clearAppBanner("subscription-global-banner");
+                return;
+            }
+
+            if (status === "trialing") {
+                const isUrgent = Number(days) <= 7;
+                showAppBanner({
+                    id: "subscription-global-banner",
+                    dismissKey: `subscription-trial:${sub.status}:${periodEnd || "no-end"}`,
+                    variant: isUrgent ? "warning" : "success",
+                    icon: isUrgent ? "!" : "✓",
+                    title: `Free trial active — ${days ?? "—"} day${Number(days) === 1 ? "" : "s"} remaining`,
+                    body: `Full access ends ${endLabel}. Upgrade before then to avoid interruption to report creation and paid bundles.`,
+                    dismissible: Number(days) > 7,
+                    actions: [
+                        {
+                            label: "Upgrade now",
+                            variant: "primary",
+                            onClick: () => startSubscriptionCheckout().catch(err => alert(err.message)),
+                        },
+                    ],
+                });
+                return;
+            }
+
+            showAppBanner({
+                id: "subscription-global-banner",
+                dismissKey: `subscription-inactive:${sub.status}:${periodEnd || "no-end"}`,
+                variant: "danger",
+                icon: "!",
+                title: "Subscription inactive",
+                body: "Creating new reports and paid bundles is paused. Existing reports, shares, and revenue remain viewable.",
+                dismissible: false,
+                actions: [
+                    {
+                        label: "Upgrade to continue",
+                        variant: "primary",
+                        onClick: () => startSubscriptionCheckout().catch(err => alert(err.message)),
+                    },
+                    {
+                        label: "Manage billing",
+                        variant: "secondary",
+                        onClick: () => openSubscriptionPortal().catch(err => alert(err.message)),
+                    },
+                ],
+            });
+        }
+
+        AppBus.on("subscription:updated", renderSubscriptionBanner);
     </script>
 </head>
 <body>
@@ -551,6 +1145,8 @@
             <a href="/app/patients" id="nav-patients">Patients</a>
             <a href="/app/cases" id="nav-cases">Cases</a>
             <a href="/app/reports" id="nav-reports">Reports</a>
+            <a href="/app/share-links" id="nav-shares">Shares</a>
+            <a href="/app/revenue" id="nav-revenue">Revenue</a>
         </nav>
 
         <div class="sidebar-footer">
@@ -587,10 +1183,23 @@
         </div>
         {% endif %}
 
+        <div id="app-banner-region" class="app-banner-region"></div>
+
         <div class="content">
             {% block content %}{% endblock %}
         </div>
     </main>
+</div>
+
+<div class="app-modal-backdrop" id="app-modal-backdrop" aria-hidden="true">
+    <div class="app-modal" role="dialog" aria-modal="true" aria-labelledby="app-modal-title">
+        <div class="app-modal-header">
+            <h2 class="app-modal-title" id="app-modal-title">Notice</h2>
+            <button class="app-modal-close" type="button" onclick="closeAppModal()" aria-label="Close">×</button>
+        </div>
+        <div class="app-modal-body" id="app-modal-body"></div>
+        <div class="app-modal-actions" id="app-modal-actions"></div>
+    </div>
 </div>
 
 <script>
@@ -624,6 +1233,10 @@
             document.getElementById("nav-cases")?.classList.add("active");
         } else if (path.startsWith("/app/reports")) {
             document.getElementById("nav-reports")?.classList.add("active");
+        } else if (path.startsWith("/app/share-links")) {
+            document.getElementById("nav-shares")?.classList.add("active");
+        } else if (path.startsWith("/app/revenue")) {
+            document.getElementById("nav-revenue")?.classList.add("active");
         }
 
         const sidebar = document.getElementById("app-sidebar");
@@ -696,11 +1309,22 @@
             if (e.key === "Escape") {
                 closeSidebar();
                 closeAccountMenu();
+                closeAppModal();
             }
+        });
+
+        document.getElementById("app-modal-backdrop")?.addEventListener("click", function (event) {
+            if (event.target === this) closeAppModal();
         });
 
         window.addEventListener("resize", syncMobileShell);
         syncMobileShell();
+
+        wireSubscriptionGates();
+
+        if (isAuthenticatedAppPage() && !isPublicOrAuthPage()) {
+            await refreshSubscriptionState();
+        }
     })();
 </script>
 </body>

@@ -425,8 +425,10 @@ class ShareBundleItem(Base):
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     share_bundle_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("share_bundles.id", ondelete="CASCADE"), index=True)
     report_version_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("report_versions.id", ondelete="CASCADE"), index=True)
+    share_link_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("share_links.id", ondelete="CASCADE"), nullable=True, index=True)
     position: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
     bundle: Mapped["ShareBundle"] = relationship(back_populates="items")
     report_version: Mapped["ReportVersion"] = relationship()
+    share_link: Mapped[Optional["ShareLink"]] = relationship()

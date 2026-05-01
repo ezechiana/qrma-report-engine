@@ -7,6 +7,7 @@ from app.api import routes_share
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from contextlib import asynccontextmanager
 
 from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router
@@ -16,22 +17,20 @@ from app.api.routes_reports import router as reports_router
 from app.api.routes_share import router as share_router
 from app.api.routes_ui import router as ui_router
 from app.api.routes_settings import router as settings_router
+from app.api.routes_subscriptions import router as subscriptions_router
 from app.db.base import Base
 from app.db.session import engine
 from app.api.routes_trend_reports import router as trend_reports_router
 from app.api.routes_share_bundles import router as share_bundle_router
+from app.api.routes_share_dashboard import router as share_dashboard_router
+from app.api.routes_revenue import router as revenue_router
+from app.api.routes_share_pages import router as share_pages_router
+from app.db.migrate import run_migrations
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
 APP_ENV = os.getenv("APP_ENV", "development")
 AUTO_CREATE_TABLES = os.getenv("AUTO_CREATE_TABLES", "true").lower() == "true"
 CORS_ALLOW_ORIGINS = os.getenv("CORS_ALLOW_ORIGINS", "*")
-
-
-def _parse_cors_origins(value: str) -> list[str]:
-    value = (value or "").strip()
-    if value == "*" or value == "":
-        return ["*"]
-    return [origin.strip() for origin in value.split(",") if origin.strip()]
 
 
 @asynccontextmanager
@@ -55,6 +54,17 @@ async def lifespan(app: FastAPI):
             # You can tighten this later once infra is stable.
 
     yield
+
+
+
+
+def _parse_cors_origins(value: str) -> list[str]:
+    value = (value or "").strip()
+    if value == "*" or value == "":
+        return ["*"]
+    return [origin.strip() for origin in value.split(",") if origin.strip()]
+
+
 
 
 def create_app() -> FastAPI:
@@ -82,9 +92,14 @@ def create_app() -> FastAPI:
     app.include_router(reports_router)
     app.include_router(share_router)
     app.include_router(settings_router)
+    app.include_router(subscriptions_router)
     app.include_router(ui_router)
+    app.include_router(routes_share.router)
     app.include_router(trend_reports_router)
     app.include_router(share_bundle_router)
+    app.include_router(share_dashboard_router)
+    app.include_router(revenue_router)
+    app.include_router(share_pages_router)
 
     # Legacy engine/debug routes
     app.include_router(engine_router)
@@ -100,6 +115,7 @@ def create_app() -> FastAPI:
             "message": "QRMA SaaS API running",
         }
 
+
     @app.get("/health")
     def health():
         return {
@@ -107,7 +123,14 @@ def create_app() -> FastAPI:
             "environment": APP_ENV,
         }
 
+
+    @app.on_event("startup")
+    def startup():
+        run_migrations(engine)
+
     return app
+
+
 
 
 app = create_app()

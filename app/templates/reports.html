@@ -8,10 +8,9 @@
 .reports-toolbar { display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; margin-bottom:14px; }
 .reports-left,.reports-right { display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
 .reports-search { max-width:320px; }
-.reports-sort,.reports-filter { max-width:220px; }
+.reports-sort { max-width:220px; }
 .reports-count { color:#64748b; font-size:13px; font-weight:700; }
 .badge { display:inline-block; padding:2px 8px; font-size:12px; border-radius:999px; background:#e2e8f0; }
-.badge.latest { background:#dcfce7; color:#166534; }
 .badge.archived { background:#fee2e2; color:#991b1b; }
 .report-type-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #e5e7eb; white-space:nowrap; }
 .report-type-assessment { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
@@ -23,15 +22,26 @@
 .link-danger { color:#dc2626; cursor:pointer; }
 .link-secondary { color:#475569; cursor:pointer; }
 .table td { vertical-align:top; }
+.share-toolbar { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; padding:12px; border:1px solid #e5e7eb; background:#f8fafc; border-radius:14px; margin-bottom:14px; }
+.share-selected-summary { color:#475569; font-size:13px; font-weight:700; }
+.modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; padding:24px; z-index:1000; }
+.modal-backdrop.is-open { display:flex; }
+.modal-card { width:min(760px,100%); max-height:90vh; overflow:auto; background:#fff; border:1px solid #e5e7eb; border-radius:18px; box-shadow:0 24px 80px rgba(15,23,42,.22); padding:18px; }
+.modal-grid { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:12px; }
+.modal-selected-list { display:grid; gap:8px; margin:12px 0; }
+.modal-selected-item { border:1px solid #e5e7eb; background:#f8fafc; border-radius:12px; padding:10px 12px; }
+.field label { display:block; font-weight:800; font-size:13px; color:#334155; margin-bottom:5px; }
+.field input, .field select { width:100%; }
+.currency-row { display:grid; grid-template-columns:1.2fr .8fr; gap:12px; }
+.success-box { border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; border-radius:14px; padding:12px; margin-top:12px; display:none; }
+@media(max-width:900px){ .modal-grid,.currency-row{grid-template-columns:1fr;} }
 </style>
 
 <div id="reports-error" class="error" style="display:none;"></div>
 
 <div class="card" style="margin-bottom:16px;">
     <h2 style="margin:0 0 6px;">Reports</h2>
-    <p class="muted" style="margin:0;">
-        Assessments show one QRMA scan. Trend reports show what changed across two or more assessments.
-    </p>
+    <p class="muted" style="margin:0;">Assessments show one QRMA scan. Trend reports show what changed across two or more assessments.</p>
 </div>
 
 <div class="card">
@@ -40,6 +50,17 @@
         <button type="button" class="report-tab" data-type-tab="assessment">Assessments</button>
         <button type="button" class="report-tab" data-type-tab="trend">Trends</button>
         <button type="button" class="report-tab" data-type-tab="archived">Archived</button>
+    </div>
+
+    <div class="share-toolbar">
+        <div>
+            <strong>Share bundle</strong>
+            <div class="share-selected-summary" id="share-selected-summary">Select one or more reports to share as a bundle.</div>
+        </div>
+        <div class="btn-row">
+            <button class="btn secondary" type="button" id="clear-selection-btn">Clear selection</button>
+            <button class="btn" type="button" id="open-share-modal-btn" disabled>Share selected</button>
+        </div>
     </div>
 
     <div class="reports-toolbar">
@@ -54,12 +75,10 @@
                 <option value="type_asc">Type</option>
             </select>
         </div>
-
         <div class="reports-right">
             <span id="reports-count" class="reports-count">0 shown</span>
             <label style="display:flex; align-items:center; gap:6px;">
-                <input type="checkbox" id="show-archived">
-                Show archived
+                <input type="checkbox" id="show-archived"> Show archived
             </label>
         </div>
     </div>
@@ -67,6 +86,7 @@
     <table class="table">
         <thead>
             <tr>
+                <th style="width:34px;"><input type="checkbox" id="select-visible-reports" aria-label="Select visible reports"></th>
                 <th><button class="sort-btn" data-sort-set="type_asc">Type</button></th>
                 <th><button class="sort-btn" data-sort-set="patient_asc">Patient / Report</button></th>
                 <th><button class="sort-btn" data-sort-set="scan_desc">Clinical basis</button></th>
@@ -77,34 +97,130 @@
             </tr>
         </thead>
         <tbody id="reports-body">
-            <tr><td colspan="7" class="muted">Loading…</td></tr>
+            <tr><td colspan="8" class="muted">Loading…</td></tr>
         </tbody>
     </table>
+</div>
+
+<div class="modal-backdrop" id="share-bundle-modal">
+    <div class="modal-card">
+        <div class="reports-toolbar">
+            <div>
+                <h3 style="margin:0;">Share selected reports</h3>
+                <div class="muted" style="margin-top:4px;">Creates one bundle link. Each item inside uses its own secure child share link.</div>
+            </div>
+            <button class="btn secondary" type="button" id="close-share-modal-btn">Close</button>
+        </div>
+
+        <div class="field">
+            <label>Bundle title</label>
+            <input id="share-title" placeholder="e.g. Follow-up assessment and progress trend">
+        </div>
+
+        <div class="modal-grid" style="margin-top:12px;">
+            <div class="field">
+                <label>Expires after</label>
+                <select id="share-expires-days">
+                    <option value="7">7 days</option>
+                    <option value="14">14 days</option>
+                    <option value="30">30 days</option>
+                    <option value="">No expiry</option>
+                </select>
+            </div>
+            <div class="field">
+                <label>Password (optional)</label>
+                <input id="share-password" type="password" placeholder="Leave blank for no password">
+            </div>
+        </div>
+
+        <div class="currency-row" style="margin-top:12px;">
+            <div class="field">
+                <label>Price (optional)</label>
+                <input id="share-price-amount" type="number" min="0" step="0.01" placeholder="£25.00">
+                <div class="muted" id="share-price-hint" style="font-size:12px;">Enter the amount in your selected currency, for example 25.00.</div>
+            </div>
+            <div class="field">
+                <label>Currency</label>
+                <select id="share-price-currency">
+                    <option value="gbp">GBP (£)</option>
+                    <option value="usd">USD ($)</option>
+                    <option value="eur">EUR (€)</option>
+                    <option value="aed">AED (د.إ)</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="modal-selected-list" id="share-selected-list"></div>
+
+        <div class="btn-row" style="margin-top:14px;">
+            <button class="btn" type="button" id="create-share-bundle-btn">Create bundle link</button>
+        </div>
+
+        <div id="share-result-box" class="success-box"></div>
+    </div>
 </div>
 
 <script>
 let allReports = [];
 let activeTypeTab = "all";
+let selectedReportIds = new Set();
+
+const currencySymbols = {
+    gbp: "£",
+    usd: "$",
+    eur: "€",
+    aed: "د.إ"
+};
+const zeroDecimalCurrencies = new Set(["bif", "clp", "djf", "gnf", "jpy", "kmf", "krw", "mga", "pyg", "rwf", "ugx", "vnd", "vuv", "xaf", "xof", "xpf"]);
+
+function convertToMinorUnits(amount, currency) {
+    const code = String(currency || "gbp").toLowerCase();
+    const numeric = Number(amount);
+    if (!Number.isFinite(numeric) || numeric <= 0) return null;
+    if (zeroDecimalCurrencies.has(code)) return Math.round(numeric);
+    return Math.round(numeric * 100);
+}
+
+function updateCurrencyPlaceholder() {
+    const currency = document.getElementById("share-price-currency").value || "gbp";
+    const input = document.getElementById("share-price-amount");
+    const hint = document.getElementById("share-price-hint");
+    const symbol = currencySymbols[currency] || currency.toUpperCase();
+    input.placeholder = `${symbol}25.00`;
+    hint.textContent = `Enter amount in ${currency.toUpperCase()} as a normal price, for example 25.00. The system stores the Stripe amount internally.`;
+}
 
 function showReportsError(message) {
     const box = document.getElementById("reports-error");
     box.style.display = "block";
     box.textContent = message;
 }
-
 function clearReportsError() {
     const box = document.getElementById("reports-error");
     box.style.display = "none";
     box.textContent = "";
 }
-
 function reportType(r) { return r.report_type === "trend" ? "trend" : "assessment"; }
 function isTrend(r) { return reportType(r) === "trend"; }
 function reportTypeLabel(r) { return isTrend(r) ? "Trend" : "Assessment"; }
 function reportTypeClass(r) { return isTrend(r) ? "report-type-trend" : "report-type-assessment"; }
-
 function generatedDate(r) { return new Date(r.generated_at || 0); }
 function scanDate(r) { return new Date(r.scan_datetime || r.generated_at || 0); }
+function selectedReports() { return allReports.filter(r => selectedReportIds.has(String(r.id))); }
+
+function updateShareSelectionUi() {
+    const selected = selectedReports();
+    const btn = document.getElementById("open-share-modal-btn");
+    const summary = document.getElementById("share-selected-summary");
+    btn.disabled = selected.length === 0;
+    if (!selected.length) {
+        summary.textContent = "Select one or more reports to share as a bundle.";
+        return;
+    }
+    const assessments = selected.filter(r => !isTrend(r)).length;
+    const trends = selected.filter(r => isTrend(r)).length;
+    summary.textContent = `${selected.length} selected · ${assessments} assessment${assessments === 1 ? "" : "s"} · ${trends} trend${trends === 1 ? "" : "s"}`;
+}
 
 function updateTabs() {
     document.querySelectorAll("[data-type-tab]").forEach(btn => {
@@ -119,24 +235,17 @@ function sortRows(rows, sort) {
         if (sort === "generated_desc") return generatedDate(b) - generatedDate(a);
         if (sort === "scan_asc") return scanDate(a) - scanDate(b);
         if (sort === "scan_desc") return scanDate(b) - scanDate(a);
-        if (sort === "patient_asc") {
-            return String(a.patient_display_name || a.display_name || "").localeCompare(String(b.patient_display_name || b.display_name || ""));
-        }
-        if (sort === "type_asc") {
-            return reportType(a).localeCompare(reportType(b)) || generatedDate(b) - generatedDate(a);
-        }
+        if (sort === "patient_asc") return String(a.patient_display_name || a.display_name || "").localeCompare(String(b.patient_display_name || b.display_name || ""));
+        if (sort === "type_asc") return reportType(a).localeCompare(reportType(b)) || generatedDate(b) - generatedDate(a);
         return generatedDate(b) - generatedDate(a);
     });
     return sorted;
 }
 
-function renderReports() {
-    const tbody = document.getElementById("reports-body");
+function currentVisibleRows() {
     const query = (document.getElementById("reports-search").value || "").toLowerCase();
     const sort = document.getElementById("reports-sort").value;
     const showArchived = document.getElementById("show-archived").checked || activeTypeTab === "archived";
-
-    updateTabs();
 
     let rows = allReports
         .filter(r => showArchived || !r.is_archived)
@@ -147,33 +256,34 @@ function renderReports() {
             return true;
         })
         .filter(r => {
-            const hay = [
-                r.display_name, r.patient_display_name, r.case_title, r.scan_datetime_display,
-                r.source_scan_range, r.status, reportTypeLabel(r)
-            ].join(" ").toLowerCase();
+            const hay = [r.display_name, r.patient_display_name, r.case_title, r.scan_datetime_display, r.source_scan_range, r.status, reportTypeLabel(r)].join(" ").toLowerCase();
             return !query || hay.includes(query);
         });
 
-    rows = sortRows(rows, sort);
+    return sortRows(rows, sort);
+}
+
+function renderReports() {
+    const tbody = document.getElementById("reports-body");
+    const rows = currentVisibleRows();
+    updateTabs();
     document.getElementById("reports-count").textContent = `${rows.length} shown`;
 
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="7" class="muted">No reports found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="8" class="muted">No reports found.</td></tr>`;
+        document.getElementById("select-visible-reports").checked = false;
+        updateShareSelectionUi();
         return;
     }
 
     tbody.innerHTML = rows.map(r => {
         const trend = isTrend(r);
-        const sourceText = trend
-            ? `${safeText(r.source_count || (r.source_report_ids || []).length || 0)} source assessment${(r.source_count || (r.source_report_ids || []).length) === 1 ? "" : "s"}`
-            : safeText(r.scan_datetime_display || "—");
-
-        const health = trend && r.health_index !== null && r.health_index !== undefined
-            ? `<div class="report-secondary">Health Index: ${safeText(r.health_index)}${r.health_index_change !== null && r.health_index_change !== undefined ? ` (${Number(r.health_index_change) > 0 ? "+" : ""}${safeText(r.health_index_change)})` : ""}</div>`
-            : "";
-
+        const sourceCount = r.source_count || (r.source_report_ids || []).length || 0;
+        const sourceText = trend ? `${safeText(sourceCount)} source assessment${sourceCount === 1 ? "" : "s"}` : safeText(r.scan_datetime_display || "—");
+        const checked = selectedReportIds.has(String(r.id)) ? "checked" : "";
         return `
         <tr>
+            <td><input type="checkbox" class="report-select-checkbox" value="${safeText(r.id)}" ${checked} aria-label="Select report"></td>
             <td><span class="report-type-pill ${reportTypeClass(r)}">${reportTypeLabel(r)}</span></td>
             <td>
                 <div class="report-primary">${safeText(r.display_name || "Untitled report")}</div>
@@ -183,7 +293,6 @@ function renderReports() {
             <td>
                 <div>${sourceText}</div>
                 ${trend && r.source_scan_range ? `<div class="report-secondary">${safeText(r.source_scan_range)}</div>` : ""}
-                ${health}
             </td>
             <td>${trend ? "—" : `v${safeText(r.version_number || "1")}`}</td>
             <td>${formatDate(r.generated_at)}</td>
@@ -191,21 +300,28 @@ function renderReports() {
             <td>
                 <a class="link" href="${trend ? `/trend-reports/${r.id}` : `/app/reports/${r.id}`}">Open</a>
                 &nbsp;|&nbsp;
-                ${r.is_archived
-                    ? `<span class="link-secondary" onclick="restoreReport('${r.id}')">Restore</span>`
-                    : `<span class="link-danger" onclick="archiveReport('${r.id}')">Archive</span>`
-                }
+                ${r.is_archived ? `<span class="link-secondary" onclick="restoreReport('${r.id}')">Restore</span>` : `<span class="link-danger" onclick="archiveReport('${r.id}')">Archive</span>`}
             </td>
-        </tr>
-        `;
+        </tr>`;
     }).join("");
+
+    document.querySelectorAll(".report-select-checkbox").forEach(cb => {
+        cb.addEventListener("change", () => {
+            if (cb.checked) selectedReportIds.add(String(cb.value));
+            else selectedReportIds.delete(String(cb.value));
+            updateShareSelectionUi();
+        });
+    });
+
+    const visibleIds = rows.map(r => String(r.id));
+    document.getElementById("select-visible-reports").checked = visibleIds.length > 0 && visibleIds.every(id => selectedReportIds.has(id));
+    updateShareSelectionUi();
 }
 
 async function loadReports() {
     clearReportsError();
     const authed = await requireAuthOrRedirect();
     if (!authed) return;
-
     try {
         const response = await apiFetch("/api/reports?include_archived=true");
         if (!response.ok) {
@@ -224,20 +340,87 @@ async function loadReports() {
 async function archiveReport(id) {
     if (!confirm("Archive this report?")) return;
     const res = await apiFetch(`/api/reports/${id}/archive`, { method: "POST" });
-    if (!res.ok) {
-        showReportsError("Failed to archive report.");
-        return;
-    }
+    if (!res.ok) showReportsError("Failed to archive report.");
     loadReports();
 }
 
 async function restoreReport(id) {
     const res = await apiFetch(`/api/reports/${id}/restore`, { method: "POST" });
-    if (!res.ok) {
-        showReportsError("Failed to restore report.");
-        return;
-    }
+    if (!res.ok) showReportsError("Failed to restore report.");
     loadReports();
+}
+
+function openShareModal() {
+    const selected = selectedReports();
+    if (!selected.length) return;
+    document.getElementById("share-selected-list").innerHTML = selected.map(r => `
+        <div class="modal-selected-item">
+            <strong>${safeText(r.display_name || "Report")}</strong><br>
+            <span class="muted">${reportTypeLabel(r)} · Generated ${formatDate(r.generated_at)}</span>
+        </div>
+    `).join("");
+    document.getElementById("share-result-box").style.display = "none";
+    updateCurrencyPlaceholder();
+    document.getElementById("share-bundle-modal").classList.add("is-open");
+}
+function closeShareModal() { document.getElementById("share-bundle-modal").classList.remove("is-open"); }
+
+async function createShareBundle() {
+    const selected = selectedReports();
+    if (!selected.length) return;
+    const btn = document.getElementById("create-share-bundle-btn");
+    const resultBox = document.getElementById("share-result-box");
+    btn.disabled = true;
+    btn.textContent = "Creating…";
+    resultBox.style.display = "none";
+    clearReportsError();
+
+    try {
+        const expiresRaw = document.getElementById("share-expires-days").value;
+        const priceRaw = document.getElementById("share-price-amount").value;
+        const currency = document.getElementById("share-price-currency").value || "gbp";
+        const amountMajor = priceRaw === "" ? null : Number(priceRaw);
+        const amountMinor = amountMajor ? convertToMinorUnits(amountMajor, currency) : null;
+
+        if (priceRaw !== "" && (!Number.isFinite(amountMajor) || amountMajor < 0)) {
+            showReportsError("Please enter a valid price amount.");
+            return;
+        }
+
+        const payload = {
+            report_version_ids: selected.map(r => r.id),
+            title: document.getElementById("share-title").value || null,
+            expires_days: expiresRaw === "" ? null : Number(expiresRaw),
+            password: document.getElementById("share-password").value || null,
+            price_amount: amountMinor,
+            price_currency: currency,
+        };
+
+        const res = await apiFetch("/api/share-bundles", { method: "POST", body: JSON.stringify(payload) });
+        const data = await res.json().catch(() => ({}));
+        if (!res.ok) {
+            showReportsError(data.detail || "Could not create share bundle.");
+            return;
+        }
+
+        resultBox.style.display = "block";
+        resultBox.innerHTML = `
+            <strong>Bundle link created</strong><br>
+            <input id="created-share-url" value="${safeText(data.url)}" readonly style="width:100%; margin-top:8px;">
+            <div class="btn-row" style="margin-top:10px;">
+                <button class="btn secondary" type="button" id="copy-share-url-btn">Copy link</button>
+                <a class="btn" href="${safeText(data.url)}" target="_blank" rel="noopener">Open bundle</a>
+            </div>`;
+        document.getElementById("copy-share-url-btn").addEventListener("click", async () => {
+            try { await navigator.clipboard.writeText(document.getElementById("created-share-url").value); } catch (e) {}
+        });
+    } catch (err) {
+        console.error(err);
+        showReportsError("Unexpected error while creating share bundle.");
+    } finally {
+        btn.disabled = false;
+        btn.textContent = "Create bundle link";
+    }
 }
 
 document.querySelectorAll("[data-type-tab]").forEach(btn => {
@@ -256,7 +439,20 @@ document.querySelectorAll("[data-sort-set]").forEach(btn => {
 document.getElementById("reports-search").addEventListener("input", renderReports);
 document.getElementById("reports-sort").addEventListener("change", renderReports);
 document.getElementById("show-archived").addEventListener("change", renderReports);
+document.getElementById("select-visible-reports").addEventListener("change", e => {
+    currentVisibleRows().forEach(r => {
+        if (e.target.checked) selectedReportIds.add(String(r.id));
+        else selectedReportIds.delete(String(r.id));
+    });
+    renderReports();
+});
+document.getElementById("clear-selection-btn").addEventListener("click", () => { selectedReportIds.clear(); renderReports(); });
+document.getElementById("open-share-modal-btn").addEventListener("click", openShareModal);
+document.getElementById("close-share-modal-btn").addEventListener("click", closeShareModal);
+document.getElementById("create-share-bundle-btn").addEventListener("click", createShareBundle);
+document.getElementById("share-price-currency").addEventListener("change", updateCurrencyPlaceholder);
 
+updateCurrencyPlaceholder();
 loadReports();
 </script>
 {% endblock %}

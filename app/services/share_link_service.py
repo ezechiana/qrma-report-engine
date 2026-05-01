@@ -49,8 +49,10 @@ def create_share_link(
     share_type="report",
     price=None,
     expires_days=7,
+    expires_at=None,
     password=None,
 ):
+
     """
     Unified share link creator.
 
@@ -62,8 +64,7 @@ def create_share_link(
 
     token = generate_token(24)
 
-    expires_at = None
-    if expires_days:
+    if expires_at is None and expires_days:
         expires_at = datetime.utcnow() + timedelta(days=expires_days)
 
     # Normalize password

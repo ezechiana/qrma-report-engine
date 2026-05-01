@@ -257,10 +257,18 @@ async function createShareLink() {
             return;
         }
 
+        const isTrendReport = isTrend(currentReport);
+
+        // IMPORTANT: route trend shares correctly
+        const finalShareUrl = isTrendReport
+            ? `${data.share_url}/trend`
+            : data.share_url;
+
         document.getElementById("share-result").innerHTML = `
             <strong>Share link:</strong><br>
-            <a class="link" href="${data.share_url}" target="_blank">${data.share_url}</a>
+            <a class="link" href="${finalShareUrl}" target="_blank">${finalShareUrl}</a>
         `;
+        
         setSuccess("Share link created.");
     } catch (err) {
         console.error(err);

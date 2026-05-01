@@ -1,11 +1,16 @@
 FROM python:3.10-slim
 
+# --- Environment ---
 ENV PYTHONDONTWRITEBYTECODE=1
 ENV PYTHONUNBUFFERED=1
+ENV PIP_NO_CACHE_DIR=1
 
 WORKDIR /app
 
+# --- System dependencies (Playwright + PostgreSQL + build) ---
 RUN apt-get update && apt-get install -y \
+    build-essential \
+    libpq-dev \
     curl \
     ca-certificates \
     fonts-liberation \
@@ -43,13 +48,22 @@ RUN apt-get update && apt-get install -y \
     xdg-utils \
     && rm -rf /var/lib/apt/lists/*
 
-COPY requirements.txt /app/requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
+# --- Install Python deps FIRST (cache-friendly) ---
+COPY requirements.txt .
 
+RUN pip install --upgrade pip \
+    && pip install -r requirements.txt
+
+# --- Install Playwright browsers ---
 RUN python -m playwright install chromium
 
-COPY . /app
+# --- Copy application ---
+COPY . .
 
+# --- Expose ---
 EXPOSE 8000
 
+# --- Run ---
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8000"]
+
+

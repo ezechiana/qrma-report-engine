@@ -21,6 +21,7 @@ from app.services.audit_service import log_action
 from app.services.case_service import create_case, update_case
 from app.services.patient_service import create_patient
 from app.services.report_service import generate_report_version
+from app.services.subscription_service import require_subscription_feature
 from app.services.scan_import_service import (
     parse_qrma_html,
     save_temp_html,
@@ -327,6 +328,8 @@ async def create_from_import(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "report_generation")
+
     if payload.existing_patient_id:
         patient = _get_owned_patient(db, current_user, payload.existing_patient_id)
         if not patient:
@@ -473,6 +476,8 @@ async def generate_report(
     case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
+
+    require_subscription_feature(db, current_user, "report_generation")
 
     if not case.raw_scan_html_path:
         raise HTTPException(
