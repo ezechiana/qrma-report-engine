@@ -45,12 +45,131 @@
 .dashboard-insight strong { color:#0f172a; }
 .activity-item { padding:11px 12px; border:1px solid #eef2f7; border-radius:14px; background:#fff; }
 .empty-state { color:#64748b; padding:10px 0; }
+
+.onboarding-card {
+    border-color:#bbf7d0;
+    background:linear-gradient(135deg,#ffffff 0%,#f0fdf4 100%);
+}
+.onboarding-header {
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-start;
+    gap:14px;
+    flex-wrap:wrap;
+}
+.onboarding-kicker {
+    display:inline-flex;
+    align-items:center;
+    gap:8px;
+    border:1px solid #bbf7d0;
+    background:#ecfdf5;
+    color:#166534;
+    border-radius:999px;
+    padding:5px 10px;
+    font-size:12px;
+    font-weight:900;
+    margin-bottom:10px;
+}
+.onboarding-title {
+    margin:0 0 6px;
+    font-size:26px;
+    line-height:1.15;
+    color:#0f172a;
+}
+.onboarding-steps {
+    display:grid;
+    grid-template-columns:repeat(3,minmax(0,1fr));
+    gap:12px;
+    margin-top:16px;
+}
+.onboarding-step {
+    border:1px solid #e2e8f0;
+    background:#fff;
+    border-radius:16px;
+    padding:14px;
+}
+.onboarding-step-number {
+    width:30px;
+    height:30px;
+    border-radius:999px;
+    background:#dcfce7;
+    color:#166534;
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    font-size:13px;
+    font-weight:900;
+    margin-bottom:10px;
+}
+.onboarding-step-title {
+    font-weight:900;
+    color:#0f172a;
+    margin-bottom:4px;
+}
+.onboarding-step-text {
+    color:#64748b;
+    font-size:13px;
+    line-height:1.45;
+}
+.onboarding-actions {
+    display:flex;
+    gap:10px;
+    flex-wrap:wrap;
+    margin-top:16px;
+}
+@media(max-width:900px){ .onboarding-steps{grid-template-columns:1fr;} }
+
 @media(max-width:1280px){ .dashboard-shell{grid-template-columns:1fr;} .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
 @media(max-width:700px){ .dashboard-grid{grid-template-columns:1fr;} }
 </style>
 
 <div id="dashboard-error" class="error dashboard-error"></div>
 <p class="dashboard-subtitle">Your practitioner command centre: revenue, report health, sharing activity, and next actions.</p>
+
+<div id="onboarding-card" class="dashboard-panel onboarding-card" style="display:none;">
+    <div class="onboarding-header">
+        <div>
+            <div class="onboarding-kicker">30-day trial active</div>
+            <h2 class="onboarding-title">Welcome to go360 — let’s generate your first report.</h2>
+            <p class="muted" style="margin:0; max-width:760px;">
+                Your first value moment is simple: upload a QRMA HTML scan, confirm the client details, then generate a polished practitioner report you can review and share.
+            </p>
+            <div class="notice" style="margin-top:12px; max-width:760px;">
+                <strong>Before you start:</strong><br>
+                Run a QRMA scan → click <strong>“Save Report (Web)”</strong> → upload the saved HTML file into go360.
+            </div>
+        </div>
+        <div class="btn-row">
+            <a class="btn" href="/app/cases/new">Upload first scan</a>
+            <a class="btn secondary" href="/app/cases/new#how-to-export">How to export QRMA scan</a>
+        </div>
+    </div>
+
+    <div class="onboarding-steps">
+        <div class="onboarding-step">
+            <div class="onboarding-step-number">1</div>
+            <div class="onboarding-step-title">Upload scan</div>
+            <div class="onboarding-step-text">Import a QRMA HTML export and confirm or create the client record.</div>
+        </div>
+        <div class="onboarding-step">
+            <div class="onboarding-step-number">2</div>
+            <div class="onboarding-step-title">Generate report</div>
+            <div class="onboarding-step-text">go360 turns the scan into structured system insights, marker detail, and recommendations.</div>
+        </div>
+        <div class="onboarding-step">
+            <div class="onboarding-step-number">3</div>
+            <div class="onboarding-step-title">Share securely</div>
+            <div class="onboarding-step-text">Send a secure client link or bundle once the report is ready.</div>
+        </div>
+    </div>
+
+    <div class="onboarding-actions">
+        <a class="btn" href="/app/cases/new">Start with a scan</a>
+        <a class="btn secondary" href="/app/cases/new#how-to-export">View QRMA export guide</a>
+        <a class="btn secondary" href="/app/settings">Set clinic branding</a>
+    </div>
+</div>
+
 
 <div class="dashboard-grid">
     <div class="dashboard-card"><div class="card-title">Paid Bundle Revenue</div><div class="card-value" id="paid-revenue">—</div><div class="card-subvalue" id="paid-revenue-sub">Confirmed Stripe payments</div></div>
@@ -123,9 +242,17 @@ function renderRevenueSummary(summary,paymentsPayload){ const currencies=summary
 function renderRevenueActivity(payments){ const list=document.getElementById("revenue-activity-list"); const paid=(payments||[]).filter(p=>paymentStatus(p)==="paid").slice().sort((a,b)=>new Date(b.paid_at||b.created_at||0)-new Date(a.paid_at||a.created_at||0)).slice(0,5); if(!paid.length){ list.innerHTML=`<div class="empty-state">No paid bundle activity yet.</div>`; return; } list.innerHTML=paid.map(p=>`<div class="activity-item"><div class="activity-title">${moneyFromMinor(paymentGrossMinor(p),paymentCurrency(p))}</div><div class="activity-meta">${safeTextLocal(p.patient_name||p.patient_display_name||p.bundle_label||"Paid bundle")} · ${formatDateTimeLocal(p.paid_at||p.created_at)}</div></div>`).join(""); }
 function renderActionPanel(){ const list=document.getElementById("action-list"); const failed=dashboardRows.filter(r=>statusValue(r)==="failed"); const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))); const unpaid=dashboardPayments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid"); const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).slice(0,5); const actions=[]; if(failed.length) actions.push({cls:"warning",title:`${failed.length} failed report${failed.length===1?"":"s"}`,subtitle:"Review failed generation and retry from the case workspace.",href:"/app/reports"}); if(stuck.length) actions.push({cls:"warning",title:`${stuck.length} draft / queued report${stuck.length===1?"":"s"}`,subtitle:"These reports may need refresh, retry, or cleanup.",href:"/app/reports"}); if(unpaid.length) actions.push({cls:"warning",title:`${unpaid.length} bundle${unpaid.length===1?"":"s"} awaiting payment`,subtitle:"Follow up with clients or review payment links.",href:"/app/share-links"}); if(!actions.length) actions.push({cls:"good",title:"No urgent operational issues",subtitle:"Reports, shares, and revenue items look healthy.",href:"/app/reports"}); if(ready.length) actions.push({cls:"",title:"Share ready reports",subtitle:"Create a report bundle or single share for recent ready reports.",href:"/app/reports"}); list.innerHTML=actions.map(a=>`<div class="action-item ${a.cls}"><div><div class="action-title">${safeTextLocal(a.title)}</div><div class="action-subtitle">${safeTextLocal(a.subtitle)}</div></div><a class="btn small secondary" href="${a.href}">Open</a></div>`).join(""); }
 function renderPipeline(){ const assessments=dashboardRows.filter(r=>reportType(r)==="assessment"); const trends=dashboardRows.filter(r=>reportType(r)==="trend"); const since=Date.now()-(7*24*60*60*1000); const last7=dashboardRows.filter(r=>{ const d=new Date(r.generated_at||0); return !Number.isNaN(d.getTime())&&d.getTime()>=since; }); document.getElementById("pipeline-assessments").textContent=`${assessments.length} assessment${assessments.length===1?"":"s"}`; document.getElementById("pipeline-trends").textContent=`${trends.length} trend report${trends.length===1?"":"s"}`; document.getElementById("pipeline-7d").textContent=`${last7.length} in last 7 days`; }
+
+function renderOnboardingState(){
+    const card=document.getElementById("onboarding-card");
+    if(!card) return;
+    const hasReports=Array.isArray(dashboardRows)&&dashboardRows.length>0;
+    card.style.display=hasReports?"none":"block";
+}
+
 function renderDashboardRows(){ const tbody=document.getElementById("reports-table-body"); const query=(document.getElementById("dashboard-search").value||"").trim().toLowerCase(); updateDashboardTabs(); const filtered=dashboardRows.filter(item=>activeDashboardTab==="attention"?isAttentionStatus(item):(activeDashboardTab==="all"||reportType(item)===activeDashboardTab)).filter(item=>{ const hay=[item.display_name,item.patient_display_name,item.generated_at,item.scan_datetime_display,item.source_scan_range,item.status,reportTypeLabel(item)].join(" ").toLowerCase(); return !query||hay.includes(query); }); if(!filtered.length){ tbody.innerHTML=`<tr><td colspan="6">No matching reports.</td></tr>`; return; } tbody.innerHTML=filtered.slice(0,20).map(item=>{ const trend=isTrend(item); const sourceCount=item.source_count||(item.source_report_ids||[]).length||0; const basis=trend?`${safeTextLocal(sourceCount)} source assessment${Number(sourceCount)===1?"":"s"}`:safeTextLocal(item.scan_datetime_display||"—"); const health=trend&&item.health_index!==null&&item.health_index!==undefined?`<div class="report-secondary">Health Index: ${safeTextLocal(item.health_index)}${item.health_index_change!==null&&item.health_index_change!==undefined?` (${Number(item.health_index_change)>0?"+":""}${safeTextLocal(item.health_index_change)})`:""}</div>`:""; const status=statusValue(item); return `<tr><td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td><td><span class="report-title-text">${safeTextLocal(item.display_name||"Untitled report")}</span><div class="report-secondary">${safeTextLocal(item.patient_display_name||"")}</div></td><td>${basis}${trend&&item.source_scan_range?`<div class="report-secondary">${safeTextLocal(item.source_scan_range)}</div>`:""}${health}</td><td><span class="status-pill status-${safeTextLocal(status)}">${safeTextLocal(item.status||"—")}</span></td><td>${formatDateLocal(item.generated_at)}</td><td><a class="link" href="${trend?`/trend-reports/${item.id}`:`/app/reports/${item.id}`}">Open</a></td></tr>`; }).join(""); }
 function renderReportHealthCards(){ const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).length; const failed=dashboardRows.filter(r=>statusValue(r)==="failed").length; const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))).length; const attention=failed+stuck; document.getElementById("ready-reports").textContent=ready; document.getElementById("failed-reports").textContent=attention; const failedCard=document.getElementById("failed-report-card"); failedCard.classList.toggle("is-warning",attention>0); failedCard.classList.toggle("is-good",attention===0); }
-async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } }
+async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); renderOnboardingState(); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } }
 document.getElementById("dashboard-search").addEventListener("input",renderDashboardRows);
 document.querySelectorAll("[data-dashboard-tab]").forEach(btn=>{ btn.addEventListener("click",()=>{ activeDashboardTab=btn.dataset.dashboardTab; renderDashboardRows(); }); });
 loadDashboard();

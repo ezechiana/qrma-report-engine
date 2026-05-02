@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>go360 · QRMA report platform for practitioners</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content="go360 helps QRMA practitioners turn scan exports into professional reports, secure client shares, trends, and revenue-ready workflows." />
+    <style>
+        :root {
+            --bg: #f4f8f5;
+            --surface: #ffffff;
+            --surface-soft: rgba(255,255,255,0.86);
+            --text: #10201b;
+            --muted: #5f6f68;
+            --line: #dbe7df;
+            --green: #1ea672;
+            --green-dark: #17865c;
+            --green-soft: #e8f7ef;
+            --gold: #d2b03f;
+            --gold-soft: #fff7d8;
+            --ink: #122132;
+            --danger: #b42318;
+            --shadow: 0 24px 70px rgba(16, 32, 27, 0.12);
+            --radius-xl: 32px;
+            --radius-lg: 22px;
+            --radius-md: 16px;
+        }
+
+        * { box-sizing: border-box; }
+        html { scroll-behavior: smooth; }
+        body {
+            margin: 0;
+            font-family: Arial, sans-serif;
+            color: var(--text);
+            background:
+                radial-gradient(circle at 8% 6%, rgba(210,176,63,0.18), transparent 28%),
+                radial-gradient(circle at 92% 12%, rgba(30,166,114,0.16), transparent 30%),
+                linear-gradient(180deg, #fbfdfb 0%, var(--bg) 52%, #eef5f0 100%);
+        }
+        a { color: inherit; text-decoration: none; }
+        .page { overflow: hidden; }
+        .container { width: min(1160px, calc(100% - 36px)); margin: 0 auto; }
+
+        .nav {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            backdrop-filter: blur(18px);
+            background: rgba(248,252,249,0.86);
+            border-bottom: 1px solid rgba(219,231,223,0.82);
+        }
+        .nav-inner {
+            height: 78px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+        }
+        .logo-wordmark {
+            display: inline-flex;
+            align-items: center;
+            gap: 5px;
+            font-size: 38px;
+            line-height: .9;
+            font-weight: 500;
+            letter-spacing: -0.07em;
+            color: #2a2a2a;
+        }
+        .logo-go { color: #15b400; }
+        .logo-o-wrap {
+            display: inline-flex;
+            width: .88em;
+            height: .88em;
+            border-radius: 999px;
+            align-items: center;
+            justify-content: center;
+            background: #15b400;
+            position: relative;
+            top: .015em;
+        }
+        .logo-o-inner {
+            width: 62%; height: 62%; border-radius: 999px;
+            background: var(--gold); border: 4px solid #111;
+        }
+        .nav-links { display: flex; align-items: center; gap: 18px; color: #425b52; font-size: 14px; font-weight: 800; }
+        .nav-links a:hover { color: var(--green-dark); }
+        .nav-actions { display: flex; align-items: center; gap: 10px; }
+
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            min-height: 46px;
+            padding: 12px 18px;
+            border-radius: 999px;
+            border: 1px solid transparent;
+            font-size: 15px;
+            font-weight: 900;
+            cursor: pointer;
+            transition: transform .14s ease, box-shadow .14s ease, background .14s ease;
+            white-space: nowrap;
+        }
+        .btn:hover { transform: translateY(-1px); }
+        .btn.primary { background: var(--green); color: white; box-shadow: 0 14px 28px rgba(30,166,114,0.22); }
+        .btn.primary:hover { background: var(--green-dark); }
+        .btn.secondary { background: white; color: #17352a; border-color: var(--line); }
+        .btn.text { background: transparent; color: #315247; padding-left: 8px; padding-right: 8px; }
+
+        .hero { padding: 72px 0 48px; }
+        .hero-grid { display: grid; grid-template-columns: 1.02fr .98fr; gap: 38px; align-items: center; }
+        .eyebrow {
+            display: inline-flex; align-items: center; gap: 8px;
+            background: rgba(232,247,239,0.92); color: #1f7f5c;
+            border: 1px solid rgba(31,127,92,.12);
+            border-radius: 999px; padding: 8px 14px;
+            font-size: 13px; font-weight: 900; letter-spacing: .02em;
+            margin-bottom: 22px;
+        }
+        .hero h1 {
+            margin: 0 0 20px;
+            font-size: clamp(46px, 6vw, 78px);
+            line-height: .94;
+            letter-spacing: -0.065em;
+            color: var(--ink);
+        }
+        .hero h1 .accent { color: var(--green); }
+        .hero-copy {
+            max-width: 650px;
+            margin: 0 0 24px;
+            font-size: 19px;
+            line-height: 1.7;
+            color: #334a41;
+        }
+        .hero-cta { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; margin: 28px 0 16px; }
+        .trust-row { display: flex; flex-wrap: wrap; gap: 14px; color: #5f6f68; font-size: 14px; font-weight: 800; }
+        .trust-row span { display: inline-flex; gap: 7px; align-items: center; }
+
+        .hero-visual {
+            position: relative;
+            min-height: 560px;
+        }
+        .device-card {
+            position: absolute;
+            inset: 18px 0 auto auto;
+            width: min(520px, 100%);
+            background: rgba(255,255,255,.88);
+            border: 1px solid rgba(219,231,223,.95);
+            border-radius: 34px;
+            box-shadow: var(--shadow);
+            padding: 18px;
+            backdrop-filter: blur(14px);
+        }
+        .browser-bar { display: flex; gap: 6px; margin-bottom: 14px; }
+        .browser-bar span { width: 10px; height: 10px; border-radius: 99px; background: #dbe7df; }
+        .report-preview {
+            border: 1px solid #e1ece5;
+            border-radius: 24px;
+            background: linear-gradient(180deg,#ffffff,#f8fbf9);
+            padding: 20px;
+        }
+        .preview-head { display: flex; justify-content: space-between; gap: 12px; margin-bottom: 18px; align-items: start; }
+        .preview-title { font-size: 18px; font-weight: 900; color: #10201b; }
+        .preview-sub { color: #6b7c74; font-size: 12px; margin-top: 4px; }
+        .score-pill {
+            width: 86px; height: 86px; border-radius: 24px;
+            background: var(--green-soft); color: #146847;
+            display: grid; place-items: center; text-align: center;
+            border: 1px solid #bdebd4;
+        }
+        .score-pill strong { display: block; font-size: 32px; line-height: 1; }
+        .score-pill span { display: block; font-size: 11px; font-weight: 800; margin-top: 4px; }
+        .mini-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; }
+        .mini-card { background: #fff; border: 1px solid #edf3ef; border-radius: 18px; padding: 14px; }
+        .mini-label { color: #6b7c74; font-size: 11px; font-weight: 900; text-transform: uppercase; letter-spacing: .05em; }
+        .mini-value { margin-top: 8px; font-weight: 900; color: #10201b; line-height: 1.25; }
+        .bar { height: 8px; background: #e7efe9; border-radius: 999px; overflow: hidden; margin-top: 12px; }
+        .bar i { display: block; height: 100%; width: 72%; background: var(--green); border-radius: inherit; }
+        .floating-card {
+            position: absolute;
+            left: 0;
+            bottom: 36px;
+            width: 280px;
+            background: #10201b;
+            color: white;
+            border-radius: 24px;
+            padding: 18px;
+            box-shadow: 0 22px 50px rgba(16,32,27,.22);
+        }
+        .floating-card .small { color: rgba(255,255,255,.68); font-size: 13px; line-height: 1.45; margin-top: 5px; }
+        .floating-card strong { color: #fff; }
+
+        .section { padding: 70px 0; }
+        .section-head { max-width: 760px; margin-bottom: 28px; }
+        .section-kicker { color: var(--green-dark); font-weight: 900; font-size: 13px; letter-spacing: .08em; text-transform: uppercase; margin-bottom: 10px; }
+        .section h2 { margin: 0; font-size: clamp(34px,4vw,54px); line-height: 1; letter-spacing: -.045em; color: var(--ink); }
+        .section .lead { color: #526960; font-size: 18px; line-height: 1.65; margin: 16px 0 0; }
+        .cards-3 { display: grid; grid-template-columns: repeat(3, minmax(0,1fr)); gap: 18px; }
+        .card {
+            background: rgba(255,255,255,.9);
+            border: 1px solid var(--line);
+            border-radius: var(--radius-lg);
+            padding: 24px;
+            box-shadow: 0 12px 32px rgba(16,32,27,.06);
+        }
+        .icon { width: 52px; height: 52px; border-radius: 18px; background: var(--green-soft); display: grid; place-items: center; font-size: 24px; margin-bottom: 16px; }
+        .card h3 { margin: 0 0 10px; color: var(--ink); font-size: 21px; }
+        .card p { margin: 0; color: #526960; line-height: 1.62; }
+
+        .workflow { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 14px; counter-reset: step; }
+        .step { position: relative; background: white; border: 1px solid var(--line); border-radius: 22px; padding: 22px; }
+        .step:before { counter-increment: step; content: counter(step); width: 34px; height: 34px; border-radius: 999px; background: #10201b; color: white; display: grid; place-items: center; font-weight: 900; margin-bottom: 16px; }
+        .step h3 { margin: 0 0 8px; font-size: 18px; }
+        .step p { margin: 0; color: #5f6f68; line-height: 1.55; font-size: 14px; }
+
+        .pricing-wrap { display: grid; grid-template-columns: 1fr 420px; gap: 24px; align-items: stretch; }
+        .pricing-copy { background: #10201b; color: white; border-radius: 32px; padding: 34px; }
+        .pricing-copy h2 { color: white; }
+        .pricing-copy .lead { color: rgba(255,255,255,.75); }
+        .pricing-list { margin: 28px 0 0; display: grid; gap: 12px; color: rgba(255,255,255,.88); }
+        .pricing-list div { display: flex; gap: 10px; align-items: start; }
+        .price-card { background: white; border: 1px solid var(--line); border-radius: 32px; padding: 34px; box-shadow: var(--shadow); }
+        .price-name { color: var(--green-dark); font-weight: 900; letter-spacing: .04em; text-transform: uppercase; font-size: 13px; }
+        .price { display: flex; align-items: baseline; gap: 8px; margin: 16px 0 8px; color: var(--ink); }
+        .price strong { font-size: 64px; letter-spacing: -.05em; }
+        .price span { color: #687a73; font-weight: 800; }
+        .trial-note { color: #526960; line-height: 1.55; margin-bottom: 22px; }
+        .feature-checks { display: grid; gap: 12px; margin: 22px 0; color: #355247; font-weight: 700; }
+        .feature-checks div { display: flex; gap: 10px; align-items: start; }
+
+        .faq { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 14px; }
+        details { background: white; border: 1px solid var(--line); border-radius: 18px; padding: 18px 20px; }
+        summary { cursor: pointer; font-weight: 900; color: var(--ink); }
+        details p { margin: 12px 0 0; color: #526960; line-height: 1.6; }
+
+        .final-cta { margin: 60px 0 80px; background: linear-gradient(135deg,#10201b,#164835); color: white; border-radius: 36px; padding: 44px; text-align: center; box-shadow: var(--shadow); }
+        .final-cta h2 { margin: 0; font-size: clamp(34px,5vw,58px); letter-spacing: -.05em; line-height: .98; }
+        .final-cta p { max-width: 720px; margin: 16px auto 26px; color: rgba(255,255,255,.78); font-size: 18px; line-height: 1.65; }
+        .footer { border-top: 1px solid var(--line); padding: 24px 0 40px; color: #667870; font-size: 14px; }
+        .footer-inner { display: flex; justify-content: space-between; gap: 18px; flex-wrap: wrap; }
+
+        @media (max-width: 980px) {
+            .nav-links { display: none; }
+            .hero-grid, .pricing-wrap { grid-template-columns: 1fr; }
+            .hero-visual { min-height: 500px; }
+            .cards-3, .workflow, .faq { grid-template-columns: 1fr 1fr; }
+        }
+        @media (max-width: 680px) {
+            .container { width: min(100% - 24px, 1160px); }
+            .nav-inner { height: 68px; }
+            .logo-wordmark { font-size: 32px; }
+            .nav-actions .btn.text { display: none; }
+            .hero { padding: 44px 0 28px; }
+            .hero-copy { font-size: 17px; }
+            .hero-visual { min-height: auto; }
+            .device-card, .floating-card { position: relative; inset: auto; width: 100%; }
+            .floating-card { margin-top: 14px; }
+            .cards-3, .workflow, .faq { grid-template-columns: 1fr; }
+            .mini-grid { grid-template-columns: 1fr; }
+            .section { padding: 48px 0; }
+            .pricing-copy, .price-card, .final-cta { padding: 24px; border-radius: 26px; }
+            .price strong { font-size: 54px; }
+        }
+    </style>
+</head>
+<body>
+<div class="page">
+    <header class="nav">
+        <div class="container nav-inner">
+            <a href="/" class="logo-wordmark" aria-label="go360 home">
+                <span class="logo-go">g</span><span class="logo-o-wrap"><span class="logo-o-inner"></span></span><span>360</span>
+            </a>
+            <nav class="nav-links" aria-label="Main navigation">
+                <a href="#how-it-works">How it works</a>
+                <a href="#features">Features</a>
+                <a href="#pricing">Pricing</a>
+                <a href="#faq">FAQ</a>
+            </nav>
+            <div class="nav-actions">
+                <a class="btn text" href="/login">Sign in</a>
+                <a class="btn primary" href="/register">Start free trial</a>
+            </div>
+        </div>
+    </header>
+
+    <main>
+        <section class="hero">
+            <div class="container hero-grid">
+                <div>
+                    <div class="eyebrow">For QRMA practitioners and wellness scan providers</div>
+                    <h1>Turn scan exports into <span class="accent">clinic-grade client reports.</span></h1>
+                    <p class="hero-copy">
+                        go360 helps you transform QRMA scan data into structured practitioner insights, polished client-facing reports, secure share links, progress trends, and paid-access bundles — without manually rebuilding every report from scratch.
+                    </p>
+                    <div class="hero-cta">
+                        <a class="btn primary" href="/register">Start 30-day free trial</a>
+                        <a class="btn secondary" href="#how-it-works">See how it works</a>
+                    </div>
+                    <div class="trust-row">
+                        <span>✓ No credit card required for trial</span>
+                        <span>✓ Built for QRMA workflows</span>
+                        <span>✓ Secure client sharing</span>
+                    </div>
+                </div>
+
+                <div class="hero-visual" aria-hidden="true">
+                    <div class="device-card">
+                        <div class="browser-bar"><span></span><span></span><span></span></div>
+                        <div class="report-preview">
+                            <div class="preview-head">
+                                <div>
+                                    <div class="preview-title">Personalised Wellness Scan Report</div>
+                                    <div class="preview-sub">Client view · Secure share link · PDF ready</div>
+                                </div>
+                                <div class="score-pill"><div><strong>78</strong><span>Health Index</span></div></div>
+                            </div>
+                            <div class="mini-grid">
+                                <div class="mini-card">
+                                    <div class="mini-label">Primary pattern</div>
+                                    <div class="mini-value">Metabolic and detoxification load</div>
+                                    <div class="bar"><i style="width:76%"></i></div>
+                                </div>
+                                <div class="mini-card">
+                                    <div class="mini-label">Priority systems</div>
+                                    <div class="mini-value">Liver · Digestive · Endocrine</div>
+                                    <div class="bar"><i style="width:64%"></i></div>
+                                </div>
+                                <div class="mini-card">
+                                    <div class="mini-label">Client actions</div>
+                                    <div class="mini-value">3 clear next steps</div>
+                                    <div class="bar"><i style="width:58%"></i></div>
+                                </div>
+                                <div class="mini-card">
+                                    <div class="mini-label">Share status</div>
+                                    <div class="mini-value">Paid bundle ready</div>
+                                    <div class="bar"><i style="width:82%"></i></div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="floating-card">
+                        <strong>From scan file to client-ready report</strong>
+                        <div class="small">Upload the QRMA HTML export, confirm the client, generate the report, and share securely in minutes.</div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="how-it-works">
+            <div class="container">
+                <div class="section-head">
+                    <div class="section-kicker">Workflow</div>
+                    <h2>A simpler way to deliver professional scan reports.</h2>
+                    <p class="lead">Designed around the way QRMA practitioners already work: scan, interpret, explain, share, and follow up.</p>
+                </div>
+                <div class="workflow">
+                    <div class="step"><h3>Upload scan</h3><p>Import the QRMA HTML export and confirm the client details.</p></div>
+                    <div class="step"><h3>Generate report</h3><p>Create a structured wellness report with scoring, systems, recommendations, and marker detail.</p></div>
+                    <div class="step"><h3>Share securely</h3><p>Send a secure client link, add password protection, expiry, or paid access where needed.</p></div>
+                    <div class="step"><h3>Track progress</h3><p>Create trend reports across multiple scans so clients can see what changed over time.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="features">
+            <div class="container">
+                <div class="section-head">
+                    <div class="section-kicker">Why go360</div>
+                    <h2>Built for clarity, trust, and practitioner revenue.</h2>
+                    <p class="lead">The goal is not just a prettier report. It is a better client experience and a more scalable practitioner workflow.</p>
+                </div>
+                <div class="cards-3">
+                    <div class="card"><div class="icon">📄</div><h3>Premium reports</h3><p>Turn raw scan output into polished practitioner and client-facing reports with clear sections and professional presentation.</p></div>
+                    <div class="card"><div class="icon">🔗</div><h3>Secure sharing</h3><p>Create share links and bundles with optional payment, expiry, and password protection for a cleaner client delivery process.</p></div>
+                    <div class="card"><div class="icon">📈</div><h3>Progress trends</h3><p>Compare multiple scans over time and show clients meaningful changes without manual spreadsheet work.</p></div>
+                    <div class="card"><div class="icon">🧠</div><h3>Practitioner insight</h3><p>Surface patterns, priority systems, and recommendations so the scan becomes easier to explain in consultation.</p></div>
+                    <div class="card"><div class="icon">💳</div><h3>Revenue-ready</h3><p>Use paid report bundles and Stripe-connected workflows to support consults, follow-ups, and client education packages.</p></div>
+                    <div class="card"><div class="icon">🛡</div><h3>Professional positioning</h3><p>Give clients a more credible experience than raw device output, while keeping language educational and wellness-focused.</p></div>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="pricing">
+            <div class="container pricing-wrap">
+                <div class="pricing-copy">
+                    <div class="section-kicker">Simple launch pricing</div>
+                    <h2>One plan. Full access. Built for early practitioners.</h2>
+                    <p class="lead">Start with the full workflow during your free trial. After the trial, you can still view existing reports, but report and share creation require an active subscription.</p>
+                    <div class="pricing-list">
+                        <div>✓ Generate QRMA assessment reports</div>
+                        <div>✓ Create secure client shares and bundles</div>
+                        <div>✓ Build trend reports from multiple scans</div>
+                        <div>✓ Use paid-access report delivery workflows</div>
+                    </div>
+                </div>
+                <div class="price-card">
+                    <div class="price-name">Practitioner Pro</div>
+                    <div class="price"><strong>$59</strong><span>/month</span></div>
+                    <div class="trial-note">30-day full-access trial. Upgrade anytime from your settings page.</div>
+                    <a class="btn primary" style="width:100%;" href="/register">Start free trial</a>
+                    <div class="feature-checks">
+                        <div>✓ Full report generation</div>
+                        <div>✓ Secure client links</div>
+                        <div>✓ Report bundles and paid access</div>
+                        <div>✓ Trend report creation</div>
+                        <div>✓ Practitioner workspace</div>
+                    </div>
+                    <a class="btn secondary" style="width:100%;" href="/login">Already have an account?</a>
+                </div>
+            </div>
+        </section>
+
+        <section class="section" id="faq">
+            <div class="container">
+                <div class="section-head">
+                    <div class="section-kicker">Questions</div>
+                    <h2>Common launch questions.</h2>
+                </div>
+                <div class="faq">
+                    <details open><summary>Who is go360 for?</summary><p>go360 is designed for practitioners and wellness scan providers using QRMA-style scan exports who want a more professional way to interpret, present, share, and monetise reports.</p></details>
+                    <details><summary>Does go360 diagnose disease?</summary><p>No. go360 is designed for wellness reporting, education, practitioner review, and client communication. It should not be used as a substitute for medical diagnosis or treatment.</p></details>
+                    <details><summary>Can I share reports with clients?</summary><p>Yes. You can create secure share links and report bundles, with options such as expiry, password protection, and paid access workflows.</p></details>
+                    <details><summary>What happens after the free trial?</summary><p>You can continue viewing existing reports and shares. Creating new reports, share links, and bundles requires an active Practitioner Pro subscription.</p></details>
+                    <details><summary>Is Spanish available?</summary><p>The first production version is being completed in English. Spanish client-facing reports are planned after the English workflow is stable with pilot users.</p></details>
+                    <details><summary>Do I need a credit card to start?</summary><p>The launch trial is designed to let practitioners evaluate the workflow before upgrading to the monthly plan.</p></details>
+                </div>
+            </div>
+        </section>
+
+        <div class="container">
+            <section class="final-cta">
+                <h2>Ready to turn scan data into a better client experience?</h2>
+                <p>Start with one scan. Generate a professional report. Share it securely. Then decide whether go360 belongs in your practitioner workflow.</p>
+                <a class="btn primary" href="/register">Start your 30-day free trial</a>
+            </section>
+        </div>
+    </main>
+
+    <footer class="footer">
+        <div class="container footer-inner">
+            <div>© go360. Practitioner wellness reporting platform.</div>
+            <div><a href="/login">Sign in</a> · <a href="/register">Create account</a></div>
+        </div>
+    </footer>
+</div>
+</body>
+</html>

@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import os
+import urllib.parse
 from contextlib import asynccontextmanager
 
 from app.api import routes_share
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from contextlib import asynccontextmanager
 
 from app.api.routes import router as engine_router
@@ -82,6 +84,43 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+
+    @app.middleware("http")
+    async def browser_auth_redirect_middleware(request, call_next):
+        """
+        Convert hard browser navigation to protected /app pages from raw JSON
+        401 into a normal login redirect with a next= return target.
+
+        API/fetch calls still receive JSON 401, allowing the frontend to attempt
+        silent refresh and then show the session-expired banner if refresh fails.
+        """
+        response = await call_next(request)
+
+        path = request.url.path or ""
+        accept = request.headers.get("accept", "")
+        sec_fetch_mode = request.headers.get("sec-fetch-mode", "")
+
+        is_page_navigation = (
+            request.method.upper() == "GET"
+            and path.startswith("/app")
+            and response.status_code == 401
+            and (
+                "text/html" in accept
+                or sec_fetch_mode == "navigate"
+                or not path.startswith("/api")
+            )
+        )
+
+        if is_page_navigation:
+            next_target = path
+            if request.url.query:
+                next_target += "?" + request.url.query
+            login_url = "/login?next=" + urllib.parse.quote(next_target, safe="") + "&session=expired"
+            return RedirectResponse(url=login_url, status_code=303)
+
+        return response
+
 
     # Auth
     app.include_router(auth_router)

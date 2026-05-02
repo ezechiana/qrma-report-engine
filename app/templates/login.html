@@ -565,6 +565,9 @@
                 <h1>Welcome back</h1>
                 <div class="muted">Sign in to your practitioner workspace.</div>
 
+                <div id="session-box" class="error" style="display:none; background:#fff7ed; border-color:#fdba74; color:#9a3412;">
+                    Your session expired. Please sign in again to continue where you left off.
+                </div>
                 <div id="error-box" class="error"></div>
 
                 <form id="login-form">
@@ -609,6 +612,37 @@
         localStorage.setItem("current_user", JSON.stringify(payload.user || null));
     }
 
+    function safeNextPath(value) {
+        if (!value) return null;
+        try {
+            const decoded = decodeURIComponent(value);
+            if (!decoded.startsWith("/") || decoded.startsWith("//")) return null;
+            if (decoded.startsWith("/login") || decoded.startsWith("/register")) return null;
+            return decoded;
+        } catch (e) {
+            if (value.startsWith("/") && !value.startsWith("//")) return value;
+            return null;
+        }
+    }
+
+    function getNextParam() {
+        const params = new URLSearchParams(window.location.search);
+        return safeNextPath(params.get("next"));
+    }
+
+    function getFallbackRedirect() {
+        return safeNextPath(localStorage.getItem("redirect_after_login"));
+    }
+
+    function showSessionMessageIfNeeded() {
+        const params = new URLSearchParams(window.location.search);
+        const box = document.getElementById("session-box");
+        if (!box) return;
+        if (params.get("session") === "expired" || params.get("reason") === "session_expired") {
+            box.style.display = "block";
+        }
+    }
+
     document.getElementById("toggle-password").addEventListener("click", () => {
         const input = document.getElementById("password");
         input.type = input.type === "password" ? "text" : "password";
@@ -629,10 +663,11 @@
         const response = await fetch("/auth/login", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
+            credentials: "same-origin",
             body: JSON.stringify(payload),
         });
 
-        const data = await response.json();
+        const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
             errorBox.textContent = data.detail || "Login failed.";
@@ -642,7 +677,14 @@
 
         setAuthSession(data);
 
-        const redirect = localStorage.getItem("redirect_after_login");
+        const next = getNextParam();
+        if (next) {
+            localStorage.removeItem("redirect_after_login");
+            window.location.href = next;
+            return;
+        }
+
+        const redirect = getFallbackRedirect();
         if (redirect) {
             localStorage.removeItem("redirect_after_login");
             window.location.href = redirect;
@@ -651,6 +693,8 @@
 
         window.location.href = "/app";
     });
+
+    showSessionMessageIfNeeded();
 </script>
 </body>
 </html>

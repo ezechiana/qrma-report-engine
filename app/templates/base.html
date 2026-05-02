@@ -711,9 +711,57 @@
             localStorage.setItem("redirect_after_login", getRedirectTarget());
         }
 
-        function redirectToLogin() {
+        function loginUrlForCurrentPage(reason = "") {
+            const next = encodeURIComponent(getRedirectTarget());
+            const reasonQuery = reason ? `&session=${encodeURIComponent(reason)}` : "";
+            return `/login?next=${next}${reasonQuery}`;
+        }
+
+        function redirectToLogin(reason = "") {
             rememberRedirectTarget();
-            window.location.href = "/login";
+            window.location.href = loginUrlForCurrentPage(reason);
+        }
+
+        function showSessionExpiredBanner() {
+            showAppBanner({
+                id: "session-expired-banner",
+                dismissKey: `session-expired:${getRedirectTarget()}`,
+                variant: "warning",
+                icon: "!",
+                title: "Your session has expired",
+                body: "Please sign in again. We will bring you back to this screen afterwards.",
+                dismissible: false,
+                actions: [
+                    {
+                        label: "Sign in again",
+                        variant: "primary",
+                        onClick: () => redirectToLogin("expired"),
+                    },
+                ],
+            });
+        }
+
+        async function refreshAuthSession() {
+            try {
+                const response = await fetch("/auth/refresh", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    credentials: "same-origin",
+                    body: JSON.stringify({}),
+                });
+
+                if (!response.ok) return false;
+
+                const data = await response.json().catch(() => ({}));
+                if (data && data.access_token) {
+                    localStorage.setItem("access_token", data.access_token || "");
+                    localStorage.setItem("refresh_token", data.refresh_token || "");
+                }
+
+                return true;
+            } catch (e) {
+                return false;
+            }
         }
 
         async function apiFetch(url, options = {}) {
@@ -722,15 +770,25 @@
                 headers.set("Content-Type", "application/json");
             }
 
-            const response = await fetch(url, {
+            const requestOptions = {
                 ...options,
                 headers,
                 credentials: "same-origin",
-            });
+            };
+
+            let response = await fetch(url, requestOptions);
+
+            if (response.status === 401 && !options.__skipAuthRefresh) {
+                const refreshed = await refreshAuthSession();
+                if (refreshed) {
+                    response = await fetch(url, requestOptions);
+                }
+            }
 
             if (response.status === 401) {
+                rememberRedirectTarget();
                 clearAuthSession();
-                redirectToLogin();
+                showSessionExpiredBanner();
             }
 
             return response;
@@ -738,14 +796,25 @@
 
         async function requireAuthOrRedirect() {
             try {
-                const response = await fetch("/auth/me", {
+                let response = await fetch("/auth/me", {
                     method: "GET",
                     credentials: "same-origin",
                 });
 
+                if (response.status === 401) {
+                    const refreshed = await refreshAuthSession();
+                    if (refreshed) {
+                        response = await fetch("/auth/me", {
+                            method: "GET",
+                            credentials: "same-origin",
+                        });
+                    }
+                }
+
                 if (response.status === 401 || !response.ok) {
+                    rememberRedirectTarget();
                     clearAuthSession();
-                    redirectToLogin();
+                    showSessionExpiredBanner();
                     return false;
                 }
 
@@ -753,10 +822,13 @@
                 if (data && data.user) {
                     localStorage.setItem("current_user", JSON.stringify(data.user));
                 }
+
+                clearAppBanner("session-expired-banner");
                 return true;
             } catch (e) {
+                rememberRedirectTarget();
                 clearAuthSession();
-                redirectToLogin();
+                showSessionExpiredBanner();
                 return false;
             }
         }
@@ -770,6 +842,7 @@
             } catch (e) {}
             clearAuthSession();
             clearSessionBannerDismissals();
+            localStorage.removeItem("redirect_after_login");
             window.location.href = "/login";
         }
 
@@ -1201,6 +1274,30 @@
         <div class="app-modal-actions" id="app-modal-actions"></div>
     </div>
 </div>
+
+
+<script>
+    (function setupProductionSessionBehaviour() {
+        if (!isAuthenticatedAppPage() || isPublicOrAuthPage()) return;
+
+        const refreshIntervalMs = 45 * 60 * 1000;
+
+        window.setInterval(async function () {
+            const ok = await refreshAuthSession();
+            if (!ok) {
+                rememberRedirectTarget();
+                showSessionExpiredBanner();
+            }
+        }, refreshIntervalMs);
+
+        window.addEventListener("storage", function (event) {
+            if (event.key === "access_token" && !event.newValue) {
+                rememberRedirectTarget();
+                showSessionExpiredBanner();
+            }
+        });
+    })();
+</script>
 
 <script>
     (async function hydrateShell() {

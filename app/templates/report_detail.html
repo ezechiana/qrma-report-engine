@@ -18,6 +18,12 @@
 .share-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
 .source-list { display:grid; gap:8px; margin-top:10px; }
 .source-item { border:1px solid #e5e7eb; border-radius:12px; padding:10px 12px; background:#f8fafc; }
+.share-next-step { border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; border-radius:14px; padding:12px 14px; margin-bottom:16px; line-height:1.5; }
+.share-result-card { border:1px solid #dbe7f3; border-radius:16px; padding:14px; background:#f8fafc; color:#0f172a; }
+.share-result-title { font-weight:900; margin-bottom:6px; }
+.share-result-url { word-break:break-all; font-size:13px; margin-bottom:12px; line-height:1.45; }
+.share-result-actions { display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+.share-helper-text { color:#64748b; font-size:12px; line-height:1.45; margin-top:10px; }
 @media(max-width:900px){ .meta-grid,.action-grid,.share-grid{grid-template-columns:1fr;} }
 </style>
 
@@ -43,6 +49,10 @@
         <summary style="cursor:pointer; font-weight:800;">Report metadata</summary>
         <div id="report-summary" class="meta-grid">Loading report…</div>
     </details>
+</div>
+
+<div class="share-next-step">
+    <strong>Next step:</strong> Review the report, then create a secure client link below. You can copy it, preview it, or send it by WhatsApp/email once created.
 </div>
 
 <div class="card">
@@ -95,6 +105,56 @@ function setSuccess(msg) { const box = document.getElementById("success-box"); b
 function clearSuccess() { const box = document.getElementById("success-box"); box.style.display = "none"; box.textContent = ""; }
 
 function isTrend(data) { return data.report_type === "trend"; }
+
+async function copyShareUrl(url) {
+    try {
+        await navigator.clipboard.writeText(url);
+        setSuccess("Share link copied to clipboard.");
+    } catch (err) {
+        console.warn("Clipboard copy failed", err);
+        const result = document.getElementById("share-result");
+        if (result) {
+            const fallback = document.createElement("textarea");
+            fallback.value = url;
+            document.body.appendChild(fallback);
+            fallback.select();
+            try {
+                document.execCommand("copy");
+                setSuccess("Share link copied to clipboard.");
+            } catch (copyErr) {
+                setError("Could not copy automatically. Please select and copy the link manually.");
+            } finally {
+                document.body.removeChild(fallback);
+            }
+        }
+    }
+}
+
+function renderShareResult(finalShareUrl) {
+    const encodedUrl = encodeURIComponent(finalShareUrl);
+    const shareLabel = isTrend(currentReport) ? "progress report" : "wellness scan report";
+    const whatsappText = encodeURIComponent(`Your ${shareLabel} is ready: ${finalShareUrl}`);
+    const emailSubject = encodeURIComponent("Your secure health report");
+    const emailBody = encodeURIComponent(`Hello,\n\nYour secure ${shareLabel} is ready. You can access it here:\n\n${finalShareUrl}\n\nPlease keep this link private unless your practitioner advises otherwise.`);
+
+    document.getElementById("share-result").innerHTML = `
+        <div class="share-result-card">
+            <div class="share-result-title">Share link ready</div>
+            <div class="share-result-url">
+                <a class="link" href="${finalShareUrl}" target="_blank" rel="noopener noreferrer">${safeText(finalShareUrl)}</a>
+            </div>
+            <div class="share-result-actions">
+                <button class="btn secondary" type="button" onclick="copyShareUrl(decodeURIComponent('${encodedUrl}'))">Copy link</button>
+                <a class="btn secondary" href="${finalShareUrl}" target="_blank" rel="noopener noreferrer">Preview client view</a>
+                <a class="btn secondary" href="https://wa.me/?text=${whatsappText}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
+                <a class="btn secondary" href="mailto:?subject=${emailSubject}&body=${emailBody}">Email</a>
+            </div>
+            <div class="share-helper-text">
+                Tip: preview the client view first, especially if you added a password or a paid access amount.
+            </div>
+        </div>
+    `;
+}
 
 function renderType(data) {
     const pill = document.getElementById("report-type-pill");
@@ -264,12 +324,8 @@ async function createShareLink() {
             ? `${data.share_url}/trend`
             : data.share_url;
 
-        document.getElementById("share-result").innerHTML = `
-            <strong>Share link:</strong><br>
-            <a class="link" href="${finalShareUrl}" target="_blank">${finalShareUrl}</a>
-        `;
-        
-        setSuccess("Share link created.");
+        renderShareResult(finalShareUrl);
+        setSuccess("Share link created. You can now copy, preview, or send it to your client.");
     } catch (err) {
         console.error(err);
         setError("Unexpected error while creating share link.");

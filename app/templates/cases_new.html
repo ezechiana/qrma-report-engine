@@ -84,6 +84,72 @@
     font-size: 0.92rem;
 }
 
+.export-guide {
+    border-color:#bfdbfe;
+    background:linear-gradient(135deg,#ffffff 0%,#eff6ff 100%);
+}
+.export-guide-grid {
+    display:grid;
+    grid-template-columns:repeat(4,minmax(0,1fr));
+    gap:12px;
+    margin-top:14px;
+}
+.export-step {
+    border:1px solid #dbeafe;
+    background:#fff;
+    border-radius:14px;
+    padding:14px;
+}
+.export-step-number {
+    display:inline-flex;
+    align-items:center;
+    justify-content:center;
+    width:28px;
+    height:28px;
+    border-radius:999px;
+    background:#dbeafe;
+    color:#1e40af;
+    font-weight:900;
+    font-size:13px;
+    margin-bottom:8px;
+}
+.export-step-title {
+    font-weight:900;
+    color:#0f172a;
+    margin-bottom:4px;
+}
+.export-step-text {
+    color:#475569;
+    font-size:13px;
+    line-height:1.45;
+}
+.processing-card {
+    display:none;
+    border:1px solid #bfdbfe;
+    background:#eff6ff;
+    color:#1e3a8a;
+    border-radius:14px;
+    padding:16px;
+    margin-bottom:16px;
+}
+.processing-card h3 {
+    margin:0 0 6px;
+    color:#1e3a8a;
+}
+.processing-spinner {
+    width:18px;
+    height:18px;
+    border:3px solid #bfdbfe;
+    border-top-color:#1d4ed8;
+    border-radius:999px;
+    display:inline-block;
+    animation:spin 0.9s linear infinite;
+    vertical-align:-4px;
+    margin-right:8px;
+}
+@keyframes spin { to { transform:rotate(360deg); } }
+@media(max-width:900px){ .export-guide-grid{grid-template-columns:1fr;} }
+
 </style>
 
 <div id="error-box" class="error" style="display:none;"></div>
@@ -108,6 +174,43 @@
     </div>
 </div>
 
+<div id="processing-panel" class="processing-card">
+    <h3><span class="processing-spinner"></span>Generating your report…</h3>
+    <p style="margin:0; line-height:1.5;">
+        We’re analysing the QRMA scan and creating your report. This usually takes 20–60 seconds.
+        You’ll be taken to the finished report automatically.
+    </p>
+</div>
+
+<div class="card export-guide" id="how-to-export">
+    <h2 style="margin-bottom:6px;">How to export your QRMA scan</h2>
+    <p class="muted" style="margin-top:0;">
+        go360 works best with the original QRMA HTML export. Use this workflow after completing the scan in your QRMA software.
+    </p>
+
+    <div class="export-guide-grid">
+        <div class="export-step">
+            <div class="export-step-number">1</div>
+            <div class="export-step-title">Run the scan</div>
+            <div class="export-step-text">Complete the QRMA scan for your client as normal.</div>
+        </div>
+        <div class="export-step">
+            <div class="export-step-number">2</div>
+            <div class="export-step-title">Save Report (Web)</div>
+            <div class="export-step-text">Choose the <strong>“Save Report (Web)”</strong> option in the QRMA software.</div>
+        </div>
+        <div class="export-step">
+            <div class="export-step-number">3</div>
+            <div class="export-step-title">Save HTML file</div>
+            <div class="export-step-text">Save the generated <strong>.html</strong> or <strong>.htm</strong> file to your computer.</div>
+        </div>
+        <div class="export-step">
+            <div class="export-step-number">4</div>
+            <div class="export-step-title">Upload below</div>
+            <div class="export-step-text">Upload that file into go360 to extract the scan data and generate a report.</div>
+        </div>
+    </div>
+</div>
 
 <div class="card">
     <h2>Upload QRMA HTML</h2>
@@ -117,9 +220,12 @@
         <div class="field">
             <label>QRMA HTML file</label>
             <input id="scan-file" type="file" accept=".html,.htm" required />
+            <div class="muted" style="margin-top:6px; font-size:13px;">
+                Only HTML files exported using <strong>“Save Report (Web)”</strong> are supported.
+            </div>
         </div>
 
-        <button type="submit" class="btn">Upload and parse</button>
+        <button type="submit" class="btn">Upload scan →</button>
     </form>
 </div>
 
@@ -207,7 +313,7 @@
 
         <div class="btn-row">
             <button type="submit" class="btn">Create case</button>
-            <button type="button" class="btn secondary" id="create-and-generate">Create and generate report</button>
+            <button type="button" class="btn secondary" id="create-and-generate">Create and open report</button>
         </div>
     </form>
 </div>
@@ -383,6 +489,20 @@
         clearError();
         box.style.display = "block";
         box.textContent = msg;
+    }
+
+    function showProcessingPanel(message) {
+        const panel = document.getElementById("processing-panel");
+        if (!panel) return;
+        panel.style.display = "block";
+        const p = panel.querySelector("p");
+        if (message && p) p.textContent = message;
+        panel.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function hideProcessingPanel() {
+        const panel = document.getElementById("processing-panel");
+        if (panel) panel.style.display = "none";
     }
 
     function normaliseText(value) {
@@ -676,6 +796,11 @@
         isSubmittingCase = true;
         clearError();
         if (!forceDuplicate) hideDuplicatePanel();
+        if (generateAfter) {
+            showProcessingPanel("We’re creating the case and generating your report. This usually takes 20–60 seconds. You’ll be taken to the report automatically.");
+        } else {
+            hideProcessingPanel();
+        }
 
         const createBtn = document.querySelector('#confirm-form button[type="submit"]');
         const createGenerateBtn = document.getElementById("create-and-generate");
@@ -759,11 +884,13 @@
                 const detail = unwrapErrorPayload(data);
 
                 if (detail && typeof detail === "object" && detail.code === "report_generation_failed" && detail.case_id) {
+                    hideProcessingPanel();
                     showSuccess("Case was created. Opening the case workspace so you can retry report generation.");
                     window.location.href = `/app/cases/${detail.case_id}`;
                     return;
                 }
 
+                hideProcessingPanel();
                 showError(data);
                 return;
             }
@@ -771,14 +898,24 @@
             const caseId = data.case_id;
 
             if (!caseId) {
+                hideProcessingPanel();
                 showError("Case was created but no case ID was returned.");
                 return;
             }
 
             // Backend now owns auto-generation. Do not call /generate-report here,
             // otherwise one click can create duplicate versions.
+            if (generateAfter && data.report_version_id) {
+                window.location.href = `/app/reports/${data.report_version_id}/view?first_report=1`;
+                return;
+            }
+
+            hideProcessingPanel();
+
             if (data.auto_generated === false) {
                 showSuccess(data.warning || "Case was created. Report generation can be retried from the case workspace.");
+            } else if (data.report_version_id) {
+                showSuccess("Case and report created successfully. Opening the case workspace.");
             }
 
             window.location.href = `/app/cases/${caseId}`;
@@ -791,7 +928,7 @@
             }
             if (createGenerateBtn) {
                 createGenerateBtn.disabled = false;
-                createGenerateBtn.textContent = originalGenerateText || "Create and generate report";
+                createGenerateBtn.textContent = originalGenerateText || "Create and open report";
             }
         }
     }

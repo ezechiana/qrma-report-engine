@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Response
+from fastapi import APIRouter, Response, Request, Body, HTTPException, status
 
 from app.api.deps import CurrentActiveUser, CurrentDB
 from app.schemas.auth import (
@@ -87,10 +87,51 @@ def login(
 
 @router.post("/refresh", response_model=TokenPairResponse)
 def refresh_tokens(
-    payload: TokenRefreshRequest,
+    request: Request,
+    response: Response,
     db: CurrentDB,
+    payload: TokenRefreshRequest | None = Body(default=None),
 ):
-    refreshed = refresh_user_tokens(db, payload.refresh_token)
+    """
+    Refresh the browser session without forcing a login.
+
+    Supports both:
+    1. JSON body refresh token, for backwards-compatible API clients.
+    2. HttpOnly refresh_token cookie, for normal browser use.
+    """
+    refresh_token = payload.refresh_token if payload and payload.refresh_token else None
+    if not refresh_token:
+        refresh_token = request.cookies.get("refresh_token")
+
+    if not refresh_token:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Refresh token missing.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
+    refreshed = refresh_user_tokens(db, refresh_token)
+
+    response.set_cookie(
+        key="access_token",
+        value=refreshed["access_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60,
+        path="/",
+    )
+
+    response.set_cookie(
+        key="refresh_token",
+        value=refreshed["refresh_token"],
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
     return TokenPairResponse(
         access_token=refreshed["access_token"],
         refresh_token=refreshed["refresh_token"],

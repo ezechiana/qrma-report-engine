@@ -54,7 +54,17 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    user = get_current_user_from_token(db, token)
+    try:
+        user = get_current_user_from_token(db, token)
+    except HTTPException:
+        raise
+    except Exception:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Session expired or invalid.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+
     return user
 
 

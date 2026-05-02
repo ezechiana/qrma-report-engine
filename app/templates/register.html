@@ -682,12 +682,6 @@
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label>Clinic name</label>
-                        <div class="input-wrap">
-                            <input id="clinic_name" autocomplete="organization" required />
-                        </div>
-                    </div>
 
                     <div class="field">
                         <label>Email address</label>
@@ -740,12 +734,6 @@
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label>Phone</label>
-                        <div class="input-wrap">
-                            <input id="phone" type="tel" autocomplete="tel" />
-                        </div>
-                    </div>
 
                     <button class="primary-btn" type="submit">Create account →</button>
                 </form>
@@ -836,9 +824,7 @@
         const lastName = document.getElementById("last_name").value.trim();
         const password = passwordInput.value;
         const confirmPassword = confirmInput.value;
-        const clinicName = document.getElementById("clinic_name").value.trim();
         const email = document.getElementById("email").value.trim();
-        const phone = document.getElementById("phone").value.trim();
 
         if (!firstName || !lastName) {
             errorBox.textContent = "First name and last name are required.";
@@ -866,8 +852,6 @@
             first_name: firstName,
             last_name: lastName,
             full_name: `${firstName} ${lastName}`.trim(),
-            clinic_name: clinicName,
-            phone: phone,
         };
 
         const response = await fetch("/auth/register", {
