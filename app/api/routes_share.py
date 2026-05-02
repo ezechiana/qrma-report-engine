@@ -28,7 +28,6 @@ from app.services.storage_service import object_exists, generate_presigned_url
 from app.services.audit_service import log_action
 from app.services.share_link_service import (
     create_share_link,
-    is_share_link_valid,
     validate_share_link_password,
 )
 from app.services.subscription_service import require_subscription_feature
@@ -214,7 +213,19 @@ def _stripe_api_request(method: str, path: str, data: dict | None = None) -> dic
         raise HTTPException(status_code=502, detail=f"Stripe request failed: {exc}")
 
 
-
+def _render_share_unavailable(request: Request, reason: str):
+    """
+    reason: revoked | expired | not_found
+    """
+    return templates.TemplateResponse(
+        request=request,
+        name="share_link_unavailable.html",
+        context={
+            "request": request,
+            "reason": reason,
+        },
+        status_code=404,
+    )
 
 # -----------------------------------------------------------------------------
 # Stripe Connect helpers
@@ -392,12 +403,23 @@ def _enforce_share_payment_or_402(db: Session, link: ShareLink) -> dict:
     return state
 
 
-def _get_share_link_or_404(db: Session, token: str) -> ShareLink:
-    link = db.query(ShareLink).filter(ShareLink.token == token).first()
-    if not link or not is_share_link_valid(link):
-        raise HTTPException(status_code=404, detail="Link not found or expired")
-    return link
+def _get_share_link(db: Session, token: str) -> ShareLink | None:
+    return db.query(ShareLink).filter(ShareLink.token == token).first()
 
+
+def _validate_share_link_or_render(request: Request, db: Session, token: str):
+    link = _get_share_link(db, token)
+
+    if not link:
+        return None, _render_share_unavailable(request, "not_found")
+
+    if not link.is_active:
+        return None, _render_share_unavailable(request, "revoked")
+
+    if link.expires_at and link.expires_at < datetime.utcnow():
+        return None, _render_share_unavailable(request, "expired")
+
+    return link, None
 
 def _get_report_for_share_or_404(db: Session, link: ShareLink) -> ReportVersion:
     report = db.query(ReportVersion).filter(
@@ -628,7 +650,9 @@ def access_shared_report(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     report = _get_report_for_share_or_404(db, link)
 
     if getattr(report, "report_type", "assessment") == "trend":
@@ -677,7 +701,9 @@ def verify_share_password(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
 
     if not link.password_hash:
         report = _get_report_for_share_or_404(db, link)
@@ -730,7 +756,9 @@ def get_shared_report_data(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     _enforce_password_gate(request, link)
 
     report = _get_report_for_share_or_404(db, link)
@@ -752,7 +780,9 @@ def get_shared_report_pdf(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     _enforce_password_gate(request, link)
 
     report = _get_report_for_share_or_404(db, link)
@@ -781,7 +811,9 @@ def get_shared_report_html(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     _enforce_password_gate(request, link)
 
     report = _get_report_for_share_or_404(db, link)
@@ -1010,7 +1042,9 @@ def access_shared_patient_trend(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     report = _get_report_for_share_or_404(db, link)
 
     if link.password_hash and not _has_valid_share_cookie(request, token):
@@ -1054,7 +1088,9 @@ def verify_trend_share_password(
     password: str = Form(...),
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
 
     if link.password_hash and not validate_share_link_password(link, password):
         raise HTTPException(status_code=401, detail="Invalid password")
@@ -1082,7 +1118,9 @@ def update_share_link_payment_settings(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     report = _get_report_for_share_or_404(db, link)
     case = getattr(report, "case", None)
 
@@ -1107,7 +1145,9 @@ def create_share_checkout_session(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     report = _get_report_for_share_or_404(db, link)
     payment = _share_payment_state(db, link)
 
@@ -1185,7 +1225,9 @@ def confirm_share_payment_success(
     session_id: str,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     session = _stripe_api_request("GET", f"/checkout/sessions/{session_id}")
 
     if session.get("client_reference_id") != token:
@@ -1243,7 +1285,9 @@ def get_shared_patient_trend_data(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
     _enforce_password_gate(request, link)
     payment = _enforce_share_payment_or_402(db, link)
 
@@ -1467,7 +1511,9 @@ def access_shared_bundle(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
 
     if link.password_hash and not _has_valid_share_cookie(request, token):
         response = templates.TemplateResponse(
@@ -1501,7 +1547,10 @@ def get_shared_bundle_data(
     request: Request,
     db: Session = Depends(get_db),
 ):
-    link = _get_share_link_or_404(db, token)
+    link, error_response = _validate_share_link_or_render(request, db, token)
+    if error_response:
+        return error_response
+
     _enforce_password_gate(request, link)
     payment = _enforce_share_payment_or_402(db, link)
 
