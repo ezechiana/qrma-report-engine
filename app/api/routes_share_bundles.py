@@ -16,6 +16,8 @@ from sqlalchemy.orm import Session, joinedload
 from app.api.deps import get_current_user, get_db
 from app.db.models import Case, ReportVersion, ShareBundle, ShareBundleItem, ShareLink, User
 from app.services.revenue_model import calculate_revenue_split
+from app.services.share_analytics import log_share_event
+from app.services.subscription_service import require_subscription_feature
 from app.utils.security import generate_token, hash_password
 
 templates = Jinja2Templates(directory="app/templates")
@@ -32,6 +34,15 @@ STRIPE_PLATFORM_FEE_FIXED_AMOUNT = int(os.getenv("STRIPE_PLATFORM_FEE_FIXED_AMOU
 
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
+
+
+def _track_share_event(db: Session, token: str, event_type: str, metadata: dict | None = None) -> None:
+    """Best-effort analytics logging for public bundle interactions."""
+    try:
+        log_share_event(db, token, event_type, metadata or {})
+    except Exception as exc:
+        db.rollback()
+        print(f"[share-analytics] failed to log {event_type} for bundle {token}: {exc}")
 
 
 class ShareBundleCreate(BaseModel):
@@ -113,6 +124,14 @@ def _bundle_is_valid(bundle: ShareBundle) -> bool:
 
 
 def _report_type(report: ReportVersion) -> str:
+    report_json = getattr(report, "report_json", None) or {}
+    if isinstance(report_json, dict) and report_json.get("report_type") == "trend":
+        return "trend"
+    if getattr(report, "trend_payload_json", None):
+        return "trend"
+    source_ids = getattr(report, "source_report_ids", None)
+    if isinstance(source_ids, list) and len(source_ids) > 0:
+        return "trend"
     return "trend" if (getattr(report, "report_type", "assessment") == "trend") else "assessment"
 
 
@@ -511,6 +530,8 @@ def create_share_bundle(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "share_bundle")
+
     reports = _owned_reports(db, current_user, payload.report_version_ids)
     patient_ids = {str(r.case.patient_id) for r in reports if getattr(r, "case", None)}
     patient_id = reports[0].case.patient_id if len(patient_ids) == 1 else None
@@ -603,6 +624,53 @@ def revoke_share_bundle(
     return {"success": True}
 
 
+@router.post("/api/share-bundles/{bundle_id}/extend-expiry")
+def extend_share_bundle_expiry(
+    bundle_id: UUID,
+    payload: dict,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    bundle = (
+        db.query(ShareBundle)
+        .options(joinedload(ShareBundle.items))
+        .filter(ShareBundle.id == bundle_id, ShareBundle.created_by_user_id == current_user.id)
+        .first()
+    )
+    if not bundle:
+        raise HTTPException(status_code=404, detail="Share bundle not found.")
+
+    remove_expiry = bool(payload.get("remove_expiry"))
+    days = payload.get("days")
+
+    if remove_expiry:
+        new_expires_at = None
+    else:
+        try:
+            days_int = int(days if days is not None else 7)
+        except Exception:
+            days_int = 7
+        if days_int <= 0:
+            new_expires_at = None
+        else:
+            base_dt = bundle.expires_at or datetime.now(timezone.utc)
+            if base_dt.tzinfo is None:
+                base_dt = base_dt.replace(tzinfo=timezone.utc)
+            new_expires_at = base_dt + timedelta(days=days_int)
+
+    bundle.expires_at = new_expires_at
+
+    child_ids = [item.share_link_id for item in bundle.items if getattr(item, "share_link_id", None)]
+    if child_ids:
+        db.query(ShareLink).filter(ShareLink.id.in_(child_ids)).update(
+            {ShareLink.expires_at: new_expires_at},
+            synchronize_session=False,
+        )
+
+    db.commit()
+    return {"success": True, "expires_at": new_expires_at.isoformat() if new_expires_at else None}
+
+
 
 @router.get("/share/bundle/{token}", response_class=HTMLResponse)
 def view_share_bundle(token: str, request: Request, db: Session = Depends(get_db)):
@@ -621,6 +689,7 @@ def view_share_bundle(token: str, request: Request, db: Session = Depends(get_db
         return _bundle_unavailable_response(request, unavailable_reason)
 
     if bundle.requires_payment and bundle.payment_status != "paid":
+        _track_share_event(db, token, "paywall_view", {"share_type": "bundle", "payment_status": bundle.payment_status})
         return templates.TemplateResponse(
             request=request,
             name="share_bundle_paywall.html",
@@ -630,6 +699,10 @@ def view_share_bundle(token: str, request: Request, db: Session = Depends(get_db
                 "amount_label": _format_minor_amount(bundle.price_amount, bundle.price_currency),
             },
         )
+
+    
+    if request.query_params.get("preview") != "1":
+        _track_share_event(db, token, "client_view", {"share_type": "bundle", "payment_status": bundle.payment_status, "actor": "client"})
 
     reports = []
     for item in bundle.items:
@@ -643,7 +716,7 @@ def view_share_bundle(token: str, request: Request, db: Session = Depends(get_db
                 "title": _report_title(report),
                 "report_type": _report_type(report),
                 "generated_at": report.generated_at,
-                "viewer_url": _item_viewer_url(link, report),
+                "viewer_url": (_item_viewer_url(link, report) + ("?preview=1" if request.query_params.get("preview") == "1" else "")),
                 "share_token": link.token,
             }
         )
@@ -727,6 +800,13 @@ def create_bundle_checkout_session(token: str, request: Request, db: Session = D
         platform_fee_amount=int(destination.get("platform_fee_amount") or 0),
         platform_fee_currency=(bundle.price_currency or "gbp").lower(),
     )
+    _track_share_event(db, token, "payment_started", {
+        "share_type": "bundle",
+        "stripe_session_id": session.id,
+        "amount": int(bundle.price_amount or 0),
+        "currency": (bundle.price_currency or "gbp").lower(),
+        "stripe_connect_mode": destination["mode"],
+    })
 
     return RedirectResponse(url=session.url, status_code=303)
 
@@ -791,6 +871,12 @@ async def share_bundle_stripe_webhook(request: Request, db: Session = Depends(ge
                         stripe_fee_amount=refs.get("stripe_fee_amount"),
                         stripe_fee_currency=refs.get("stripe_fee_currency"),
                     )
+                    _track_share_event(db, bundle.token, "paid", {
+                        "share_type": "bundle",
+                        "stripe_session_id": session.get("id"),
+                        "stripe_payment_intent_id": payment_intent_id,
+                        "source": "checkout.session.completed",
+                    })
 
         elif event_type in {"payment_intent.succeeded", "charge.succeeded", "charge.updated"}:
             payment_intent_id = obj.get("id") if event_type == "payment_intent.succeeded" else obj.get("payment_intent")
@@ -808,6 +894,11 @@ async def share_bundle_stripe_webhook(request: Request, db: Session = Depends(ge
                     stripe_fee_amount=refs.get("stripe_fee_amount"),
                     stripe_fee_currency=refs.get("stripe_fee_currency"),
                 )
+                _track_share_event(db, bundle.token, "paid", {
+                    "share_type": "bundle",
+                    "stripe_payment_intent_id": payment_intent_id,
+                    "source": event_type,
+                })
 
         _record_webhook_event(db, event_id, event_type)
 
