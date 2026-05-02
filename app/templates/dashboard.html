@@ -3,343 +3,131 @@
 {% block content %}
 <style>
 .dashboard-subtitle { color:#64748b; margin-bottom:24px; }
-.dashboard-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; margin-bottom:28px; }
+.dashboard-shell { display:grid; grid-template-columns:minmax(0,1fr) 340px; gap:20px; align-items:start; }
+.dashboard-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:18px; margin-bottom:20px; }
 .dashboard-card { background:white; border-radius:18px; padding:20px; border:1px solid #e2e8f0; min-height:108px; }
+.dashboard-card.is-warning { border-color:#fed7aa; background:#fff7ed; }
+.dashboard-card.is-good { border-color:#bbf7d0; background:#f0fdf4; }
 .card-title { font-size:13px; color:#64748b; margin-bottom:6px; font-weight:750; }
-.card-value { font-size:26px; font-weight:900; line-height:1.15; }
+.card-value { font-size:26px; font-weight:900; line-height:1.15; color:#0f172a; }
 .card-subvalue { margin-top:6px; color:#64748b; font-size:12px; line-height:1.35; }
 .dashboard-section { margin-top:20px; }
 .section-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:14px; gap:12px; flex-wrap:wrap; }
+.dashboard-panel { background:white; border:1px solid #e2e8f0; border-radius:20px; padding:18px; margin-bottom:18px; }
+.dashboard-panel h2,.dashboard-panel h3 { margin-top:0; }
+.action-list,.activity-list { display:grid; gap:10px; }
+.action-item { display:flex; justify-content:space-between; align-items:center; gap:12px; padding:12px; border:1px solid #eef2f7; border-radius:14px; background:#fff; }
+.action-item.warning { border-color:#fed7aa; background:#fff7ed; }
+.action-item.good { border-color:#bbf7d0; background:#f0fdf4; }
+.action-title,.activity-title { font-weight:850; color:#0f172a; line-height:1.25; }
+.action-subtitle,.activity-meta { color:#64748b; font-size:12px; margin-top:4px; line-height:1.35; }
+.quick-actions { display:grid; grid-template-columns:1fr; gap:10px; }
+.quick-actions .btn { width:100%; justify-content:center; text-align:center; }
 .reports-table { width:100%; border-collapse:collapse; }
 .reports-table th { text-align:left; font-size:13px; color:#64748b; padding:10px; }
 .reports-table td { padding:12px 10px; border-top:1px solid #f1f5f9; vertical-align:top; }
 .reports-table tr:hover { background:#f8fafc; }
 .dashboard-error { display:none; margin-bottom:16px; }
 .search-input { max-width:320px; }
-.report-type-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #e5e7eb; white-space:nowrap; }
+.report-type-pill,.status-pill { display:inline-flex; border-radius:999px; padding:4px 9px; font-size:11px; font-weight:900; border:1px solid #e5e7eb; white-space:nowrap; }
 .report-type-assessment { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
 .report-type-trend { background:#eef2ff; color:#3730a3; border-color:#c7d2fe; }
+.status-pill { background:#f1f5f9; color:#334155; }
+.status-ready,.status-final { background:#dcfce7; color:#166534; }
+.status-failed { background:#fee2e2; color:#991b1b; }
+.status-draft,.status-queued,.status-processing { background:#fef3c7; color:#92400e; }
 .report-secondary { color:#64748b; font-size:12px; margin-top:3px; line-height:1.35; }
-.report-title-text { font-weight:700; color:#0f172a; }
+.report-title-text { font-weight:800; color:#0f172a; }
 .dashboard-tabs { display:flex; gap:8px; flex-wrap:wrap; }
 .dashboard-tab { border:1px solid #dbe7f3; background:#fff; border-radius:999px; padding:7px 11px; font-weight:800; color:#475569; cursor:pointer; }
 .dashboard-tab.is-active { background:#dbeafe; color:#1e3a8a; border-color:#93c5fd; }
 .dashboard-insight { background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:16px; margin-bottom:20px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
 .dashboard-insight strong { color:#0f172a; }
-@media(max-width:1200px){ .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
+.activity-item { padding:11px 12px; border:1px solid #eef2f7; border-radius:14px; background:#fff; }
+.empty-state { color:#64748b; padding:10px 0; }
+@media(max-width:1280px){ .dashboard-shell{grid-template-columns:1fr;} .dashboard-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
 @media(max-width:700px){ .dashboard-grid{grid-template-columns:1fr;} }
 </style>
 
 <div id="dashboard-error" class="error dashboard-error"></div>
-
-<p class="dashboard-subtitle">Overview of your recent assessment, trend-report, share, and revenue activity.</p>
+<p class="dashboard-subtitle">Your practitioner command centre: revenue, report health, sharing activity, and next actions.</p>
 
 <div class="dashboard-grid">
-    <div class="dashboard-card">
-        <div class="card-title">Paid Bundle Revenue</div>
-        <div class="card-value" id="paid-revenue">—</div>
-        <div class="card-subvalue" id="paid-revenue-sub">Confirmed Stripe payments</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Practitioner Earnings</div>
-        <div class="card-value" id="practitioner-earnings">—</div>
-        <div class="card-subvalue">After platform commission</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Platform Net</div>
-        <div class="card-value" id="platform-net">—</div>
-        <div class="card-subvalue" id="platform-net-sub">Commission minus Stripe fees</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Needs Payment</div>
-        <div class="card-value" id="pending-payments">—</div>
-        <div class="card-subvalue">Unpaid paid-access bundles</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Total Reports</div>
-        <div class="card-value" id="total-reports">—</div>
-        <div class="card-subvalue">Assessments + trends</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Assessments</div>
-        <div class="card-value" id="total-assessments">—</div>
-        <div class="card-subvalue">Single-scan reports</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Trend Reports</div>
-        <div class="card-value" id="total-trends">—</div>
-        <div class="card-subvalue">Progress views</div>
-    </div>
-    <div class="dashboard-card">
-        <div class="card-title">Last Activity</div>
-        <div class="card-value" id="last-activity" style="font-size:20px;">—</div>
-        <div class="card-subvalue">Latest generated report</div>
-    </div>
+    <div class="dashboard-card"><div class="card-title">Paid Bundle Revenue</div><div class="card-value" id="paid-revenue">—</div><div class="card-subvalue" id="paid-revenue-sub">Confirmed Stripe payments</div></div>
+    <div class="dashboard-card"><div class="card-title">Practitioner Earnings</div><div class="card-value" id="practitioner-earnings">—</div><div class="card-subvalue">After platform commission</div></div>
+    <div class="dashboard-card"><div class="card-title">Platform Net</div><div class="card-value" id="platform-net">—</div><div class="card-subvalue">Commission minus Stripe fees</div></div>
+    <div class="dashboard-card" id="pending-payment-card"><div class="card-title">Needs Payment</div><div class="card-value" id="pending-payments">—</div><div class="card-subvalue">Unpaid paid-access bundles</div></div>
+    <div class="dashboard-card"><div class="card-title">Total Reports</div><div class="card-value" id="total-reports">—</div><div class="card-subvalue">Assessments + trends</div></div>
+    <div class="dashboard-card"><div class="card-title">Ready Reports</div><div class="card-value" id="ready-reports">—</div><div class="card-subvalue">Available to review/share</div></div>
+    <div class="dashboard-card" id="failed-report-card"><div class="card-title">Failed / Stuck</div><div class="card-value" id="failed-reports">—</div><div class="card-subvalue">Needs practitioner/admin attention</div></div>
+    <div class="dashboard-card"><div class="card-title">Last Activity</div><div class="card-value" id="last-activity" style="font-size:20px;">—</div><div class="card-subvalue">Latest generated report</div></div>
 </div>
 
 <div class="dashboard-insight" id="dashboard-revenue-insight" style="display:none;">
-    <div>
-        <strong>Revenue model:</strong>
-        <span id="fee-model-label">—</span>
-        <div class="muted" id="fee-model-note" style="margin-top:4px;">—</div>
-    </div>
+    <div><strong>Revenue model:</strong> <span id="fee-model-label">—</span><div class="muted" id="fee-model-note" style="margin-top:4px;">—</div></div>
     <a class="btn secondary" href="/app/revenue">View revenue</a>
 </div>
 
-<div class="dashboard-section">
-    <div class="section-header">
-        <div>
-            <h2 style="margin:0;">Recent Reports</h2>
-            <div class="muted" style="margin-top:4px;">Assessments and trend reports are shown together, with type-specific context.</div>
+<div class="dashboard-shell">
+    <main>
+        <div class="dashboard-panel">
+            <div class="section-header"><div><h2 style="margin:0;">Action needed</h2><div class="muted" style="margin-top:4px;">Operational items that may affect revenue, report delivery, or client access.</div></div></div>
+            <div class="action-list" id="action-list"><div class="empty-state">Loading actions…</div></div>
         </div>
-        <div class="btn-row">
-            <input class="search-input" id="dashboard-search" placeholder="Search patient, report or date" />
-            <a class="btn secondary" href="/app/reports">View all reports</a>
+        <div class="dashboard-section">
+            <div class="section-header">
+                <div><h2 style="margin:0;">Recent Reports</h2><div class="muted" style="margin-top:4px;">Assessments and trend reports are shown together, with type-specific context.</div></div>
+                <div class="btn-row"><input class="search-input" id="dashboard-search" placeholder="Search patient, report or date" /><a class="btn secondary" href="/app/reports">View all reports</a></div>
+            </div>
+            <div class="dashboard-tabs" style="margin-bottom:12px;">
+                <button class="dashboard-tab is-active" data-dashboard-tab="all">All</button>
+                <button class="dashboard-tab" data-dashboard-tab="assessment">Assessments</button>
+                <button class="dashboard-tab" data-dashboard-tab="trend">Trends</button>
+                <button class="dashboard-tab" data-dashboard-tab="attention">Needs attention</button>
+            </div>
+            <div class="card"><table class="reports-table"><thead><tr><th>Type</th><th>Report</th><th>Clinical basis</th><th>Status</th><th>Generated</th><th></th></tr></thead><tbody id="reports-table-body"><tr><td colspan="6">Loading…</td></tr></tbody></table></div>
         </div>
-    </div>
-
-    <div class="dashboard-tabs" style="margin-bottom:12px;">
-        <button class="dashboard-tab is-active" data-dashboard-tab="all">All</button>
-        <button class="dashboard-tab" data-dashboard-tab="assessment">Assessments</button>
-        <button class="dashboard-tab" data-dashboard-tab="trend">Trends</button>
-    </div>
-
-    <div class="card">
-        <table class="reports-table">
-            <thead>
-                <tr>
-                    <th>Type</th>
-                    <th>Report</th>
-                    <th>Clinical basis</th>
-                    <th>Status</th>
-                    <th>Generated</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody id="reports-table-body">
-                <tr><td colspan="6">Loading…</td></tr>
-            </tbody>
-        </table>
-    </div>
+    </main>
+    <aside>
+        <div class="dashboard-panel"><h3>Quick actions</h3><div class="quick-actions"><a class="btn" href="/app/cases/new">Upload scan</a><a class="btn secondary" href="/app/reports">Share report bundle</a><a class="btn secondary" href="/app/patients">Create trend report</a><a class="btn secondary" href="/app/revenue">View revenue</a></div></div>
+        <div class="dashboard-panel"><h3>Report pipeline</h3><div class="activity-list"><div class="activity-item"><div class="activity-title" id="pipeline-assessments">— assessments</div><div class="activity-meta">Single-scan reports in workspace</div></div><div class="activity-item"><div class="activity-title" id="pipeline-trends">— trend reports</div><div class="activity-meta">Progress views created</div></div><div class="activity-item"><div class="activity-title" id="pipeline-7d">— in last 7 days</div><div class="activity-meta">Recent report generation activity</div></div></div></div>
+        <div class="dashboard-panel"><h3>Recent revenue activity</h3><div class="activity-list" id="revenue-activity-list"><div class="empty-state">Loading revenue activity…</div></div></div>
+    </aside>
 </div>
 
 <script>
 let dashboardRows = [];
+let dashboardPayments = [];
 let activeDashboardTab = "all";
-
-function safeTextLocal(value) {
-    if (typeof safeText === "function") return safeText(value);
-    return String(value ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
-}
-
-function formatDateLocal(value) {
-    if (typeof formatDate === "function") return formatDate(value);
-    if (!value) return "—";
-    const d = new Date(value);
-    return Number.isNaN(d.getTime()) ? String(value) : d.toLocaleDateString(undefined, {day:"2-digit", month:"short", year:"numeric"});
-}
-
-function reportType(item) { return item.report_type === "trend" ? "trend" : "assessment"; }
-function isTrend(item) { return reportType(item) === "trend"; }
-function reportTypeLabel(item) { return isTrend(item) ? "Trend" : "Assessment"; }
-function reportTypeClass(item) { return isTrend(item) ? "report-type-trend" : "report-type-assessment"; }
-
-function showDashboardError(message) {
-    const box = document.getElementById("dashboard-error");
-    box.textContent = message;
-    box.style.display = "block";
-}
-
-function clearDashboardError() {
-    const box = document.getElementById("dashboard-error");
-    box.textContent = "";
-    box.style.display = "none";
-}
-
-function updateDashboardTabs() {
-    document.querySelectorAll("[data-dashboard-tab]").forEach(btn => {
-        btn.classList.toggle("is-active", btn.dataset.dashboardTab === activeDashboardTab);
-    });
-}
-
-function displayMoneyList(amountsByCurrency, emptyText="—") {
-    const entries = Object.entries(amountsByCurrency || {}).filter(([, value]) => Number(value || 0) !== 0);
-    if (!entries.length) return emptyText;
-    return entries.map(([currency, minor]) => moneyFromMinor(minor, currency)).join(" · ");
-}
-
-function moneyFromMinor(minor, currency) {
-    const code = String(currency || "gbp").toLowerCase();
-    const amount = Number(minor || 0);
-    const symbols = {gbp:"£", usd:"$", eur:"€", aed:"د.إ", jpy:"¥", krw:"₩"};
-    const symbol = symbols[code] || code.toUpperCase() + " ";
-    const zeroDecimal = new Set(["jpy", "krw"]);
-    if (zeroDecimal.has(code)) return `${symbol}${amount.toLocaleString()}`;
-    return `${symbol}${(amount / 100).toLocaleString(undefined, {minimumFractionDigits:2, maximumFractionDigits:2})}`;
-}
-
-function addCurrency(target, currency, amount) {
-    const key = String(currency || "gbp").toLowerCase();
-    target[key] = Number(target[key] || 0) + Number(amount || 0);
-}
-
-function revenueFeeModelLabel(model) {
-    if (model === "practitioner_absorbs") return "Practitioner absorbs Stripe fees";
-    if (model === "split_proportional") return "Stripe fees are split proportionally";
-    return "Platform absorbs Stripe fees";
-}
-
-function revenueFeeModelNote(model) {
-    if (model === "practitioner_absorbs") return "Platform commission is preserved and processing fees reduce practitioner payout.";
-    if (model === "split_proportional") return "Processing fees are allocated proportionally between platform and practitioner.";
-    return "Practitioner payout is shown separately from platform revenue; Stripe fees reduce platform net.";
-}
-
-function renderRevenueSummary(summary, paymentsPayload) {
-    const currencies = summary.currencies || [];
-    const payments = paymentsPayload.items || [];
-    const feeModel = summary.fee_model || paymentsPayload.fee_model || "platform_absorbs";
-
-    const grossByCurrency = {};
-    const practitionerByCurrency = {};
-    const platformNetByCurrency = {};
-    let pending = Number(summary.unpaid_count || 0);
-
-    // Use the summary endpoint as source of truth for all-time cards.
-    currencies.forEach(c => {
-        const currency = String(c.currency || "gbp").toLowerCase();
-        addCurrency(grossByCurrency, currency, c.gross_minor);
-        addCurrency(practitionerByCurrency, currency, c.practitioner_payout_minor);
-        addCurrency(platformNetByCurrency, currency, c.platform_net_minor);
-    });
-
-    if (!pending && payments.length) {
-        pending = payments.filter(p => p.payment_status && p.payment_status !== "paid").length;
-    }
-
-    document.getElementById("paid-revenue").textContent = displayMoneyList(grossByCurrency);
-    document.getElementById("practitioner-earnings").textContent = displayMoneyList(practitionerByCurrency);
-    document.getElementById("platform-net").textContent = displayMoneyList(platformNetByCurrency);
-    document.getElementById("pending-payments").textContent = String(pending || 0);
-    document.getElementById("paid-revenue-sub").textContent = `${summary.paid_count || 0} paid bundle${Number(summary.paid_count || 0) === 1 ? "" : "s"}`;
-
-    document.getElementById("fee-model-label").textContent = revenueFeeModelLabel(feeModel);
-    document.getElementById("fee-model-note").textContent = revenueFeeModelNote(feeModel);
-    document.getElementById("dashboard-revenue-insight").style.display = "flex";
-}
-
-function renderDashboardRows() {
-    const tbody = document.getElementById("reports-table-body");
-    const query = (document.getElementById("dashboard-search").value || "").trim().toLowerCase();
-
-    updateDashboardTabs();
-
-    const filtered = dashboardRows
-        .filter(item => activeDashboardTab === "all" || reportType(item) === activeDashboardTab)
-        .filter(item => {
-            const hay = [
-                item.display_name, item.patient_display_name, item.generated_at,
-                item.scan_datetime_display, item.source_scan_range, item.status, reportTypeLabel(item)
-            ].join(" ").toLowerCase();
-            return !query || hay.includes(query);
-        });
-
-    if (!filtered.length) {
-        tbody.innerHTML = `<tr><td colspan="6">No matching reports.</td></tr>`;
-        return;
-    }
-
-    tbody.innerHTML = filtered.slice(0, 20).map(item => {
-        const trend = isTrend(item);
-        const sourceCount = item.source_count || (item.source_report_ids || []).length || 0;
-        const basis = trend
-            ? `${safeTextLocal(sourceCount)} source assessment${Number(sourceCount) === 1 ? "" : "s"}`
-            : safeTextLocal(item.scan_datetime_display || "—");
-
-        const health = trend && item.health_index !== null && item.health_index !== undefined
-            ? `<div class="report-secondary">Health Index: ${safeTextLocal(item.health_index)}${item.health_index_change !== null && item.health_index_change !== undefined ? ` (${Number(item.health_index_change) > 0 ? "+" : ""}${safeTextLocal(item.health_index_change)})` : ""}</div>`
-            : "";
-
-        return `
-            <tr>
-                <td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td>
-                <td>
-                    <span class="report-title-text">${safeTextLocal(item.display_name || "Untitled report")}</span>
-                    <div class="report-secondary">${safeTextLocal(item.patient_display_name || "")}</div>
-                </td>
-                <td>
-                    ${basis}
-                    ${trend && item.source_scan_range ? `<div class="report-secondary">${safeTextLocal(item.source_scan_range)}</div>` : ""}
-                    ${health}
-                </td>
-                <td>${safeTextLocal(item.status)}</td>
-                <td>${formatDateLocal(item.generated_at)}</td>
-                <td><a class="link" href="${trend ? `/trend-reports/${item.id}` : `/app/reports/${item.id}`}">Open</a></td>
-            </tr>
-        `;
-    }).join("");
-}
-
-async function loadDashboard() {
-    clearDashboardError();
-    const authed = await requireAuthOrRedirect();
-    if (!authed) return;
-
-    try {
-        const [reportsResponse, revenueSummaryResponse, revenuePaymentsResponse] = await Promise.all([
-            apiFetch("/api/reports?include_archived=false"),
-            apiFetch("/api/revenue/summary"),
-            apiFetch("/api/revenue/payments"),
-        ]);
-
-        if (!reportsResponse.ok) {
-            const errorData = await reportsResponse.json().catch(() => ({}));
-            showDashboardError(errorData.detail || "Could not load dashboard data.");
-            document.getElementById("reports-table-body").innerHTML = `<tr><td colspan="6">Could not load reports.</td></tr>`;
-            return;
-        }
-
-        const reports = await reportsResponse.json();
-        dashboardRows = (Array.isArray(reports) ? reports : (reports.items || []))
-            .slice()
-            .sort((a, b) => new Date(b.generated_at || 0) - new Date(a.generated_at || 0));
-
-        const assessments = dashboardRows.filter(r => reportType(r) === "assessment");
-        const trends = dashboardRows.filter(r => reportType(r) === "trend");
-
-        document.getElementById("total-reports").textContent = dashboardRows.length;
-        document.getElementById("total-assessments").textContent = assessments.length;
-        document.getElementById("total-trends").textContent = trends.length;
-        document.getElementById("last-activity").textContent =
-            dashboardRows.length && dashboardRows[0].generated_at ? formatDateLocal(dashboardRows[0].generated_at) : "—";
-
-        renderDashboardRows();
-
-        if (revenueSummaryResponse.ok && revenuePaymentsResponse.ok) {
-            const revenueSummary = await revenueSummaryResponse.json();
-            const revenuePayments = await revenuePaymentsResponse.json();
-            renderRevenueSummary(revenueSummary, revenuePayments);
-        } else {
-            document.getElementById("paid-revenue").textContent = "—";
-            document.getElementById("practitioner-earnings").textContent = "—";
-            document.getElementById("platform-net").textContent = "—";
-            document.getElementById("pending-payments").textContent = "—";
-        }
-    } catch (err) {
-        console.error(err);
-        showDashboardError("Unexpected error while loading dashboard.");
-        document.getElementById("reports-table-body").innerHTML = `<tr><td colspan="6">Unexpected error.</td></tr>`;
-    }
-}
-
-document.getElementById("dashboard-search").addEventListener("input", renderDashboardRows);
-document.querySelectorAll("[data-dashboard-tab]").forEach(btn => {
-    btn.addEventListener("click", () => {
-        activeDashboardTab = btn.dataset.dashboardTab;
-        renderDashboardRows();
-    });
-});
-
+function safeTextLocal(value){ if(typeof safeText==="function") return safeText(value); return String(value??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
+function formatDateLocal(value){ if(typeof formatDate==="function") return formatDate(value); if(!value) return "—"; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}); }
+function formatDateTimeLocal(value){ if(!value) return "—"; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleString(undefined,{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
+function reportType(item){ return item.report_type==="trend"?"trend":"assessment"; }
+function isTrend(item){ return reportType(item)==="trend"; }
+function reportTypeLabel(item){ return isTrend(item)?"Trend":"Assessment"; }
+function reportTypeClass(item){ return isTrend(item)?"report-type-trend":"report-type-assessment"; }
+function statusValue(item){ return String(item.status||"").toLowerCase(); }
+function isAttentionStatus(item){ return ["failed","draft","queued","processing"].includes(statusValue(item)); }
+function showDashboardError(message){ const box=document.getElementById("dashboard-error"); box.textContent=message; box.style.display="block"; }
+function clearDashboardError(){ const box=document.getElementById("dashboard-error"); box.textContent=""; box.style.display="none"; }
+function updateDashboardTabs(){ document.querySelectorAll("[data-dashboard-tab]").forEach(btn=>btn.classList.toggle("is-active",btn.dataset.dashboardTab===activeDashboardTab)); }
+function moneyFromMinor(minor,currency){ const code=String(currency||"gbp").toLowerCase(); const amount=Number(minor||0); const symbols={gbp:"£",usd:"$",eur:"€",aed:"د.إ",jpy:"¥",krw:"₩"}; const symbol=symbols[code]||code.toUpperCase()+" "; const zeroDecimal=new Set(["jpy","krw"]); if(zeroDecimal.has(code)) return `${symbol}${amount.toLocaleString()}`; return `${symbol}${(amount/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+function displayMoneyList(amountsByCurrency,emptyText="—"){ const entries=Object.entries(amountsByCurrency||{}).filter(([,v])=>Number(v||0)!==0); if(!entries.length) return emptyText; return entries.map(([c,m])=>moneyFromMinor(m,c)).join(" · "); }
+function addCurrency(target,currency,amount){ const key=String(currency||"gbp").toLowerCase(); target[key]=Number(target[key]||0)+Number(amount||0); }
+function revenueFeeModelLabel(model){ if(model==="practitioner_absorbs") return "Practitioner absorbs Stripe fees"; if(model==="split_proportional") return "Stripe fees are split proportionally"; return "Platform absorbs Stripe fees"; }
+function revenueFeeModelNote(model){ if(model==="practitioner_absorbs") return "Platform commission is preserved and processing fees reduce practitioner payout."; if(model==="split_proportional") return "Processing fees are allocated proportionally between platform and practitioner."; return "Practitioner payout is shown separately from platform revenue; Stripe fees reduce platform net."; }
+function paymentStatus(p){ return String(p.payment_status||p.status||"").toLowerCase(); }
+function paymentCurrency(p){ return p.currency||p.price_currency||p.payment_currency||"gbp"; }
+function paymentGrossMinor(p){ return Number(p.gross_minor??p.gross_amount_minor??p.price_amount??p.amount??0); }
+function renderRevenueSummary(summary,paymentsPayload){ const currencies=summary.currencies||[]; const payments=paymentsPayload.items||[]; dashboardPayments=payments; const feeModel=summary.fee_model||paymentsPayload.fee_model||"platform_absorbs"; const grossByCurrency={}; const practitionerByCurrency={}; const platformNetByCurrency={}; let pending=Number(summary.unpaid_count||0); currencies.forEach(c=>{ const currency=String(c.currency||"gbp").toLowerCase(); addCurrency(grossByCurrency,currency,c.gross_minor); addCurrency(practitionerByCurrency,currency,c.practitioner_payout_minor); addCurrency(platformNetByCurrency,currency,c.platform_net_minor); }); if(!pending&&payments.length) pending=payments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid").length; document.getElementById("paid-revenue").textContent=displayMoneyList(grossByCurrency); document.getElementById("practitioner-earnings").textContent=displayMoneyList(practitionerByCurrency); document.getElementById("platform-net").textContent=displayMoneyList(platformNetByCurrency); document.getElementById("pending-payments").textContent=String(pending||0); document.getElementById("paid-revenue-sub").textContent=`${summary.paid_count||0} paid bundle${Number(summary.paid_count||0)===1?"":"s"}`; const pendingCard=document.getElementById("pending-payment-card"); pendingCard.classList.toggle("is-warning",Number(pending||0)>0); pendingCard.classList.toggle("is-good",Number(pending||0)===0); document.getElementById("fee-model-label").textContent=revenueFeeModelLabel(feeModel); document.getElementById("fee-model-note").textContent=revenueFeeModelNote(feeModel); document.getElementById("dashboard-revenue-insight").style.display="flex"; renderRevenueActivity(payments); }
+function renderRevenueActivity(payments){ const list=document.getElementById("revenue-activity-list"); const paid=(payments||[]).filter(p=>paymentStatus(p)==="paid").slice().sort((a,b)=>new Date(b.paid_at||b.created_at||0)-new Date(a.paid_at||a.created_at||0)).slice(0,5); if(!paid.length){ list.innerHTML=`<div class="empty-state">No paid bundle activity yet.</div>`; return; } list.innerHTML=paid.map(p=>`<div class="activity-item"><div class="activity-title">${moneyFromMinor(paymentGrossMinor(p),paymentCurrency(p))}</div><div class="activity-meta">${safeTextLocal(p.patient_name||p.patient_display_name||p.bundle_label||"Paid bundle")} · ${formatDateTimeLocal(p.paid_at||p.created_at)}</div></div>`).join(""); }
+function renderActionPanel(){ const list=document.getElementById("action-list"); const failed=dashboardRows.filter(r=>statusValue(r)==="failed"); const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))); const unpaid=dashboardPayments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid"); const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).slice(0,5); const actions=[]; if(failed.length) actions.push({cls:"warning",title:`${failed.length} failed report${failed.length===1?"":"s"}`,subtitle:"Review failed generation and retry from the case workspace.",href:"/app/reports"}); if(stuck.length) actions.push({cls:"warning",title:`${stuck.length} draft / queued report${stuck.length===1?"":"s"}`,subtitle:"These reports may need refresh, retry, or cleanup.",href:"/app/reports"}); if(unpaid.length) actions.push({cls:"warning",title:`${unpaid.length} bundle${unpaid.length===1?"":"s"} awaiting payment`,subtitle:"Follow up with clients or review payment links.",href:"/app/share-links"}); if(!actions.length) actions.push({cls:"good",title:"No urgent operational issues",subtitle:"Reports, shares, and revenue items look healthy.",href:"/app/reports"}); if(ready.length) actions.push({cls:"",title:"Share ready reports",subtitle:"Create a report bundle or single share for recent ready reports.",href:"/app/reports"}); list.innerHTML=actions.map(a=>`<div class="action-item ${a.cls}"><div><div class="action-title">${safeTextLocal(a.title)}</div><div class="action-subtitle">${safeTextLocal(a.subtitle)}</div></div><a class="btn small secondary" href="${a.href}">Open</a></div>`).join(""); }
+function renderPipeline(){ const assessments=dashboardRows.filter(r=>reportType(r)==="assessment"); const trends=dashboardRows.filter(r=>reportType(r)==="trend"); const since=Date.now()-(7*24*60*60*1000); const last7=dashboardRows.filter(r=>{ const d=new Date(r.generated_at||0); return !Number.isNaN(d.getTime())&&d.getTime()>=since; }); document.getElementById("pipeline-assessments").textContent=`${assessments.length} assessment${assessments.length===1?"":"s"}`; document.getElementById("pipeline-trends").textContent=`${trends.length} trend report${trends.length===1?"":"s"}`; document.getElementById("pipeline-7d").textContent=`${last7.length} in last 7 days`; }
+function renderDashboardRows(){ const tbody=document.getElementById("reports-table-body"); const query=(document.getElementById("dashboard-search").value||"").trim().toLowerCase(); updateDashboardTabs(); const filtered=dashboardRows.filter(item=>activeDashboardTab==="attention"?isAttentionStatus(item):(activeDashboardTab==="all"||reportType(item)===activeDashboardTab)).filter(item=>{ const hay=[item.display_name,item.patient_display_name,item.generated_at,item.scan_datetime_display,item.source_scan_range,item.status,reportTypeLabel(item)].join(" ").toLowerCase(); return !query||hay.includes(query); }); if(!filtered.length){ tbody.innerHTML=`<tr><td colspan="6">No matching reports.</td></tr>`; return; } tbody.innerHTML=filtered.slice(0,20).map(item=>{ const trend=isTrend(item); const sourceCount=item.source_count||(item.source_report_ids||[]).length||0; const basis=trend?`${safeTextLocal(sourceCount)} source assessment${Number(sourceCount)===1?"":"s"}`:safeTextLocal(item.scan_datetime_display||"—"); const health=trend&&item.health_index!==null&&item.health_index!==undefined?`<div class="report-secondary">Health Index: ${safeTextLocal(item.health_index)}${item.health_index_change!==null&&item.health_index_change!==undefined?` (${Number(item.health_index_change)>0?"+":""}${safeTextLocal(item.health_index_change)})`:""}</div>`:""; const status=statusValue(item); return `<tr><td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td><td><span class="report-title-text">${safeTextLocal(item.display_name||"Untitled report")}</span><div class="report-secondary">${safeTextLocal(item.patient_display_name||"")}</div></td><td>${basis}${trend&&item.source_scan_range?`<div class="report-secondary">${safeTextLocal(item.source_scan_range)}</div>`:""}${health}</td><td><span class="status-pill status-${safeTextLocal(status)}">${safeTextLocal(item.status||"—")}</span></td><td>${formatDateLocal(item.generated_at)}</td><td><a class="link" href="${trend?`/trend-reports/${item.id}`:`/app/reports/${item.id}`}">Open</a></td></tr>`; }).join(""); }
+function renderReportHealthCards(){ const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).length; const failed=dashboardRows.filter(r=>statusValue(r)==="failed").length; const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))).length; const attention=failed+stuck; document.getElementById("ready-reports").textContent=ready; document.getElementById("failed-reports").textContent=attention; const failedCard=document.getElementById("failed-report-card"); failedCard.classList.toggle("is-warning",attention>0); failedCard.classList.toggle("is-good",attention===0); }
+async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } }
+document.getElementById("dashboard-search").addEventListener("input",renderDashboardRows);
+document.querySelectorAll("[data-dashboard-tab]").forEach(btn=>{ btn.addEventListener("click",()=>{ activeDashboardTab=btn.dataset.dashboardTab; renderDashboardRows(); }); });
 loadDashboard();
 </script>
 {% endblock %}
