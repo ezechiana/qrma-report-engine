@@ -56,6 +56,8 @@ def _serialise_settings(settings) -> PractitionerSettingsRead:
         "accent_color": settings.accent_color,
         "support_email": settings.support_email,
         "website_url": settings.website_url,
+        "preferred_currency": getattr(settings, "preferred_currency", None) or "USD",
+        "monthly_goal_minor": getattr(settings, "monthly_goal_minor", None) or 200000,
         "recommendation_mode_default": settings.recommendation_mode_default.value
             if hasattr(settings.recommendation_mode_default, "value")
             else settings.recommendation_mode_default,

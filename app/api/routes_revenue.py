@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import APIRouter, Depends, Request
@@ -11,6 +12,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
 from app.services.revenue_model import calculate_revenue_split, get_revenue_fee_model
+from app.services.fx_service import ensure_current_month_fx_snapshot, build_revenue_goal_payload
 
 router = APIRouter(tags=["revenue"])
 templates = Jinja2Templates(directory="app/templates")
@@ -41,6 +43,51 @@ def _dt(value: Any) -> str:
 
 def _row_to_dict(row) -> dict[str, Any]:
     return dict(row._mapping)
+
+
+def _settings_goal_config(db: Session, user_id) -> dict[str, Any]:
+    row = db.execute(
+        text(
+            """
+            SELECT preferred_currency, monthly_goal_minor
+            FROM practitioner_settings
+            WHERE user_id = :user_id
+            LIMIT 1
+            """
+        ),
+        {"user_id": str(user_id)},
+    ).mappings().first()
+
+    return {
+        "preferred_currency": (row["preferred_currency"] if row and row.get("preferred_currency") else "USD"),
+        "monthly_goal_minor": int(row["monthly_goal_minor"] if row and row.get("monthly_goal_minor") else 200000),
+    }
+
+
+def _paid_bundle_rows_for_goal(db: Session, user_id) -> list[dict[str, Any]]:
+    rows = db.execute(
+        text(
+            """
+            SELECT
+                id,
+                paid_at,
+                created_at,
+                payment_status,
+                price_amount,
+                COALESCE(price_currency, 'gbp') AS price_currency
+            FROM share_bundles
+            WHERE created_by_user_id = :user_id
+              AND requires_payment = true
+              AND payment_status = 'paid'
+              AND price_amount IS NOT NULL
+            ORDER BY COALESCE(paid_at, created_at) DESC
+            LIMIT 1000
+            """
+        ),
+        {"user_id": str(user_id)},
+    ).mappings().all()
+    return [dict(r) for r in rows]
+
 
 
 @router.get("/app/revenue", response_class=HTMLResponse)
@@ -123,11 +170,24 @@ def revenue_summary(
             }
         )
 
+    goal_config = _settings_goal_config(db, current_user.id)
+    fx_snapshot = ensure_current_month_fx_snapshot(db)
+    revenue_goal = build_revenue_goal_payload(
+        payments=_paid_bundle_rows_for_goal(db, current_user.id),
+        preferred_currency=goal_config["preferred_currency"],
+        monthly_goal_minor=goal_config["monthly_goal_minor"],
+        snapshot=fx_snapshot,
+        now=datetime.now(timezone.utc),
+    )
+
     return {
         "fee_model": fee_model,
         "paid_count": total_paid_count,
         "unpaid_count": total_unpaid_count,
         "currencies": currencies,
+        "preferred_currency": goal_config["preferred_currency"],
+        "monthly_goal_minor": goal_config["monthly_goal_minor"],
+        "revenue_goal": revenue_goal,
     }
 
 

@@ -20,6 +20,9 @@ class PractitionerSettingsRead(BaseModel):
     support_email: Optional[str] = None
     website_url: Optional[str] = None
 
+    preferred_currency: Optional[str] = "USD"
+    monthly_goal_minor: Optional[int] = 200000
+
     recommendation_mode_default: str = "natural_approaches_clinical"
 
     logo_preview_url: Optional[str] = None
@@ -40,6 +43,9 @@ class PractitionerSettingsUpdate(BaseModel):
 
     support_email: Optional[str] = None
     website_url: Optional[str] = None
+
+    preferred_currency: Optional[str] = None
+    monthly_goal_minor: Optional[int] = None
 
     recommendation_mode_default: Optional[str] = None
 

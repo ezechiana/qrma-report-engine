@@ -79,13 +79,18 @@
 .spark-bar { width:100%; max-width:34px; min-height:5px; border-radius:999px 999px 4px 4px; background:linear-gradient(180deg,#2563eb,#60a5fa); transition:height .35s ease; }
 .spark-label { font-size:10px; color:#64748b; white-space:nowrap; }
 .spark-value { font-size:10px; color:#0f172a; font-weight:800; white-space:nowrap; }
-.period-bars { display:grid; gap:12px; padding:4px 0 0; }
-.period-row { display:grid; grid-template-columns:118px 1fr 110px; gap:12px; align-items:center; }
-.period-label { font-size:12px; color:#334155; font-weight:900; }
-.period-track { height:16px; border-radius:999px; background:#e2e8f0; overflow:hidden; }
-.period-fill { height:100%; border-radius:999px; background:linear-gradient(90deg,#2563eb,#60a5fa); width:0%; transition:width .35s ease; }
-.period-value { text-align:right; font-size:12px; color:#0f172a; font-weight:900; white-space:nowrap; }
-@media(max-width:700px){ .period-row{grid-template-columns:92px 1fr 86px;} }
+.revenue-column-chart { display:block; min-height:275px; padding:16px; border:1px solid #eef2f7; border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow:visible; }
+.revenue-column-bars { display:flex; align-items:flex-end; gap:16px; height:218px; padding:24px 4px 4px; }
+.revenue-column { flex:1; min-width:0; display:grid; grid-template-rows:36px 128px 52px; gap:8px; align-items:end; text-align:center; }
+.revenue-column-value { font-size:12px; color:#0f172a; font-weight:900; min-height:22px; white-space:nowrap; overflow:visible; text-overflow:clip; display:flex; align-items:flex-end; justify-content:center; position:relative; z-index:2; }
+.revenue-column-track { width:100%; height:128px; display:flex; align-items:flex-end; justify-content:center; border-bottom:1px solid #e2e8f0; }
+.revenue-column-fill { width:min(46px,72%); min-height:0; border-radius:12px 12px 5px 5px; background:linear-gradient(180deg,#2563eb,#60a5fa); transition:height .35s ease; box-shadow:0 10px 20px rgba(37,99,235,.12); }
+.revenue-column-fill.is-empty { height:0 !important; box-shadow:none; background:transparent; }
+.revenue-column-label { font-size:11px; color:#334155; font-weight:900; line-height:1.15; min-height:48px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:3px; }
+.revenue-column-period { color:#64748b; font-size:10px; font-weight:750; line-height:1.15; }
+.revenue-chart-context { margin:12px 0 0; padding:9px 10px; border:1px solid #dbeafe; background:#eff6ff; border-radius:12px; color:#1e3a8a; font-size:12px; line-height:1.4; }
+.revenue-chart-note { margin-top:12px; padding-top:10px; border-top:1px solid #e2e8f0; color:#64748b; font-size:12px; line-height:1.45; }
+@media(max-width:700px){ .revenue-column-chart{padding:12px;} .revenue-column-bars{gap:8px;} .revenue-column-value{font-size:10px;} .revenue-column-label{font-size:9px;} .revenue-column-period{font-size:8px;} }
 
 .funnel-list { display:grid; gap:12px; margin-top:6px; }
 .funnel-row { display:grid; grid-template-columns:110px 1fr 42px; gap:10px; align-items:center; font-size:13px; }
@@ -145,9 +150,9 @@
       </div>
     </div>
     <div class="hero-goal">
-      <div class="goal-header"><div class="goal-label">Weekly revenue goal</div><div class="goal-value" id="weekly-goal-value">—</div></div>
+      <div class="goal-header"><div class="goal-label">Monthly revenue goal</div><div class="goal-value" id="weekly-goal-value">—</div></div>
       <div class="goal-bar"><span id="weekly-goal-bar"></span></div>
-      <div class="goal-note" id="weekly-goal-note">Loading recent revenue activity…</div>
+      <div class="goal-note" id="weekly-goal-note">Loading monthly revenue goal…</div>
     </div>
   </section>
 
@@ -173,7 +178,7 @@
   </div>
 
   <section class="kpi-grid">
-    <div class="kpi-card"><div class="kpi-label">Paid bundle revenue</div><div class="kpi-value" id="paid-revenue">—</div><div class="kpi-sub" id="paid-revenue-sub">Confirmed Stripe payments</div><div class="kpi-tag" id="revenue-trend-tag">Revenue periods loading…</div></div>
+    <div class="kpi-card"><div class="kpi-label">Paid bundle revenue</div><div class="kpi-value" id="paid-revenue">—</div><div class="kpi-sub" id="paid-revenue-sub">Confirmed Stripe payments</div><div class="kpi-tag" id="revenue-trend-tag">Monthly goal loading…</div></div>
     <div class="kpi-card"><div class="kpi-label">Practitioner earnings</div><div class="kpi-value" id="practitioner-earnings">—</div><div class="kpi-sub">After platform commission</div></div>
     <div class="kpi-card"><div class="kpi-label">Platform net</div><div class="kpi-value" id="platform-net">—</div><div class="kpi-sub">Commission minus Stripe fees</div></div>
     <div class="kpi-card" id="pending-payment-card"><div class="kpi-label">Needs payment</div><div class="kpi-value" id="pending-payments">—</div><div class="kpi-sub" id="pending-payment-sub">Unpaid paid-access bundles</div></div>
@@ -188,7 +193,7 @@
   <div class="dashboard-insight" id="dashboard-revenue-insight" style="display:none;"><div><strong>Revenue model:</strong> <span id="fee-model-label">—</span><div class="muted" id="fee-model-note" style="margin-top:4px;">—</div></div><a class="btn secondary" href="/app/revenue">View revenue</a></div>
 
   <section class="panel-grid">
-    <div class="dashboard-panel chart-card"><div class="section-header"><div><h3 style="margin:0;">Revenue trend</h3><div class="section-eyebrow">Paid bundle activity across practical business periods.</div></div></div><div id="revenue-chart" class="chart-empty">Loading revenue trend…</div></div>
+    <div class="dashboard-panel chart-card"><div class="section-header"><div><h3 style="margin:0;">Monthly revenue performance</h3><div class="section-eyebrow">Converted view for your monthly goal. Actual earnings remain in original currencies.</div></div></div><div id="revenue-chart" class="chart-empty">Loading revenue trend…</div></div>
     <div class="dashboard-panel chart-card"><div class="section-header"><div><h3 style="margin:0;">Referral funnel</h3><div class="section-eyebrow">Referral signups and rewards from your referral link.</div></div><a class="btn secondary" href="/app/settings#referral-card">Open referrals</a></div><div class="funnel-list" id="referral-funnel"><div class="chart-empty">Loading referral funnel…</div></div></div>
   </section>
 
@@ -218,8 +223,9 @@ let dashboardRows = [];
 let dashboardPayments = [];
 let dashboardReferral = null;
 let activeDashboardTab = "all";
-let WEEKLY_GOAL_MINOR = 50000;
-let USER_REVENUE_CURRENCY = "gbp";
+let MONTHLY_GOAL_MINOR = 200000;
+let USER_REVENUE_CURRENCY = "usd";
+let revenueGoalSnapshot = null;
 function safeTextLocal(value){ if(typeof safeText==="function") return safeText(value); return String(value??"").replace(/[&<>"']/g,m=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m])); }
 function formatDateLocal(value){ if(typeof formatDate==="function") return formatDate(value); if(!value) return "—"; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleDateString(undefined,{day:"2-digit",month:"short",year:"numeric"}); }
 function formatDateTimeLocal(value){ if(!value) return "—"; const d=new Date(value); return Number.isNaN(d.getTime())?String(value):d.toLocaleString(undefined,{day:"2-digit",month:"short",year:"numeric",hour:"2-digit",minute:"2-digit"}); }
@@ -231,33 +237,8 @@ function statusValue(item){ return String(item.status||"").toLowerCase(); }
 function isAttentionStatus(item){ return ["failed","draft","queued","processing"].includes(statusValue(item)); }
 function showDashboardError(message){ const box=document.getElementById("dashboard-error"); box.textContent=message; box.style.display="block"; }
 function clearDashboardError(){ const box=document.getElementById("dashboard-error"); box.textContent=""; box.style.display="none"; }
-function moneyFromMinor(minor,currency){ const code=String(currency||"gbp").toLowerCase(); const amount=Number(minor||0); const symbols={gbp:"£",usd:"$",eur:"€",aed:"د.إ",jpy:"¥",krw:"₩"}; const symbol=symbols[code]||code.toUpperCase()+" "; const zeroDecimal=new Set(["jpy","krw"]); if(zeroDecimal.has(code)) return `${symbol}${amount.toLocaleString()}`; return `${symbol}${(amount/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
+function moneyFromMinor(minor,currency){ const code=String(currency||"usd").toLowerCase(); const amount=Number(minor||0); const symbols={gbp:"£",usd:"$",eur:"€",aed:"د.إ",jpy:"¥",krw:"₩"}; const symbol=symbols[code]||code.toUpperCase()+" "; const zeroDecimal=new Set(["jpy","krw"]); if(zeroDecimal.has(code)) return `${symbol}${Math.round(amount).toLocaleString()}`; return `${symbol}${(amount/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
 function displayMoneyList(amountsByCurrency,emptyText="—"){ const entries=Object.entries(amountsByCurrency||{}).filter(([,v])=>Number(v||0)!==0); if(!entries.length) return emptyText; return entries.map(([c,m])=>moneyFromMinor(m,c)).join(" · "); }
-function minorUnitsForWholeAmount(amount,currency){ const zeroDecimal=new Set(["jpy","krw"]); const code=String(currency||"gbp").toLowerCase(); return zeroDecimal.has(code)?Number(amount||0):Number(amount||0)*100; }
-function deriveDashboardCurrency(summary, payments){
-  const explicit=summary?.currency||summary?.default_currency||summary?.practitioner_currency||summary?.workspace_currency;
-  if(explicit) return String(explicit).toLowerCase();
-  const paid=(payments||[]).filter(p=>paymentStatus(p)==="paid");
-  const totals={};
-  paid.forEach(p=>addCurrency(totals,paymentCurrency(p),paymentGrossMinor(p)));
-  const best=Object.entries(totals).sort((a,b)=>Number(b[1]||0)-Number(a[1]||0))[0];
-  if(best) return best[0];
-  const firstCurrency=(summary?.currencies||[]).find(c=>c.currency)?.currency;
-  return String(firstCurrency||"gbp").toLowerCase();
-}
-function setWeeklyGoalFromSummary(summary, payments){
-  USER_REVENUE_CURRENCY=deriveDashboardCurrency(summary||{}, payments||[]);
-  const explicitGoal=summary?.weekly_goal_minor||summary?.weekly_revenue_goal_minor||summary?.practitioner_weekly_goal_minor;
-  WEEKLY_GOAL_MINOR=Number(explicitGoal||minorUnitsForWholeAmount(500,USER_REVENUE_CURRENCY));
-}
-function weeklyGoalNote(total,currency){
-  const remaining=Number(WEEKLY_GOAL_MINOR||0)-Number(total||0);
-  const goalLabel=moneyFromMinor(WEEKLY_GOAL_MINOR,currency);
-  if(Number(total||0)===0) return `${goalLabel} to reach your weekly target.`;
-  if(remaining>0) return `${moneyFromMinor(remaining,currency)} remaining to reach your ${goalLabel} weekly target.`;
-  if(remaining===0) return `Weekly target met 🎯`;
-  return `Weekly target exceeded by ${moneyFromMinor(Math.abs(remaining),currency)} 🚀`;
-}
 function addCurrency(target,currency,amount){ const key=String(currency||"gbp").toLowerCase(); target[key]=Number(target[key]||0)+Number(amount||0); }
 function paymentStatus(p){ return String(p.payment_status||p.status||"").toLowerCase(); }
 function paymentCurrency(p){ return p.currency||p.price_currency||p.payment_currency||"gbp"; }
@@ -266,70 +247,43 @@ function paymentDate(p){ return p.paid_at||p.created_at||p.updated_at||p.created
 function revenueFeeModelLabel(model){ if(model==="practitioner_absorbs") return "Practitioner absorbs Stripe fees"; if(model==="split_proportional") return "Stripe fees are split proportionally"; return "Platform absorbs Stripe fees"; }
 function revenueFeeModelNote(model){ if(model==="practitioner_absorbs") return "Platform commission is preserved and processing fees reduce practitioner payout."; if(model==="split_proportional") return "Processing fees are allocated proportionally between platform and practitioner."; return "Practitioner payout is shown separately from platform revenue; Stripe fees reduce platform net."; }
 function updateDashboardTabs(){ document.querySelectorAll("[data-dashboard-tab]").forEach(btn=>btn.classList.toggle("is-active",btn.dataset.dashboardTab===activeDashboardTab)); }
-function lastNDays(n){ const days=[]; const now=new Date(); for(let i=n-1;i>=0;i--){ const d=new Date(now); d.setDate(now.getDate()-i); d.setHours(0,0,0,0); days.push(d); } return days; }
-function dateKey(d){ return d.toISOString().slice(0,10); }
-function renderRevenueChart(payments){
+function goalNote(total,currency,monthLabel){
+  const remaining=Number(MONTHLY_GOAL_MINOR||0)-Number(total||0);
+  const goalLabel=moneyFromMinor(MONTHLY_GOAL_MINOR,currency);
+  const month=monthLabel || "this month";
+  if(Number(total||0)===0) return `${goalLabel} to reach your ${month} target.`;
+  if(remaining>0) return `${moneyFromMinor(remaining,currency)} remaining to reach your ${goalLabel} ${month} target.`;
+  if(remaining===0) return `${month.charAt(0).toUpperCase()+month.slice(1)} target met 🎯`;
+  return `${month.charAt(0).toUpperCase()+month.slice(1)} target exceeded by ${moneyFromMinor(Math.abs(remaining),currency)} 🚀`;
+}
+function renderRevenueChart(payments, summary={}){
   const root=document.getElementById("revenue-chart");
-  const now=new Date();
-  const paid=(payments||[])
-    .filter(p=>paymentStatus(p)==="paid")
-    .filter(p=>String(paymentCurrency(p)).toLowerCase()===String(USER_REVENUE_CURRENCY).toLowerCase());
-
-  function startOfDay(d){ const x=new Date(d); x.setHours(0,0,0,0); return x; }
-  function startOfWeek(d){
-    const x=startOfDay(d);
-    const day=x.getDay();
-    const diff=x.getDate() - day + (day===0 ? -6 : 1); // Monday start
-    x.setDate(diff);
-    return x;
-  }
-  function startOfMonth(d){ return new Date(d.getFullYear(), d.getMonth(), 1); }
-  function addDays(d,n){ const x=new Date(d); x.setDate(x.getDate()+n); return x; }
-  function addMonths(d,n){ const x=new Date(d); x.setMonth(x.getMonth()+n); return x; }
-  function sumBetween(start,end){
-    return paid.filter(p=>{
-      const d=new Date(paymentDate(p)||0);
-      if(Number.isNaN(d.getTime())) return false;
-      return d>=start && d<=end;
-    }).reduce((sum,p)=>sum+paymentGrossMinor(p),0);
-  }
-
-  const thisWeekStart=startOfWeek(now);
-  const lastWeekStart=addDays(thisWeekStart,-7);
-  const lastWeekEnd=new Date(thisWeekStart.getTime()-1);
-  const thisMonthStart=startOfMonth(now);
-  const lastMonthStart=addMonths(thisMonthStart,-1);
-  const lastMonthEnd=new Date(thisMonthStart.getTime()-1);
-  const threeMonthsStart=addMonths(startOfDay(now),-3);
-
-  const periods=[
-    {label:"This week", value:sumBetween(thisWeekStart, now)},
-    {label:"Last week", value:sumBetween(lastWeekStart, lastWeekEnd)},
-    {label:"This month", value:sumBetween(thisMonthStart, now)},
-    {label:"Last month", value:sumBetween(lastMonthStart, lastMonthEnd)},
-    {label:"Last 3 months", value:sumBetween(threeMonthsStart, now)}
-  ];
-
-  const totalThisWeek=periods[0].value;
-  const currency=USER_REVENUE_CURRENCY;
-  document.getElementById("weekly-goal-value").textContent=moneyFromMinor(totalThisWeek,currency);
-  const progress=Math.min(100,Math.round((totalThisWeek/Math.max(1,WEEKLY_GOAL_MINOR))*100));
+  const goal=summary.revenue_goal || {};
+  const periods=Array.isArray(goal.periods) ? goal.periods : [];
+  USER_REVENUE_CURRENCY=String(goal.currency || summary.preferred_currency || "USD").toLowerCase();
+  MONTHLY_GOAL_MINOR=Number(goal.monthly_goal_minor || summary.monthly_goal_minor || 200000);
+  const thisMonth=periods.find(p=>p.key==="this_month") || {value_minor:0,label:"This month",month_label:"this month"};
+  const thisMonthValue=Number(thisMonth.value_minor||0);
+  document.getElementById("weekly-goal-value").textContent=`${moneyFromMinor(thisMonthValue,USER_REVENUE_CURRENCY)} / ${moneyFromMinor(MONTHLY_GOAL_MINOR,USER_REVENUE_CURRENCY)}`;
+  const progress=Math.min(100,Math.round((thisMonthValue/Math.max(1,MONTHLY_GOAL_MINOR))*100));
   document.getElementById("weekly-goal-bar").style.width=`${progress}%`;
-  document.getElementById("weekly-goal-note").textContent=weeklyGoalNote(totalThisWeek,currency);
-  document.getElementById("revenue-trend-tag").textContent=`This week: ${moneyFromMinor(totalThisWeek,currency)}`;
-
-  if(!periods.some(p=>p.value>0)){
+  document.getElementById("weekly-goal-note").textContent=goalNote(thisMonthValue,USER_REVENUE_CURRENCY,goal.month_label || "this month");
+  document.getElementById("revenue-trend-tag").textContent=`${goal.month_label || "This month"}: ${moneyFromMinor(thisMonthValue,USER_REVENUE_CURRENCY)}`;
+  if(!periods.length || !periods.some(p=>Number(p.value_minor||0)>0)){
     root.className="chart-empty";
-    root.textContent=`No paid bundle revenue in ${String(currency).toUpperCase()} yet.`;
+    root.textContent=`No paid bundle revenue to convert into ${String(USER_REVENUE_CURRENCY).toUpperCase()} yet.`;
     return;
   }
-
-  const max=Math.max(1,...periods.map(p=>p.value));
-  root.className="period-bars";
-  root.innerHTML=periods.map(p=>{
-    const width=p.value===0?0:Math.max(4,Math.round((p.value/max)*100));
-    return `<div class="period-row"><div class="period-label">${p.label}</div><div class="period-track"><div class="period-fill" style="width:${width}%"></div></div><div class="period-value">${p.value?moneyFromMinor(p.value,currency):"—"}</div></div>`;
+  const max=Math.max(1,...periods.map(p=>Number(p.value_minor||0)));
+  root.className="revenue-column-chart";
+  const barsHtml=periods.map(p=>{
+    const value=Number(p.value_minor||0);
+    const height=value===0?0:Math.max(8,Math.round((value/max)*128));
+    const periodLabel=p.range_label || p.period_label || p.date_range || "";
+    const tooltip=`${p.label || "Period"}: ${moneyFromMinor(value,USER_REVENUE_CURRENCY)}${periodLabel?` · ${periodLabel}`:""}`;
+    return `<div class="revenue-column" title="${safeTextLocal(tooltip)}"><div class="revenue-column-value">${value?moneyFromMinor(value,USER_REVENUE_CURRENCY):"—"}</div><div class="revenue-column-track"><div class="revenue-column-fill ${value===0?"is-empty":""}" style="height:${height}px"></div></div><div class="revenue-column-label"><span>${safeTextLocal(p.short_label || p.label || "Period")}</span>${periodLabel?`<span class="revenue-column-period">${safeTextLocal(periodLabel)}</span>`:""}</div></div>`;
   }).join("");
+  root.innerHTML=`<div class="revenue-column-bars">${barsHtml}</div><div class="revenue-chart-context">Periods are calendar-aware. “This week” may include days from the previous month, while “This month” starts on the 1st. Last week/month labels show the inclusive display end date.</div><div class="revenue-chart-note">Converted for performance tracking only using ${safeTextLocal(goal.fx_source || "monthly FX snapshot")}${goal.fx_effective_month?` for ${safeTextLocal(goal.fx_effective_month)}`:""}. Actual earnings remain reported in original currencies.</div>`;
 }
 function renderReferral(ref){
   dashboardReferral=ref||{};
@@ -360,7 +314,7 @@ function renderReferral(ref){
     return `<div class="funnel-row"><div class="funnel-label">${label}</div><div class="funnel-track"><div class="funnel-fill ${count===0?"is-empty":""}" style="width:${width}%"></div></div><div class="funnel-count">${count}</div></div>`;
   }).join("")+`<div class="section-eyebrow" style="margin-top:8px;">${months} free month${months===1?"":"s"} earned from paying referrals.</div>`;
 }
-function renderRevenueSummary(summary,paymentsPayload){ const currencies=summary.currencies||[]; const payments=paymentsPayload.items||[]; dashboardPayments=payments; setWeeklyGoalFromSummary(summary,payments); const feeModel=summary.fee_model||paymentsPayload.fee_model||"platform_absorbs"; const grossByCurrency={}; const practitionerByCurrency={}; const platformNetByCurrency={}; let pending=Number(summary.unpaid_count||0); currencies.forEach(c=>{ const currency=String(c.currency||"gbp").toLowerCase(); addCurrency(grossByCurrency,currency,c.gross_minor); addCurrency(practitionerByCurrency,currency,c.practitioner_payout_minor); addCurrency(platformNetByCurrency,currency,c.platform_net_minor); }); if(!pending&&payments.length) pending=payments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid").length; document.getElementById("paid-revenue").textContent=displayMoneyList(grossByCurrency); document.getElementById("practitioner-earnings").textContent=displayMoneyList(practitionerByCurrency); document.getElementById("platform-net").textContent=displayMoneyList(platformNetByCurrency); document.getElementById("pending-payments").textContent=String(pending||0); document.getElementById("pending-payment-sub").textContent=pending?`${pending} client payment${pending===1?"":"s"} to follow up`:"No unpaid paid-access bundles"; document.getElementById("paid-revenue-sub").textContent=`${summary.paid_count||0} paid bundle${Number(summary.paid_count||0)===1?"":"s"}`; const pendingCard=document.getElementById("pending-payment-card"); pendingCard.classList.toggle("warning",Number(pending||0)>0); pendingCard.classList.toggle("good",Number(pending||0)===0); document.getElementById("fee-model-label").textContent=revenueFeeModelLabel(feeModel); document.getElementById("fee-model-note").textContent=revenueFeeModelNote(feeModel); document.getElementById("dashboard-revenue-insight").style.display="flex"; renderRevenueActivity(payments); renderRevenueChart(payments); }
+function renderRevenueSummary(summary,paymentsPayload){ const currencies=summary.currencies||[]; const payments=paymentsPayload.items||[]; dashboardPayments=payments; const feeModel=summary.fee_model||paymentsPayload.fee_model||"platform_absorbs"; const grossByCurrency={}; const practitionerByCurrency={}; const platformNetByCurrency={}; let pending=Number(summary.unpaid_count||0); currencies.forEach(c=>{ const currency=String(c.currency||"gbp").toLowerCase(); addCurrency(grossByCurrency,currency,c.gross_minor); addCurrency(practitionerByCurrency,currency,c.practitioner_payout_minor); addCurrency(platformNetByCurrency,currency,c.platform_net_minor); }); if(!pending&&payments.length) pending=payments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid").length; document.getElementById("paid-revenue").textContent=displayMoneyList(grossByCurrency); document.getElementById("practitioner-earnings").textContent=displayMoneyList(practitionerByCurrency); document.getElementById("platform-net").textContent=displayMoneyList(platformNetByCurrency); document.getElementById("pending-payments").textContent=String(pending||0); document.getElementById("pending-payment-sub").textContent=pending?`${pending} client payment${pending===1?"":"s"} to follow up`:"No unpaid paid-access bundles"; document.getElementById("paid-revenue-sub").textContent=`${summary.paid_count||0} paid bundle${Number(summary.paid_count||0)===1?"":"s"} · original currencies`; const pendingCard=document.getElementById("pending-payment-card"); pendingCard.classList.toggle("warning",Number(pending||0)>0); pendingCard.classList.toggle("good",Number(pending||0)===0); document.getElementById("fee-model-label").textContent=revenueFeeModelLabel(feeModel); document.getElementById("fee-model-note").textContent=revenueFeeModelNote(feeModel); document.getElementById("dashboard-revenue-insight").style.display="flex"; renderRevenueActivity(payments); renderRevenueChart(payments, summary); }
 function renderRevenueActivity(payments){ const list=document.getElementById("revenue-activity-list"); const paid=(payments||[]).filter(p=>paymentStatus(p)==="paid").slice().sort((a,b)=>new Date(paymentDate(b)||0)-new Date(paymentDate(a)||0)).slice(0,5); if(!paid.length){ list.innerHTML=`<div class="empty-state">No paid bundle activity yet.</div>`; return; } list.innerHTML=paid.map(p=>`<div class="activity-item"><div class="activity-title">${moneyFromMinor(paymentGrossMinor(p),paymentCurrency(p))}</div><div class="activity-meta">${safeTextLocal(p.patient_name||p.patient_display_name||p.bundle_label||"Paid bundle")} · ${formatDateTimeLocal(paymentDate(p))}</div></div>`).join(""); }
 function renderActionPanel(){ const list=document.getElementById("action-list"); const failed=dashboardRows.filter(r=>statusValue(r)==="failed"); const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))); const unpaid=dashboardPayments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid"); const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).slice(0,5); const actions=[]; if(failed.length) actions.push({cls:"warning",title:`${failed.length} failed report${failed.length===1?"":"s"}`,subtitle:"Fix now to avoid client delivery delays. Retry from the reports or cases workspace.",href:"/app/reports"}); if(stuck.length) actions.push({cls:"warning",title:`${stuck.length} draft / queued report${stuck.length===1?"":"s"}`,subtitle:"These reports may need refresh, retry, or cleanup.",href:"/app/reports"}); if(unpaid.length){ const byCurrency={}; unpaid.forEach(p=>addCurrency(byCurrency,paymentCurrency(p),paymentGrossMinor(p))); actions.push({cls:"warning",title:`${unpaid.length} bundle${unpaid.length===1?"":"s"} awaiting payment`,subtitle:`Potential revenue: ${displayMoneyList(byCurrency,"—")}. Send a reminder or review payment links.`,href:"/app/share-links"}); } if(ready.length) actions.push({cls:"",title:"Share ready reports",subtitle:"Create a bundle or single share for recent ready reports.",href:"/app/reports"}); if(!actions.length) actions.push({cls:"good",title:"No urgent operational issues",subtitle:"Reports, shares, and revenue items look healthy.",href:"/app/reports"}); list.innerHTML=actions.map(a=>`<div class="action-item ${a.cls}"><div><div class="action-title">${safeTextLocal(a.title)}</div><div class="action-subtitle">${safeTextLocal(a.subtitle)}</div></div><a class="btn secondary" href="${a.href}">Open</a></div>`).join(""); }
 function renderPipeline(){ const assessments=dashboardRows.filter(r=>reportType(r)==="assessment"); const trends=dashboardRows.filter(r=>reportType(r)==="trend"); const since=Date.now()-(7*24*60*60*1000); const last7=dashboardRows.filter(r=>{ const d=new Date(r.generated_at||0); return !Number.isNaN(d.getTime())&&d.getTime()>=since; }); document.getElementById("pipeline-assessments").textContent=`${assessments.length} assessment${assessments.length===1?"":"s"}`; document.getElementById("pipeline-trends").textContent=`${trends.length} trend report${trends.length===1?"":"s"}`; document.getElementById("pipeline-7d").textContent=`${last7.length} in last 7 days`; }

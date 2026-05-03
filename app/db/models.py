@@ -73,6 +73,12 @@ class PractitionerSettings(Base):
     support_email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     website_url: Mapped[Optional[str]] = mapped_column(String(500), nullable=True)
 
+    # Dashboard performance settings. Actual revenue remains reported in the
+    # original transaction currencies; these fields are only used for converted
+    # goal tracking and visual dashboard progress.
+    preferred_currency: Mapped[Optional[str]] = mapped_column(String(10), default="USD", nullable=True)
+    monthly_goal_minor: Mapped[Optional[int]] = mapped_column(Integer, default=200000, nullable=True)
+
     recommendation_mode_default: Mapped[RecommendationMode] = mapped_column(
         Enum(RecommendationMode),
         default=RecommendationMode.natural_approaches_clinical,
@@ -337,38 +343,6 @@ class Subscription(Base):
 
     user: Mapped["User"] = relationship(back_populates="subscriptions")
 
-
-
-class Referral(Base):
-    __tablename__ = "referrals"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    referrer_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    referred_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="SET NULL"), nullable=True, index=True)
-    referral_code: Mapped[str] = mapped_column(String(80), nullable=False, index=True)
-    status: Mapped[str] = mapped_column(String(40), default="signed_up", nullable=False, index=True)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
-
-
-class ReferralReward(Base):
-    __tablename__ = "referral_rewards"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    referrer_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    referred_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
-    months_awarded: Mapped[int] = mapped_column(Integer, default=1, nullable=False)
-    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
-
-
-class SubscriptionCredit(Base):
-    __tablename__ = "subscription_credits"
-
-    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), unique=True, index=True)
-    months_available: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    months_used: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
-    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
 class AuditLog(Base):
     __tablename__ = "audit_logs"
