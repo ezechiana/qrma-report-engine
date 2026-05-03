@@ -9,10 +9,11 @@ from typing import Any
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.platform_settings_service import is_feature_enabled
+
 REFERRAL_ENABLED = os.getenv("REFERRAL_ENABLED", "true").lower() == "true"
 DEFAULT_REWARD_MONTHS = int(os.getenv("REFERRAL_REWARD_MONTHS", "1"))
 REFERRAL_SETTINGS_KEY = "referral_config"
-DEFAULT_PLAN_CODE = os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly"))
 
 
 def _utcnow() -> datetime:
@@ -31,13 +32,14 @@ def generate_referral_code() -> str:
 
 
 def get_referral_config(db: Session) -> dict[str, Any]:
-    """Read referral configuration. Schema is managed by migrations, never request-time DDL."""
+    """Read referral config. Schema must be migrated separately; no runtime DDL here."""
     default_config = {
-        "enabled": REFERRAL_ENABLED,
+        "enabled": feature_enabled,
         "reward_type": "free_months",
         "reward_months": DEFAULT_REWARD_MONTHS,
         "trigger": "referred_user_becomes_paid",
     }
+
     try:
         row = db.execute(
             text("SELECT value FROM app_settings WHERE key = :key"),
@@ -58,7 +60,7 @@ def get_referral_config(db: Session) -> dict[str, Any]:
             value = {}
 
     return {
-        "enabled": bool(value.get("enabled", REFERRAL_ENABLED)),
+        "enabled": bool(value.get("enabled", feature_enabled)) and feature_enabled,
         "reward_type": value.get("reward_type") or "free_months",
         "reward_months": int(value.get("reward_months") or DEFAULT_REWARD_MONTHS),
         "trigger": value.get("trigger") or "referred_user_becomes_paid",
@@ -66,6 +68,7 @@ def get_referral_config(db: Session) -> dict[str, Any]:
 
 
 def ensure_user_referral_code(db: Session, user) -> str:
+    """Ensure the user has a referral code. No schema changes are attempted here."""
     row = db.execute(
         text("SELECT referral_code FROM users WHERE id = :user_id"),
         {"user_id": user.id},
@@ -79,12 +82,16 @@ def ensure_user_referral_code(db: Session, user) -> str:
             pass
         return existing
 
-    for _ in range(20):
+    for _ in range(10):
         code = generate_referral_code()
         exists = db.execute(text("SELECT 1 FROM users WHERE referral_code = :code"), {"code": code}).first()
         if exists:
             continue
-        db.execute(text("UPDATE users SET referral_code = :code WHERE id = :user_id"), {"code": code, "user_id": user.id})
+
+        db.execute(
+            text("UPDATE users SET referral_code = :code WHERE id = :user_id"),
+            {"code": code, "user_id": user.id},
+        )
         db.commit()
         try:
             setattr(user, "referral_code", code)
@@ -96,6 +103,7 @@ def ensure_user_referral_code(db: Session, user) -> str:
 
 
 def register_referral_signup(db: Session, *, referred_user, referral_code: str | None) -> None:
+    """Called during signup when /register?ref=CODE is present."""
     config = get_referral_config(db)
     if not config.get("enabled"):
         return
@@ -104,7 +112,10 @@ def register_referral_signup(db: Session, *, referred_user, referral_code: str |
     if not code:
         return
 
-    referrer = db.execute(text("SELECT id FROM users WHERE referral_code = :code LIMIT 1"), {"code": code}).mappings().first()
+    referrer = db.execute(
+        text("SELECT id FROM users WHERE referral_code = :code LIMIT 1"),
+        {"code": code},
+    ).mappings().first()
     if not referrer:
         return
 
@@ -124,95 +135,13 @@ def register_referral_signup(db: Session, *, referred_user, referral_code: str |
             INSERT INTO referrals (referrer_user_id, referred_user_id, referral_code, status, created_at, updated_at)
             VALUES (:referrer_user_id, :referred_user_id, :referral_code, 'signed_up', NOW(), NOW())
         """),
-        {"referrer_user_id": referrer_id, "referred_user_id": referred_user.id, "referral_code": code},
+        {
+            "referrer_user_id": referrer_id,
+            "referred_user_id": referred_user.id,
+            "referral_code": code,
+        },
     )
     db.commit()
-
-
-def get_subscription_credit_summary(db: Session, *, user_id) -> dict[str, int]:
-    row = db.execute(
-        text("""
-            SELECT months_available, months_used
-            FROM subscription_credits
-            WHERE user_id = :user_id
-        """),
-        {"user_id": user_id},
-    ).mappings().first()
-
-    rewards = db.execute(
-        text("""
-            SELECT COALESCE(SUM(months_awarded), 0) AS months_awarded
-            FROM referral_rewards
-            WHERE referrer_user_id = :user_id
-        """),
-        {"user_id": user_id},
-    ).mappings().first()
-
-    return {
-        "months_available": int(row["months_available"] or 0) if row else 0,
-        "months_used": int(row["months_used"] or 0) if row else 0,
-        "months_awarded": int(rewards["months_awarded"] or 0) if rewards else 0,
-    }
-
-
-def apply_subscription_credits(db: Session, *, user_id) -> bool:
-    """Apply any available free-month credit to the user's current subscription period."""
-    credit = db.execute(
-        text("""
-            SELECT months_available
-            FROM subscription_credits
-            WHERE user_id = :user_id
-            FOR UPDATE
-        """),
-        {"user_id": user_id},
-    ).mappings().first()
-
-    if not credit or int(credit["months_available"] or 0) <= 0:
-        return False
-
-    months = int(credit["months_available"] or 0)
-
-    db.execute(
-        text("""
-            INSERT INTO subscriptions (user_id, plan_code, status, current_period_end, created_at, updated_at)
-            SELECT :user_id, :plan_code, 'active', NOW(), NOW(), NOW()
-            WHERE NOT EXISTS (SELECT 1 FROM subscriptions WHERE user_id = :user_id)
-        """),
-        {"user_id": user_id, "plan_code": DEFAULT_PLAN_CODE},
-    )
-
-    db.execute(
-        text("""
-            UPDATE subscriptions
-            SET status = CASE
-                    WHEN status IN ('canceled', 'trial_expired', 'expired', 'incomplete', 'past_due') THEN 'active'
-                    ELSE status
-                END,
-                current_period_end = GREATEST(COALESCE(current_period_end, NOW()), NOW()) + (:months * INTERVAL '1 month'),
-                updated_at = NOW()
-            WHERE id = (
-                SELECT id
-                FROM subscriptions
-                WHERE user_id = :user_id
-                ORDER BY created_at DESC
-                LIMIT 1
-            )
-        """),
-        {"user_id": user_id, "months": months},
-    )
-
-    db.execute(
-        text("""
-            UPDATE subscription_credits
-            SET months_used = months_used + :months,
-                months_available = months_available - :months,
-                updated_at = NOW()
-            WHERE user_id = :user_id
-        """),
-        {"user_id": user_id, "months": months},
-    )
-    db.commit()
-    return True
 
 
 def award_referral_if_eligible(db: Session, *, referred_user_id) -> bool:
@@ -248,22 +177,30 @@ def award_referral_if_eligible(db: Session, *, referred_user_id) -> bool:
 
     db.execute(
         text("""
-            INSERT INTO referral_rewards (referrer_user_id, referred_user_id, months_awarded, created_at)
-            VALUES (:referrer_user_id, :referred_user_id, :months, NOW())
-            ON CONFLICT (referrer_user_id, referred_user_id) DO NOTHING
+            INSERT INTO subscriptions (user_id, plan_code, status, current_period_end, created_at, updated_at)
+            SELECT :referrer_user_id, 'practitioner_monthly', 'active', NOW(), NOW(), NOW()
+            WHERE NOT EXISTS (
+                SELECT 1 FROM subscriptions WHERE user_id = :referrer_user_id
+            )
         """),
-        {"referrer_user_id": ref["referrer_user_id"], "referred_user_id": referred_user_id, "months": months},
+        {"referrer_user_id": ref["referrer_user_id"]},
     )
 
     db.execute(
         text("""
-            INSERT INTO subscription_credits (user_id, months_available, months_used, updated_at)
-            VALUES (:user_id, :months, 0, NOW())
-            ON CONFLICT (user_id)
-            DO UPDATE SET months_available = subscription_credits.months_available + :months,
-                          updated_at = NOW()
+            UPDATE subscriptions
+            SET status = CASE WHEN status IN ('canceled', 'trial_expired', 'expired', 'incomplete') THEN 'active' ELSE status END,
+                current_period_end = GREATEST(COALESCE(current_period_end, NOW()), NOW()) + (:months * INTERVAL '1 month'),
+                updated_at = NOW()
+            WHERE id = (
+                SELECT id
+                FROM subscriptions
+                WHERE user_id = :referrer_user_id
+                ORDER BY created_at DESC
+                LIMIT 1
+            )
         """),
-        {"user_id": ref["referrer_user_id"], "months": months},
+        {"referrer_user_id": ref["referrer_user_id"], "months": months},
     )
 
     db.execute(
@@ -274,10 +211,20 @@ def award_referral_if_eligible(db: Session, *, referred_user_id) -> bool:
         """),
         {"referral_id": ref["id"]},
     )
-    db.commit()
 
-    # V1 policy: apply free-month credit immediately to the current subscription period.
-    apply_subscription_credits(db, user_id=ref["referrer_user_id"])
+    db.execute(
+        text("""
+            INSERT INTO referral_rewards (referrer_user_id, referred_user_id, months_awarded, created_at)
+            VALUES (:referrer_user_id, :referred_user_id, :months, NOW())
+            ON CONFLICT (referrer_user_id, referred_user_id) DO NOTHING
+        """),
+        {
+            "referrer_user_id": ref["referrer_user_id"],
+            "referred_user_id": referred_user_id,
+            "months": months,
+        },
+    )
+    db.commit()
     return True
 
 
@@ -300,7 +247,14 @@ def referral_summary(db: Session, *, user, base_url: str) -> dict[str, Any]:
         {"user_id": user.id},
     ).mappings().first()
 
-    credit_summary = get_subscription_credit_summary(db, user_id=user.id)
+    rewards = db.execute(
+        text("""
+            SELECT COALESCE(SUM(months_awarded), 0) AS months_awarded
+            FROM referral_rewards
+            WHERE referrer_user_id = :user_id
+        """),
+        {"user_id": user.id},
+    ).mappings().first()
 
     recent_rows = db.execute(
         text("""
@@ -320,7 +274,7 @@ def referral_summary(db: Session, *, user, base_url: str) -> dict[str, Any]:
         "enabled": bool(config.get("enabled")),
         "reward_type": config.get("reward_type"),
         "reward_months": reward_months,
-        "headline": f"Give a colleague access. Get {reward_months} month{'s' if reward_months != 1 else ''} free.",
+        "headline": f"Refer a paying practitioner and get {reward_months} month{'s' if reward_months != 1 else ''} free.",
         "referral_code": code,
         "referral_link": link,
         "counts": {
@@ -329,10 +283,7 @@ def referral_summary(db: Session, *, user, base_url: str) -> dict[str, Any]:
             "paid": int(counts["paid"] or 0) if counts else 0,
             "rewarded": int(counts["rewarded"] or 0) if counts else 0,
         },
-        "months_awarded": credit_summary["months_awarded"],
-        "months_available": credit_summary["months_available"],
-        "months_used": credit_summary["months_used"],
-        "credit_summary": credit_summary,
+        "months_awarded": int(rewards["months_awarded"] or 0) if rewards else 0,
         "recent": [
             {
                 "status": row["status"],

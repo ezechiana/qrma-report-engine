@@ -79,18 +79,18 @@
 .spark-bar { width:100%; max-width:34px; min-height:5px; border-radius:999px 999px 4px 4px; background:linear-gradient(180deg,#2563eb,#60a5fa); transition:height .35s ease; }
 .spark-label { font-size:10px; color:#64748b; white-space:nowrap; }
 .spark-value { font-size:10px; color:#0f172a; font-weight:800; white-space:nowrap; }
-.revenue-column-chart { display:block; min-height:335px; padding:16px; border:1px solid #eef2f7; border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow:visible; }
-.revenue-column-bars { display:flex; align-items:stretch; gap:16px; min-height:248px; height:auto; padding:6px 4px 4px; overflow:visible; }
-.revenue-column { flex:1; min-width:0; display:grid; grid-template-rows:42px 144px 58px; gap:8px; align-items:end; text-align:center; overflow:visible; }
-.revenue-column-value { font-size:12px; color:#0f172a; font-weight:950; min-height:24px; white-space:nowrap; overflow:visible; text-overflow:clip; display:flex; align-items:flex-end; justify-content:center; position:relative; z-index:2; }
-.revenue-column-track { width:100%; height:144px; display:flex; align-items:flex-end; justify-content:center; border-bottom:1px solid #e2e8f0; overflow:visible; }
+.revenue-column-chart { display:block; min-height:275px; padding:16px; border:1px solid #eef2f7; border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow:visible; }
+.revenue-column-bars { display:flex; align-items:flex-end; gap:16px; height:218px; padding:24px 4px 4px; }
+.revenue-column { flex:1; min-width:0; display:grid; grid-template-rows:36px 128px 52px; gap:8px; align-items:end; text-align:center; }
+.revenue-column-value { font-size:12px; color:#0f172a; font-weight:900; min-height:22px; white-space:nowrap; overflow:visible; text-overflow:clip; display:flex; align-items:flex-end; justify-content:center; position:relative; z-index:2; }
+.revenue-column-track { width:100%; height:128px; display:flex; align-items:flex-end; justify-content:center; border-bottom:1px solid #e2e8f0; }
 .revenue-column-fill { width:min(46px,72%); min-height:0; border-radius:12px 12px 5px 5px; background:linear-gradient(180deg,#2563eb,#60a5fa); transition:height .35s ease; box-shadow:0 10px 20px rgba(37,99,235,.12); }
 .revenue-column-fill.is-empty { height:0 !important; box-shadow:none; background:transparent; }
-.revenue-column-label { font-size:11px; color:#334155; font-weight:900; line-height:1.15; min-height:54px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:3px; }
+.revenue-column-label { font-size:11px; color:#334155; font-weight:900; line-height:1.15; min-height:48px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:3px; }
 .revenue-column-period { color:#64748b; font-size:10px; font-weight:750; line-height:1.15; }
-.revenue-chart-context { margin:14px 0 0; padding:9px 10px; border:1px solid #dbeafe; background:#eff6ff; border-radius:12px; color:#1e3a8a; font-size:12px; line-height:1.4; }
+.revenue-chart-context { margin:12px 0 0; padding:9px 10px; border:1px solid #dbeafe; background:#eff6ff; border-radius:12px; color:#1e3a8a; font-size:12px; line-height:1.4; }
 .revenue-chart-note { margin-top:12px; padding-top:10px; border-top:1px solid #e2e8f0; color:#64748b; font-size:12px; line-height:1.45; }
-@media(max-width:700px){ .revenue-column-chart{padding:12px; min-height:320px;} .revenue-column-bars{gap:8px; min-height:238px;} .revenue-column{grid-template-rows:38px 136px 58px;} .revenue-column-track{height:136px;} .revenue-column-value{font-size:10px;} .revenue-column-label{font-size:9px;} .revenue-column-period{font-size:8px;} }
+@media(max-width:700px){ .revenue-column-chart{padding:12px;} .revenue-column-bars{gap:8px;} .revenue-column-value{font-size:10px;} .revenue-column-label{font-size:9px;} .revenue-column-period{font-size:8px;} }
 
 .funnel-list { display:grid; gap:12px; margin-top:6px; }
 .funnel-row { display:grid; grid-template-columns:110px 1fr 42px; gap:10px; align-items:center; font-size:13px; }
@@ -278,12 +278,12 @@ function renderRevenueChart(payments, summary={}){
   root.className="revenue-column-chart";
   const barsHtml=periods.map(p=>{
     const value=Number(p.value_minor||0);
-    const height=value===0?0:Math.max(8,Math.round((value/max)*144));
+    const height=value===0?0:Math.max(8,Math.round((value/max)*128));
     const periodLabel=p.range_label || p.period_label || p.date_range || "";
     const tooltip=`${p.label || "Period"}: ${moneyFromMinor(value,USER_REVENUE_CURRENCY)}${periodLabel?` · ${periodLabel}`:""}`;
     return `<div class="revenue-column" title="${safeTextLocal(tooltip)}"><div class="revenue-column-value">${value?moneyFromMinor(value,USER_REVENUE_CURRENCY):"—"}</div><div class="revenue-column-track"><div class="revenue-column-fill ${value===0?"is-empty":""}" style="height:${height}px"></div></div><div class="revenue-column-label"><span>${safeTextLocal(p.short_label || p.label || "Period")}</span>${periodLabel?`<span class="revenue-column-period">${safeTextLocal(periodLabel)}</span>`:""}</div></div>`;
   }).join("");
-  root.innerHTML=`<div class="revenue-column-bars">${barsHtml}</div><div class="revenue-chart-context">${safeTextLocal(goal.period_note || "Periods are calendar-aware. “This week” may include days from the previous month, while “This month” starts on the 1st. Last week/month labels show the inclusive display end date.")}</div><div class="revenue-chart-note">Converted for performance tracking only using ${safeTextLocal(goal.fx_source || "monthly FX snapshot")}${goal.fx_effective_month?` for ${safeTextLocal(goal.fx_effective_month)}`:""}. Actual earnings remain reported in original currencies.</div>`;
+  root.innerHTML=`<div class="revenue-column-bars">${barsHtml}</div><div class="revenue-chart-context">Periods are calendar-aware. “This week” may include days from the previous month, while “This month” starts on the 1st. Last week/month labels show the inclusive display end date.</div><div class="revenue-chart-note">Converted for performance tracking only using ${safeTextLocal(goal.fx_source || "monthly FX snapshot")}${goal.fx_effective_month?` for ${safeTextLocal(goal.fx_effective_month)}`:""}. Actual earnings remain reported in original currencies.</div>`;
 }
 function renderReferral(ref){
   dashboardReferral=ref||{};

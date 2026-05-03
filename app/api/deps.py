@@ -83,3 +83,37 @@ def get_current_active_user(current_user: CurrentUser) -> User:
 
 
 CurrentActiveUser = Annotated[User, Depends(get_current_active_user)]
+
+def require_platform_admin(
+    db: CurrentDB,
+    current_user: CurrentUser,
+) -> User:
+    """Require platform administrator access.
+
+    Access is granted when either:
+    - users.role = 'admin', or
+    - the user's email is present in Platform Settings / PLATFORM_ADMIN_EMAILS.
+    """
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    if not is_platform_admin_user(db, current_user):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Platform administrator access required.",
+        )
+    return current_user
+
+
+def require_feature_enabled(feature_key: str):
+    """FastAPI dependency factory for feature-flag enforcement."""
+    def _dependency(db: CurrentDB) -> bool:
+        from app.services.platform_settings_service import is_feature_enabled
+
+        if not is_feature_enabled(db, feature_key, default=True):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Feature disabled: {feature_key}",
+            )
+        return True
+
+    return _dependency

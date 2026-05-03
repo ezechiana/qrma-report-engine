@@ -697,11 +697,9 @@
             localStorage.setItem("redirect_after_login", getRedirectTarget());
         }
 
-        function redirectToLogin(reason = "expired") {
+        function redirectToLogin() {
             rememberRedirectTarget();
-            const next = encodeURIComponent(getRedirectTarget());
-            const reasonQuery = reason ? `&session=${encodeURIComponent(reason)}` : "";
-            window.location.href = `/login?next=${next}${reasonQuery}`;
+            window.location.href = "/login";
         }
 
         async function apiFetch(url, options = {}) {
@@ -718,7 +716,7 @@
 
             if (response.status === 401) {
                 clearAuthSession();
-                redirectToLogin("expired");
+                redirectToLogin();
             }
 
             return response;
@@ -733,7 +731,7 @@
 
                 if (response.status === 401 || !response.ok) {
                     clearAuthSession();
-                    redirectToLogin("expired");
+                    redirectToLogin();
                     return false;
                 }
 
@@ -744,7 +742,7 @@
                 return true;
             } catch (e) {
                 clearAuthSession();
-                redirectToLogin("expired");
+                redirectToLogin();
                 return false;
             }
         }
@@ -1104,6 +1102,7 @@
             <a href="/app/reports" id="nav-reports">Reports</a>
             <a href="/app/share-links" id="nav-shares">Shares</a>
             <a href="/app/revenue" id="nav-revenue">Revenue</a>
+            <a href="/app/platform-settings" id="nav-platform-settings" style="display:none;">Platform Settings</a>
         </nav>
 
         <div class="sidebar-footer">
@@ -1134,6 +1133,7 @@
                     </div>
                     <a href="/app/settings">Settings</a>
                     <a href="/app/billing">Billing</a>
+                    <a href="/app/platform-settings" id="account-platform-settings-link" style="display:none;">Platform Settings</a>
                     <button type="button" onclick="logoutNow()">Logout</button>
                 </div>
             </div>
@@ -1182,6 +1182,17 @@
             if (menuEmailEl) menuEmailEl.textContent = email;
         }
 
+        try {
+            const adminRes = await apiFetch('/api/platform-settings/me');
+            const adminData = await adminRes.json().catch(() => ({}));
+            if (adminRes.ok && adminData.is_admin) {
+                document.getElementById('nav-platform-settings')?.style.removeProperty('display');
+                document.getElementById('account-platform-settings-link')?.style.removeProperty('display');
+            }
+        } catch (err) {
+            // Non-admin users simply do not see platform controls.
+        }
+
         if (path === "/app") {
             document.getElementById("nav-dashboard")?.classList.add("active");
         } else if (path.startsWith("/app/patients")) {
@@ -1194,6 +1205,8 @@
             document.getElementById("nav-shares")?.classList.add("active");
         } else if (path.startsWith("/app/revenue")) {
             document.getElementById("nav-revenue")?.classList.add("active");
+        } else if (path.startsWith("/app/platform-settings")) {
+            document.getElementById("nav-platform-settings")?.classList.add("active");
         }
 
         const sidebar = document.getElementById("app-sidebar");

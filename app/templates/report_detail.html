@@ -97,14 +97,64 @@ let currentReport = null;
 
 function setError(msg) {
     const box = document.getElementById("error-box");
+    if (!box) return;
     box.style.display = "block";
     box.textContent = msg;
 }
-function clearError() { const box = document.getElementById("error-box"); box.style.display = "none"; box.textContent = ""; }
-function setSuccess(msg) { const box = document.getElementById("success-box"); box.style.display = "block"; box.textContent = msg; }
-function clearSuccess() { const box = document.getElementById("success-box"); box.style.display = "none"; box.textContent = ""; }
+function clearError() {
+    const box = document.getElementById("error-box");
+    if (!box) return;
+    box.style.display = "none";
+    box.textContent = "";
+}
+function setSuccess(msg) {
+    const box = document.getElementById("success-box");
+    if (!box) return;
+    box.style.display = "block";
+    box.textContent = msg;
+}
+function clearSuccess() {
+    const box = document.getElementById("success-box");
+    if (!box) return;
+    box.style.display = "none";
+    box.textContent = "";
+}
 
-function isTrend(data) { return data.report_type === "trend"; }
+function escapeHtml(value, fallback = "—") {
+    if (value === null || value === undefined || value === "") return fallback;
+    if (typeof window.safeText === "function") return window.safeText(value, fallback);
+    return String(value).replace(/[&<>"']/g, function(m) {
+        return ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"})[m];
+    });
+}
+
+function displayDate(value) {
+    if (!value) return "—";
+    if (typeof window.formatDate === "function") return window.formatDate(value);
+    const d = new Date(value);
+    if (Number.isNaN(d.getTime())) return String(value);
+    return d.toLocaleDateString(undefined, { year:"numeric", month:"short", day:"numeric" });
+}
+
+async function appFetch(url, options = {}) {
+    if (typeof window.apiFetch === "function") return window.apiFetch(url, options);
+    return fetch(url, { credentials:"same-origin", headers:{"Content-Type":"application/json", ...(options.headers || {})}, ...options });
+}
+
+async function ensureAuth() {
+    if (typeof window.requireAuthOrRedirect === "function") return window.requireAuthOrRedirect();
+    return true;
+}
+
+async function maybeHandleSubscription(response, label) {
+    if (typeof window.handleSubscriptionRequiredResponse === "function") {
+        return window.handleSubscriptionRequiredResponse(response, label);
+    }
+    return false;
+}
+
+function isTrend(data) { return data && data.report_type === "trend"; }
+function sourceIds(data) { return Array.isArray(data?.source_report_ids) ? data.source_report_ids : []; }
 
 async function copyShareUrl(url) {
     try {
@@ -112,26 +162,24 @@ async function copyShareUrl(url) {
         setSuccess("Share link copied to clipboard.");
     } catch (err) {
         console.warn("Clipboard copy failed", err);
-        const result = document.getElementById("share-result");
-        if (result) {
-            const fallback = document.createElement("textarea");
-            fallback.value = url;
-            document.body.appendChild(fallback);
-            fallback.select();
-            try {
-                document.execCommand("copy");
-                setSuccess("Share link copied to clipboard.");
-            } catch (copyErr) {
-                setError("Could not copy automatically. Please select and copy the link manually.");
-            } finally {
-                document.body.removeChild(fallback);
-            }
+        const fallback = document.createElement("textarea");
+        fallback.value = url;
+        document.body.appendChild(fallback);
+        fallback.select();
+        try {
+            document.execCommand("copy");
+            setSuccess("Share link copied to clipboard.");
+        } catch (copyErr) {
+            setError("Could not copy automatically. Please select and copy the link manually.");
+        } finally {
+            document.body.removeChild(fallback);
         }
     }
 }
 
 function renderShareResult(finalShareUrl) {
     const encodedUrl = encodeURIComponent(finalShareUrl);
+    const safeUrl = escapeHtml(finalShareUrl);
     const shareLabel = isTrend(currentReport) ? "progress report" : "wellness scan report";
     const whatsappText = encodeURIComponent(`Your ${shareLabel} is ready: ${finalShareUrl}`);
     const emailSubject = encodeURIComponent("Your secure health report");
@@ -141,17 +189,15 @@ function renderShareResult(finalShareUrl) {
         <div class="share-result-card">
             <div class="share-result-title">Share link ready</div>
             <div class="share-result-url">
-                <a class="link" href="${finalShareUrl}" target="_blank" rel="noopener noreferrer">${safeText(finalShareUrl)}</a>
+                <a class="link" href="${safeUrl}" target="_blank" rel="noopener noreferrer">${safeUrl}</a>
             </div>
             <div class="share-result-actions">
                 <button class="btn secondary" type="button" onclick="copyShareUrl(decodeURIComponent('${encodedUrl}'))">Copy link</button>
-                <a class="btn secondary" href="${finalShareUrl}" target="_blank" rel="noopener noreferrer">Preview client view</a>
+                <a class="btn secondary" href="${safeUrl}" target="_blank" rel="noopener noreferrer">Preview client view</a>
                 <a class="btn secondary" href="https://wa.me/?text=${whatsappText}" target="_blank" rel="noopener noreferrer">WhatsApp</a>
                 <a class="btn secondary" href="mailto:?subject=${emailSubject}&body=${emailBody}">Email</a>
             </div>
-            <div class="share-helper-text">
-                Tip: preview the client view first, especially if you added a password or a paid access amount.
-            </div>
+            <div class="share-helper-text">Tip: preview the client view first, especially if you added a password or a paid access amount.</div>
         </div>
     `;
 }
@@ -166,23 +212,24 @@ function renderType(data) {
 function renderMetadata(data) {
     const trend = isTrend(data);
     const summary = document.getElementById("report-summary");
+    const sourceCount = data.source_count || sourceIds(data).length || 0;
     if (trend) {
         summary.innerHTML = `
             <div class="meta-card"><div class="meta-label">Report type</div><div class="meta-value">Trend report</div></div>
-            <div class="meta-card"><div class="meta-label">Patient</div><div class="meta-value">${safeText(data.patient_display_name || "—")}</div></div>
-            <div class="meta-card"><div class="meta-label">Source assessments</div><div class="meta-value">${safeText(data.source_count || (data.source_report_ids || []).length || 0)}</div></div>
-            <div class="meta-card"><div class="meta-label">Source range</div><div class="meta-value">${safeText(data.source_scan_range || "—")}</div></div>
-            <div class="meta-card"><div class="meta-label">Health Index</div><div class="meta-value">${safeText(data.health_index ?? "—")}${data.health_index_change !== null && data.health_index_change !== undefined ? ` (${Number(data.health_index_change) > 0 ? "+" : ""}${safeText(data.health_index_change)})` : ""}</div></div>
-            <div class="meta-card"><div class="meta-label">Generated</div><div class="meta-value">${formatDate(data.generated_at)}</div></div>
+            <div class="meta-card"><div class="meta-label">Patient</div><div class="meta-value">${escapeHtml(data.patient_display_name)}</div></div>
+            <div class="meta-card"><div class="meta-label">Source assessments</div><div class="meta-value">${escapeHtml(sourceCount)}</div></div>
+            <div class="meta-card"><div class="meta-label">Source range</div><div class="meta-value">${escapeHtml(data.source_scan_range)}</div></div>
+            <div class="meta-card"><div class="meta-label">Health Index</div><div class="meta-value">${escapeHtml(data.health_index)}${data.health_index_change !== null && data.health_index_change !== undefined ? ` (${Number(data.health_index_change) > 0 ? "+" : ""}${escapeHtml(data.health_index_change)})` : ""}</div></div>
+            <div class="meta-card"><div class="meta-label">Generated</div><div class="meta-value">${displayDate(data.generated_at)}</div></div>
         `;
     } else {
         summary.innerHTML = `
             <div class="meta-card"><div class="meta-label">Report type</div><div class="meta-value">Assessment report</div></div>
-            <div class="meta-card"><div class="meta-label">Patient</div><div class="meta-value">${safeText(data.patient_display_name || "—")}</div></div>
-            <div class="meta-card"><div class="meta-label">Version</div><div class="meta-value">v${safeText(data.version_number || "1")}</div></div>
-            <div class="meta-card"><div class="meta-label">Scan date/time</div><div class="meta-value">${safeText(data.scan_datetime_display || "—")}</div></div>
-            <div class="meta-card"><div class="meta-label">Generated</div><div class="meta-value">${formatDate(data.generated_at)}</div></div>
-            <div class="meta-card"><div class="meta-label">Status</div><div class="meta-value">${safeText(data.is_archived ? "Archived" : "Active")}</div></div>
+            <div class="meta-card"><div class="meta-label">Patient</div><div class="meta-value">${escapeHtml(data.patient_display_name)}</div></div>
+            <div class="meta-card"><div class="meta-label">Version</div><div class="meta-value">v${escapeHtml(data.version_number || "1")}</div></div>
+            <div class="meta-card"><div class="meta-label">Scan date/time</div><div class="meta-value">${escapeHtml(data.scan_datetime_display)}</div></div>
+            <div class="meta-card"><div class="meta-label">Generated</div><div class="meta-value">${displayDate(data.generated_at)}</div></div>
+            <div class="meta-card"><div class="meta-label">Status</div><div class="meta-value">${escapeHtml(data.is_archived ? "Archived" : "Active")}</div></div>
         `;
     }
 }
@@ -192,42 +239,18 @@ function renderActions(data) {
     if (isTrend(data)) {
         document.getElementById("actions-heading").textContent = "Trend report actions";
         grid.innerHTML = `
-            <div class="action-card">
-                <h4>Open trend report</h4>
-                <p>View the full trend intelligence dashboard, marker changes, charts, priorities, and recommendations.</p>
-                <a class="btn" href="/trend-reports/${reportId}">Open trend report</a>
-            </div>
-            <div class="action-card">
-                <h4>Review source assessments</h4>
-                <p>Open the assessment reports used to generate this trend report.</p>
-                <button class="btn secondary" type="button" onclick="document.getElementById('source-reports-card').scrollIntoView({behavior:'smooth'})">View sources</button>
-            </div>
-            <div class="action-card">
-                <h4>Bundle for client</h4>
-                <p>Use share bundles to share this trend report together with one or more assessment reports.</p>
-                <a class="btn secondary" href="/app/reports">Go to reports list</a>
-            </div>
+            <div class="action-card"><h4>Open trend report</h4><p>View the full trend intelligence dashboard, marker changes, charts, priorities, and recommendations.</p><a class="btn" href="/trend-reports/${reportId}">Open trend report</a></div>
+            <div class="action-card"><h4>Review source assessments</h4><p>Open the assessment reports used to generate this trend report.</p><button class="btn secondary" type="button" onclick="document.getElementById('source-reports-card').scrollIntoView({behavior:'smooth'})">View sources</button></div>
+            <div class="action-card"><h4>Bundle for client</h4><p>Use share bundles to share this trend report together with one or more assessment reports.</p><a class="btn secondary" href="/app/reports">Go to reports list</a></div>
         `;
         document.getElementById("share-heading").textContent = "Share trend report";
         document.getElementById("share-description").textContent = "Create a secure client link for this stored trend report.";
     } else {
         document.getElementById("actions-heading").textContent = "Assessment report actions";
         grid.innerHTML = `
-            <div class="action-card">
-                <h4>Open assessment report</h4>
-                <p>View the full QRMA assessment with marker detail, recommendations, and system balance.</p>
-                <a class="btn" href="/app/reports/${reportId}/view">Open full report</a>
-            </div>
-            <div class="action-card">
-                <h4>Download PDF</h4>
-                <p>Download the generated PDF output for this assessment report.</p>
-                <a class="btn secondary" href="/api/reports/${reportId}/pdf" target="_blank">Download PDF</a>
-            </div>
-            <div class="action-card">
-                <h4>Generate new version</h4>
-                <p>Create a new generated version from the same case data.</p>
-                <button class="btn secondary" id="generate-new-version-btn" type="button">Generate new version</button>
-            </div>
+            <div class="action-card"><h4>Open assessment report</h4><p>View the full QRMA assessment with marker detail, recommendations, and system balance.</p><a class="btn" href="/app/reports/${reportId}/view">Open full report</a></div>
+            <div class="action-card"><h4>Download PDF</h4><p>Download the generated PDF output for this assessment report.</p><a class="btn secondary" href="/api/reports/${reportId}/pdf" target="_blank">Download PDF</a></div>
+            <div class="action-card"><h4>Generate new version</h4><p>Create a new generated version from the same case data.</p><button class="btn secondary" id="generate-new-version-btn" type="button">Generate new version</button></div>
         `;
         document.getElementById("share-heading").textContent = "Share assessment report";
         document.getElementById("share-description").textContent = "Create a secure client link for this single assessment report.";
@@ -239,7 +262,7 @@ function renderActions(data) {
 async function renderSourceReports(data) {
     const card = document.getElementById("source-reports-card");
     const box = document.getElementById("source-report-list");
-    const ids = data.source_report_ids || [];
+    const ids = sourceIds(data);
     if (!isTrend(data) || !ids.length) {
         card.style.display = "none";
         return;
@@ -250,30 +273,30 @@ async function renderSourceReports(data) {
     const rows = [];
     for (const id of ids) {
         try {
-            const res = await apiFetch(`/api/reports/${id}`);
+            const res = await appFetch(`/api/reports/${id}`);
             const item = await res.json().catch(() => ({}));
             if (res.ok) rows.push(item);
-        } catch (e) {}
+        } catch (e) {
+            console.warn("Could not load source report", id, e);
+        }
     }
 
     box.innerHTML = rows.length ? rows.map(item => `
         <div class="source-item">
-            <strong>${safeText(item.display_name || "Assessment report")}</strong>
-            <div class="muted">Scan: ${safeText(item.scan_datetime_display || "—")} · Generated: ${formatDate(item.generated_at)} · <a class="link" href="/app/reports/${item.id}">Open source</a></div>
+            <strong>${escapeHtml(item.display_name || "Assessment report")}</strong>
+            <div class="muted">Scan: ${escapeHtml(item.scan_datetime_display)} · Generated: ${displayDate(item.generated_at)} · <a class="link" href="/app/reports/${escapeHtml(item.id)}">Open source</a></div>
         </div>
     `).join("") : `<div class="muted">${ids.length} source assessment IDs recorded.</div>`;
 }
 
 async function loadReport() {
     clearError();
-    const authed = await requireAuthOrRedirect();
+    const authed = await ensureAuth();
     if (!authed) return;
 
     try {
-        const response = await apiFetch(`/api/reports/${reportId}`);
-        if (await handleSubscriptionRequiredResponse(response, "share this report with your client")) {
-            return;
-        }
+        const response = await appFetch(`/api/reports/${reportId}`);
+        if (await maybeHandleSubscription(response, "share this report with your client")) return;
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -281,24 +304,28 @@ async function loadReport() {
             return;
         }
 
-        currentReport = data;
-        renderType(data);
-        document.getElementById("report-page-title").textContent = data.display_name || (isTrend(data) ? "Trend report" : "Assessment report");
-        document.getElementById("report-description").textContent = isTrend(data)
+        currentReport = data || {};
+        renderType(currentReport);
+        document.getElementById("report-page-title").textContent = currentReport.display_name || (isTrend(currentReport) ? "Trend report" : "Assessment report");
+        document.getElementById("report-description").textContent = isTrend(currentReport)
             ? "This trend report represents longitudinal change across selected QRMA assessment reports."
             : "This assessment report represents one QRMA scan and the generated clinical-style report output.";
-        renderMetadata(data);
-        renderActions(data);
-        renderSourceReports(data);
+        renderMetadata(currentReport);
+        renderActions(currentReport);
+        await renderSourceReports(currentReport);
     } catch (err) {
-        console.error(err);
-        setError("Unexpected error while loading report.");
+        console.error("Report detail load failed", err);
+        setError(`Unexpected error while loading report${err && err.message ? `: ${err.message}` : "."}`);
     }
 }
 
 async function createShareLink() {
     clearError();
     clearSuccess();
+    if (!currentReport) {
+        setError("Report is still loading. Please wait a moment and try again.");
+        return;
+    }
 
     try {
         const expiresDays = Number(document.getElementById("share-expires-days").value || 7);
@@ -310,14 +337,12 @@ async function createShareLink() {
             share_type: isTrend(currentReport) ? "trend" : "assessment",
         };
 
-        const response = await apiFetch(`/api/reports/${reportId}/share-links`, {
+        const response = await appFetch(`/api/reports/${reportId}/share-links`, {
             method: "POST",
             body: JSON.stringify(payload),
         });
 
-        if (await handleSubscriptionRequiredResponse(response, "share this report with your client")) {
-            return;
-        }
+        if (await maybeHandleSubscription(response, "share this report with your client")) return;
 
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
@@ -325,18 +350,12 @@ async function createShareLink() {
             return;
         }
 
-        const isTrendReport = isTrend(currentReport);
-
-        // IMPORTANT: route trend shares correctly
-        const finalShareUrl = isTrendReport
-            ? `${data.share_url}/trend`
-            : data.share_url;
-
+        const finalShareUrl = isTrend(currentReport) ? `${data.share_url}/trend` : data.share_url;
         renderShareResult(finalShareUrl);
         setSuccess("Share link created. You can now copy, preview, or send it to your client.");
     } catch (err) {
         console.error(err);
-        setError("Unexpected error while creating share link.");
+        setError(`Unexpected error while creating share link${err && err.message ? `: ${err.message}` : "."}`);
     }
 }
 
@@ -345,12 +364,9 @@ async function generateNewVersion() {
     clearSuccess();
     const btn = document.getElementById("generate-new-version-btn");
     try {
-        btn.disabled = true;
-        btn.textContent = "Generating…";
-        const res = await apiFetch(`/api/reports/${reportId}/generate-new-version`, { method: "POST" });
-        if (await handleSubscriptionRequiredResponse(res, "generate another report version")) {
-            return;
-        }
+        if (btn) { btn.disabled = true; btn.textContent = "Generating…"; }
+        const res = await appFetch(`/api/reports/${reportId}/generate-new-version`, { method: "POST" });
+        if (await maybeHandleSubscription(res, "generate another report version")) return;
 
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
@@ -361,10 +377,9 @@ async function generateNewVersion() {
         await loadReport();
     } catch (err) {
         console.error(err);
-        setError("Unexpected error while generating report.");
+        setError(`Unexpected error while generating report${err && err.message ? `: ${err.message}` : "."}`);
     } finally {
-        btn.disabled = false;
-        btn.textContent = "Generate new version";
+        if (btn) { btn.disabled = false; btn.textContent = "Generate new version"; }
     }
 }
 

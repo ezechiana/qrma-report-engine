@@ -28,6 +28,7 @@ from app.api.routes_share_bundles import router as share_bundle_router
 from app.api.routes_share_dashboard import router as share_dashboard_router
 from app.api.routes_revenue import router as revenue_router
 from app.api.routes_share_pages import router as share_pages_router
+from app.api.routes_platform_settings import router as platform_settings_router
 from app.db.migrate import run_migrations
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
@@ -140,14 +141,15 @@ def create_app() -> FastAPI:
     app.include_router(share_dashboard_router)
     app.include_router(revenue_router)
     app.include_router(share_pages_router)
+    app.include_router(platform_settings_router)
 
     # Legacy engine/debug routes
     app.include_router(engine_router)
 
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-    @app.get("/api/status")
-    def api_status():
+    @app.get("/")
+    def root():
         return {
             "status": "ok",
             "app": APP_TITLE,
