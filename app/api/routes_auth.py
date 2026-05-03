@@ -22,14 +22,13 @@ from app.services.auth_service import (
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
+ACCESS_TOKEN_MAX_AGE_SECONDS = 60 * 60
+REFRESH_TOKEN_DEFAULT_MAX_AGE_SECONDS = 60 * 60 * 24 * 7
+REFRESH_TOKEN_REMEMBER_MAX_AGE_SECONDS = 60 * 60 * 24 * 30
 
-@router.post("/register", response_model=AuthResponse)
-def register(
-    payload: AuthRegisterRequest,
-    db: CurrentDB,
-    response: Response,
-):
-    auth = register_and_login_user(db, payload)
+
+def _set_auth_cookies(response: Response, auth: dict, *, remember_me: bool = False) -> None:
+    refresh_max_age = REFRESH_TOKEN_REMEMBER_MAX_AGE_SECONDS if remember_me else REFRESH_TOKEN_DEFAULT_MAX_AGE_SECONDS
 
     response.set_cookie(
         key="access_token",
@@ -37,7 +36,7 @@ def register(
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=60 * 60,
+        max_age=ACCESS_TOKEN_MAX_AGE_SECONDS,
         path="/",
     )
 
@@ -47,9 +46,30 @@ def register(
         httponly=True,
         secure=False,
         samesite="lax",
-        max_age=60 * 60 * 24 * 7,
+        max_age=refresh_max_age,
         path="/",
     )
+
+    response.set_cookie(
+        key="remember_me",
+        value="1" if remember_me else "0",
+        httponly=True,
+        secure=False,
+        samesite="lax",
+        max_age=refresh_max_age,
+        path="/",
+    )
+
+
+@router.post("/register", response_model=AuthResponse)
+def register(
+    payload: AuthRegisterRequest,
+    db: CurrentDB,
+    response: Response,
+):
+    auth = register_and_login_user(db, payload)
+
+    _set_auth_cookies(response, auth, remember_me=True)
 
     return auth
 
@@ -62,25 +82,7 @@ def login(
 ):
     auth = login_user(db, payload)
 
-    response.set_cookie(
-        key="access_token",
-        value=auth["access_token"],
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=60 * 60,
-        path="/",
-    )
-
-    response.set_cookie(
-        key="refresh_token",
-        value=auth["refresh_token"],
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=60 * 60 * 24 * 7,
-        path="/",
-    )
+    _set_auth_cookies(response, auth, remember_me=bool(getattr(payload, "remember_me", False)))
 
     return auth
 
@@ -112,25 +114,8 @@ def refresh_tokens(
 
     refreshed = refresh_user_tokens(db, refresh_token)
 
-    response.set_cookie(
-        key="access_token",
-        value=refreshed["access_token"],
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=60 * 60,
-        path="/",
-    )
-
-    response.set_cookie(
-        key="refresh_token",
-        value=refreshed["refresh_token"],
-        httponly=True,
-        secure=False,
-        samesite="lax",
-        max_age=60 * 60 * 24 * 7,
-        path="/",
-    )
+    remember_me = request.cookies.get("remember_me") == "1"
+    _set_auth_cookies(response, refreshed, remember_me=remember_me)
 
     return TokenPairResponse(
         access_token=refreshed["access_token"],
@@ -165,6 +150,7 @@ def update_password(
 def logout(response: Response):
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("remember_me", path="/")
     return AuthMessageResponse(message="Logged out successfully.")
 
 

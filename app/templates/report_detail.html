@@ -271,6 +271,10 @@ async function loadReport() {
 
     try {
         const response = await apiFetch(`/api/reports/${reportId}`);
+        if (await handleSubscriptionRequiredResponse(response, "share this report with your client")) {
+            return;
+        }
+
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             setError(data.detail || "Could not load report.");
@@ -311,6 +315,10 @@ async function createShareLink() {
             body: JSON.stringify(payload),
         });
 
+        if (await handleSubscriptionRequiredResponse(response, "share this report with your client")) {
+            return;
+        }
+
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             setError(data.detail || "Could not create share link. Use bundle sharing if this endpoint is not enabled for this report type.");
@@ -340,6 +348,10 @@ async function generateNewVersion() {
         btn.disabled = true;
         btn.textContent = "Generating…";
         const res = await apiFetch(`/api/reports/${reportId}/generate-new-version`, { method: "POST" });
+        if (await handleSubscriptionRequiredResponse(res, "generate another report version")) {
+            return;
+        }
+
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
             setError(data.detail || "Failed to generate new version.");

@@ -323,14 +323,18 @@ class Subscription(Base):
 
     stripe_customer_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
     stripe_subscription_id: Mapped[Optional[str]] = mapped_column(String(255), unique=True, nullable=True)
-    plan_code: Mapped[str] = mapped_column(String(100))
+    stripe_checkout_session_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    stripe_price_id: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    plan_code: Mapped[str] = mapped_column(String(100), default="practitioner_monthly")
     status: Mapped[SubscriptionStatus] = mapped_column(
         Enum(SubscriptionStatus),
         default=SubscriptionStatus.incomplete,
         index=True,
     )
     current_period_end: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    trial_ends_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     cancel_at_period_end: Mapped[bool] = mapped_column(Boolean, default=False)
+    voucher_code: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

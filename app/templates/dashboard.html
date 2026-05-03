@@ -140,7 +140,7 @@
             </div>
         </div>
         <div class="btn-row">
-            <a class="btn" href="/app/cases/new">Upload first scan</a>
+            <a class="btn" href="/app/cases/new" data-requires-subscription data-subscription-context="upload a scan and generate a report">Upload first scan</a>
             <a class="btn secondary" href="/app/cases/new#how-to-export">How to export QRMA scan</a>
         </div>
     </div>
@@ -164,7 +164,7 @@
     </div>
 
     <div class="onboarding-actions">
-        <a class="btn" href="/app/cases/new">Start with a scan</a>
+        <a class="btn" href="/app/cases/new" data-requires-subscription data-subscription-context="upload a scan and generate a report">Start with a scan</a>
         <a class="btn secondary" href="/app/cases/new#how-to-export">View QRMA export guide</a>
         <a class="btn secondary" href="/app/settings">Set clinic branding</a>
     </div>
@@ -208,7 +208,7 @@
         </div>
     </main>
     <aside>
-        <div class="dashboard-panel"><h3>Quick actions</h3><div class="quick-actions"><a class="btn" href="/app/cases/new">Upload scan</a><a class="btn secondary" href="/app/reports">Share report bundle</a><a class="btn secondary" href="/app/patients">Create trend report</a><a class="btn secondary" href="/app/revenue">View revenue</a></div></div>
+        <div class="dashboard-panel"><h3>Quick actions</h3><div class="quick-actions"><a class="btn" href="/app/cases/new">Upload scan</a><a class="btn secondary" href="/app/reports" data-requires-subscription data-subscription-context="create client share bundles">Share report bundle</a><a class="btn secondary" href="/app/patients">Create trend report</a><a class="btn secondary" href="/app/revenue">View revenue</a></div></div>
         <div class="dashboard-panel"><h3>Report pipeline</h3><div class="activity-list"><div class="activity-item"><div class="activity-title" id="pipeline-assessments">— assessments</div><div class="activity-meta">Single-scan reports in workspace</div></div><div class="activity-item"><div class="activity-title" id="pipeline-trends">— trend reports</div><div class="activity-meta">Progress views created</div></div><div class="activity-item"><div class="activity-title" id="pipeline-7d">— in last 7 days</div><div class="activity-meta">Recent report generation activity</div></div></div></div>
         <div class="dashboard-panel"><h3>Recent revenue activity</h3><div class="activity-list" id="revenue-activity-list"><div class="empty-state">Loading revenue activity…</div></div></div>
     </aside>

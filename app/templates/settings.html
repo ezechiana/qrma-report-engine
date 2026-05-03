@@ -357,44 +357,91 @@
         return Math.max(0, Math.ceil((target - now) / (1000 * 60 * 60 * 24)));
     }
 
+    async function syncSubscriptionCheckoutReturnIfNeeded() {
+        const params = new URLSearchParams(window.location.search || "");
+        const subscriptionResult = params.get("subscription");
+        const sessionId = params.get("session_id");
+
+        if (subscriptionResult !== "success" || !sessionId) {
+            return false;
+        }
+
+        clearError();
+        clearSuccess();
+
+        const box = document.getElementById("subscription-status");
+        if (box) {
+            box.style.display = "block";
+            box.className = "notice";
+            box.textContent = "Confirming your Stripe subscription…";
+        }
+
+        try {
+            const res = await apiFetch("/api/subscription/sync-checkout-session", {
+                method: "POST",
+                body: JSON.stringify({ session_id: sessionId }),
+            });
+            const data = await res.json().catch(() => ({}));
+
+            if (!res.ok) {
+                setError(data.detail || "Stripe checkout completed, but the local subscription could not be confirmed. Try Refresh, or check the subscription webhook.");
+                return false;
+            }
+
+            setSuccess("Subscription confirmed. Your workspace access is active.");
+            renderSubscriptionStatus(data);
+
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.replaceState({}, document.title, cleanUrl);
+            return true;
+        } catch (err) {
+            setError("Stripe checkout completed, but the local subscription could not be confirmed. Try Refresh, or check the subscription webhook.");
+            return false;
+        }
+    }
+
     function renderSubscriptionStatus(data) {
         const box = document.getElementById("subscription-status");
         if (!box) return;
 
-        const status = data?.status || "unknown";
-        const endDate = data?.trial_ends_at || data?.current_period_end || null;
-        const daysRemaining = calculateDaysRemaining(endDate);
+        const rawStatus = String(data?.status || "unknown").toLowerCase();
+        const status = String(data?.effective_status || rawStatus).toLowerCase();
+        const isActive = Boolean(data?.is_active || data?.can_create_reports || data?.can_create_shares || data?.can_create_bundles);
+        const endDate = data?.current_period_end || data?.trial_ends_at || null;
+        const daysRemaining = data?.days_remaining !== undefined && data?.days_remaining !== null
+            ? Number(data.days_remaining)
+            : calculateDaysRemaining(endDate);
         const dateLabel = formatSubscriptionDate(endDate);
 
         box.style.display = "block";
         box.className = "notice";
 
-        if (status === "trialing") {
+        if (isActive && rawStatus === "trialing") {
             box.className = "success";
             box.textContent = `Trial active · ${daysRemaining ?? "—"} days remaining. Full access is enabled until ${dateLabel}.`;
             return;
         }
 
-        if (status === "active") {
+        if (isActive && rawStatus === "active") {
             box.className = "success";
             box.textContent = `Subscription active. Your current billing period runs until ${dateLabel}.`;
             return;
         }
 
-        if (status === "past_due") {
+        if (rawStatus === "past_due") {
             box.className = "notice";
             box.textContent = "Payment issue detected. Please update your billing details to keep report and bundle creation enabled.";
             return;
         }
 
-        if (status === "canceled" || status === "expired") {
+        if (!isActive || ["trial_expired", "canceled", "expired", "incomplete"].includes(status)) {
             box.className = "error";
-            box.textContent = "Subscription inactive. Existing reports remain viewable, but new report and bundle creation are disabled until you upgrade.";
+            box.textContent = "Subscription required. Existing reports remain viewable, but new report generation, share links, and paid bundles are paused until you upgrade.";
             return;
         }
 
         box.className = "notice";
-        box.textContent = `Subscription status: ${status}.`;
+        box.textContent = data?.access_message || `Subscription status: ${rawStatus}.`;
     }
 
     async function loadSubscriptionStatus() {
@@ -555,7 +602,10 @@
 
     document.getElementById("save-settings-btn").addEventListener("click", saveSettings);
 
-    loadSubscriptionStatus();
-    loadSettings();
+    (async function initialiseSettingsPage() {
+        await syncSubscriptionCheckoutReturnIfNeeded();
+        await loadSubscriptionStatus();
+        await loadSettings();
+    })();
 </script>
 {% endblock %}

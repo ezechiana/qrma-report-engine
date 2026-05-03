@@ -59,7 +59,7 @@
         </div>
         <div class="btn-row">
             <button class="btn secondary" type="button" id="clear-selection-btn">Clear selection</button>
-            <button class="btn" type="button" id="open-share-modal-btn" disabled>Share selected</button>
+            <button class="btn" type="button" id="open-share-modal-btn" data-requires-subscription data-subscription-context="create a client share bundle" disabled>Share selected</button>
         </div>
     </div>
 
@@ -397,6 +397,10 @@ async function createShareBundle() {
         };
 
         const res = await apiFetch("/api/share-bundles", { method: "POST", body: JSON.stringify(payload) });
+        if (await handleSubscriptionRequiredResponse(res, "create a client share bundle")) {
+            return;
+        }
+
         const data = await res.json().catch(() => ({}));
         if (!res.ok) {
             showReportsError(data.detail || "Could not create share bundle.");
@@ -447,7 +451,14 @@ document.getElementById("select-visible-reports").addEventListener("change", e =
     renderReports();
 });
 document.getElementById("clear-selection-btn").addEventListener("click", () => { selectedReportIds.clear(); renderReports(); });
-document.getElementById("open-share-modal-btn").addEventListener("click", openShareModal);
+document.getElementById("open-share-modal-btn").addEventListener("click", async (event) => {
+    event.preventDefault();
+    if (window.ensureSubscriptionCanCreate) {
+        const ok = await window.ensureSubscriptionCanCreate("create a client share bundle");
+        if (!ok) return;
+    }
+    openShareModal();
+});
 document.getElementById("close-share-modal-btn").addEventListener("click", closeShareModal);
 document.getElementById("create-share-bundle-btn").addEventListener("click", createShareBundle);
 document.getElementById("share-price-currency").addEventListener("change", updateCurrencyPlaceholder);

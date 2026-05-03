@@ -221,6 +221,8 @@ def create_case_endpoint(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "report_generation")
+
     patient = _get_owned_patient(db, current_user, payload.patient_id)
     if not patient:
         raise HTTPException(status_code=404, detail="Patient not found")
@@ -334,7 +336,11 @@ def update_case_endpoint(
 @router.post("/import-from-html", response_model=ImportFromHtmlResponse)
 async def import_from_html(
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "report_generation")
+
     content = await file.read()
     temp_id, _ = save_temp_html(content)
     parsed = parse_qrma_html(content)
@@ -602,6 +608,8 @@ def create_from_existing_patient_import(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    require_subscription_feature(db, current_user, "report_generation")
+
     patient_id = payload.get("patient_id")
     temporary_upload_id = payload.get("temporary_upload_id")
     case_payload = payload.get("case", {})

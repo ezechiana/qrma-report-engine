@@ -312,8 +312,8 @@
         </div>
 
         <div class="btn-row">
-            <button type="submit" class="btn">Create case</button>
-            <button type="button" class="btn secondary" id="create-and-generate">Create and open report</button>
+            <button type="submit" class="btn" data-requires-subscription data-subscription-context="create this case and report">Create case</button>
+            <button type="button" class="btn secondary" id="create-and-generate" data-requires-subscription data-subscription-context="create and open this report">Create and open report</button>
         </div>
     </form>
 </div>
@@ -734,6 +734,10 @@
             body: formData,
         });
 
+        if (await handleSubscriptionRequiredResponse(response, "upload a scan and generate a report")) {
+            return;
+        }
+
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
@@ -877,6 +881,11 @@
                 method: "POST",
                 body: JSON.stringify(payload),
             });
+
+            if (await handleSubscriptionRequiredResponse(response, "create your first report")) {
+                hideProcessingPanel();
+                return;
+            }
 
             const data = await response.json().catch(() => ({}));
 

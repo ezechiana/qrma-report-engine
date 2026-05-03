@@ -588,7 +588,7 @@
 
                     <div class="remember-row">
                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input id="remember-me" type="checkbox" />
+                            <input id="remember-me" type="checkbox" checked />
                             <span>Keep me signed in</span>
                         </label>
                         <a class="forgot-link" href="#">Forgot password?</a>
@@ -658,6 +658,7 @@
         const payload = {
             email: document.getElementById("email").value.trim(),
             password: document.getElementById("password").value,
+            remember_me: document.getElementById("remember-me")?.checked === true,
         };
 
         const response = await fetch("/auth/login", {

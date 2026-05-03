@@ -188,6 +188,7 @@ def _upsert_subscription_from_stripe(
     subscription_id=None,
     status=None,
     current_period_end=None,
+    trial_ends_at=None,
     cancel_at_period_end=False,
     price_id=None,
     voucher_code=None,
@@ -235,6 +236,7 @@ def _upsert_subscription_from_stripe(
                     stripe_price_id = COALESCE(:price_id, stripe_price_id),
                     status = :status,
                     current_period_end = COALESCE(:current_period_end, current_period_end),
+                    trial_ends_at = COALESCE(:trial_ends_at, trial_ends_at),
                     cancel_at_period_end = :cancel_at_period_end,
                     voucher_code = COALESCE(:voucher_code, voucher_code),
                     updated_at = NOW()
@@ -248,6 +250,7 @@ def _upsert_subscription_from_stripe(
                 "price_id": price_id,
                 "status": mapped_status,
                 "current_period_end": current_period_end,
+                "trial_ends_at": trial_ends_at,
                 "cancel_at_period_end": bool(cancel_at_period_end),
                 "voucher_code": voucher_code,
             },
@@ -265,6 +268,7 @@ def _upsert_subscription_from_stripe(
                     plan_code,
                     status,
                     current_period_end,
+                    trial_ends_at,
                     cancel_at_period_end,
                     voucher_code,
                     created_at,
@@ -278,6 +282,7 @@ def _upsert_subscription_from_stripe(
                     :plan_code,
                     :status,
                     :current_period_end,
+                    :trial_ends_at,
                     :cancel_at_period_end,
                     :voucher_code,
                     NOW(),
@@ -293,12 +298,89 @@ def _upsert_subscription_from_stripe(
                 "plan_code": DEFAULT_PLAN_CODE,
                 "status": mapped_status,
                 "current_period_end": current_period_end,
+                "trial_ends_at": trial_ends_at,
                 "cancel_at_period_end": bool(cancel_at_period_end),
                 "voucher_code": voucher_code,
             },
         )
 
     db.commit()
+
+
+def _subscription_price_id(subscription_obj: Any) -> str | None:
+    try:
+        obj = dict(subscription_obj) if not isinstance(subscription_obj, dict) else subscription_obj
+        items = (obj.get("items") or {}).get("data") or []
+        if items:
+            price = items[0].get("price") or {}
+            return price.get("id")
+    except Exception:
+        return None
+    return None
+
+
+def _sync_checkout_session_to_local_subscription(db: Session, current_user: User, session_id: str) -> dict[str, Any]:
+    if not STRIPE_SECRET_KEY:
+        raise HTTPException(status_code=500, detail="Stripe is not configured. Set STRIPE_SECRET_KEY.")
+    if not session_id:
+        raise HTTPException(status_code=400, detail="Missing Stripe checkout session id.")
+
+    try:
+        session = stripe.checkout.Session.retrieve(
+            session_id,
+            expand=["subscription"],
+        )
+    except Exception as exc:
+        raise HTTPException(status_code=502, detail=f"Could not verify Stripe checkout session: {exc}")
+
+    metadata = session.get("metadata") or {}
+    session_user_id = metadata.get("user_id") or session.get("client_reference_id")
+
+    if session_user_id and str(session_user_id) != str(current_user.id):
+        raise HTTPException(status_code=403, detail="Stripe checkout session does not belong to this user.")
+
+    if session.get("mode") != "subscription":
+        raise HTTPException(status_code=400, detail="Stripe checkout session is not a subscription checkout.")
+
+    payment_status = (session.get("payment_status") or "").lower()
+    checkout_status = (session.get("status") or "").lower()
+    if payment_status not in {"paid", "no_payment_required"} and checkout_status != "complete":
+        raise HTTPException(status_code=409, detail="Stripe checkout has not completed yet.")
+
+    subscription_obj = session.get("subscription")
+    subscription_id = subscription_obj.get("id") if hasattr(subscription_obj, "get") else subscription_obj
+    sub_dict: dict[str, Any] = {}
+
+    if subscription_obj and not isinstance(subscription_obj, str):
+        sub_dict = dict(subscription_obj)
+    elif subscription_id:
+        try:
+            sub_dict = dict(stripe.Subscription.retrieve(subscription_id))
+        except Exception:
+            sub_dict = {}
+
+    # If Stripe does not return current_period_end for any reason, use a safe
+    # one-month local access window so the successful checkout never leaves the
+    # user blocked. Webhooks can later overwrite this with the canonical period.
+    current_period_end = _timestamp_to_dt(sub_dict.get("current_period_end")) if sub_dict else None
+    if not current_period_end:
+        current_period_end = _now() + timedelta(days=31)
+
+    _upsert_subscription_from_stripe(
+        db,
+        user_id=current_user.id,
+        customer_id=session.get("customer"),
+        subscription_id=subscription_id,
+        status=sub_dict.get("status") or "active",
+        current_period_end=current_period_end,
+        trial_ends_at=_timestamp_to_dt(sub_dict.get("trial_end")) if sub_dict else None,
+        cancel_at_period_end=bool(sub_dict.get("cancel_at_period_end")) if sub_dict else False,
+        price_id=_subscription_price_id(sub_dict) or STRIPE_SUBSCRIPTION_PRICE_ID,
+        voucher_code=metadata.get("voucher_code") or None,
+    )
+
+    synced = _ensure_subscription_record(db, current_user)
+    return _subscription_payload(synced)
 
 
 @router.get("/api/subscription/status")
@@ -308,6 +390,16 @@ def get_subscription_status(
 ):
     sub = _ensure_subscription_record(db, current_user)
     return _subscription_payload(sub)
+
+
+@router.post("/api/subscription/sync-checkout-session")
+def sync_subscription_checkout_session(
+    payload: dict[str, Any],
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    session_id = (payload or {}).get("session_id")
+    return _sync_checkout_session_to_local_subscription(db, current_user, session_id)
 
 
 @router.post("/api/subscription/checkout")
@@ -455,6 +547,7 @@ async def subscription_stripe_webhook(request: Request, db: Session = Depends(ge
             subscription_id=subscription_id,
             status=(subscription_obj.get("status") if subscription_obj else "active"),
             current_period_end=_timestamp_to_dt(subscription_obj.get("current_period_end")) if subscription_obj else None,
+            trial_ends_at=_timestamp_to_dt(subscription_obj.get("trial_end")) if subscription_obj else None,
             cancel_at_period_end=bool(subscription_obj.get("cancel_at_period_end")) if subscription_obj else False,
             price_id=STRIPE_SUBSCRIPTION_PRICE_ID,
             voucher_code=(obj.get("metadata") or {}).get("voucher_code") or None,
@@ -476,6 +569,7 @@ async def subscription_stripe_webhook(request: Request, db: Session = Depends(ge
             subscription_id=obj.get("id"),
             status=obj.get("status"),
             current_period_end=_timestamp_to_dt(obj.get("current_period_end")),
+            trial_ends_at=_timestamp_to_dt(obj.get("trial_end")),
             cancel_at_period_end=bool(obj.get("cancel_at_period_end")),
             price_id=price_id,
             voucher_code=metadata.get("voucher_code"),
