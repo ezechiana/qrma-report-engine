@@ -82,6 +82,74 @@
 .hidden-url {
     display: none;
 }
+
+.referral-hero {
+    border: 1px solid #bfdbfe;
+    background: linear-gradient(135deg,#ffffff 0%,#eff6ff 100%);
+}
+.referral-stat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+.referral-stat {
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 12px;
+    padding: 12px;
+}
+.referral-stat-label {
+    color: #64748b;
+    font-size: 11px;
+    text-transform: uppercase;
+    font-weight: 900;
+    letter-spacing: .04em;
+}
+.referral-stat-value {
+    color: #0f172a;
+    font-size: 24px;
+    font-weight: 950;
+    margin-top: 4px;
+}
+.referral-link-box {
+    display: flex;
+    gap: 10px;
+    align-items: center;
+    margin-top: 12px;
+}
+.referral-link-box input {
+    flex: 1;
+    min-width: 0;
+}
+.referral-recent-list {
+    margin-top: 12px;
+    display: grid;
+    gap: 8px;
+}
+.referral-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    align-items: center;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 10px;
+    padding: 10px;
+    font-size: 13px;
+}
+.referral-status {
+    border-radius: 999px;
+    padding: 4px 8px;
+    font-size: 11px;
+    font-weight: 900;
+    background: #f1f5f9;
+    color: #334155;
+    white-space: nowrap;
+}
+.referral-status.rewarded { background:#dcfce7; color:#166534; }
+@media(max-width:900px){ .referral-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr));} .referral-link-box{flex-direction:column; align-items:stretch;} }
+
 </style>
 
 <div id="error-box" class="error" style="display:none;"></div>
@@ -196,6 +264,31 @@
       </div>
     </div>
   </div>
+</div>
+
+
+<div class="card referral-hero" id="referral-card">
+  <h3>Refer & earn</h3>
+  <p class="muted" id="referral-headline">
+    Refer a paying practitioner and get 1 month free. Your reward is applied automatically when they become a paying subscriber.
+  </p>
+
+  <div class="referral-link-box">
+    <input id="referral-link" readonly value="Loading referral link…">
+    <button class="btn" type="button" id="copy-referral-link-btn">Copy link</button>
+    <button class="btn secondary" type="button" id="whatsapp-referral-link-btn">WhatsApp</button>
+    <button class="btn secondary" type="button" id="email-referral-link-btn">Email</button>
+  </div>
+  <div class="help-text">Share this with QRMA practitioners. Tracking and rewards are automatic.</div>
+
+  <div class="referral-stat-grid">
+    <div class="referral-stat"><div class="referral-stat-label">Free months earned</div><div class="referral-stat-value" id="referral-months-earned">—</div></div>
+    <div class="referral-stat"><div class="referral-stat-label">Total referrals</div><div class="referral-stat-value" id="referral-total">—</div></div>
+    <div class="referral-stat"><div class="referral-stat-label">Signed up</div><div class="referral-stat-value" id="referral-signed-up">—</div></div>
+    <div class="referral-stat"><div class="referral-stat-label">Rewarded</div><div class="referral-stat-value" id="referral-rewarded">—</div></div>
+  </div>
+
+  <div id="referral-recent" class="referral-recent-list"></div>
 </div>
 
 <div class="card">
@@ -357,91 +450,44 @@
         return Math.max(0, Math.ceil((target - now) / (1000 * 60 * 60 * 24)));
     }
 
-    async function syncSubscriptionCheckoutReturnIfNeeded() {
-        const params = new URLSearchParams(window.location.search || "");
-        const subscriptionResult = params.get("subscription");
-        const sessionId = params.get("session_id");
-
-        if (subscriptionResult !== "success" || !sessionId) {
-            return false;
-        }
-
-        clearError();
-        clearSuccess();
-
-        const box = document.getElementById("subscription-status");
-        if (box) {
-            box.style.display = "block";
-            box.className = "notice";
-            box.textContent = "Confirming your Stripe subscription…";
-        }
-
-        try {
-            const res = await apiFetch("/api/subscription/sync-checkout-session", {
-                method: "POST",
-                body: JSON.stringify({ session_id: sessionId }),
-            });
-            const data = await res.json().catch(() => ({}));
-
-            if (!res.ok) {
-                setError(data.detail || "Stripe checkout completed, but the local subscription could not be confirmed. Try Refresh, or check the subscription webhook.");
-                return false;
-            }
-
-            setSuccess("Subscription confirmed. Your workspace access is active.");
-            renderSubscriptionStatus(data);
-
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.replaceState({}, document.title, cleanUrl);
-            return true;
-        } catch (err) {
-            setError("Stripe checkout completed, but the local subscription could not be confirmed. Try Refresh, or check the subscription webhook.");
-            return false;
-        }
-    }
-
     function renderSubscriptionStatus(data) {
         const box = document.getElementById("subscription-status");
         if (!box) return;
 
-        const rawStatus = String(data?.status || "unknown").toLowerCase();
-        const status = String(data?.effective_status || rawStatus).toLowerCase();
-        const isActive = Boolean(data?.is_active || data?.can_create_reports || data?.can_create_shares || data?.can_create_bundles);
-        const endDate = data?.current_period_end || data?.trial_ends_at || null;
-        const daysRemaining = data?.days_remaining !== undefined && data?.days_remaining !== null
-            ? Number(data.days_remaining)
-            : calculateDaysRemaining(endDate);
+        const status = data?.status || "unknown";
+        const endDate = data?.trial_ends_at || data?.current_period_end || null;
+        const daysRemaining = calculateDaysRemaining(endDate);
         const dateLabel = formatSubscriptionDate(endDate);
 
         box.style.display = "block";
         box.className = "notice";
 
-        if (isActive && rawStatus === "trialing") {
+        if (status === "trialing") {
             box.className = "success";
             box.textContent = `Trial active · ${daysRemaining ?? "—"} days remaining. Full access is enabled until ${dateLabel}.`;
             return;
         }
 
-        if (isActive && rawStatus === "active") {
+        if (status === "active") {
             box.className = "success";
             box.textContent = `Subscription active. Your current billing period runs until ${dateLabel}.`;
             return;
         }
 
-        if (rawStatus === "past_due") {
+        if (status === "past_due") {
             box.className = "notice";
             box.textContent = "Payment issue detected. Please update your billing details to keep report and bundle creation enabled.";
             return;
         }
 
-        if (!isActive || ["trial_expired", "canceled", "expired", "incomplete"].includes(status)) {
+        if (status === "canceled" || status === "expired") {
             box.className = "error";
-            box.textContent = "Subscription required. Existing reports remain viewable, but new report generation, share links, and paid bundles are paused until you upgrade.";
+            box.textContent = "Subscription inactive. Existing reports remain viewable, but new report and bundle creation are disabled until you upgrade.";
             return;
         }
 
         box.className = "notice";
-        box.textContent = data?.access_message || `Subscription status: ${rawStatus}.`;
+        box.textContent = `Subscription status: ${status}.`;
     }
 
     async function loadSubscriptionStatus() {
@@ -602,10 +648,7 @@
 
     document.getElementById("save-settings-btn").addEventListener("click", saveSettings);
 
-    (async function initialiseSettingsPage() {
-        await syncSubscriptionCheckoutReturnIfNeeded();
-        await loadSubscriptionStatus();
-        await loadSettings();
-    })();
+    loadSubscriptionStatus();
+    loadSettings();
 </script>
 {% endblock %}

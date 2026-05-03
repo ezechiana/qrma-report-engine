@@ -678,24 +678,10 @@
             localStorage.setItem("current_user", JSON.stringify(payload.user || null));
         }
 
-        function clearSessionBannerDismissals() {
-            try {
-                const keysToRemove = [];
-                for (let i = 0; i < sessionStorage.length; i += 1) {
-                    const key = sessionStorage.key(i);
-                    if (key && key.startsWith("app_banner_dismissed:")) {
-                        keysToRemove.push(key);
-                    }
-                }
-                keysToRemove.forEach(key => sessionStorage.removeItem(key));
-            } catch (e) {}
-        }
-
         function clearAuthSession() {
             localStorage.removeItem("access_token");
             localStorage.removeItem("refresh_token");
             localStorage.removeItem("current_user");
-            clearSessionBannerDismissals();
         }
 
         function getRedirectTarget() {
@@ -711,57 +697,11 @@
             localStorage.setItem("redirect_after_login", getRedirectTarget());
         }
 
-        function loginUrlForCurrentPage(reason = "") {
+        function redirectToLogin(reason = "expired") {
+            rememberRedirectTarget();
             const next = encodeURIComponent(getRedirectTarget());
             const reasonQuery = reason ? `&session=${encodeURIComponent(reason)}` : "";
-            return `/login?next=${next}${reasonQuery}`;
-        }
-
-        function redirectToLogin(reason = "") {
-            rememberRedirectTarget();
-            window.location.href = loginUrlForCurrentPage(reason);
-        }
-
-        function showSessionExpiredBanner() {
-            showAppBanner({
-                id: "session-expired-banner",
-                dismissKey: `session-expired:${getRedirectTarget()}`,
-                variant: "warning",
-                icon: "!",
-                title: "Your session has expired",
-                body: "Please sign in again. We will bring you back to this screen afterwards.",
-                dismissible: false,
-                actions: [
-                    {
-                        label: "Sign in again",
-                        variant: "primary",
-                        onClick: () => redirectToLogin("expired"),
-                    },
-                ],
-            });
-        }
-
-        async function refreshAuthSession() {
-            try {
-                const response = await fetch("/auth/refresh", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    credentials: "same-origin",
-                    body: JSON.stringify({}),
-                });
-
-                if (!response.ok) return false;
-
-                const data = await response.json().catch(() => ({}));
-                if (data && data.access_token) {
-                    localStorage.setItem("access_token", data.access_token || "");
-                    localStorage.setItem("refresh_token", data.refresh_token || "");
-                }
-
-                return true;
-            } catch (e) {
-                return false;
-            }
+            window.location.href = `/login?next=${next}${reasonQuery}`;
         }
 
         async function apiFetch(url, options = {}) {
@@ -770,25 +710,15 @@
                 headers.set("Content-Type", "application/json");
             }
 
-            const requestOptions = {
+            const response = await fetch(url, {
                 ...options,
                 headers,
                 credentials: "same-origin",
-            };
-
-            let response = await fetch(url, requestOptions);
-
-            if (response.status === 401 && !options.__skipAuthRefresh) {
-                const refreshed = await refreshAuthSession();
-                if (refreshed) {
-                    response = await fetch(url, requestOptions);
-                }
-            }
+            });
 
             if (response.status === 401) {
-                rememberRedirectTarget();
                 clearAuthSession();
-                showSessionExpiredBanner();
+                redirectToLogin("expired");
             }
 
             return response;
@@ -796,25 +726,14 @@
 
         async function requireAuthOrRedirect() {
             try {
-                let response = await fetch("/auth/me", {
+                const response = await fetch("/auth/me", {
                     method: "GET",
                     credentials: "same-origin",
                 });
 
-                if (response.status === 401) {
-                    const refreshed = await refreshAuthSession();
-                    if (refreshed) {
-                        response = await fetch("/auth/me", {
-                            method: "GET",
-                            credentials: "same-origin",
-                        });
-                    }
-                }
-
                 if (response.status === 401 || !response.ok) {
-                    rememberRedirectTarget();
                     clearAuthSession();
-                    showSessionExpiredBanner();
+                    redirectToLogin("expired");
                     return false;
                 }
 
@@ -822,13 +741,10 @@
                 if (data && data.user) {
                     localStorage.setItem("current_user", JSON.stringify(data.user));
                 }
-
-                clearAppBanner("session-expired-banner");
                 return true;
             } catch (e) {
-                rememberRedirectTarget();
                 clearAuthSession();
-                showSessionExpiredBanner();
+                redirectToLogin("expired");
                 return false;
             }
         }
@@ -841,8 +757,6 @@
                 });
             } catch (e) {}
             clearAuthSession();
-            clearSessionBannerDismissals();
-            localStorage.removeItem("redirect_after_login");
             window.location.href = "/login";
         }
 
@@ -963,8 +877,7 @@
                 period_end: periodEnd,
                 trial_end: trialEnd,
                 days_remaining: daysRemaining,
-                effective_status: data.effective_status || data.status || "unknown",
-                is_active: Boolean(data.is_active || data.can_create_reports || data.can_create_shares),
+                is_active: ["trialing", "active"].includes(String(data.status || "").toLowerCase()),
             };
 
             AppBus.emit("subscription:updated", AppState.subscription);
@@ -974,62 +887,13 @@
         function isSubscriptionActive() {
             const sub = AppState.subscription;
             if (!sub) return true;
-            return Boolean(sub.is_active || sub.can_create_reports || sub.can_create_shares || sub.can_create_bundles);
+            return ["trialing", "active"].includes(String(sub.status || "").toLowerCase());
         }
 
         function subscriptionRequiresUpgrade() {
             const sub = AppState.subscription;
             if (!sub) return false;
-            return !isSubscriptionActive();
-        }
-
-        function extractSubscriptionRequiredDetail(data) {
-            const detail = data && data.detail !== undefined ? data.detail : data;
-            if (!detail) return null;
-            if (typeof detail === "string") {
-                return detail === "subscription_required" ? { code: "subscription_required", message: "Subscription required." } : null;
-            }
-            if (detail.code === "subscription_required" || detail.subscription) return detail;
-            return null;
-        }
-
-        async function handleSubscriptionRequiredResponse(response, contextLabel) {
-            if (!response || response.status !== 402) return false;
-            let data = {};
-            try { data = await response.clone().json(); } catch (e) {}
-            const detail = extractSubscriptionRequiredDetail(data) || {};
-            if (detail.subscription) {
-                AppState.subscription = {
-                    ...detail.subscription,
-                    period_end: detail.subscription.current_period_end || detail.subscription.trial_ends_at || null,
-                    trial_end: detail.subscription.trial_ends_at || detail.subscription.current_period_end || null,
-                    is_active: Boolean(detail.subscription.is_active || detail.subscription.can_create_reports || detail.subscription.can_create_shares),
-                };
-                AppBus.emit("subscription:updated", AppState.subscription);
-            }
-            showSubscriptionGateModal(contextLabel || detail.feature || "this action", detail);
-            return true;
-        }
-
-        function bannerDismissStorageKey(config, id) {
-            const rawKey = config.dismissKey || id || "app-banner";
-            return `app_banner_dismissed:${rawKey}`;
-        }
-
-        function isBannerDismissed(config, id) {
-            if (config.dismissible === false) return false;
-            try {
-                return sessionStorage.getItem(bannerDismissStorageKey(config, id)) === "1";
-            } catch (e) {
-                return false;
-            }
-        }
-
-        function rememberBannerDismissed(config, id) {
-            if (config.dismissible === false) return;
-            try {
-                sessionStorage.setItem(bannerDismissStorageKey(config, id), "1");
-            } catch (e) {}
+            return !["trialing", "active"].includes(String(sub.status || "").toLowerCase());
         }
 
         function showAppBanner(config) {
@@ -1044,10 +908,6 @@
 
             const existing = document.getElementById(id);
             if (existing) existing.remove();
-
-            if (isBannerDismissed(config, id)) {
-                return null;
-            }
 
             const banner = document.createElement("div");
             banner.className = `app-banner ${variant}${compact}`;
@@ -1074,15 +934,12 @@
 
             banner.querySelectorAll("[data-banner-action]").forEach(btn => {
                 btn.addEventListener("click", () => {
-                    const action = (config.actions || [])[Number(btn.getAttribute("data-banner-action"))];
+                    const action = (config.actions || [])[Number(btn.dataset.bannerAction)];
                     if (action && typeof action.onClick === "function") action.onClick();
                 });
             });
 
-            banner.querySelector(".banner-close")?.addEventListener("click", () => {
-                rememberBannerDismissed(config, id);
-                banner.remove();
-            });
+            banner.querySelector(".banner-close")?.addEventListener("click", () => banner.remove());
 
             region.appendChild(banner);
             return banner;
@@ -1126,23 +983,13 @@
             document.body.style.overflow = "";
         }
 
-        function showSubscriptionGateModal(contextLabel, detail = {}) {
+        function showSubscriptionGateModal(contextLabel) {
             const label = contextLabel || "continue";
-            const sub = (detail && detail.subscription) || AppState.subscription || {};
-            const priceLabel = sub.price_label || "$59/month";
-            const planName = sub.plan_name || "go360 Practitioner";
-            const message = detail.message || `Your trial or subscription is not active, so ${label} is currently paused.`;
-
             showAppModal({
-                title: "Upgrade to continue",
+                title: "Subscription required",
                 body: `
-                    <p>${message}</p>
-                    <p>You can still view existing reports, shares, and revenue. Upgrade to resume creating new reports, client share links, and paid bundles.</p>
-                    <div style="border:1px solid var(--line); border-radius:14px; padding:12px; margin:12px 0; background:#f8fafc;">
-                        <div style="font-weight:900; color:#111827;">${planName}</div>
-                        <div style="font-size:24px; font-weight:950; margin-top:4px;">${priceLabel}</div>
-                        <div class="muted" style="margin-top:6px;">Includes report generation, client sharing, paid bundle creation, revenue tracking, and share analytics.</div>
-                    </div>
+                    <p>Your trial or subscription is not active, so ${label} is currently paused.</p>
+                    <p>You can still view existing reports, shares, and revenue. Upgrade to resume creating new reports and paid bundles.</p>
                 `,
                 actions: [
                     { label: "Not now", variant: "secondary", onClick: closeAppModal },
@@ -1184,7 +1031,7 @@
                 return;
             }
 
-            const status = String(sub.effective_status || sub.status || "").toLowerCase();
+            const status = String(sub.status || "").toLowerCase();
             const days = sub.days_remaining;
             const periodEnd = sub.period_end || sub.trial_end;
             const endLabel = formatDate(periodEnd);
@@ -1198,7 +1045,6 @@
                 const isUrgent = Number(days) <= 7;
                 showAppBanner({
                     id: "subscription-global-banner",
-                    dismissKey: `subscription-trial:${sub.status}:${periodEnd || "no-end"}`,
                     variant: isUrgent ? "warning" : "success",
                     icon: isUrgent ? "!" : "✓",
                     title: `Free trial active — ${days ?? "—"} day${Number(days) === 1 ? "" : "s"} remaining`,
@@ -1217,7 +1063,6 @@
 
             showAppBanner({
                 id: "subscription-global-banner",
-                dismissKey: `subscription-inactive:${sub.status}:${periodEnd || "no-end"}`,
                 variant: "danger",
                 icon: "!",
                 title: "Subscription inactive",
@@ -1239,13 +1084,6 @@
         }
 
         AppBus.on("subscription:updated", renderSubscriptionBanner);
-
-        window.startSubscriptionCheckout = startSubscriptionCheckout;
-        window.openSubscriptionPortal = openSubscriptionPortal;
-        window.refreshSubscriptionState = refreshSubscriptionState;
-        window.showSubscriptionGateModal = showSubscriptionGateModal;
-        window.handleSubscriptionRequiredResponse = handleSubscriptionRequiredResponse;
-        window.ensureSubscriptionCanCreate = ensureSubscriptionCanCreate;
     </script>
 </head>
 <body>
@@ -1320,30 +1158,6 @@
         <div class="app-modal-actions" id="app-modal-actions"></div>
     </div>
 </div>
-
-
-<script>
-    (function setupProductionSessionBehaviour() {
-        if (!isAuthenticatedAppPage() || isPublicOrAuthPage()) return;
-
-        const refreshIntervalMs = 45 * 60 * 1000;
-
-        window.setInterval(async function () {
-            const ok = await refreshAuthSession();
-            if (!ok) {
-                rememberRedirectTarget();
-                showSessionExpiredBanner();
-            }
-        }, refreshIntervalMs);
-
-        window.addEventListener("storage", function (event) {
-            if (event.key === "access_token" && !event.newValue) {
-                rememberRedirectTarget();
-                showSessionExpiredBanner();
-            }
-        });
-    })();
-</script>
 
 <script>
     (async function hydrateShell() {

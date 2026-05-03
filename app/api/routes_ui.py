@@ -13,15 +13,6 @@ router = APIRouter()
 templates = Jinja2Templates(directory="app/templates")
 
 
-@router.get("/", response_class=HTMLResponse)
-def landing_page(request: Request):
-    return templates.TemplateResponse(
-        request=request,
-        name="landing.html",
-        context={"request": request, "title": "go360"},
-    )
-
-
 def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}
     stored_theme = report_json.get("tenant_theme", {}) if isinstance(report_json, dict) else {}
@@ -82,6 +73,17 @@ def login_page(request: Request):
 def register_page(request: Request):
     return templates.TemplateResponse(request=request, name="register.html", context={"request": request, "title": "Register"})
 
+
+
+
+@router.get("/terms", response_class=HTMLResponse)
+def terms_page(request: Request):
+    return templates.TemplateResponse(request=request, name="legal/terms.html", context={"request": request, "title": "Terms of Service"})
+
+
+@router.get("/privacy", response_class=HTMLResponse)
+def privacy_page(request: Request):
+    return templates.TemplateResponse(request=request, name="legal/privacy.html", context={"request": request, "title": "Privacy Policy"})
 
 @router.get("/logout")
 def logout():

@@ -4,6 +4,7 @@ import os
 import urllib.parse
 from contextlib import asynccontextmanager
 
+from app.api import routes_ui
 from app.api import routes_share
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
@@ -145,8 +146,8 @@ def create_app() -> FastAPI:
 
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-    @app.get("/")
-    def root():
+    @app.get("/api/status")
+    def api_status():
         return {
             "status": "ok",
             "app": APP_TITLE,

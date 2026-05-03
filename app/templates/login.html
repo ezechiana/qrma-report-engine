@@ -588,7 +588,7 @@
 
                     <div class="remember-row">
                         <label style="display:flex; align-items:center; gap:10px; cursor:pointer;">
-                            <input id="remember-me" type="checkbox" checked />
+                            <input id="remember-me" type="checkbox" />
                             <span>Keep me signed in</span>
                         </label>
                         <a class="forgot-link" href="#">Forgot password?</a>
@@ -598,7 +598,7 @@
                 </form>
 
                 <div class="legal">
-                    By signing in, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
+                    By signing in, you agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
                 </div>
             </div>
         </div>
@@ -658,7 +658,6 @@
         const payload = {
             email: document.getElementById("email").value.trim(),
             password: document.getElementById("password").value,
-            remember_me: document.getElementById("remember-me")?.checked === true,
         };
 
         const response = await fetch("/auth/login", {

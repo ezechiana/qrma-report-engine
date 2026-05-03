@@ -18,6 +18,7 @@ class AuthRegisterRequest(BaseModel):
     full_name: str | None = Field(default=None, min_length=2, max_length=255)
     clinic_name: str | None = Field(default=None, max_length=255)
     phone: str | None = Field(default=None, max_length=50)
+    referral_code: str | None = Field(default=None, max_length=80)
 
     @model_validator(mode="after")
     def validate_registration(self):
@@ -50,13 +51,15 @@ class AuthRegisterRequest(BaseModel):
         if self.phone is not None:
             self.phone = self.phone.strip() or None
 
+        if self.referral_code is not None:
+            self.referral_code = self.referral_code.strip().upper() or None
+
         return self
 
 
 class AuthLoginRequest(BaseModel):
     email: EmailStr
     password: str = Field(min_length=1, max_length=128)
-    remember_me: bool = False
 
 
 class TokenRefreshRequest(BaseModel):
@@ -87,6 +90,7 @@ class AuthUserResponse(BaseModel):
     support_email: str | None = None
     website_url: str | None = None
     timezone: str | None = None
+    referral_code: str | None = None
     created_at: datetime
     updated_at: datetime
 
