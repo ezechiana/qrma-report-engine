@@ -33,6 +33,8 @@ def generate_referral_code() -> str:
 
 def get_referral_config(db: Session) -> dict[str, Any]:
     """Read referral config. Schema must be migrated separately; no runtime DDL here."""
+    feature_enabled = is_feature_enabled(db, "referrals_enabled", default=True)
+
     default_config = {
         "enabled": feature_enabled,
         "reward_type": "free_months",

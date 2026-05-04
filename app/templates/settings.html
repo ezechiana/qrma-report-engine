@@ -601,6 +601,28 @@
         }
     }
 
+    async function loadReferral() {
+        try {
+            const res = await fetch("/api/referrals/me", { credentials: "include" });
+            const data = await res.json();
+
+            const input = document.getElementById("referral-link");
+
+            if (!data.enabled) {
+            input.value = "Referral system disabled";
+            return;
+            }
+
+            input.value = data.referral_link || "Referral link unavailable";
+
+        } catch (err) {
+            document.getElementById("referral-link").value = "Referral link unavailable";
+        }
+        }
+
+        loadReferral();
+
+
     function getReferralShareText() {
         const link = document.getElementById("referral-link")?.value || "";
         return `I thought you might find go360 useful for turning QRMA scans into professional client-ready reports. You can start here: ${link}`;

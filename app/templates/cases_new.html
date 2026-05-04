@@ -366,6 +366,43 @@
         return out;
     }
 
+
+
+    // Local safety shim: older base.html builds may not expose this helper.
+    // Keeps the upload/create flow working while still respecting subscription gating.
+    async function handleSubscriptionRequiredResponse(response, contextText) {
+        if (!response || response.status !== 402) return false;
+
+        let payload = {};
+        try {
+            payload = await response.clone().json();
+        } catch (e) {
+            payload = {};
+        }
+
+        const detail = unwrapErrorPayload(payload);
+        let message = "A subscription is required to continue.";
+        if (detail && typeof detail === "object" && detail.message) {
+            message = detail.message;
+        } else if (typeof detail === "string" && detail.trim()) {
+            message = detail;
+        }
+
+        const box = document.getElementById("error-box");
+        const target = contextText || "continue";
+        box.style.display = "block";
+        box.innerHTML = `
+            <div class="error-action-row">
+                <div class="error-message-text">
+                    <strong>Subscription required.</strong><br>
+                    ${safeText(message)} ${target ? `Please upgrade to ${safeText(target)}.` : ""}
+                </div>
+                <a class="btn small" href="/app/settings">Upgrade / manage billing</a>
+            </div>
+        `;
+        return true;
+    }
+
     let preselectedPatientId = getQueryParam("patient_id");
     let temporaryUploadId = null;
     let parsedScanMetadata = null;
@@ -761,7 +798,9 @@
         document.getElementById("case_title").value =
             (p.full_name ? `${p.full_name} QRMA scan` : "QRMA scan case");
 
-        document.getElementById("confirm-card").style.display = "block";
+        const confirmCard = document.getElementById("confirm-card");
+        confirmCard.style.display = "block";
+        confirmCard.scrollIntoView({ behavior: "smooth", block: "start" });
 
         await loadPatientsForMatching();
 

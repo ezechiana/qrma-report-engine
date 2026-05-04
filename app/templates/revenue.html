@@ -34,6 +34,141 @@
     color: #065f46;
 }
 
+.revenue-intelligence-grid {
+    display: grid;
+    grid-template-columns: 1.1fr .9fr;
+    gap: 14px;
+    margin-bottom: 16px;
+}
+
+.revenue-intelligence-card {
+    background: #fff;
+    border: 1px solid var(--line);
+    border-radius: 18px;
+    padding: 16px;
+}
+
+.revenue-intelligence-card.highlight {
+    background: linear-gradient(135deg, #ffffff 0%, #f8fafc 48%, #eff6ff 100%);
+    border-color: #bfdbfe;
+}
+
+.revenue-intelligence-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 12px;
+}
+
+.revenue-intelligence-title {
+    font-size: 18px;
+    font-weight: 950;
+    color: #0f172a;
+    margin: 0 0 4px;
+}
+
+.revenue-intelligence-subtitle {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.45;
+}
+
+.revenue-goal-value {
+    font-size: 22px;
+    font-weight: 950;
+    color: #1d4ed8;
+    text-align: right;
+}
+
+.revenue-goal-bar {
+    height: 10px;
+    background: #e2e8f0;
+    border-radius: 999px;
+    overflow: hidden;
+    margin: 10px 0 8px;
+}
+
+.revenue-goal-bar span {
+    display: block;
+    width: 0%;
+    height: 100%;
+    background: linear-gradient(90deg, #2563eb, #16a34a);
+    border-radius: 999px;
+    transition: width .35s ease;
+}
+
+.revenue-period-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 10px;
+    margin-top: 12px;
+}
+
+.revenue-period-card {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 11px;
+    background: rgba(255,255,255,.84);
+}
+
+.revenue-period-label {
+    font-size: 11px;
+    color: #64748b;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    font-weight: 900;
+}
+
+.revenue-period-value {
+    margin-top: 4px;
+    color: #0f172a;
+    font-size: 18px;
+    font-weight: 950;
+}
+
+.revenue-period-range {
+    margin-top: 3px;
+    color: #64748b;
+    font-size: 11px;
+    line-height: 1.3;
+}
+
+.revenue-insight-list {
+    display: grid;
+    gap: 10px;
+}
+
+.revenue-insight-item {
+    border: 1px solid #e2e8f0;
+    border-radius: 14px;
+    padding: 11px 12px;
+    background: #f8fafc;
+}
+
+.revenue-insight-item.warning {
+    background: #fff7ed;
+    border-color: #fed7aa;
+}
+
+.revenue-insight-item.good {
+    background: #ecfdf5;
+    border-color: #bbf7d0;
+}
+
+.revenue-insight-title {
+    color: #0f172a;
+    font-weight: 900;
+    margin-bottom: 3px;
+}
+
+.revenue-insight-text {
+    color: #64748b;
+    font-size: 12px;
+    line-height: 1.4;
+}
+
 .revenue-stats {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -103,6 +238,13 @@
     align-items: center;
     flex-wrap: wrap;
     margin-bottom: 12px;
+}
+
+.revenue-toolbar-controls {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+    align-items: center;
 }
 
 .revenue-toolbar input,
@@ -187,14 +329,20 @@
 
 @media(max-width:1100px) {
     .revenue-stats,
-    .revenue-currency-grid {
+    .revenue-currency-grid,
+    .revenue-intelligence-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .revenue-period-grid {
         grid-template-columns: repeat(2, 1fr);
     }
 }
 
 @media(max-width:900px) {
     .revenue-stats,
-    .revenue-currency-grid {
+    .revenue-currency-grid,
+    .revenue-intelligence-grid,
+    .revenue-period-grid {
         grid-template-columns: 1fr;
     }
 }
@@ -211,6 +359,35 @@
 
 <div class="revenue-notice">
     Stripe fees are shown separately from the platform commission so practitioner payout, platform commission, and true platform net revenue remain clear.
+</div>
+
+<div class="revenue-intelligence-grid">
+    <div class="revenue-intelligence-card highlight">
+        <div class="revenue-intelligence-header">
+            <div>
+                <h3 class="revenue-intelligence-title">Converted performance summary</h3>
+                <div class="revenue-intelligence-subtitle" id="converted-performance-subtitle">Loading FX snapshot and goal data…</div>
+            </div>
+            <div class="revenue-goal-value" id="converted-goal-value">—</div>
+        </div>
+        <div class="revenue-goal-bar"><span id="converted-goal-bar"></span></div>
+        <div class="revenue-small" id="converted-goal-note">Converted for performance tracking only. Accounting remains in original currencies.</div>
+        <div class="revenue-period-grid" id="converted-period-grid">
+            <div class="revenue-empty">Loading periods…</div>
+        </div>
+    </div>
+
+    <div class="revenue-intelligence-card">
+        <div class="revenue-intelligence-header">
+            <div>
+                <h3 class="revenue-intelligence-title">Revenue intelligence</h3>
+                <div class="revenue-intelligence-subtitle">Operational signals from paid bundles, unpaid access, and Stripe routing.</div>
+            </div>
+        </div>
+        <div class="revenue-insight-list" id="revenue-insight-list">
+            <div class="revenue-insight-item"><div class="revenue-insight-title">Loading insights…</div><div class="revenue-insight-text">Please wait.</div></div>
+        </div>
+    </div>
 </div>
 
 <div class="revenue-stats">
@@ -231,13 +408,20 @@
             <h2 style="margin:0">Payments</h2>
             <div class="muted">Paid and unpaid client bundle payments.</div>
         </div>
-        <div>
+        <div class="revenue-toolbar-controls">
             <input id="search" placeholder="Search patient, bundle, Stripe ID…">
             <select id="status">
                 <option value="">All statuses</option>
                 <option value="paid">Paid</option>
                 <option value="checkout_started">Checkout started</option>
                 <option value="unpaid">Unpaid</option>
+            </select>
+            <select id="period-filter">
+                <option value="">All dates</option>
+                <option value="this_month">Paid this month</option>
+                <option value="last_month">Paid last month</option>
+                <option value="last_3_months">Paid last 3 months</option>
+                <option value="needs_payment">Needs payment</option>
             </select>
         </div>
     </div>
@@ -267,7 +451,11 @@
 
 <script>
 let payments = [];
-let filters = { q: "", status: "" };
+let revenueSummary = {};
+let filters = { q: "", status: "", period: "" };
+
+const ZERO_DECIMAL = new Set(["JPY", "KRW"]);
+const SYMBOLS = { GBP: "£", USD: "$", EUR: "€", AED: "د.إ", JPY: "¥", KRW: "₩" };
 
 function esc(s) {
     return String(s ?? "").replace(/[&<>"']/g, m => ({
@@ -283,6 +471,61 @@ function cls(v) {
     return String(v || "").replaceAll(" ", "_").toLowerCase();
 }
 
+function minorFactor(currency) {
+    return ZERO_DECIMAL.has(String(currency || "").toUpperCase()) ? 1 : 100;
+}
+
+function moneyMinor(amount, currency) {
+    const code = String(currency || "GBP").toUpperCase();
+    const value = Number(amount || 0);
+    const symbol = SYMBOLS[code] || `${code} `;
+    if (ZERO_DECIMAL.has(code)) return `${symbol}${Math.round(value).toLocaleString()}`;
+    return `${symbol}${(value / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function paymentDate(p) {
+    return p.paid_at || p.created_at || null;
+}
+
+function paymentStatus(p) {
+    return String(p.payment_status || "").toLowerCase();
+}
+
+function parseDate(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function currentMonthBounds() {
+    const now = new Date();
+    return {
+        start: new Date(now.getFullYear(), now.getMonth(), 1),
+        end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+    };
+}
+
+function lastMonthBounds() {
+    const now = new Date();
+    return {
+        start: new Date(now.getFullYear(), now.getMonth() - 1, 1),
+        end: new Date(now.getFullYear(), now.getMonth(), 1),
+    };
+}
+
+function last3MonthBounds() {
+    const now = new Date();
+    return {
+        start: new Date(now.getFullYear(), now.getMonth() - 2, 1),
+        end: new Date(now.getFullYear(), now.getMonth() + 1, 1),
+    };
+}
+
+function isInRange(dateValue, bounds) {
+    const d = parseDate(dateValue);
+    return Boolean(d && d >= bounds.start && d < bounds.end);
+}
+
 function feeModelLabel(model) {
     if (model === "practitioner_absorbs") {
         return "Fee model: Stripe fees are deducted from practitioner payouts. Platform commission is preserved.";
@@ -291,6 +534,14 @@ function feeModelLabel(model) {
         return "Fee model: Stripe fees are shared proportionally between practitioner payout and platform commission.";
     }
     return "Fee model: Platform absorbs Stripe fees. Practitioner payout is calculated from gross minus platform commission.";
+}
+
+function goalNote(valueMinor, goalMinor, currency, monthLabel) {
+    const remaining = Math.max(0, Number(goalMinor || 0) - Number(valueMinor || 0));
+    const exceeded = Math.max(0, Number(valueMinor || 0) - Number(goalMinor || 0));
+    if (exceeded > 0) return `${monthLabel || "This month"} target exceeded by ${moneyMinor(exceeded, currency)}.`;
+    if (remaining === 0) return `${monthLabel || "This month"} target met.`;
+    return `${moneyMinor(remaining, currency)} remaining to reach ${String(monthLabel || "this month").toLowerCase()} target.`;
 }
 
 async function loadRevenue() {
@@ -304,8 +555,11 @@ async function loadRevenue() {
     const summary = await s.json();
     const data = await p.json();
 
+    revenueSummary = summary || {};
     payments = data.items || [];
     renderSummary(summary);
+    renderConvertedPerformance(summary);
+    renderInsights(summary, payments);
     renderPayments();
 }
 
@@ -338,11 +592,71 @@ function renderSummary(summary) {
     `).join("");
 }
 
+function renderConvertedPerformance(summary) {
+    const goal = summary.revenue_goal || {};
+    const currency = String(goal.currency || summary.preferred_currency || "USD").toUpperCase();
+    const goalMinor = Number(goal.monthly_goal_minor || summary.monthly_goal_minor || 0);
+    const periods = Array.isArray(goal.periods) ? goal.periods : [];
+    const thisMonth = periods.find(p => p.key === "this_month") || { value_minor: 0, label: "This month", range_label: "—" };
+    const thisMonthValue = Number(thisMonth.value_minor || 0);
+    const progress = goalMinor > 0 ? Math.min(100, Math.round((thisMonthValue / goalMinor) * 100)) : 0;
+
+    document.getElementById("converted-goal-value").textContent = `${moneyMinor(thisMonthValue, currency)} / ${moneyMinor(goalMinor, currency)}`;
+    document.getElementById("converted-goal-bar").style.width = `${progress}%`;
+    document.getElementById("converted-goal-note").textContent = goalNote(thisMonthValue, goalMinor, currency, goal.month_label || "This month");
+    document.getElementById("converted-performance-subtitle").textContent = `Converted to ${currency} using ${goal.fx_source || "monthly FX snapshot"}${goal.fx_effective_month ? ` for ${goal.fx_effective_month}` : ""}. Actual income remains in original currencies.`;
+
+    const periodGrid = document.getElementById("converted-period-grid");
+    if (!periods.length) {
+        periodGrid.innerHTML = '<div class="revenue-empty">No converted period data available yet.</div>';
+        return;
+    }
+    const visiblePeriods = periods.filter(p => ["this_week", "this_month", "last_month", "last_3_months"].includes(p.key));
+    periodGrid.innerHTML = visiblePeriods.map(p => `
+        <div class="revenue-period-card">
+            <div class="revenue-period-label">${esc(p.short_label || p.label || "Period")}</div>
+            <div class="revenue-period-value">${moneyMinor(Number(p.value_minor || 0), currency)}</div>
+            <div class="revenue-period-range">${esc(p.range_label || "—")}</div>
+        </div>
+    `).join("");
+}
+
+function renderInsights(summary, items) {
+    const paidCount = Number(summary.paid_count || 0);
+    const unpaidCount = Number(summary.unpaid_count || 0);
+    const destinationCount = items.filter(p => p.connect_mode === "destination_charge").length;
+    const paid = items.filter(p => paymentStatus(p) === "paid");
+    const grossValues = paid.map(p => Number(p.price_amount || p.gross_minor || 0)).filter(Boolean);
+    const avgMinor = grossValues.length ? Math.round(grossValues.reduce((a, b) => a + b, 0) / grossValues.length) : 0;
+    const mainCurrency = (paid[0] && (paid[0].currency || paid[0].price_currency)) || ((summary.currencies || [])[0] || {}).currency || "GBP";
+
+    const insights = [];
+    if (unpaidCount > 0) {
+        insights.push({ type: "warning", title: `${unpaidCount} payment${unpaidCount === 1 ? "" : "s"} need follow-up`, text: "Use the status filter to review checkout-started or unpaid bundles and resend the client payment link." });
+    } else {
+        insights.push({ type: "good", title: "No unpaid paid-access bundles", text: "Current paid bundle access looks clean from an operational perspective." });
+    }
+    insights.push({ type: "", title: `${paidCount} paid bundle${paidCount === 1 ? "" : "s"}`, text: avgMinor ? `Average paid bundle value is approximately ${moneyMinor(avgMinor, mainCurrency)} in original transaction currency.` : "Paid bundle activity will appear here once clients complete checkout." });
+    insights.push({ type: "", title: `${destinationCount} Stripe Connect routed`, text: destinationCount ? "These payments were routed to connected practitioner accounts using destination charges." : "No destination-charge payments yet. Platform-only and fallback payments are still tracked below." });
+
+    document.getElementById("revenue-insight-list").innerHTML = insights.map(i => `
+        <div class="revenue-insight-item ${esc(i.type)}">
+            <div class="revenue-insight-title">${esc(i.title)}</div>
+            <div class="revenue-insight-text">${esc(i.text)}</div>
+        </div>
+    `).join("");
+}
+
 function filtered() {
     const q = filters.q.toLowerCase().trim();
 
     return payments.filter(p => {
-        if (filters.status && p.payment_status !== filters.status) return false;
+        const status = paymentStatus(p);
+        if (filters.status && status !== filters.status) return false;
+        if (filters.period === "needs_payment" && status === "paid") return false;
+        if (filters.period === "this_month" && !(status === "paid" && isInRange(paymentDate(p), currentMonthBounds()))) return false;
+        if (filters.period === "last_month" && !(status === "paid" && isInRange(paymentDate(p), lastMonthBounds()))) return false;
+        if (filters.period === "last_3_months" && !(status === "paid" && isInRange(paymentDate(p), last3MonthBounds()))) return false;
         if (q && !([
             p.title,
             p.patient,
@@ -406,11 +720,18 @@ document.getElementById("status").addEventListener("change", e => {
     renderPayments();
 });
 
+document.getElementById("period-filter").addEventListener("change", e => {
+    filters.period = e.target.value;
+    renderPayments();
+});
+
 loadRevenue().catch(e => {
     console.error(e);
     document.getElementById("rows").innerHTML = '<tr><td colspan="10" class="revenue-empty">Could not load revenue.</td></tr>';
     document.getElementById("currency-grid").innerHTML = '<div class="muted">Could not load summary.</div>';
     document.getElementById("fee-model-banner").textContent = "Could not load revenue model.";
+    document.getElementById("converted-period-grid").innerHTML = '<div class="revenue-empty">Could not load converted performance.</div>';
+    document.getElementById("revenue-insight-list").innerHTML = '<div class="revenue-insight-item warning"><div class="revenue-insight-title">Could not load revenue insights</div><div class="revenue-insight-text">Please refresh or check the backend logs.</div></div>';
 });
 </script>
 {% endblock %}
