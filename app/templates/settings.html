@@ -82,19 +82,6 @@
 .hidden-url {
     display: none;
 }
-.goal-currency-row {
-    align-items: end;
-}
-.goal-note-box {
-    border: 1px solid #bfdbfe;
-    background: #eff6ff;
-    color: #1e3a8a;
-    border-radius: 12px;
-    padding: 12px;
-    font-size: 13px;
-    line-height: 1.5;
-    margin-top: 10px;
-}
 </style>
 
 <div id="error-box" class="error" style="display:none;"></div>
@@ -211,64 +198,6 @@
   </div>
 </div>
 
-<div class="card" id="revenue-goals-card">
-  <h3>Revenue goals</h3>
-  <p class="muted">
-    Used for dashboard performance tracking only. Actual earnings and payouts remain reported in the original transaction currencies.
-  </p>
-
-  <div class="grid-2 goal-currency-row" style="margin-top:12px;">
-    <div class="field">
-      <label>Dashboard goal currency</label>
-      <select id="preferred_currency">
-        <option value="USD">USD ($)</option>
-        <option value="GBP">GBP (£)</option>
-        <option value="EUR">EUR (€)</option>
-        <option value="AED">AED (د.إ)</option>
-        <option value="JPY">JPY (¥)</option>
-        <option value="KRW">KRW (₩)</option>
-      </select>
-      <div class="help-text">Revenue from other currencies is converted into this currency for the monthly goal view only.</div>
-    </div>
-
-    <div class="field">
-      <label>Monthly revenue goal</label>
-      <input id="monthly_goal_major" type="number" min="0" step="1" placeholder="e.g. 2000">
-      <div class="help-text">Calendar-month goal, for example May. The stored value is saved in minor units for accuracy.</div>
-    </div>
-  </div>
-
-  <div class="goal-note-box">
-    FX rates are stored as a monthly snapshot by the platform. The dashboard explains the FX snapshot used. This does not alter accounting or Stripe payout values.
-  </div>
-</div>
-
-<div class="card" id="referral-card">
-  <h3>Refer & earn</h3>
-  <p class="muted" id="referral-headline">
-    Refer a paying practitioner and get subscription credit.
-  </p>
-
-  <div class="grid-2" style="margin-top:14px; align-items:start;">
-    <div class="asset-box" style="border-style:solid;">
-      <div class="help-text" style="text-transform:uppercase; font-weight:900; letter-spacing:.06em; margin:0 0 6px;">Your referral link</div>
-      <input id="referral-link" readonly value="Loading…">
-      <div class="help-text" style="margin-top:8px;">Share this link with QRMA practitioners. The reward is applied when the referred practitioner becomes a paying subscriber.</div>
-      <div class="btn-row" style="margin-top:10px;">
-        <button class="btn" type="button" id="copy-referral-link-btn">Copy link</button>
-        <button class="btn secondary" type="button" id="whatsapp-referral-link-btn">WhatsApp</button>
-        <button class="btn secondary" type="button" id="email-referral-link-btn">Email</button>
-      </div>
-    </div>
-
-    <div class="asset-box" style="border-style:solid;">
-      <div class="help-text" style="text-transform:uppercase; font-weight:900; letter-spacing:.06em; margin:0 0 6px;">Referral dashboard</div>
-      <div id="referral-stats" class="muted">Loading referral stats…</div>
-      <div id="referral-recent" class="help-text" style="margin-top:10px;"></div>
-    </div>
-  </div>
-</div>
-
 <div class="card">
   <h3>Stripe payouts</h3>
   <p class="muted">
@@ -350,20 +279,6 @@
         meta.textContent = storedValue || "";
     }
 
-    function isZeroDecimalCurrency(currency) {
-        return ["JPY", "KRW"].includes(String(currency || "").toUpperCase());
-    }
-
-    function majorToMinor(amount, currency) {
-        const n = Number(amount || 0);
-        return Math.max(0, Math.round(n * (isZeroDecimalCurrency(currency) ? 1 : 100)));
-    }
-
-    function minorToMajor(amount, currency) {
-        const n = Number(amount || 0);
-        return isZeroDecimalCurrency(currency) ? n : Math.round(n / 100);
-    }
-
     async function loadSettings() {
         clearError();
         clearSuccess();
@@ -387,9 +302,6 @@
         document.getElementById("report_subtitle").value = data.report_subtitle || "";
         document.getElementById("support_email").value = data.support_email || "";
         document.getElementById("website_url").value = data.website_url || "";
-        const preferredCurrency = String(data.preferred_currency || "USD").toUpperCase();
-        document.getElementById("preferred_currency").value = preferredCurrency;
-        document.getElementById("monthly_goal_major").value = minorToMajor(data.monthly_goal_minor || 200000, preferredCurrency);
         document.getElementById("recommendation_mode_default").value =
             data.recommendation_mode_default || "natural_approaches_clinical";
 
@@ -411,8 +323,6 @@
             report_subtitle: document.getElementById("report_subtitle").value.trim(),
             support_email: document.getElementById("support_email").value.trim(),
             website_url: document.getElementById("website_url").value.trim(),
-            preferred_currency: document.getElementById("preferred_currency").value,
-            monthly_goal_minor: majorToMinor(document.getElementById("monthly_goal_major").value, document.getElementById("preferred_currency").value),
             recommendation_mode_default: document.getElementById("recommendation_mode_default").value,
         };
 
@@ -560,102 +470,6 @@
     document.getElementById("subscription-refresh-btn")?.addEventListener("click", loadSubscriptionStatus);
     
 
-
-    function formatReferralDate(value) {
-        if (!value) return "—";
-        const date = new Date(value);
-        if (Number.isNaN(date.getTime())) return "—";
-        return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
-    }
-
-    async function loadReferralSummary() {
-        const linkInput = document.getElementById("referral-link");
-        const headline = document.getElementById("referral-headline");
-        const stats = document.getElementById("referral-stats");
-        const recent = document.getElementById("referral-recent");
-        if (!linkInput || !stats) return;
-
-        try {
-            const res = await apiFetch("/api/referrals/me");
-            const data = await res.json().catch(() => ({}));
-            if (!res.ok) {
-                stats.textContent = data.detail || "Could not load referral information.";
-                return;
-            }
-
-            linkInput.value = data.referral_link || "";
-            if (headline) headline.innerHTML = data.headline || "Refer a paying practitioner and get subscription credit.";
-
-            const counts = data.counts || {};
-            stats.innerHTML = `
-                <strong>${data.months_awarded || 0}</strong> free month${Number(data.months_awarded || 0) === 1 ? "" : "s"} earned<br>
-                ${counts.total || 0} referral${Number(counts.total || 0) === 1 ? "" : "s"} · ${counts.signed_up || 0} signed up · ${counts.rewarded || 0} rewarded
-            `;
-
-            const rows = (data.recent || []).slice(0, 4);
-            recent.innerHTML = rows.length
-                ? rows.map(r => `${r.full_name || r.email || "Referral"} — ${r.status} (${formatReferralDate(r.created_at)})`).join("<br>")
-                : "No referrals yet.";
-        } catch (err) {
-            stats.textContent = "Could not load referral information.";
-        }
-    }
-
-    async function loadReferral() {
-        try {
-            const res = await fetch("/api/referrals/me", { credentials: "include" });
-            const data = await res.json();
-
-            const input = document.getElementById("referral-link");
-
-            if (!data.enabled) {
-            input.value = "Referral system disabled";
-            return;
-            }
-
-            input.value = data.referral_link || "Referral link unavailable";
-
-        } catch (err) {
-            document.getElementById("referral-link").value = "Referral link unavailable";
-        }
-        }
-
-        loadReferral();
-
-
-    function getReferralShareText() {
-        const link = document.getElementById("referral-link")?.value || "";
-        return `I thought you might find go360 useful for turning QRMA scans into professional client-ready reports. You can start here: ${link}`;
-    }
-
-    async function copyReferralLink() {
-        const link = document.getElementById("referral-link")?.value || "";
-        if (!link) return;
-        try {
-            await navigator.clipboard.writeText(link);
-            setSuccess("Referral link copied.");
-        } catch (err) {
-            const input = document.getElementById("referral-link");
-            input?.select();
-            document.execCommand("copy");
-            setSuccess("Referral link copied.");
-        }
-    }
-
-    function shareReferralWhatsApp() {
-        window.open(`https://wa.me/?text=${encodeURIComponent(getReferralShareText())}`, "_blank");
-    }
-
-    function shareReferralEmail() {
-        const subject = encodeURIComponent("go360 referral");
-        const body = encodeURIComponent(getReferralShareText());
-        window.location.href = `mailto:?subject=${subject}&body=${body}`;
-    }
-
-    document.getElementById("copy-referral-link-btn")?.addEventListener("click", copyReferralLink);
-    document.getElementById("whatsapp-referral-link-btn")?.addEventListener("click", shareReferralWhatsApp);
-    document.getElementById("email-referral-link-btn")?.addEventListener("click", shareReferralEmail);
-
     async function loadStripeConnectStatus() {
         const box = document.getElementById("stripe-connect-status");
         if (!box) return;
@@ -739,16 +553,9 @@
         uploadBrandAsset("cover_file", "/api/settings/upload-cover", "cover_image_url", "cover_preview", "cover_meta");
     });
 
-    document.getElementById("preferred_currency")?.addEventListener("change", () => {
-        const input = document.getElementById("monthly_goal_major");
-        if (input && !input.value) input.value = "2000";
-    });
-
     document.getElementById("save-settings-btn").addEventListener("click", saveSettings);
 
     loadSubscriptionStatus();
     loadSettings();
-    loadReferralDashboard();
-    loadReferralSummary();
 </script>
 {% endblock %}

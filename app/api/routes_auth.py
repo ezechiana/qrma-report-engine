@@ -28,8 +28,21 @@ def register(
     payload: AuthRegisterRequest,
     db: CurrentDB,
     response: Response,
+    request: Request,
 ):
     auth = register_and_login_user(db, payload)
+
+    # Referral V2: capture /register?ref=CODE without changing the auth schema.
+    # Best-effort only; registration must never fail because referral tracking failed.
+    referral_code = request.query_params.get("ref") or request.query_params.get("referral_code")
+    if referral_code:
+        try:
+            from app.services.referral_service import register_referral_signup
+
+            register_referral_signup(db, referred_user=auth.get("user"), referral_code=referral_code)
+        except Exception as exc:
+            db.rollback()
+            print(f"[referrals] failed to register referral signup: {exc}")
 
     response.set_cookie(
         key="access_token",

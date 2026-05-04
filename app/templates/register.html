@@ -751,7 +751,7 @@
                 </form>
 
                 <div class="legal">
-                    By creating an account, you agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+                    By creating an account, you agree to our <a href="#">Terms of Service</a> and <a href="#">Privacy Policy</a>.
                 </div>
             </div>
         </div>
@@ -763,6 +763,11 @@
         localStorage.setItem("access_token", payload.access_token || "");
         localStorage.setItem("refresh_token", payload.refresh_token || "");
         localStorage.setItem("current_user", JSON.stringify(payload.user || null));
+    }
+
+    function getReferralCode() {
+        const url = new URL(window.location.href);
+        return url.searchParams.get("ref") || url.searchParams.get("referral_code") || "";
     }
 
     function togglePasswordInput(inputId) {
@@ -870,7 +875,12 @@
             phone: phone,
         };
 
-        const response = await fetch("/auth/register", {
+        const referralCode = getReferralCode();
+        const registerUrl = referralCode
+            ? `/auth/register?ref=${encodeURIComponent(referralCode)}`
+            : "/auth/register";
+
+        const response = await fetch(registerUrl, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),

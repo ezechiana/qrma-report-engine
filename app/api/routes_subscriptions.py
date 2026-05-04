@@ -12,7 +12,6 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
-from app.services.platform_settings_service import get_platform_settings, is_feature_enabled
 
 router = APIRouter(tags=["subscriptions"])
 
@@ -70,42 +69,6 @@ def _row_to_dict(row) -> dict[str, Any] | None:
     return dict(row._mapping) if row else None
 
 
-def _subscription_config(db: Session) -> dict[str, Any]:
-    try:
-        return get_platform_settings(db).get("subscription", {})
-    except Exception:
-        db.rollback()
-        return {}
-
-
-def _subscription_feature_enabled(db: Session) -> bool:
-    try:
-        return is_feature_enabled(db, "subscriptions_enabled", default=True)
-    except Exception:
-        db.rollback()
-        return True
-
-
-def _trial_days(db: Session) -> int:
-    return int(_subscription_config(db).get("trial_days") or TRIAL_DAYS)
-
-
-def _plan_code(db: Session) -> str:
-    return str(_subscription_config(db).get("plan_code") or DEFAULT_PLAN_CODE)
-
-
-def _allow_promotion_codes(db: Session) -> bool:
-    return bool(_subscription_config(db).get("allow_promotion_codes", STRIPE_ALLOW_PROMOTION_CODES))
-
-
-def _plan_name(db: Session) -> str:
-    return str(_subscription_config(db).get("plan_name") or os.getenv("SUBSCRIPTION_PLAN_NAME", "go360 Practitioner"))
-
-
-def _price_label(db: Session) -> str:
-    return str(_subscription_config(db).get("price_label") or os.getenv("SUBSCRIPTION_PRICE_LABEL", "$59/month"))
-
-
 def _is_subscription_usable(sub: dict[str, Any] | None) -> bool:
     if not sub:
         return False
@@ -148,7 +111,7 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
     if row:
         return dict(row)
 
-    trial_end = _now() + timedelta(days=_trial_days(db))
+    trial_end = _now() + timedelta(days=TRIAL_DAYS)
     row = db.execute(
         text(
             """
@@ -178,7 +141,7 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
         ),
         {
             "user_id": current_user.id,
-            "plan_code": _plan_code(db),
+            "plan_code": DEFAULT_PLAN_CODE,
             "trial_end": trial_end,
         },
     ).mappings().first()
@@ -186,7 +149,7 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
     return dict(row)
 
 
-def _subscription_payload(sub: dict[str, Any], db: Session | None = None) -> dict[str, Any]:
+def _subscription_payload(sub: dict[str, Any]) -> dict[str, Any]:
     status = sub.get("status") or "incomplete"
     usable = _is_subscription_usable(sub)
     end = sub.get("current_period_end") or sub.get("trial_ends_at")
@@ -194,10 +157,7 @@ def _subscription_payload(sub: dict[str, Any], db: Session | None = None) -> dic
 
     return {
         "id": str(sub.get("id")) if sub.get("id") else None,
-        "plan_code": sub.get("plan_code") or (_plan_code(db) if db is not None else DEFAULT_PLAN_CODE),
-        "plan_name": _plan_name(db) if db is not None else os.getenv("SUBSCRIPTION_PLAN_NAME", "go360 Practitioner"),
-        "price_label": _price_label(db) if db is not None else os.getenv("SUBSCRIPTION_PRICE_LABEL", "$59/month"),
-        "feature_enabled": _subscription_feature_enabled(db) if db is not None else True,
+        "plan_code": sub.get("plan_code") or DEFAULT_PLAN_CODE,
         "status": status,
         "is_active": usable,
         "can_create_reports": usable,
@@ -330,7 +290,7 @@ def _upsert_subscription_from_stripe(
                 "customer_id": customer_id,
                 "subscription_id": subscription_id,
                 "price_id": price_id,
-                "plan_code": _plan_code(db),
+                "plan_code": DEFAULT_PLAN_CODE,
                 "status": mapped_status,
                 "current_period_end": current_period_end,
                 "cancel_at_period_end": bool(cancel_at_period_end),
@@ -340,6 +300,15 @@ def _upsert_subscription_from_stripe(
 
     db.commit()
 
+    if mapped_status == "active":
+        try:
+            from app.services.referral_service import award_referral_if_eligible
+
+            award_referral_if_eligible(db, referred_user_id=user_id)
+        except Exception as exc:
+            db.rollback()
+            print(f"[referrals] failed to award referral for user {user_id}: {exc}")
+
 
 @router.get("/api/subscription/status")
 def get_subscription_status(
@@ -347,7 +316,7 @@ def get_subscription_status(
     current_user: User = Depends(get_current_user),
 ):
     sub = _ensure_subscription_record(db, current_user)
-    return _subscription_payload(sub, db)
+    return _subscription_payload(sub)
 
 
 @router.post("/api/subscription/checkout")
@@ -357,8 +326,6 @@ def create_subscription_checkout(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    if not _subscription_feature_enabled(db):
-        raise HTTPException(status_code=403, detail="Subscriptions are currently disabled by platform settings.")
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe is not configured. Set STRIPE_SECRET_KEY.")
     if not STRIPE_SUBSCRIPTION_PRICE_ID:
@@ -415,7 +382,7 @@ def create_subscription_checkout(
         if not promo or not promo.data:
             raise HTTPException(status_code=400, detail="Voucher code was not found or is no longer active.")
         checkout_args["discounts"] = [{"promotion_code": promo.data[0].id}]
-    elif _allow_promotion_codes(db):
+    elif STRIPE_ALLOW_PROMOTION_CODES:
         checkout_args["allow_promotion_codes"] = True
 
     session = stripe.checkout.Session.create(**checkout_args)
