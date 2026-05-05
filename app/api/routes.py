@@ -1,7 +1,8 @@
 # app/api/routes.py
 
-from fastapi import APIRouter, UploadFile, File, Body
+from fastapi import Request, APIRouter, UploadFile, File, Body
 from fastapi.responses import HTMLResponse, FileResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 
 from app.models.schema import ReportBuildRequest, NarrativeBlock
 from app.parser.html_parser import parse_html_report
@@ -16,7 +17,14 @@ from app.services.pdf_service import save_html, save_pdf
 from app.services.storage_service import generate_presigned_url
 
 router = APIRouter()
+templates = Jinja2Templates(directory="app/templates")
 
+@router.get("/", response_class=HTMLResponse)
+def landing_page(request: Request):
+    return templates.TemplateResponse(
+        "landing.html",
+        {"request": request}
+    )
 
 def decode_uploaded_file(content: bytes) -> str:
     for encoding in ("utf-8", "cp1252", "latin-1"):
