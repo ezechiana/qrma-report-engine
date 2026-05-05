@@ -300,15 +300,6 @@ def _upsert_subscription_from_stripe(
 
     db.commit()
 
-    if mapped_status == "active":
-        try:
-            from app.services.referral_service import award_referral_if_eligible
-
-            award_referral_if_eligible(db, referred_user_id=user_id)
-        except Exception as exc:
-            db.rollback()
-            print(f"[referrals] failed to award referral for user {user_id}: {exc}")
-
 
 @router.get("/api/subscription/status")
 def get_subscription_status(

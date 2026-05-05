@@ -43,19 +43,63 @@
     .page:last-child{page-break-after:auto;}
 
     .cover{display:flex;flex-direction:column;justify-content:flex-start}
+    .cover-hero{
+      border-radius:22px;
+      overflow:hidden;
+      border:1px solid var(--border-color);
+      margin-bottom:18px;
+      box-shadow:0 12px 34px rgba(15,23,42,.08);
+      background:linear-gradient(135deg,#f8fafc,#eef2ff,#ecfdf5);
+      position:relative;
+    }
     .cover-image{
       width:100%;
       height:70mm;
       object-fit:cover;
-      border-radius:12px;
-      margin-bottom:18px;
-      border:1px solid var(--border-color);
+      display:block;
+    }
+    .cover-hero::after{
+      content:"";
+      position:absolute;
+      inset:auto 0 0 0;
+      height:20mm;
+      background:linear-gradient(180deg,rgba(255,255,255,0),rgba(255,255,255,.72));
     }
 
-    .brand-row{display:flex;align-items:center;gap:14px;margin-bottom:12px}
-    .logo{max-height:26mm;max-width:60mm;object-fit:contain}
-    .brand-name{font-size:15px;font-weight:bold;color:var(--primary-color);}
-    .report-title{font-size:30px;font-weight:bold;color:#0f172a;margin:6px 0 8px}
+    .brand-row{
+      display:flex;
+      align-items:center;
+      gap:14px;
+      margin-bottom:14px;
+      padding:10px 0 2px;
+      border-bottom:3px solid color-mix(in srgb, var(--primary-color) 42%, transparent);
+    }
+    .logo-shell{
+      min-width:68px;
+      min-height:52px;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      border-radius:16px;
+      background:#ffffff;
+      border:1px solid #e2e8f0;
+      box-shadow:0 8px 20px rgba(15,23,42,.06);
+      padding:6px;
+    }
+    .logo{max-height:24mm;max-width:54mm;object-fit:contain}
+    .brand-name{
+      font-size:16px;
+      font-weight:800;
+      color:var(--primary-color);
+      letter-spacing:0.01em;
+    }
+    .brand-tagline{
+      font-size:12px;
+      color:#64748b;
+      margin-top:2px;
+      line-height:1.35;
+    }
+    .report-title{font-size:31px;font-weight:800;color:#0f172a;margin:8px 0 8px;line-height:1.08}
     .subtitle{font-size:15px;color:var(--muted-text);margin-bottom:18px}
 
     h1,h2,h3,h4{margin:0;color:#0f172a}
@@ -274,7 +318,14 @@
     .full-table tr.sev-moderate td, .appendix-table tr.sev-moderate td { background:#fff8dc; color:#92400e; }
     .full-table tr.sev-severe td, .appendix-table tr.sev-severe td { background:#fff0f0; color:#991b1b; }
 
-    .footer-contact{margin-top:16px;font-size:12px;color:var(--muted-text)}
+    .footer-contact{margin-top:20px;font-size:12px;color:var(--muted-text);line-height:1.55}
+    .powered-by-go360{margin-top:8px;font-size:11px;color:#94a3b8;letter-spacing:.01em}
+    .powered-by-go360 strong{color:var(--primary-color)}
+
+    .report-theme-minimal .cover-hero{box-shadow:none;border-radius:16px}
+    .report-theme-minimal .brand-row{border-bottom-width:1px}
+    .report-theme-luxury .cover-hero{box-shadow:0 16px 42px rgba(15,23,42,.14)}
+    .report-theme-luxury .brand-name{letter-spacing:.04em;text-transform:uppercase}
     .no-break{page-break-inside:avoid}
 
     .status-bar-wrap{min-width:150px}
@@ -578,7 +629,7 @@
       text-transform:uppercase;
       color:var(--primary-color);
       margin-bottom:8px;
-    
+    }
 
     .section-intro-title{
       font-size:28px;
@@ -617,7 +668,7 @@
     .soft-emphasis{background:linear-gradient(180deg,#f8fafc,#ffffff)}
   </style>
 </head>
-<body>
+<body class="report-theme-{{ config.report_theme or 'default' }}">
   {% macro page_header(ph) -%}
     <div class="page-info-header">
       <div><span class="label">Name:</span> {{ ph.name }}</div>
@@ -704,20 +755,23 @@
   {%- endmacro %}
 
   <div class="page cover">
-    {% if config.cover_image_url %}
+    <div class="cover-hero">
       <img src="{{ config.cover_image_url }}" alt="Cover image" class="cover-image" />
-    {% endif %}
+    </div>
     <div class="brand-row">
-      {% if config.logo_url %}
-        <img src="{{ config.logo_url }}" alt="{{ clinic_name }} logo" class="logo" />
-      {% endif %}
+      <div class="logo-shell">
+        <img src="{{ config.logo_url }}" alt="{{ config.brand_name }} logo" class="logo" />
+      </div>
       <div class="brand-text">
-        <div class="brand-name">{{ clinic_name }}</div>
+        <div class="brand-name">{{ config.brand_name }}</div>
+        {% if config.clinic_tagline %}
+          <div class="brand-tagline">{{ config.clinic_tagline }}</div>
+        {% endif %}
       </div>
     </div>
-    <div class="report-title">{{ report_title }}</div>
-    {% if subtitle %}
-      <p class="subtitle">{{ subtitle }}</p>
+    <div class="report-title">{{ config.report_title }}</div>
+    {% if config.report_subtitle %}
+      <p class="subtitle">{{ config.report_subtitle }}</p>
     {% endif %}
     <div class="panel">
       <h2>Patient details</h2>
@@ -751,13 +805,14 @@
         <p><span class="label">Practitioner note:</span> {{ practitioner_notes.disclaimer_note }}</p>
       {% endif %}
     </div>
-    {% if config.clinic_contact or config.clinic_email or config.clinic_website %}
-      <div class="footer-contact">
-        {% if config.clinic_contact %}<div>{{ config.clinic_contact }}</div>{% endif %}
-        {% if config.clinic_email %}<div>{{ config.clinic_email }}</div>{% endif %}
-        {% if config.clinic_website %}<div>{{ config.clinic_website }}</div>{% endif %}
-      </div>
-    {% endif %}
+    <div class="footer-contact">
+      {% if config.clinic_name %}<div>{{ config.clinic_name }}</div>{% endif %}
+      {% if config.clinic_email %}<div>{{ config.clinic_email }}</div>{% endif %}
+      {% if config.clinic_website %}<div>{{ config.clinic_website }}</div>{% endif %}
+      {% if config.show_powered_by_go360 %}
+        <div class="powered-by-go360">Powered by <strong>go360</strong></div>
+      {% endif %}
+    </div>
   </div>
 
   {% if include_toc %}

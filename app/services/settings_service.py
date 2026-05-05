@@ -12,7 +12,14 @@ def get_or_create_settings(db: Session, user: User) -> PractitionerSettings:
         .filter(PractitionerSettings.user_id == user.id)
         .first()
     )
+
     if settings:
+        if not settings.preferred_currency:
+            settings.preferred_currency = "USD"
+
+        if settings.monthly_goal_minor is None:
+            settings.monthly_goal_minor = 0
+
         return settings
 
     settings = PractitionerSettings(
@@ -33,6 +40,14 @@ def get_or_create_settings(db: Session, user: User) -> PractitionerSettings:
     return settings
 
 
+def _clean_placeholder(value):
+    if value is None:
+        return None
+    if isinstance(value, str) and value.strip().lower() in {"", "string", "null", "undefined"}:
+        return None
+    return value
+
+
 def update_settings(db: Session, settings: PractitionerSettings, payload: dict) -> PractitionerSettings:
     if "recommendation_mode_default" in payload and payload["recommendation_mode_default"] is not None:
         payload["recommendation_mode_default"] = RecommendationMode(
@@ -40,6 +55,22 @@ def update_settings(db: Session, settings: PractitionerSettings, payload: dict) 
         )
 
     for field, value in payload.items():
+        value = _clean_placeholder(value)
+
+        if field == "accent_color" and not value:
+            value = "#2f6fed"
+
+        if field == "preferred_currency":
+            value = (value or "USD").upper()
+            if value not in {"USD", "GBP", "EUR", "AED", "JPY", "KRW"}:
+                value = "USD"
+
+        if field == "monthly_goal_minor":
+            value = int(value or 200000)
+
+        if field == "report_theme" and not value:
+            value = "default"
+
         setattr(settings, field, value)
 
     db.commit()

@@ -3,6 +3,7 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 from app.models.schema import ParsedReport, ReportOverrides, ParameterResult
 from app.services.config_service import load_practitioner_config
 from app.services.pdf_service import save_html, save_pdf
+from app.services.storage_service import generate_presigned_url
 from app.services.marker_definition_service import load_marker_definition_index, get_marker_definition
 from app.services.product_resolver import resolve_all_products
 from app.services.protocol_composer import compose_protocol
@@ -36,6 +37,96 @@ EXCLUDED_PRIORITY_SECTIONS = {"element of human", "basic physical quality"}
 USE_V3_SCORING = True
 USE_V3_PATTERN_ENGINE = True
 USE_V3_CLINICAL_SUMMARY = True
+
+
+
+def _plain(value) -> str:
+    """Return a stripped string, or an empty string for None-like values."""
+    if value is None:
+        return ""
+    return str(value).strip()
+
+
+def _default_logo_data_uri(clinic_name: str = "Clinic") -> str:
+    """Small neutral inline SVG logo so new/white-label tenants never show broken images."""
+    from urllib.parse import quote
+    initials = "".join([part[:1] for part in _plain(clinic_name).split()[:2]]).upper() or "C"
+    svg = """<svg xmlns='http://www.w3.org/2000/svg' width='240' height='120' viewBox='0 0 240 120'>
+      <rect width='240' height='120' rx='24' fill='#f8fafc'/>
+      <circle cx='60' cy='60' r='34' fill='#e2e8f0' stroke='#cbd5e1' stroke-width='2'/>
+      <text x='60' y='71' text-anchor='middle' font-family='Arial, sans-serif' font-size='28' font-weight='700' fill='#475569'>{initials}</text>
+    </svg>""".format(initials=initials)
+    return "data:image/svg+xml;charset=utf-8," + quote(svg)
+
+
+def _default_cover_data_uri() -> str:
+    """Neutral white-label cover image used when the practitioner has not uploaded one."""
+    from urllib.parse import quote
+    svg = """<svg xmlns='http://www.w3.org/2000/svg' width='1200' height='420' viewBox='0 0 1200 420'>
+      <defs>
+        <linearGradient id='g' x1='0' y1='0' x2='1' y2='1'>
+          <stop offset='0' stop-color='#f8fafc'/>
+          <stop offset='0.55' stop-color='#eef2ff'/>
+          <stop offset='1' stop-color='#ecfdf5'/>
+        </linearGradient>
+      </defs>
+      <rect width='1200' height='420' rx='32' fill='url(#g)'/>
+      <circle cx='1040' cy='90' r='120' fill='#ffffff' opacity='0.5'/>
+      <circle cx='180' cy='340' r='140' fill='#ffffff' opacity='0.45'/>
+      <path d='M120 285 C260 190, 390 210, 520 150 S760 80, 1030 165' fill='none' stroke='#cbd5e1' stroke-width='8' opacity='0.55'/>
+    </svg>"""
+    return "data:image/svg+xml;charset=utf-8," + quote(svg)
+
+
+def _asset_url(value: str | None, *, default: str | None = None) -> str | None:
+    """Resolve uploaded S3 keys to temporary URLs; pass through absolute/data URLs; use neutral defaults."""
+    raw = _plain(value)
+    if not raw:
+        return default
+    if raw.startswith(("http://", "https://", "data:")):
+        return raw
+    try:
+        return generate_presigned_url(raw, expires_in=86400)
+    except Exception:
+        return default
+
+
+def _config_from_practitioner_settings(practitioner_settings=None, *, base_config: dict | None = None) -> dict:
+    """Merge static engine defaults with tenant/practitioner branding from DB.
+
+    Static config still controls report-engine switches (max sections, appendix, product
+    recommendations). PractitionerSettings controls display branding/contact details.
+    """
+    base = dict(base_config or {})
+    clinic_name = _plain(getattr(practitioner_settings, "clinic_name", None)) or _plain(base.get("brand_name")) or "Clinic Name"
+    report_title = _plain(getattr(practitioner_settings, "report_title", None)) or _plain(base.get("report_title")) or "Personalised Wellness Scan Report"
+    report_subtitle = _plain(getattr(practitioner_settings, "report_subtitle", None)) or _plain(base.get("subtitle")) or "Wellness screening summary"
+    accent = _plain(getattr(practitioner_settings, "accent_color", None)) or _plain(base.get("accent_color")) or "#2f6fed"
+    support_email = _plain(getattr(practitioner_settings, "support_email", None)) or "support@example.com"
+    website_url = _plain(getattr(practitioner_settings, "website_url", None)) or "https://example.com"
+
+    base.update({
+        "brand_name": clinic_name,
+        "clinic_name": clinic_name,
+        "report_title": report_title,
+        "subtitle": report_subtitle,
+        "report_subtitle": report_subtitle,
+        "primary_color": accent,
+        "accent_color": accent,
+        "text_color": _plain(base.get("text_color")) or "#1f2937",
+        "logo_url": _asset_url(getattr(practitioner_settings, "logo_url", None), default=_default_logo_data_uri(clinic_name)),
+        "cover_image_url": _asset_url(getattr(practitioner_settings, "cover_image_url", None), default=_default_cover_data_uri()),
+        "clinic_contact": clinic_name,
+        "clinic_email": support_email,
+        "clinic_website": website_url,
+        "support_email": support_email,
+        "website_url": website_url,
+        "clinic_tagline": _plain(getattr(practitioner_settings, "clinic_tagline", None)),
+        "show_powered_by_go360": getattr(practitioner_settings, "show_powered_by_go360", True),
+        "report_theme": _plain(getattr(practitioner_settings, "report_theme", None)) or "default",
+
+    })
+    return base
 
 def is_hidden_section(title: str | None) -> bool:
     return (title or "").strip().lower() in NON_DISPLAY_SECTIONS
@@ -1382,8 +1473,12 @@ def build_report_context(
     report: ParsedReport,
     overrides: ReportOverrides | None = None,
     recommendation_mode: str | None = None,
+    practitioner_settings=None,
 ):
-    config = load_practitioner_config()
+    config = _config_from_practitioner_settings(
+        practitioner_settings,
+        base_config=load_practitioner_config(),
+    )
     overrides = overrides or ReportOverrides()
 
     all_non_body = [
@@ -1688,8 +1783,8 @@ def build_report_context(
     return {
         "config": config,
         "report_title": config.get("report_title", "Personalised Wellness Scan Report"),
-        "clinic_name": config.get("brand_name", "Wellness Report"),
-        "subtitle": config.get("subtitle", ""),
+        "clinic_name": config.get("clinic_name") or config.get("brand_name") or "Clinic Name",
+        "subtitle": config.get("report_subtitle") or config.get("subtitle") or "Wellness screening summary",
         "patient": report.patient,
         "patient_header": patient_header,
         "report_profile": getattr(report, "report_profile", None),
@@ -1758,6 +1853,7 @@ def build_viewer_payload(
     report: ParsedReport,
     overrides: ReportOverrides | None = None,
     recommendation_mode: str | None = None,
+    practitioner_settings=None,
 ) -> dict:
     """
     Build a structured payload for the web viewer using the same context that powers
@@ -1767,6 +1863,7 @@ def build_viewer_payload(
         report,
         overrides=overrides,
         recommendation_mode=recommendation_mode,
+        practitioner_settings=practitioner_settings,
     )
 
     patient = ctx.get("patient")
@@ -1875,6 +1972,7 @@ def render_report_html(
     report: ParsedReport,
     overrides: ReportOverrides | None = None,
     recommendation_mode: str | None = None,
+    practitioner_settings=None,
 ) -> str:
     env = get_jinja_env()
     template = env.get_template("report.html")
@@ -1883,6 +1981,7 @@ def render_report_html(
             report,
             overrides=overrides,
             recommendation_mode=recommendation_mode,
+            practitioner_settings=practitioner_settings,
         )
     )
 
@@ -1893,6 +1992,7 @@ async def build_report(
     html_filename: str = "wellness_report.html",
     pdf_filename: str = "wellness_report.pdf",
     recommendation_mode: str | None = None,
+    practitioner_settings=None,
 ) -> dict[str, str]:
     """
     Build the SaaS viewer payload and printable artefacts.
@@ -1908,6 +2008,7 @@ async def build_report(
         report,
         overrides=overrides,
         recommendation_mode=recommendation_mode,
+        practitioner_settings=practitioner_settings,
     )
 
     if not isinstance(viewer_payload, dict) or not viewer_payload:
@@ -1938,6 +2039,7 @@ async def build_report(
             report,
             overrides=overrides,
             recommendation_mode=recommendation_mode,
+            practitioner_settings=practitioner_settings,
         )
     except Exception as exc:
         build_warnings.append(f"HTML render failed: {exc}")

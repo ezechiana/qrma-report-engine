@@ -5,7 +5,6 @@ from pathlib import Path
 
 from playwright.async_api import async_playwright
 
-from app.services.config_service import load_practitioner_config
 from app.services.storage_service import upload_text, upload_bytes
 
 
@@ -72,7 +71,17 @@ async def save_pdf(html_content: str, filename: str) -> str:
     Render to a temporary local file, then upload to S3.
     `filename` is the final S3 object key.
     """
-    config = load_practitioner_config()
+    # Report-cover branding is rendered inside report.html using database-backed
+    # PractitionerSettings. Header/footer remain deliberately minimal here so
+    # stale static config cannot override tenant branding.
+    config = {
+        "header_left_text": "",
+        "header_right_text": "",
+        "footer_left_text": "",
+        "footer_center_text": "",
+        "footer_right_text": "",
+        "show_page_numbers": True,
+    }
 
     with tempfile.TemporaryDirectory() as tmpdir:
         temp_pdf_path = Path(tmpdir) / "report.pdf"

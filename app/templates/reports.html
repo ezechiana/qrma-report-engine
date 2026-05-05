@@ -396,12 +396,27 @@ async function createShareBundle() {
             price_currency: currency,
         };
 
-        const res = await apiFetch("/api/share-bundles", { method: "POST", body: JSON.stringify(payload) });
-        if (await handleSubscriptionRequiredResponse(res, "create a client share bundle")) {
+        const res = await apiFetch("/api/share-bundles", {
+            method: "POST",
+            body: JSON.stringify(payload),
+        });
+
+        const data = await res.json().catch(() => ({}));
+
+        if (!res.ok && res.status === 402) {
+            if (window.handleSubscriptionRequiredResponse) {
+                await window.handleSubscriptionRequiredResponse(res, "create a client share bundle");
+            } else if (window.ensureSubscriptionCanCreate) {
+                await window.ensureSubscriptionCanCreate("create a client share bundle");
+            } else {
+                showReportsError(data.detail || "Subscription required to create share bundles.");
+            }
             return;
         }
 
-        const data = await res.json().catch(() => ({}));
+
+
+
         if (!res.ok) {
             showReportsError(data.detail || "Could not create share bundle.");
             return;

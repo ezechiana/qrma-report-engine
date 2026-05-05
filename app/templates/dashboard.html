@@ -79,18 +79,16 @@
 .spark-bar { width:100%; max-width:34px; min-height:5px; border-radius:999px 999px 4px 4px; background:linear-gradient(180deg,#2563eb,#60a5fa); transition:height .35s ease; }
 .spark-label { font-size:10px; color:#64748b; white-space:nowrap; }
 .spark-value { font-size:10px; color:#0f172a; font-weight:800; white-space:nowrap; }
-.revenue-column-chart { display:block; min-height:335px; padding:16px; border:1px solid #eef2f7; border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow:visible; }
-.revenue-column-bars { display:flex; align-items:stretch; gap:16px; min-height:248px; height:auto; padding:6px 4px 4px; overflow:visible; }
-.revenue-column { flex:1; min-width:0; display:grid; grid-template-rows:42px 144px 58px; gap:8px; align-items:end; text-align:center; overflow:visible; }
-.revenue-column-value { font-size:12px; color:#0f172a; font-weight:950; min-height:24px; white-space:nowrap; overflow:visible; text-overflow:clip; display:flex; align-items:flex-end; justify-content:center; position:relative; z-index:2; }
-.revenue-column-track { width:100%; height:144px; display:flex; align-items:flex-end; justify-content:center; border-bottom:1px solid #e2e8f0; overflow:visible; }
+.revenue-column-chart { display:block; min-height:250px; padding:16px; border:1px solid #eef2f7; border-radius:18px; background:linear-gradient(180deg,#ffffff 0%,#f8fafc 100%); overflow:hidden; }
+.revenue-column-bars { display:flex; align-items:flex-end; gap:16px; height:188px; padding:10px 4px 2px; }
+.revenue-column { flex:1; min-width:0; display:grid; grid-template-rows:28px 128px 34px; gap:8px; align-items:end; text-align:center; }
+.revenue-column-value { font-size:12px; color:#0f172a; font-weight:900; min-height:18px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+.revenue-column-track { width:100%; height:128px; display:flex; align-items:flex-end; justify-content:center; border-bottom:1px solid #e2e8f0; }
 .revenue-column-fill { width:min(46px,72%); min-height:0; border-radius:12px 12px 5px 5px; background:linear-gradient(180deg,#2563eb,#60a5fa); transition:height .35s ease; box-shadow:0 10px 20px rgba(37,99,235,.12); }
 .revenue-column-fill.is-empty { height:0 !important; box-shadow:none; background:transparent; }
-.revenue-column-label { font-size:11px; color:#334155; font-weight:900; line-height:1.15; min-height:54px; display:flex; flex-direction:column; align-items:center; justify-content:flex-start; gap:3px; }
-.revenue-column-period { color:#64748b; font-size:10px; font-weight:750; line-height:1.15; }
-.revenue-chart-context { margin:14px 0 0; padding:9px 10px; border:1px solid #dbeafe; background:#eff6ff; border-radius:12px; color:#1e3a8a; font-size:12px; line-height:1.4; }
+.revenue-column-label { font-size:11px; color:#64748b; font-weight:850; line-height:1.15; min-height:30px; display:flex; align-items:flex-start; justify-content:center; }
 .revenue-chart-note { margin-top:12px; padding-top:10px; border-top:1px solid #e2e8f0; color:#64748b; font-size:12px; line-height:1.45; }
-@media(max-width:700px){ .revenue-column-chart{padding:12px; min-height:320px;} .revenue-column-bars{gap:8px; min-height:238px;} .revenue-column{grid-template-rows:38px 136px 58px;} .revenue-column-track{height:136px;} .revenue-column-value{font-size:10px;} .revenue-column-label{font-size:9px;} .revenue-column-period{font-size:8px;} }
+@media(max-width:700px){ .revenue-column-chart{padding:12px;} .revenue-column-bars{gap:8px;} .revenue-column-value{font-size:10px;} .revenue-column-label{font-size:9px;} }
 
 .funnel-list { display:grid; gap:12px; margin-top:6px; }
 .funnel-row { display:grid; grid-template-columns:110px 1fr 42px; gap:10px; align-items:center; font-size:13px; }
@@ -184,6 +182,7 @@
     <div class="kpi-card" id="pending-payment-card"><div class="kpi-label">Needs payment</div><div class="kpi-value" id="pending-payments">—</div><div class="kpi-sub" id="pending-payment-sub">Unpaid paid-access bundles</div></div>
     <div class="kpi-card blue"><div class="kpi-label">Free months earned</div><div class="kpi-value" id="referral-credits">—</div><div class="kpi-sub" id="referral-credits-sub">Referral subscription credits</div></div>
     <div class="kpi-card purple"><div class="kpi-label">Referral conversions</div><div class="kpi-value" id="referral-conversions">—</div><div class="kpi-sub" id="referral-conversions-sub">Paying practitioners referred</div></div>
+    <div class="kpi-card purple"><div class="kpi-label">Referral revenue</div><div class="kpi-value" id="referral-revenue">—</div><div class="kpi-sub" id="referral-revenue-sub">From referred practitioners</div></div>
     <div class="kpi-card"><div class="kpi-label">Total reports</div><div class="kpi-value" id="total-reports">—</div><div class="kpi-sub">Assessments + trends</div></div>
     <div class="kpi-card"><div class="kpi-label">Ready reports</div><div class="kpi-value" id="ready-reports">—</div><div class="kpi-sub">Available to review/share</div></div>
     <div class="kpi-card" id="failed-report-card"><div class="kpi-label">Failed / stuck</div><div class="kpi-value" id="failed-reports">—</div><div class="kpi-sub">Needs practitioner/admin attention</div></div>
@@ -278,41 +277,53 @@ function renderRevenueChart(payments, summary={}){
   root.className="revenue-column-chart";
   const barsHtml=periods.map(p=>{
     const value=Number(p.value_minor||0);
-    const height=value===0?0:Math.max(8,Math.round((value/max)*144));
-    const periodLabel=p.range_label || p.period_label || p.date_range || "";
-    const tooltip=`${p.label || "Period"}: ${moneyFromMinor(value,USER_REVENUE_CURRENCY)}${periodLabel?` · ${periodLabel}`:""}`;
-    return `<div class="revenue-column" title="${safeTextLocal(tooltip)}"><div class="revenue-column-value">${value?moneyFromMinor(value,USER_REVENUE_CURRENCY):"—"}</div><div class="revenue-column-track"><div class="revenue-column-fill ${value===0?"is-empty":""}" style="height:${height}px"></div></div><div class="revenue-column-label"><span>${safeTextLocal(p.short_label || p.label || "Period")}</span>${periodLabel?`<span class="revenue-column-period">${safeTextLocal(periodLabel)}</span>`:""}</div></div>`;
+    const height=value===0?0:Math.max(8,Math.round((value/max)*128));
+    const tooltip=`${p.label || "Period"}: ${moneyFromMinor(value,USER_REVENUE_CURRENCY)}${p.range_label?` · ${p.range_label}`:""}`;
+    return `<div class="revenue-column" title="${safeTextLocal(tooltip)}"><div class="revenue-column-value">${value?moneyFromMinor(value,USER_REVENUE_CURRENCY):"—"}</div><div class="revenue-column-track"><div class="revenue-column-fill ${value===0?"is-empty":""}" style="height:${height}px"></div></div><div class="revenue-column-label">${safeTextLocal(p.short_label || p.label || "Period")}</div></div>`;
   }).join("");
-  root.innerHTML=`<div class="revenue-column-bars">${barsHtml}</div><div class="revenue-chart-context">${safeTextLocal(goal.period_note || "Periods are calendar-aware. “This week” may include days from the previous month, while “This month” starts on the 1st. Last week/month labels show the inclusive display end date.")}</div><div class="revenue-chart-note">Converted for performance tracking only using ${safeTextLocal(goal.fx_source || "monthly FX snapshot")}${goal.fx_effective_month?` for ${safeTextLocal(goal.fx_effective_month)}`:""}. Actual earnings remain reported in original currencies.</div>`;
+  root.innerHTML=`<div class="revenue-column-bars">${barsHtml}</div><div class="revenue-chart-note">Converted for performance tracking only using ${safeTextLocal(goal.fx_source || "monthly FX snapshot")}${goal.fx_effective_month?` for ${safeTextLocal(goal.fx_effective_month)}`:""}. Actual earnings remain reported in original currencies.</div>`;
 }
 function renderReferral(ref){
   dashboardReferral=ref||{};
   const counts=dashboardReferral.counts||{};
   const total=Number(counts.total||dashboardReferral.total_referrals||0);
   const signed=Number(counts.signed_up||dashboardReferral.signed_up||0);
+  const paid=Number(counts.paid||dashboardReferral.paid_referrals||0);
   const rewarded=Number(counts.rewarded||dashboardReferral.rewarded_referrals||0);
-  const months=Number(dashboardReferral.months_awarded||dashboardReferral.months_available||0);
+  const monthsAwarded=Number(dashboardReferral.months_awarded||0);
+  const monthsAvailable=Number(dashboardReferral.months_available||monthsAwarded||0);
+  const monthsUsed=Number(dashboardReferral.months_used||0);
   const link=dashboardReferral.referral_link||"";
+  const revenueByCurrency=dashboardReferral.revenue_generated_by_currency||{};
+  const revenueEvents=Number(dashboardReferral.revenue_event_count||0);
 
-  document.getElementById("referral-credits").textContent=months;
-  document.getElementById("referral-credits-sub").textContent=`${Number(dashboardReferral.months_used||0)} used · ${months} available/applied`;
-  document.getElementById("referral-conversions").textContent=rewarded;
-  document.getElementById("referral-conversions-sub").textContent=`${total} total referral${total===1?"":"s"}`;
+  document.getElementById("referral-credits").textContent=monthsAwarded;
+  document.getElementById("referral-credits-sub").textContent=`${monthsUsed} used · ${monthsAvailable} available`;
+  document.getElementById("referral-conversions").textContent=paid;
+  document.getElementById("referral-conversions-sub").textContent=`${total} total referral${total===1?"":"s"} · ${rewarded} rewarded`;
+
+  const revenueEl=document.getElementById("referral-revenue");
+  if(revenueEl) revenueEl.textContent=displayMoneyList(revenueByCurrency,"—");
+  const revenueSub=document.getElementById("referral-revenue-sub");
+  if(revenueSub) revenueSub.textContent=revenueEvents?`${revenueEvents} attributed payment${revenueEvents===1?"":"s"}`:"From referred practitioners";
+
   document.getElementById("dashboard-referral-link").value=link||"Referral link unavailable";
   document.getElementById("referral-growth-note").textContent=dashboardReferral.headline||"Refer 1 paying practitioner → get 1 month free.";
 
   const funnel=document.getElementById("referral-funnel");
-  if(total===0 && signed===0 && rewarded===0){
+  if(!funnel) return;
+
+  if(total===0 && signed===0 && paid===0 && rewarded===0){
     funnel.innerHTML=`<div class="chart-empty">No referral activity yet. Share your referral link to start earning free months.</div>`;
     return;
   }
 
-  const max=Math.max(total,signed,rewarded,1);
-  const rows=[["Referred",total],["Signed up",signed],["Rewarded",rewarded]];
+  const max=Math.max(total,signed,paid,rewarded,1);
+  const rows=[["Referred",total],["Signed up",signed],["Paid",paid],["Rewarded",rewarded]];
   funnel.innerHTML=rows.map(([label,count])=>{
     const width=count===0?0:Math.round((count/max)*100);
     return `<div class="funnel-row"><div class="funnel-label">${label}</div><div class="funnel-track"><div class="funnel-fill ${count===0?"is-empty":""}" style="width:${width}%"></div></div><div class="funnel-count">${count}</div></div>`;
-  }).join("")+`<div class="section-eyebrow" style="margin-top:8px;">${months} free month${months===1?"":"s"} earned from paying referrals.</div>`;
+  }).join("")+`<div class="section-eyebrow" style="margin-top:8px;">${monthsAwarded} free month${monthsAwarded===1?"":"s"} earned from paying referrals.</div>`;
 }
 function renderRevenueSummary(summary,paymentsPayload){ const currencies=summary.currencies||[]; const payments=paymentsPayload.items||[]; dashboardPayments=payments; const feeModel=summary.fee_model||paymentsPayload.fee_model||"platform_absorbs"; const grossByCurrency={}; const practitionerByCurrency={}; const platformNetByCurrency={}; let pending=Number(summary.unpaid_count||0); currencies.forEach(c=>{ const currency=String(c.currency||"gbp").toLowerCase(); addCurrency(grossByCurrency,currency,c.gross_minor); addCurrency(practitionerByCurrency,currency,c.practitioner_payout_minor); addCurrency(platformNetByCurrency,currency,c.platform_net_minor); }); if(!pending&&payments.length) pending=payments.filter(p=>paymentStatus(p)&&paymentStatus(p)!=="paid").length; document.getElementById("paid-revenue").textContent=displayMoneyList(grossByCurrency); document.getElementById("practitioner-earnings").textContent=displayMoneyList(practitionerByCurrency); document.getElementById("platform-net").textContent=displayMoneyList(platformNetByCurrency); document.getElementById("pending-payments").textContent=String(pending||0); document.getElementById("pending-payment-sub").textContent=pending?`${pending} client payment${pending===1?"":"s"} to follow up`:"No unpaid paid-access bundles"; document.getElementById("paid-revenue-sub").textContent=`${summary.paid_count||0} paid bundle${Number(summary.paid_count||0)===1?"":"s"} · original currencies`; const pendingCard=document.getElementById("pending-payment-card"); pendingCard.classList.toggle("warning",Number(pending||0)>0); pendingCard.classList.toggle("good",Number(pending||0)===0); document.getElementById("fee-model-label").textContent=revenueFeeModelLabel(feeModel); document.getElementById("fee-model-note").textContent=revenueFeeModelNote(feeModel); document.getElementById("dashboard-revenue-insight").style.display="flex"; renderRevenueActivity(payments); renderRevenueChart(payments, summary); }
 function renderRevenueActivity(payments){ const list=document.getElementById("revenue-activity-list"); const paid=(payments||[]).filter(p=>paymentStatus(p)==="paid").slice().sort((a,b)=>new Date(paymentDate(b)||0)-new Date(paymentDate(a)||0)).slice(0,5); if(!paid.length){ list.innerHTML=`<div class="empty-state">No paid bundle activity yet.</div>`; return; } list.innerHTML=paid.map(p=>`<div class="activity-item"><div class="activity-title">${moneyFromMinor(paymentGrossMinor(p),paymentCurrency(p))}</div><div class="activity-meta">${safeTextLocal(p.patient_name||p.patient_display_name||p.bundle_label||"Paid bundle")} · ${formatDateTimeLocal(paymentDate(p))}</div></div>`).join(""); }
@@ -322,7 +333,7 @@ function renderOnboardingState(){ const card=document.getElementById("onboarding
 function renderReportHealthCards(){ const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).length; const failed=dashboardRows.filter(r=>statusValue(r)==="failed").length; const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))).length; const attention=failed+stuck; document.getElementById("ready-reports").textContent=ready; document.getElementById("failed-reports").textContent=attention; const failedCard=document.getElementById("failed-report-card"); failedCard.classList.toggle("warning",attention>0); failedCard.classList.toggle("good",attention===0); }
 function renderDashboardRows(){ const tbody=document.getElementById("reports-table-body"); const query=(document.getElementById("dashboard-search").value||"").trim().toLowerCase(); updateDashboardTabs(); const filtered=dashboardRows.filter(item=>activeDashboardTab==="attention"?isAttentionStatus(item):(activeDashboardTab==="all"||reportType(item)===activeDashboardTab)).filter(item=>{ const hay=[item.display_name,item.patient_display_name,item.generated_at,item.scan_datetime_display,item.source_scan_range,item.status,reportTypeLabel(item)].join(" ").toLowerCase(); return !query||hay.includes(query); }); if(!filtered.length){ tbody.innerHTML=`<tr><td colspan="6">No matching reports.</td></tr>`; return; } tbody.innerHTML=filtered.slice(0,20).map(item=>{ const trend=isTrend(item); const sourceCount=item.source_count||(item.source_report_ids||[]).length||0; const basis=trend?`${safeTextLocal(sourceCount)} source assessment${Number(sourceCount)===1?"":"s"}`:safeTextLocal(item.scan_datetime_display||"—"); const health=trend&&item.health_index!==null&&item.health_index!==undefined?`<div class="report-secondary">Health Index: ${safeTextLocal(item.health_index)}${item.health_index_change!==null&&item.health_index_change!==undefined?` (${Number(item.health_index_change)>0?"+":""}${safeTextLocal(item.health_index_change)})`:""}</div>`:""; const status=statusValue(item); return `<tr><td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td><td><span class="report-title-text">${safeTextLocal(item.display_name||"Untitled report")}</span><div class="report-secondary">${safeTextLocal(item.patient_display_name||"")}</div></td><td>${basis}${trend&&item.source_scan_range?`<div class="report-secondary">${safeTextLocal(item.source_scan_range)}</div>`:""}${health}</td><td><span class="status-pill status-${safeTextLocal(status)}">${safeTextLocal(item.status||"—")}</span></td><td>${formatDateLocal(item.generated_at)}</td><td><a class="link" href="${trend?`/trend-reports/${item.id}`:`/app/reports/${item.id}`}">Open</a></td></tr>`; }).join(""); }
 async function copyReferralLink(){ const link=document.getElementById("dashboard-referral-link")?.value||dashboardReferral?.referral_link||""; if(!link||link==="Loading…") return; try{ await navigator.clipboard.writeText(link); if(typeof showAppBanner==="function") showAppBanner({id:"dashboard-referral-copied",variant:"success",icon:"✓",title:"Referral link copied",body:"Send it to 2–3 QRMA practitioners you already know.",dismissible:true,compact:true}); } catch(e){ alert("Referral link copied: "+link); } }
-async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse,referralResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments"),apiFetch("/api/referrals/me")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); renderOnboardingState(); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(referralResponse.ok){ renderReferral(await referralResponse.json()); } else { renderReferral({counts:{total:0,signed_up:0,rewarded:0},months_awarded:0}); } if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); renderRevenueChart([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } }
+async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse,referralResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments"),apiFetch("/api/referrals/me")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); renderOnboardingState(); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(referralResponse.ok){ renderReferral(await referralResponse.json()); } else { renderReferral({counts:{total:0,signed_up:0,paid:0,rewarded:0},months_awarded:0}); } if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); renderRevenueChart([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } }
 document.getElementById("dashboard-search")?.addEventListener("input",renderDashboardRows);
 document.querySelectorAll("[data-dashboard-tab]").forEach(btn=>{ btn.addEventListener("click",()=>{ activeDashboardTab=btn.dataset.dashboardTab; renderDashboardRows(); }); });
 document.getElementById("copy-dashboard-referral-btn")?.addEventListener("click",copyReferralLink);

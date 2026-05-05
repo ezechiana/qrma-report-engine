@@ -21,7 +21,11 @@ class PractitionerSettingsRead(BaseModel):
     website_url: Optional[str] = None
 
     preferred_currency: Optional[str] = "USD"
-    monthly_goal_minor: Optional[int] = 200000
+    monthly_goal_minor: Optional[int] = 0
+
+    clinic_tagline: Optional[str] = None
+    show_powered_by_go360: bool = True
+    report_theme: Optional[str] = "default"
 
     recommendation_mode_default: str = "natural_approaches_clinical"
 
@@ -44,8 +48,12 @@ class PractitionerSettingsUpdate(BaseModel):
     support_email: Optional[str] = None
     website_url: Optional[str] = None
 
-    preferred_currency: Optional[str] = None
-    monthly_goal_minor: Optional[int] = None
+    preferred_currency: Optional[str] = "USD"
+    monthly_goal_minor: Optional[int] = 0
+
+    clinic_tagline: Optional[str] = None
+    show_powered_by_go360: Optional[bool] = None
+    report_theme: Optional[str] = None
 
     recommendation_mode_default: Optional[str] = None
 

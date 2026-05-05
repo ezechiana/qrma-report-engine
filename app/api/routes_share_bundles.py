@@ -18,6 +18,7 @@ from app.db.models import Case, ReportVersion, ShareBundle, ShareBundleItem, Sha
 from app.services.revenue_model import calculate_revenue_split
 from app.services.share_analytics import log_share_event
 from app.services.subscription_service import require_subscription_feature
+from app.services.referral_service import record_referral_revenue
 from app.utils.security import generate_token, hash_password
 
 templates = Jinja2Templates(directory="app/templates")
@@ -521,6 +522,24 @@ def _mark_bundle_paid(
     )
     db.commit()
     db.refresh(bundle)
+
+    # V4 referral revenue attribution. This is deliberately best-effort and
+    # must never block payment completion or bundle unlocking.
+    try:
+        record_referral_revenue(
+            db,
+            referred_user_id=getattr(bundle, "created_by_user_id", None),
+            amount_minor=gross,
+            currency=(snapshot.get("price_currency") or getattr(bundle, "price_currency", None) or "gbp"),
+            source_id=getattr(bundle, "id", None),
+            source_type="share_bundle",
+            commission_minor=platform_fee,
+            commission_rate=0,
+        )
+    except Exception as exc:
+        db.rollback()
+        print(f"[referral] revenue attribution skipped for bundle {getattr(bundle, 'id', None)}: {exc}")
+
     return bundle
 
 

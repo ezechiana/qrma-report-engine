@@ -82,6 +82,46 @@
 .hidden-url {
     display: none;
 }
+.btn.save-primary {
+    background: linear-gradient(135deg, #065f46, #0f766e);
+    border: 1px solid #064e3b;
+    color: #ffffff;
+    box-shadow: 0 8px 18px rgba(6, 95, 70, 0.18);
+}
+
+.btn.save-primary:hover {
+    background: linear-gradient(135deg, #064e3b, #115e59);
+}
+
+.btn[disabled] {
+    opacity: 0.65;
+    cursor: not-allowed;
+}
+
+.settings-action-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.settings-save-status {
+    display: inline-flex;
+    align-items: center;
+    min-height: 28px;
+    padding: 6px 10px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    color: #64748b;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+}
+.settings-save-status.dirty { color:#92400e; background:#fffbeb; border-color:#fde68a; }
+.settings-save-status.saving { color:#1e40af; background:#eff6ff; border-color:#bfdbfe; }
+.settings-save-status.saved { color:#065f46; background:#ecfdf5; border-color:#a7f3d0; }
+.settings-save-status.error { color:#991b1b; background:#fef2f2; border-color:#fecaca; }
+
 </style>
 
 <div id="error-box" class="error" style="display:none;"></div>
@@ -114,6 +154,31 @@
                 <button type="button" class="swatch-btn" data-color="#334155" style="background:#334155;"></button>
             </div>
             <div class="help-text">Choose the main accent colour used across the practitioner workspace and report styling.</div>
+        </div>
+
+        <div class="field">
+            <label>Clinic tagline</label>
+            <input id="clinic_tagline" placeholder="e.g. Functional wellness, longevity & prevention">
+            <div class="help-text">Optional short line shown under your clinic name on PDF cover pages.</div>
+        </div>
+
+        <div class="field">
+            <label>Report theme</label>
+            <select id="report_theme">
+                <option value="default">Default clinical</option>
+                <option value="premium_clinical">Premium clinical</option>
+                <option value="minimal_white_label">Minimal white-label</option>
+            </select>
+            <div class="help-text">Prepared for multi-tenant report styling. Default clinical is safest for now.</div>
+        </div>
+
+        <div class="field">
+            <label>Powered by go360</label>
+            <select id="show_powered_by_go360">
+                <option value="true">Show platform credit</option>
+                <option value="false">Hide / white-label</option>
+            </select>
+            <div class="help-text">When enabled, reports show a small “Powered by go360™” footer note.</div>
         </div>
 
         <div class="field">
@@ -184,8 +249,8 @@
   <div class="grid-2" style="margin-top:12px;">
     <div class="field">
       <label>Voucher code (optional)</label>
-      <input id="subscription-voucher-code" placeholder="e.g. FOUNDING50">
-      <div class="help-text">Voucher codes are created in Stripe as Promotion Codes and applied at subscription checkout.</div>
+      <input id="subscription-voucher-code" placeholder="Enter voucher code, if you have one">
+      <div class="help-text">Voucher codes are applied at subscription checkout when issued to you.</div>
     </div>
     <div class="field">
       <label>&nbsp;</label>
@@ -194,6 +259,31 @@
         <button class="btn secondary" type="button" id="subscription-portal-btn">Manage billing</button>
         <button class="btn secondary" type="button" id="subscription-refresh-btn">Refresh</button>
       </div>
+    </div>
+  </div>
+</div>
+
+
+<div class="card" id="referral-card">
+  <h3>Refer & earn</h3>
+  <p class="muted" id="referral-headline">Refer a paying practitioner and get subscription credit.</p>
+
+  <div class="grid-2" style="margin-top:14px; align-items:start;">
+    <div class="asset-box" style="border-style:solid;">
+      <div class="help-text" style="text-transform:uppercase; font-weight:900; letter-spacing:.06em; margin:0 0 6px;">Your referral link</div>
+      <input id="referral-link" readonly value="Loading…">
+      <div class="help-text" style="margin-top:8px;">Share this link with QRMA practitioners. The reward is applied when the referred practitioner becomes a paying subscriber.</div>
+      <div class="btn-row" style="margin-top:10px;">
+        <button class="btn" type="button" id="copy-referral-link-btn">Copy link</button>
+        <button class="btn secondary" type="button" id="whatsapp-referral-link-btn">WhatsApp</button>
+        <button class="btn secondary" type="button" id="email-referral-link-btn">Email</button>
+      </div>
+    </div>
+
+    <div class="asset-box" style="border-style:solid;">
+      <div class="help-text" style="text-transform:uppercase; font-weight:900; letter-spacing:.06em; margin:0 0 6px;">Referral dashboard</div>
+      <div id="referral-stats" class="muted">Loading referral stats…</div>
+      <div id="referral-recent" class="help-text" style="margin-top:10px;"></div>
     </div>
   </div>
 </div>
@@ -227,12 +317,18 @@
         </div>
     </div>
 
-    <div class="btn-row">
-        <button id="save-settings-btn" class="btn" type="button">Save settings</button>
+    <div class="settings-action-row">
+        <button id="save-settings-btn" class="btn save-primary" type="button">Save settings</button>
+        <span id="settings-save-status" class="settings-save-status saved">All changes saved</span>
     </div>
 </div>
 
 <script>
+    let isLoadingSettings = false;
+    let isUploading = false;
+    let isSavingSettings = false;
+    let hasUnsavedChanges = false;
+    let latestSettings = {};
     function setError(msg) {
         const box = document.getElementById("error-box");
         box.style.display = "block";
@@ -255,6 +351,28 @@
         const box = document.getElementById("success-box");
         box.style.display = "none";
         box.textContent = "";
+    }
+
+    function getStatusBox() {
+        return document.getElementById("settings-save-status");
+    }
+
+    function setStatus(message, mode = "saved") {
+        const box = getStatusBox();
+        if (!box) return;
+        box.textContent = message || "";
+        box.className = `settings-save-status ${mode}`;
+    }
+
+    function markUnsaved(message = "Unsaved changes") {
+        if (isLoadingSettings) return;
+        hasUnsavedChanges = true;
+        setStatus(message, "dirty");
+    }
+
+    function markSaved(message = "All changes saved") {
+        hasUnsavedChanges = false;
+        setStatus(message, "saved");
     }
 
     function setSwatchActive(color) {
@@ -286,13 +404,18 @@
         const authed = await requireAuthOrRedirect();
         if (!authed) return;
 
+        isLoadingSettings = true;
+
         const res = await apiFetch("/api/settings");
         const data = await res.json();
 
         if (!res.ok) {
+            isLoadingSettings = false;
             setError(data.detail || "Could not load settings.");
             return;
         }
+
+        latestSettings = data || {};
 
         document.getElementById("clinic_name").value = data.clinic_name || "";
         document.getElementById("accent_color").value = data.accent_color || "#2f6fed";
@@ -304,42 +427,106 @@
         document.getElementById("website_url").value = data.website_url || "";
         document.getElementById("recommendation_mode_default").value =
             data.recommendation_mode_default || "natural_approaches_clinical";
+        document.getElementById("clinic_tagline").value = data.clinic_tagline || "";
+        document.getElementById("show_powered_by_go360").value = String(data.show_powered_by_go360 ?? true);
+        document.getElementById("report_theme").value = data.report_theme || "default";
 
         setSwatchActive(data.accent_color || "#2f6fed");
         updatePreview("logo_preview", "logo_meta", data.logo_preview_url || data.logo_url || "", data.logo_url || "");
         updatePreview("cover_preview", "cover_meta", data.cover_image_preview_url || data.cover_image_url || "", data.cover_image_url || "");
+        isLoadingSettings = false;
+        markSaved();
     }
 
-    async function saveSettings() {
-        clearError();
-        clearSuccess();
-
-        const payload = {
+    function collectSettingsPayload(existing = {}) {
+        const logoVal = document.getElementById("logo_url").value.trim();
+        const coverVal = document.getElementById("cover_image_url").value.trim();
+        return {
             clinic_name: document.getElementById("clinic_name").value.trim(),
             accent_color: document.getElementById("accent_color").value.trim(),
-            logo_url: document.getElementById("logo_url").value.trim(),
-            cover_image_url: document.getElementById("cover_image_url").value.trim(),
+            logo_url: logoVal || existing.logo_url || null,
+            cover_image_url: coverVal || existing.cover_image_url || null,
             report_title: document.getElementById("report_title").value.trim(),
             report_subtitle: document.getElementById("report_subtitle").value.trim(),
             support_email: document.getElementById("support_email").value.trim(),
             website_url: document.getElementById("website_url").value.trim(),
+            clinic_tagline: document.getElementById("clinic_tagline").value.trim(),
+            show_powered_by_go360: document.getElementById("show_powered_by_go360").value === "true",
+            report_theme: document.getElementById("report_theme").value || "default",
             recommendation_mode_default: document.getElementById("recommendation_mode_default").value,
+            preferred_currency: latestSettings.preferred_currency || "USD",
+            monthly_goal_minor: latestSettings.monthly_goal_minor || 200000,
         };
+    }
 
-        const res = await apiFetch("/api/settings", {
-            method: "PUT",
-            body: JSON.stringify(payload),
-        });
+    async function saveSettings(options = {}) {
+        const { silent = false, reloadAfterSave = true, successMessage = "Settings saved." } = options;
 
-        const data = await res.json();
+        if (isUploading) {
+            setError("Please wait for the upload to finish before saving.");
+            return false;
+        }
+        if (isSavingSettings) return false;
 
-        if (!res.ok) {
-            setError(data.detail || "Could not save settings.");
-            return;
+        if (!silent) {
+            clearError();
+            clearSuccess();
         }
 
-        setSuccess("Settings saved.");
-        await loadSettings();
+        let currentSettings = latestSettings || {};
+        try {
+            const currentSettingsRes = await apiFetch("/api/settings");
+            if (currentSettingsRes.ok) {
+                currentSettings = await currentSettingsRes.json();
+                latestSettings = currentSettings || latestSettings || {};
+            }
+        } catch (err) {
+            // Continue with the last in-memory settings.
+        }
+
+        const payload = collectSettingsPayload(currentSettings || {});
+        const saveBtn = document.getElementById("save-settings-btn");
+        const originalText = saveBtn?.textContent || "Save settings";
+        isSavingSettings = true;
+
+        if (saveBtn) {
+            saveBtn.disabled = true;
+            saveBtn.textContent = silent ? "Saving automatically…" : "Saving…";
+        }
+        setStatus(silent ? "Auto-saving changes…" : "Saving changes…", "saving");
+
+        try {
+            const res = await apiFetch("/api/settings", {
+                method: "PUT",
+                body: JSON.stringify(payload),
+            });
+
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                setError(data.detail || "Could not save settings.");
+                setStatus("Save failed", "error");
+                return false;
+            }
+
+            latestSettings = data || payload;
+            document.getElementById("logo_url").value = latestSettings.logo_url || payload.logo_url || "";
+            document.getElementById("cover_image_url").value = latestSettings.cover_image_url || payload.cover_image_url || "";
+
+            markSaved(silent ? "Auto-saved" : "All changes saved");
+            if (!silent) setSuccess(successMessage);
+            if (reloadAfterSave) await loadSettings();
+            return true;
+        } catch (err) {
+            setError("Could not save settings.");
+            setStatus("Save failed", "error");
+            return false;
+        } finally {
+            isSavingSettings = false;
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.textContent = originalText;
+            }
+        }
     }
 
     function formatSubscriptionDate(value) {
@@ -507,42 +694,230 @@
 
         loadStripeConnectStatus();
 
+
+    function formatReferralDate(value) {
+        if (!value) return "—";
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "—";
+        return date.toLocaleDateString(undefined, { year: "numeric", month: "short", day: "numeric" });
+    }
+
+    async function loadReferralSummary() {
+        const linkInput = document.getElementById("referral-link");
+        const headline = document.getElementById("referral-headline");
+        const stats = document.getElementById("referral-stats");
+        const recent = document.getElementById("referral-recent");
+        if (!linkInput || !stats) return;
+
+        try {
+            const res = await apiFetch("/api/referrals/me");
+            const data = await res.json().catch(() => ({}));
+            if (!res.ok) {
+                stats.textContent = data.detail || "Could not load referral information.";
+                linkInput.value = "Referral link unavailable";
+                return;
+            }
+
+            linkInput.value = data.referral_link || "Referral link unavailable";
+            if (headline) headline.innerHTML = data.headline || "Refer a paying practitioner and get subscription credit.";
+
+            const counts = data.counts || {};
+            stats.innerHTML = `
+                <strong>${data.months_awarded || 0}</strong> free month${Number(data.months_awarded || 0) === 1 ? "" : "s"} awarded<br>
+                ${data.months_available || 0} available · ${data.months_used || 0} used<br>
+                ${counts.total || 0} referral${Number(counts.total || 0) === 1 ? "" : "s"} · ${counts.signed_up || 0} signed up · ${counts.paid || 0} paid · ${counts.rewarded || 0} rewarded
+            `;
+
+            const rows = (data.recent || []).slice(0, 4);
+            recent.innerHTML = rows.length
+                ? rows.map(r => `${r.full_name || r.email || "Referral"} — ${r.status} (${formatReferralDate(r.created_at)})`).join("<br>")
+                : "No referrals yet.";
+        } catch (err) {
+            stats.textContent = "Could not load referral information.";
+            linkInput.value = "Referral link unavailable";
+        }
+    }
+
+    function getReferralShareText() {
+        const link = document.getElementById("referral-link")?.value || "";
+        return `I thought you might find go360 useful for turning QRMA scans into professional client-ready reports. You can start here: ${link}`;
+    }
+
+    async function copyReferralLink() {
+        const link = document.getElementById("referral-link")?.value || "";
+        if (!link || link === "Referral link unavailable" || link === "Loading…") return;
+        try {
+            await navigator.clipboard.writeText(link);
+            setSuccess("Referral link copied.");
+        } catch (err) {
+            const input = document.getElementById("referral-link");
+            input?.select();
+            document.execCommand("copy");
+            setSuccess("Referral link copied.");
+        }
+    }
+
+    function shareReferralWhatsApp() {
+        window.open(`https://wa.me/?text=${encodeURIComponent(getReferralShareText())}`, "_blank");
+    }
+
+    function shareReferralEmail() {
+        const subject = encodeURIComponent("go360 referral");
+        const body = encodeURIComponent(getReferralShareText());
+        window.location.href = `mailto:?subject=${subject}&body=${body}`;
+    }
+
+    document.getElementById("copy-referral-link-btn")?.addEventListener("click", copyReferralLink);
+    document.getElementById("whatsapp-referral-link-btn")?.addEventListener("click", shareReferralWhatsApp);
+    document.getElementById("email-referral-link-btn")?.addEventListener("click", shareReferralEmail);
+
+    
     async function uploadBrandAsset(fileInputId, endpoint, hiddenInputId, previewImgId, previewMetaId) {
         clearError();
         clearSuccess();
 
         const authed = await requireAuthOrRedirect();
-        if (!authed) return;
+        if (!authed) return false;
 
         const fileInput = document.getElementById(fileInputId);
-        if (!fileInput.files.length) {
+        const file = fileInput?.files?.[0];
+
+        if (!file) {
             setError("Please choose a file first.");
-            return;
+            return false;
         }
+
+        if (isSavingSettings || isUploading) {
+            setError("Please wait for the current save/upload to finish.");
+            return false;
+        }
+
+        const localPreviewUrl = URL.createObjectURL(file);
+        updatePreview(previewImgId, previewMetaId, localPreviewUrl, `${file.name} · uploading…`);
+
+        isUploading = true;
+        setStatus("Uploading and saving image…", "saving");
 
         const formData = new FormData();
-        formData.append("file", fileInput.files[0]);
+        formData.append("file", file);
 
-        const response = await apiFetch(endpoint, {
-            method: "POST",
-            headers: {},
-            body: formData,
-        });
+        try {
+            const response = await fetch(endpoint, {
+                method: "POST",
+                body: formData,
+                credentials: "include"
+            });
 
-        const data = await response.json().catch(() => ({}));
+            const data = await response.json().catch(() => ({}));
 
-        if (!response.ok) {
-            setError(data.detail || "Could not upload file.");
-            return;
+            if (!response.ok) {
+                setError(data.detail || "Upload failed.");
+                setStatus("Upload failed", "error");
+                return false;
+            }
+
+            latestSettings = data || {};
+
+            if (hiddenInputId === "logo_url") {
+                document.getElementById("logo_url").value = data.logo_url || "";
+                updatePreview(
+                    "logo_preview",
+                    "logo_meta",
+                    data.logo_preview_url || data.logo_url || localPreviewUrl,
+                    data.logo_url || ""
+                );
+            }
+
+            if (hiddenInputId === "cover_image_url") {
+                document.getElementById("cover_image_url").value = data.cover_image_url || "";
+                updatePreview(
+                    "cover_preview",
+                    "cover_meta",
+                    data.cover_image_preview_url || data.cover_image_url || localPreviewUrl,
+                    data.cover_image_url || ""
+                );
+            }
+
+            markSaved("Image uploaded and saved");
+            setSuccess("Image uploaded and saved.");
+            return true;
+
+        } catch (err) {
+            console.error(err);
+            setError("Could not upload image.");
+            setStatus("Upload failed", "error");
+            return false;
+        } finally {
+            isUploading = false;
         }
-
-        document.getElementById(hiddenInputId).value = data.storage_key || "";
-        updatePreview(previewImgId, previewMetaId, data.url || "", data.storage_key || "");
-        setSuccess("File uploaded successfully. Click Save settings to persist it.");
     }
 
+    document.getElementById("logo_file")?.addEventListener("change", () => {
+        uploadBrandAsset(
+            "logo_file",
+            "/api/settings/upload-logo",
+            "logo_url",
+            "logo_preview",
+            "logo_meta"
+        );
+    });
+
+    document.getElementById("cover_file")?.addEventListener("change", () => {
+        uploadBrandAsset(
+            "cover_file",
+            "/api/settings/upload-cover",
+            "cover_image_url",
+            "cover_preview",
+            "cover_meta"
+        );
+    });
+
+    document.getElementById("upload-logo-btn")?.addEventListener("click", () => {
+        uploadBrandAsset(
+            "logo_file",
+            "/api/settings/upload-logo",
+            "logo_url",
+            "logo_preview",
+            "logo_meta"
+        );
+    });
+
+    document.getElementById("upload-cover-btn")?.addEventListener("click", () => {
+        uploadBrandAsset(
+            "cover_file",
+            "/api/settings/upload-cover",
+            "cover_image_url",
+            "cover_preview",
+            "cover_meta"
+        );
+    });
+
     document.querySelectorAll(".swatch-btn").forEach(btn => {
-        btn.addEventListener("click", () => setSwatchActive(btn.dataset.color));
+        btn.addEventListener("click", () => {
+            setSwatchActive(btn.dataset.color);
+            markUnsaved("Unsaved changes");
+        });
+    });
+
+    document.getElementById("logo_file")?.addEventListener("change", (event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            updatePreview("logo_preview", "logo_meta", URL.createObjectURL(file), `${file.name} · preview only`);
+            markUnsaved("Logo selected · click Upload logo to save it");
+        }
+    });
+
+    document.getElementById("cover_file")?.addEventListener("change", (event) => {
+        const file = event.target.files?.[0];
+        if (file) {
+            updatePreview("cover_preview", "cover_meta", URL.createObjectURL(file), `${file.name} · preview only`);
+            markUnsaved("Cover selected · click Upload cover image to save it");
+        }
+    });
+
+    document.querySelectorAll("#clinic_name, #clinic_tagline, #report_theme, #show_powered_by_go360, #report_title, #recommendation_mode_default, #report_subtitle, #support_email, #website_url").forEach(el => {
+        const eventName = el.tagName === "SELECT" ? "change" : "input";
+        el.addEventListener(eventName, () => markUnsaved("Unsaved changes"));
     });
 
     document.getElementById("upload-logo-btn").addEventListener("click", () => {
@@ -553,9 +928,10 @@
         uploadBrandAsset("cover_file", "/api/settings/upload-cover", "cover_image_url", "cover_preview", "cover_meta");
     });
 
-    document.getElementById("save-settings-btn").addEventListener("click", saveSettings);
+    document.getElementById("save-settings-btn").addEventListener("click", () => saveSettings({ silent: false, reloadAfterSave: true }));
 
     loadSubscriptionStatus();
     loadSettings();
+    loadReferralSummary();
 </script>
 {% endblock %}

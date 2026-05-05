@@ -37,11 +37,16 @@ def _resolve_preview_url(stored_value: str | None) -> str | None:
     if not stored_value:
         return None
 
-    if stored_value.startswith("http://") or stored_value.startswith("https://"):
+    if stored_value.startswith(("http://", "https://", "data:")):
         return stored_value
 
-    if object_exists(stored_value):
-        return generate_presigned_url(stored_value)
+    try:
+        if object_exists(stored_value):
+            return generate_presigned_url(stored_value)
+    except Exception:
+        # Do not break the settings page if S3 preview generation fails.
+        # The stored key is still returned so the setting remains auditable.
+        return stored_value
 
     return stored_value
 
@@ -58,6 +63,9 @@ def _serialise_settings(settings) -> PractitionerSettingsRead:
         "website_url": settings.website_url,
         "preferred_currency": getattr(settings, "preferred_currency", None) or "USD",
         "monthly_goal_minor": getattr(settings, "monthly_goal_minor", None) or 200000,
+        "clinic_tagline": getattr(settings, "clinic_tagline", None),
+        "show_powered_by_go360": getattr(settings, "show_powered_by_go360", True),
+        "report_theme": getattr(settings, "report_theme", None) or "default",
         "recommendation_mode_default": settings.recommendation_mode_default.value
             if hasattr(settings.recommendation_mode_default, "value")
             else settings.recommendation_mode_default,
@@ -140,25 +148,43 @@ def save_settings(
     return _serialise_settings(updated)
 
 
-@router.post("/upload-logo", response_model=BrandAssetUploadResponse)
+
+
+@router.post("/upload-logo", response_model=PractitionerSettingsRead)
 async def upload_logo(
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await _upload_brand_asset(
+    uploaded = await _upload_brand_asset(
         file=file,
         current_user=current_user,
         asset_kind="logo",
     )
 
+    settings = get_or_create_settings(db, current_user)
+    settings.logo_url = uploaded.storage_key
+    db.commit()
+    db.refresh(settings)
 
-@router.post("/upload-cover", response_model=BrandAssetUploadResponse)
+    return _serialise_settings(settings)
+
+
+@router.post("/upload-cover", response_model=PractitionerSettingsRead)
 async def upload_cover(
     file: UploadFile = File(...),
+    db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    return await _upload_brand_asset(
+    uploaded = await _upload_brand_asset(
         file=file,
         current_user=current_user,
         asset_kind="cover",
     )
+
+    settings = get_or_create_settings(db, current_user)
+    settings.cover_image_url = uploaded.storage_key
+    db.commit()
+    db.refresh(settings)
+
+    return _serialise_settings(settings)

@@ -1,16 +1,16 @@
 from __future__ import annotations
 
 import os
-import hashlib
 from pathlib import Path
 from typing import Optional
 
-from sqlalchemy import func, text
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.db.models import Case, CaseStatus, ReportStatus, ReportVersion, User
 from app.services.audit_service import log_action
 from app.services.report_builder import build_report
+from app.services.settings_service import get_or_create_settings
 from app.services.scan_import_service import load_case_html
 from app.services.scoring_engine import build_metrics_snapshot as build_scoring_metrics_snapshot
 
@@ -38,53 +38,6 @@ def _to_str_path(value):
     if isinstance(value, Path):
         return str(value)
     return value
-
-
-def _source_hash_from_case_html(case: Case) -> str | None:
-    if not case.raw_scan_html_path:
-        return None
-    try:
-        html_bytes = load_case_html(case.raw_scan_html_path)
-        if isinstance(html_bytes, str):
-            html_bytes = html_bytes.encode("utf-8", errors="ignore")
-        return hashlib.sha256(html_bytes).hexdigest()
-    except Exception:
-        return None
-
-
-def _persist_report_source_hash(db: Session, report_id, source_hash: str | None) -> None:
-    if not source_hash:
-        return
-    try:
-        db.execute(text("ALTER TABLE report_versions ADD COLUMN IF NOT EXISTS source_hash TEXT"))
-        db.execute(text("CREATE INDEX IF NOT EXISTS idx_report_versions_case_source_hash ON report_versions (case_id, source_hash)"))
-        db.execute(
-            text("UPDATE report_versions SET source_hash = :source_hash WHERE id = :report_id"),
-            {"source_hash": source_hash, "report_id": str(report_id)},
-        )
-    except Exception:
-        db.rollback()
-
-
-def _viewer_payload_has_content(viewer_payload: dict | None) -> bool:
-    if not isinstance(viewer_payload, dict) or not viewer_payload:
-        return False
-    overview = viewer_payload.get("overview") or {}
-    systems = viewer_payload.get("systems") or {}
-    recommendations = viewer_payload.get("recommendations") or {}
-    detail = viewer_payload.get("detail") or {}
-    return any([
-        overview.get("overall_scan_score") is not None,
-        overview.get("overall_summary"),
-        overview.get("primary_pattern"),
-        overview.get("practitioner_summary"),
-        systems.get("system_score_cards"),
-        systems.get("priority_overview"),
-        recommendations.get("clinical_recommendations"),
-        recommendations.get("protocol_plan"),
-        detail.get("full_marker_tables"),
-        detail.get("body_composition_block"),
-    ])
 
 
 def _extract_health_index_from_viewer(viewer_payload: dict) -> float | None:
@@ -180,49 +133,123 @@ def _extract_systems_from_viewer(viewer_payload: dict) -> dict:
     return systems
 
 
+def _clean_category_name(value: str | None) -> str | None:
+    text = (value or "").strip()
+    if not text or text.lower() in {"marker", "markers", "none", "null", "unknown", "—", "-"}:
+        return None
+    return text
+
+
+def _marker_payload_from_row(row: dict, category: str | None = None) -> dict | None:
+    name = (
+        row.get("display_name")
+        or row.get("marker")
+        or row.get("marker_name")
+        or row.get("source_name")
+        or row.get("name")
+        or row.get("title")
+    )
+
+    value = (
+        row.get("actual_value_numeric")
+        if row.get("actual_value_numeric") is not None
+        else row.get("actual_value")
+        if row.get("actual_value") is not None
+        else row.get("actual_value_text")
+        if row.get("actual_value_text") is not None
+        else row.get("value")
+    )
+
+    numeric_value = _safe_float(value)
+
+    if not name or numeric_value is None:
+        return None
+
+    key = _norm_key(name)
+
+    if key in {"health_index", "overall_scan_score", "score", "value"}:
+        return None
+
+    category_value = _clean_category_name(
+        row.get("category")
+        or row.get("category_name")
+        or row.get("qrma_category")
+        or row.get("original_report_category")
+        or row.get("section")
+        or row.get("section_title")
+        or category
+    )
+
+    return {
+        "key": key,
+        "value": numeric_value,
+        "label": str(name),
+        "category": category_value,
+        "range": row.get("normal_range_text") or row.get("range") or row.get("reference_range"),
+        "severity": row.get("severity") or row.get("status") or row.get("band"),
+        "severity_class": row.get("severity_class"),
+        "status_pointer_position": row.get("status_pointer_position"),
+        "status_bar_variant": row.get("status_bar_variant"),
+        "color": row.get("color") or row.get("colour") or row.get("severity_color"),
+        "unit": row.get("unit") or row.get("units"),
+    }
+
+
 def _extract_markers_from_viewer(viewer_payload: dict) -> dict:
     markers = {}
 
+    # First pass: use the canonical full marker tables from the report viewer.
+    # These tables are already grouped by QRMA category in the generated report.
+    detail = (viewer_payload or {}).get("detail") or {}
+    for section in detail.get("full_marker_tables") or []:
+        if not isinstance(section, dict):
+            continue
+
+        category = _clean_category_name(
+            section.get("title")
+            or section.get("display_title")
+            or section.get("source_title")
+            or section.get("section")
+        )
+
+        for row in section.get("rows") or []:
+            if not isinstance(row, dict):
+                continue
+
+            payload = _marker_payload_from_row(row, category)
+            if not payload:
+                continue
+
+            key = payload.pop("key")
+            markers[key] = payload
+
+    # Appendix fallback.
+    for row in detail.get("appendix_rows") or []:
+        if not isinstance(row, dict):
+            continue
+
+        payload = _marker_payload_from_row(row, row.get("section"))
+        if not payload:
+            continue
+
+        key = payload.pop("key")
+        markers.setdefault(key, payload)
+
+    # Generic fallback for any marker-like structures not present in full_marker_tables.
     for d in _walk_dicts(viewer_payload or {}):
-        name = (
-            d.get("display_name")
-            or d.get("marker")
-            or d.get("marker_name")
-            or d.get("name")
-            or d.get("title")
-        )
-
-        value = (
-            d.get("actual_value_numeric")
-            if d.get("actual_value_numeric") is not None
-            else d.get("actual_value")
-            if d.get("actual_value") is not None
-            else d.get("value")
-        )
-
-        numeric_value = _safe_float(value)
-
-        if not name or numeric_value is None:
+        payload = _marker_payload_from_row(d)
+        if not payload:
             continue
 
-        key = _norm_key(name)
+        key = payload.pop("key")
 
-        # Avoid charting report/system cards as markers
-        if key in {"health_index", "overall_scan_score", "score", "value"}:
-            continue
+        if key in markers:
+            if markers[key].get("category") and not payload.get("category"):
+                payload["category"] = markers[key]["category"]
+            elif not payload.get("category") and markers[key].get("category"):
+                payload["category"] = markers[key]["category"]
 
-        markers[key] = {
-            "value": numeric_value,
-            "label": str(name),
-            "range": d.get("normal_range_text") or d.get("range") or d.get("reference_range"),
-            "severity": d.get("severity") or d.get("status") or d.get("band"),
-            "severity_class": d.get("severity_class"),
-            "status_pointer_position": d.get("status_pointer_position"),
-            "status_bar_variant": d.get("status_bar_variant"),
-            "color": d.get("color") or d.get("colour") or d.get("severity_color"),
-            "unit": d.get("unit") or d.get("units"),
-        }
-
+        markers[key] = {**markers.get(key, {}), **payload}
 
     return markers
 
@@ -289,7 +316,6 @@ def create_report_version(
     case: Case,
     user: User,
     job_id: Optional[str] = None,
-    source_hash: str | None = None,
 ) -> ReportVersion:
     """
     Create a queued report version row before generation starts.
@@ -319,14 +345,6 @@ def create_report_version(
     db.commit()
     db.refresh(report)
 
-    if source_hash:
-        _persist_report_source_hash(db, report.id, source_hash)
-        try:
-            db.commit()
-            db.refresh(report)
-        except Exception:
-            db.rollback()
-
     log_action(
         db,
         action="report_queued",
@@ -336,7 +354,6 @@ def create_report_version(
         metadata_json={
             "version_number": version_number,
             "job_id": job_id,
-            "source_hash": source_hash,
         },
     )
 
@@ -374,20 +391,20 @@ async def build_report_version(
             else str(case.recommendation_mode)
         )
 
+        practitioner_settings = get_or_create_settings(db, user)
+
         built = await build_report(
             enriched_report,
             overrides=None,
             html_filename=html_filename,
             pdf_filename=pdf_filename,
             recommendation_mode=recommendation_mode,
+            practitioner_settings=practitioner_settings,
         )
 
         html_path = _to_str_path(built.get("html_path"))
         pdf_path = _to_str_path(built.get("pdf_path"))
         viewer_payload = built.get("viewer_payload") or {}
-
-        if not _viewer_payload_has_content(viewer_payload):
-            raise ValueError("Report builder returned an empty or unusable viewer_payload.")
 
         metrics_snapshot = _build_metrics_snapshot(viewer_payload, enriched_report)
 
@@ -399,7 +416,6 @@ async def build_report_version(
             "pdf_path": pdf_path,
             "viewer": viewer_payload,
             "metrics_snapshot": metrics_snapshot,
-            "build_warnings": built.get("build_warnings") or [],
         }
 
         report.report_json = report_json
@@ -429,11 +445,7 @@ async def build_report_version(
             user_id=user.id,
             case_id=case.id,
             report_version_id=report.id,
-            metadata_json={
-                "version_number": version_number,
-                "source_hash": _source_hash_from_case_html(case),
-                "build_warnings": built.get("build_warnings") or [],
-            },
+            metadata_json={"version_number": version_number},
         )
 
         return report
@@ -467,7 +479,6 @@ async def generate_report_version(
     case: Case,
     user: User,
     job_id: Optional[str] = None,
-    force_new: bool = False,
 ) -> ReportVersion:
     """
     Backward-compatible convenience wrapper.
@@ -478,17 +489,6 @@ async def generate_report_version(
     Internally it now follows the SaaS lifecycle:
     queued -> processing -> ready/failed
     """
-    # Always build a fresh version. source_hash is persisted for audit only;
-    # it is deliberately not used for report reuse in V1 because prior reuse
-    # of failed/empty rows caused blank reports.
-    source_hash = _source_hash_from_case_html(case)
-
-    report = create_report_version(
-        db=db,
-        case=case,
-        user=user,
-        job_id=job_id,
-        source_hash=source_hash,
-    )
+    report = create_report_version(db=db, case=case, user=user, job_id=job_id)
     report = await build_report_version(db=db, report=report, case=case, user=user)
     return report
