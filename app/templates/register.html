@@ -682,12 +682,6 @@
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label>Clinic name</label>
-                        <div class="input-wrap">
-                            <input id="clinic_name" autocomplete="organization" required />
-                        </div>
-                    </div>
 
                     <div class="field">
                         <label>Email address</label>
@@ -740,12 +734,6 @@
                         </div>
                     </div>
 
-                    <div class="field">
-                        <label>Phone</label>
-                        <div class="input-wrap">
-                            <input id="phone" type="tel" autocomplete="tel" />
-                        </div>
-                    </div>
 
                     <button class="primary-btn" type="submit">Create account →</button>
                 </form>
@@ -763,11 +751,6 @@
         localStorage.setItem("access_token", payload.access_token || "");
         localStorage.setItem("refresh_token", payload.refresh_token || "");
         localStorage.setItem("current_user", JSON.stringify(payload.user || null));
-    }
-
-    function getReferralCode() {
-        const url = new URL(window.location.href);
-        return url.searchParams.get("ref") || url.searchParams.get("referral_code") || "";
     }
 
     function togglePasswordInput(inputId) {
@@ -841,9 +824,7 @@
         const lastName = document.getElementById("last_name").value.trim();
         const password = passwordInput.value;
         const confirmPassword = confirmInput.value;
-        const clinicName = document.getElementById("clinic_name").value.trim();
         const email = document.getElementById("email").value.trim();
-        const phone = document.getElementById("phone").value.trim();
 
         if (!firstName || !lastName) {
             errorBox.textContent = "First name and last name are required.";
@@ -871,16 +852,12 @@
             first_name: firstName,
             last_name: lastName,
             full_name: `${firstName} ${lastName}`.trim(),
-            clinic_name: clinicName,
-            phone: phone,
+            // Keep signup friction low. Clinic/profile details are completed later in Settings.
+            clinic_name: "",
+            phone: "",
         };
 
-        const referralCode = getReferralCode();
-        const registerUrl = referralCode
-            ? `/auth/register?ref=${encodeURIComponent(referralCode)}`
-            : "/auth/register";
-
-        const response = await fetch(registerUrl, {
+        const response = await fetch("/auth/register", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify(payload),
