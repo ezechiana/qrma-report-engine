@@ -928,10 +928,6 @@ async def share_bundle_stripe_webhook(request: Request, db: Session = Depends(ge
     return {"received": True}
 
 
-@router.post("/api/webhooks/stripe")
-async def stripe_webhook_alias(request: Request, db: Session = Depends(get_db)):
-    return await share_bundle_stripe_webhook(request, db)
-
 
 @router.get("/share/bundle/{token}/reports/{report_id}", response_class=HTMLResponse)
 def view_bundle_report(token: str, report_id: UUID, request: Request, db: Session = Depends(get_db)):

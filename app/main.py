@@ -32,6 +32,7 @@ from app.db.base import Base
 from app.db.session import engine
 from app.db.migrate import run_migrations
 from app.middleware.domain_routing import DomainRoutingMiddleware
+from app.api.routes_webhooks import router as webhooks_router
 
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
@@ -142,6 +143,7 @@ def create_app() -> FastAPI:
     app.include_router(share_router)
     app.include_router(settings_router)
     app.include_router(subscriptions_router)
+    app.include_router(webhooks_router)
     app.include_router(ui_router)
     app.include_router(routes_share.router)
     app.include_router(trend_reports_router)
