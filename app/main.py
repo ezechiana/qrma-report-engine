@@ -4,14 +4,13 @@ import os
 import urllib.parse
 from contextlib import asynccontextmanager
 
-from app.api import routes_ui
-from app.api import routes_share
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import RedirectResponse
-from contextlib import asynccontextmanager
+from fastapi.templating import Jinja2Templates
 
+from app.api import routes_share
 from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router
 from app.api.routes_cases import router as cases_router
@@ -21,8 +20,6 @@ from app.api.routes_share import router as share_router
 from app.api.routes_ui import router as ui_router
 from app.api.routes_settings import router as settings_router
 from app.api.routes_subscriptions import router as subscriptions_router
-from app.db.base import Base
-from app.db.session import engine
 from app.api.routes_trend_reports import router as trend_reports_router
 from app.api.routes_share_bundles import router as share_bundle_router
 from app.api.routes_share_dashboard import router as share_dashboard_router
@@ -30,12 +27,19 @@ from app.api.routes_revenue import router as revenue_router
 from app.api.routes_share_pages import router as share_pages_router
 from app.api.routes_platform_settings import router as platform_settings_router
 from app.api.routes_referrals import router as referrals_router
+
+from app.db.base import Base
+from app.db.session import engine
 from app.db.migrate import run_migrations
+from app.middleware.domain_routing import DomainRoutingMiddleware
+
 
 APP_TITLE = os.getenv("APP_TITLE", "QRMA SaaS MVP")
-APP_ENV = os.getenv("APP_ENV", "development")
+APP_ENV = os.getenv("APP_ENV", "development").lower()
 AUTO_CREATE_TABLES = os.getenv("AUTO_CREATE_TABLES", "true").lower() == "true"
 CORS_ALLOW_ORIGINS = os.getenv("CORS_ALLOW_ORIGINS", "*")
+
+templates = Jinja2Templates(directory="app/templates")
 
 
 @asynccontextmanager
@@ -44,8 +48,8 @@ async def lifespan(app: FastAPI):
     App startup/shutdown lifecycle.
 
     Railway-ready behaviour:
-    - allows startup even if DB is temporarily unavailable during first boot
-    - optionally auto-creates tables when AUTO_CREATE_TABLES=true
+    - Allows startup even if DB is temporarily unavailable during first boot.
+    - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
     if AUTO_CREATE_TABLES:
         try:
@@ -55,12 +59,8 @@ async def lifespan(app: FastAPI):
             print(f"⚠️ Database startup check failed: {exc}")
             if APP_ENV != "production":
                 raise
-            # In production on Railway, allow app boot so deploy/debug is easier.
-            # You can tighten this later once infra is stable.
 
     yield
-
-
 
 
 def _parse_cors_origins(value: str) -> list[str]:
@@ -68,8 +68,6 @@ def _parse_cors_origins(value: str) -> list[str]:
     if value == "*" or value == "":
         return ["*"]
     return [origin.strip() for origin in value.split(",") if origin.strip()]
-
-
 
 
 def create_app() -> FastAPI:
@@ -88,15 +86,20 @@ def create_app() -> FastAPI:
         allow_headers=["*"],
     )
 
+    # Domain-aware routing:
+    # - go360.io -> www.go360.io
+    # - www.go360.io -> landing/legal/static only
+    # - app.go360.io -> SaaS app
+    # - staging.go360.io -> staging app
+    app.add_middleware(DomainRoutingMiddleware)
 
     @app.middleware("http")
-    async def browser_auth_redirect_middleware(request, call_next):
+    async def browser_auth_redirect_middleware(request: Request, call_next):
         """
-        Convert hard browser navigation to protected /app pages from raw JSON
-        401 into a normal login redirect with a next= return target.
+        Convert browser navigation to protected /app pages from raw JSON 401
+        into a normal login redirect with a next= return target.
 
-        API/fetch calls still receive JSON 401, allowing the frontend to attempt
-        silent refresh and then show the session-expired banner if refresh fails.
+        API/fetch calls still receive JSON 401.
         """
         response = await call_next(request)
 
@@ -119,11 +122,15 @@ def create_app() -> FastAPI:
             next_target = path
             if request.url.query:
                 next_target += "?" + request.url.query
-            login_url = "/login?next=" + urllib.parse.quote(next_target, safe="") + "&session=expired"
+
+            login_url = (
+                "/login?next="
+                + urllib.parse.quote(next_target, safe="")
+                + "&session=expired"
+            )
             return RedirectResponse(url=login_url, status_code=303)
 
         return response
-
 
     # Auth
     app.include_router(auth_router)
@@ -150,15 +157,13 @@ def create_app() -> FastAPI:
 
     app.mount("/static", StaticFiles(directory="app/static"), name="static")
 
-    @app.get("/")
-    def root():
-        return {
-            "status": "ok",
-            "app": APP_TITLE,
-            "environment": APP_ENV,
-            "message": "QRMA SaaS API running",
-        }
-
+    @app.get("/", response_class=HTMLResponse)
+    def root(request: Request):
+        return templates.TemplateResponse(
+            request=request,
+            name="landing.html",
+            context={"request": request},
+        )
 
     @app.get("/health")
     def health():
@@ -167,14 +172,11 @@ def create_app() -> FastAPI:
             "environment": APP_ENV,
         }
 
-
     @app.on_event("startup")
     def startup():
         run_migrations(engine)
 
     return app
-
-
 
 
 app = create_app()
