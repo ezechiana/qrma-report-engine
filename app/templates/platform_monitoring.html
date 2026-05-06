@@ -1,0 +1,292 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+.monitor-shell { display:grid; gap:16px; }
+.monitor-hero { background:#fff; border:1px solid var(--line); border-radius:18px; padding:18px; display:flex; justify-content:space-between; gap:16px; flex-wrap:wrap; align-items:flex-start; }
+.monitor-hero h2 { margin:0 0 6px; font-size:26px; }
+.monitor-muted { color:var(--muted); font-size:13px; line-height:1.45; }
+.monitor-status-pill { display:inline-flex; align-items:center; gap:8px; border-radius:999px; padding:8px 12px; font-weight:900; font-size:13px; border:1px solid var(--line); background:#f8fafc; }
+.monitor-status-pill.green { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+.monitor-status-pill.amber { background:#fff7ed; color:#9a3412; border-color:#fdba74; }
+.monitor-status-pill.red { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+.monitor-grid-4 { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:12px; }
+.monitor-grid-3 { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; }
+.monitor-card { background:#fff; border:1px solid var(--line); border-radius:16px; padding:16px; min-width:0; }
+.monitor-card h3 { margin:0 0 8px; font-size:17px; }
+.monitor-kpi-label { color:#64748b; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.monitor-kpi-value { margin-top:6px; font-size:26px; font-weight:950; color:#0f172a; }
+.monitor-kpi-note { margin-top:5px; color:#64748b; font-size:12px; line-height:1.35; }
+.monitor-row { display:flex; justify-content:space-between; gap:12px; padding:8px 0; border-bottom:1px solid #eef2f7; font-size:13px; }
+.monitor-row:last-child { border-bottom:none; }
+.monitor-row strong { color:#0f172a; }
+.monitor-row span { color:#64748b; text-align:right; word-break:break-word; }
+.monitor-alerts { display:grid; gap:10px; }
+.monitor-alert { border:1px solid var(--line); border-radius:14px; padding:12px; background:#f8fafc; }
+.monitor-alert.red { background:#fef2f2; border-color:#fecaca; color:#991b1b; }
+.monitor-alert.amber { background:#fff7ed; border-color:#fdba74; color:#9a3412; }
+.monitor-alert.green { background:#ecfdf5; border-color:#bbf7d0; color:#065f46; }
+.monitor-alert-title { font-weight:950; margin-bottom:3px; }
+.monitor-alert-detail { font-size:12px; line-height:1.4; opacity:.92; }
+.monitor-chart { width:100%; height:220px; display:block; }
+.monitor-chart-empty { color:#64748b; font-size:13px; padding:24px; text-align:center; }
+.monitor-table { width:100%; border-collapse:collapse; }
+.monitor-table th,.monitor-table td { padding:10px; border-bottom:1px solid #eef2f7; text-align:left; vertical-align:top; font-size:13px; }
+.monitor-table th { color:#64748b; text-transform:uppercase; font-size:11px; letter-spacing:.04em; }
+.monitor-badge { display:inline-flex; border-radius:999px; padding:4px 8px; font-size:11px; font-weight:900; background:#f1f5f9; color:#475569; }
+.monitor-badge.destination_charge { background:#eef2ff; color:#3730a3; }
+.monitor-badge.platform_fallback,.monitor-badge.platform_only,.monitor-badge.platform { background:#fff7ed; color:#9a3412; }
+@media(max-width:1100px){ .monitor-grid-4{grid-template-columns:repeat(2,minmax(0,1fr));} .monitor-grid-3{grid-template-columns:1fr;} }
+@media(max-width:720px){ .monitor-grid-4{grid-template-columns:1fr;} }
+</style>
+
+<div class="monitor-shell">
+  <div class="monitor-hero">
+    <div>
+      <h2>Platform Monitoring</h2>
+      <div class="monitor-muted">Day 1 control tower for Stripe, revenue, reports, share bundles, and launch anomalies. Admin-only.</div>
+      <div class="monitor-muted" id="monitor-generated-at" style="margin-top:6px;">Loading…</div>
+    </div>
+    <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap;">
+      <div id="overall-status-pill" class="monitor-status-pill">Checking…</div>
+      <button class="btn secondary" type="button" id="refresh-monitoring-btn">Refresh</button>
+    </div>
+  </div>
+
+  <div class="monitor-grid-4">
+    <div class="monitor-card"><div class="monitor-kpi-label">Paid bundles today</div><div class="monitor-kpi-value" id="kpi-paid">—</div><div class="monitor-kpi-note" id="kpi-paid-note">—</div></div>
+    <div class="monitor-card"><div class="monitor-kpi-label">Gross today</div><div class="monitor-kpi-value" id="kpi-gross">—</div><div class="monitor-kpi-note">Original transaction currency / minor units converted for display where possible.</div></div>
+    <div class="monitor-card"><div class="monitor-kpi-label">Failed reports today</div><div class="monitor-kpi-value" id="kpi-failed-reports">—</div><div class="monitor-kpi-note">Should remain zero on launch day.</div></div>
+    <div class="monitor-card"><div class="monitor-kpi-label">Latest webhook</div><div class="monitor-kpi-value" id="kpi-webhook">—</div><div class="monitor-kpi-note" id="kpi-webhook-note">—</div></div>
+  </div>
+
+  <div class="monitor-grid-3">
+    <div class="monitor-card">
+      <h3>Launch health</h3>
+      <div id="health-rows"></div>
+    </div>
+    <div class="monitor-card">
+      <h3>Revenue sanity</h3>
+      <div id="revenue-rows"></div>
+    </div>
+    <div class="monitor-card">
+      <h3>Operational activity today</h3>
+      <div id="activity-rows"></div>
+    </div>
+  </div>
+
+  <div class="monitor-grid-3">
+    <div class="monitor-card">
+      <h3>Payments: 14 days</h3>
+      <svg id="chart-payments" class="monitor-chart" viewBox="0 0 760 220" preserveAspectRatio="none"></svg>
+      <div id="chart-payments-empty" class="monitor-chart-empty" style="display:none;">No payment chart data yet.</div>
+    </div>
+    <div class="monitor-card">
+      <h3>Reports: 14 days</h3>
+      <svg id="chart-reports" class="monitor-chart" viewBox="0 0 760 220" preserveAspectRatio="none"></svg>
+      <div id="chart-reports-empty" class="monitor-chart-empty" style="display:none;">No report chart data yet.</div>
+    </div>
+    <div class="monitor-card">
+      <h3>Bundle conversion: 14 days</h3>
+      <svg id="chart-conversion" class="monitor-chart" viewBox="0 0 760 220" preserveAspectRatio="none"></svg>
+      <div id="chart-conversion-empty" class="monitor-chart-empty" style="display:none;">No conversion chart data yet.</div>
+    </div>
+  </div>
+
+  <div class="monitor-grid-3">
+    <div class="monitor-card">
+      <h3>Anomaly alerts</h3>
+      <div id="anomaly-list" class="monitor-alerts"></div>
+    </div>
+    <div class="monitor-card">
+      <h3>Connect mode breakdown</h3>
+      <div class="scroll-x">
+        <table class="monitor-table">
+          <thead><tr><th>Mode</th><th>Count</th><th>Meaning</th></tr></thead>
+          <tbody id="connect-mode-body"><tr><td colspan="3">Loading…</td></tr></tbody>
+        </table>
+      </div>
+    </div>
+    <div class="monitor-card">
+      <h3>Latest payment</h3>
+      <div id="latest-payment-rows"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const MONEY_SYMBOLS = { GBP: "£", USD: "$", EUR: "€", AED: "د.إ", JPY: "¥", KRW: "₩" };
+const ZERO_DECIMAL = new Set(["JPY", "KRW"]);
+
+function esc(value) {
+  return String(value ?? "—").replace(/[&<>"']/g, m => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", "\"":"&quot;", "'":"&#39;" }[m]));
+}
+
+function minorMoney(amount, currency) {
+  const code = String(currency || "GBP").toUpperCase();
+  const symbol = MONEY_SYMBOLS[code] || `${code} `;
+  const value = Number(amount || 0);
+  if (ZERO_DECIMAL.has(code)) return `${symbol}${Math.round(value).toLocaleString()}`;
+  return `${symbol}${(value / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function fmtDate(value) {
+  if (!value) return "—";
+  try { return new Date(value).toLocaleString(); } catch { return value; }
+}
+
+function row(label, value) {
+  return `<div class="monitor-row"><strong>${esc(label)}</strong><span>${esc(value)}</span></div>`;
+}
+
+function statusLabel(level) {
+  if (level === "red") return "Red — action needed";
+  if (level === "amber") return "Amber — review";
+  return "Green — healthy";
+}
+
+function connectMeaning(mode) {
+  if (mode === "destination_charge") return "Stripe Connect routed to practitioner account.";
+  if (["platform_fallback", "platform_only", "platform"].includes(mode)) return "Platform-collected or fallback payment. Reconcile separately.";
+  return "Unknown or not yet routed.";
+}
+
+function renderBars(svgId, emptyId, points, series) {
+  const svg = document.getElementById(svgId);
+  const empty = document.getElementById(emptyId);
+  if (!svg) return;
+
+  const usable = Array.isArray(points) ? points : [];
+  if (!usable.length) {
+    svg.innerHTML = "";
+    if (empty) empty.style.display = "block";
+    return;
+  }
+  if (empty) empty.style.display = "none";
+
+  const width = 760, height = 220, padL = 36, padR = 18, padT = 18, padB = 38;
+  const chartW = width - padL - padR;
+  const chartH = height - padT - padB;
+  const max = Math.max(1, ...usable.flatMap(p => series.map(s => Number(p[s.key] || 0))));
+  const groupW = chartW / usable.length;
+  const barW = Math.max(4, (groupW - 8) / series.length);
+
+  let grid = "";
+  for (let i = 0; i <= 4; i++) {
+    const y = padT + (i / 4) * chartH;
+    const v = Math.round(max - (max * i / 4));
+    grid += `<line x1="${padL}" y1="${y}" x2="${width - padR}" y2="${y}" stroke="#e2e8f0" /><text x="${padL - 8}" y="${y + 4}" text-anchor="end" font-size="10" fill="#64748b">${v}</text>`;
+  }
+
+  const bars = usable.map((p, idx) => {
+    const x0 = padL + idx * groupW + 4;
+    const label = String(p.day || "").slice(5);
+    const barBits = series.map((s, sidx) => {
+      const val = Number(p[s.key] || 0);
+      const h = (val / max) * chartH;
+      const x = x0 + sidx * barW;
+      const y = padT + chartH - h;
+      return `<rect x="${x}" y="${y}" width="${barW - 1}" height="${h}" rx="3" fill="${s.color}"><title>${s.label}: ${val} on ${p.day}</title></rect>`;
+    }).join("");
+    return `${barBits}<text x="${x0 + groupW / 2 - 4}" y="${height - 12}" text-anchor="middle" font-size="10" fill="#64748b">${label}</text>`;
+  }).join("");
+
+  const legend = series.map((s, i) => `<rect x="${padL + i * 120}" y="2" width="10" height="10" fill="${s.color}" rx="2"></rect><text x="${padL + 15 + i * 120}" y="11" font-size="11" fill="#475569">${s.label}</text>`).join("");
+
+  svg.innerHTML = `<rect x="0" y="0" width="${width}" height="${height}" fill="white"></rect>${legend}${grid}${bars}`;
+}
+
+async function loadMonitoring() {
+  const res = await apiFetch("/api/platform-monitoring");
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) {
+    document.getElementById("anomaly-list").innerHTML = `<div class="monitor-alert red"><div class="monitor-alert-title">Could not load monitoring data</div><div class="monitor-alert-detail">${esc(data.detail || "Unknown error")}</div></div>`;
+    return;
+  }
+
+  const status = data.overall_status || "green";
+  const pill = document.getElementById("overall-status-pill");
+  pill.className = `monitor-status-pill ${status}`;
+  pill.textContent = statusLabel(status);
+
+  document.getElementById("monitor-generated-at").textContent = `Last refreshed: ${fmtDate(data.generated_at)}`;
+
+  const today = data.today || {};
+  const latestPayment = data.latest_payment || {};
+  const currency = latestPayment.price_currency || "GBP";
+
+  document.getElementById("kpi-paid").textContent = today.paid_bundles ?? 0;
+  document.getElementById("kpi-paid-note").textContent = `${today.pending_bundles ?? 0} pending / checkout-started`;
+  document.getElementById("kpi-gross").textContent = minorMoney(today.gross_minor || 0, currency);
+  document.getElementById("kpi-failed-reports").textContent = (data.activity_today || {}).failed_reports ?? 0;
+  document.getElementById("kpi-webhook").textContent = (data.webhook || {}).latest_event_type || "—";
+  document.getElementById("kpi-webhook-note").textContent = (data.webhook || {}).latest_processed_at ? `${(data.webhook || {}).age_hours ?? "—"} hours ago` : "No webhook events recorded";
+
+  const health = data.health || {};
+  document.getElementById("health-rows").innerHTML = [
+    row("Environment", health.environment),
+    row("Database reachable", health.database_reachable ? "Yes" : "No"),
+    row("Stripe mode", health.stripe_mode),
+    row("Webhook secret present", health.webhook_secret_present ? "Yes" : "No"),
+    row("S3 configured", health.s3_bucket_configured ? `Yes (${health.s3_prefix || "no prefix"})` : "No"),
+    row("Base URL", health.base_url),
+    row("Frontend URL", health.frontend_url),
+  ].join("");
+
+  const platformNetDisplay = Math.max(0, Number(today.platform_commission_minor || 0) - Number(today.stripe_fee_minor || 0));
+  document.getElementById("revenue-rows").innerHTML = [
+    row("Gross", minorMoney(today.gross_minor || 0, currency)),
+    row("Platform commission", minorMoney(today.platform_commission_minor || 0, currency)),
+    row("Stripe fees", minorMoney(today.stripe_fee_minor || 0, currency)),
+    row("Display-safe platform net", minorMoney(platformNetDisplay, currency)),
+    row("Practitioner allocation", minorMoney(today.practitioner_allocation_minor || 0, currency)),
+  ].join("");
+
+  const activity = data.activity_today || {};
+  document.getElementById("activity-rows").innerHTML = [
+    row("New users", activity.new_users),
+    row("Reports generated", activity.reports_generated),
+    row("Failed reports", activity.failed_reports),
+    row("Share links created", activity.share_links_created),
+    row("Bundles created", activity.bundles_created),
+    row("Settings updated", activity.settings_updated),
+  ].join("");
+
+  document.getElementById("anomaly-list").innerHTML = (data.anomalies || []).map(a => `
+    <div class="monitor-alert ${esc(a.level)}">
+      <div class="monitor-alert-title">${esc(a.title)}${a.metric !== undefined && a.metric !== null ? ` · ${esc(a.metric)}` : ""}</div>
+      <div class="monitor-alert-detail">${esc(a.detail)}</div>
+    </div>
+  `).join("");
+
+  const modeRows = data.connect_modes || [];
+  document.getElementById("connect-mode-body").innerHTML = modeRows.length ? modeRows.map(m => `
+    <tr><td><span class="monitor-badge ${esc(m.mode)}">${esc(m.mode)}</span></td><td>${esc(m.count)}</td><td>${esc(connectMeaning(m.mode))}</td></tr>
+  `).join("") : `<tr><td colspan="3" class="monitor-muted">No paid bundle routing yet.</td></tr>`;
+
+  document.getElementById("latest-payment-rows").innerHTML = [
+    row("Status", latestPayment.payment_status),
+    row("Amount", minorMoney(latestPayment.price_amount || 0, latestPayment.price_currency || "GBP")),
+    row("Connect mode", latestPayment.connect_mode),
+    row("Created", fmtDate(latestPayment.created_at)),
+    row("Paid", fmtDate(latestPayment.paid_at)),
+  ].join("");
+
+  const charts = data.charts || {};
+  renderBars("chart-payments", "chart-payments-empty", charts.payments_14d || [], [
+    { key: "paid", label: "Paid", color: "#16a34a" },
+    { key: "pending", label: "Pending", color: "#f97316" },
+  ]);
+  renderBars("chart-reports", "chart-reports-empty", charts.reports_14d || [], [
+    { key: "generated", label: "Generated", color: "#2563eb" },
+    { key: "failed", label: "Failed", color: "#dc2626" },
+  ]);
+  renderBars("chart-conversion", "chart-conversion-empty", charts.bundle_conversion_14d || [], [
+    { key: "created", label: "Created", color: "#64748b" },
+    { key: "paid", label: "Paid", color: "#16a34a" },
+  ]);
+}
+
+document.getElementById("refresh-monitoring-btn")?.addEventListener("click", loadMonitoring);
+loadMonitoring();
+</script>
+{% endblock %}

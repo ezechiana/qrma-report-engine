@@ -1103,6 +1103,7 @@
             <a href="/app/share-links" id="nav-shares">Shares</a>
             <a href="/app/revenue" id="nav-revenue">Revenue</a>
             <a href="/app/platform-settings" id="nav-platform-settings" style="display:none;">Platform Settings</a>
+            <a href="/app/platform-monitoring" id="nav-platform-monitoring" style="display:none;">Platform Monitoring</a>
         </nav>
 
         <div class="sidebar-footer">
@@ -1188,6 +1189,7 @@
             if (adminRes.ok && adminData.is_admin) {
                 document.getElementById('nav-platform-settings')?.style.removeProperty('display');
                 document.getElementById('account-platform-settings-link')?.style.removeProperty('display');
+                document.getElementById('nav-platform-monitoring')?.style.removeProperty('display');
             }
         } catch (err) {
             // Non-admin users simply do not see platform controls.
@@ -1207,6 +1209,8 @@
             document.getElementById("nav-revenue")?.classList.add("active");
         } else if (path.startsWith("/app/platform-settings")) {
             document.getElementById("nav-platform-settings")?.classList.add("active");
+        } else if (path.startsWith("/app/platform-monitoring")) {
+            document.getElementById("nav-platform-monitoring")?.classList.add("active");
         }
 
         const sidebar = document.getElementById("app-sidebar");

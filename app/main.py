@@ -27,6 +27,7 @@ from app.api.routes_revenue import router as revenue_router
 from app.api.routes_share_pages import router as share_pages_router
 from app.api.routes_platform_settings import router as platform_settings_router
 from app.api.routes_referrals import router as referrals_router
+from app.api.routes_platform_monitoring import router as platform_monitoring_router
 
 from app.db.base import Base
 from app.db.session import engine
@@ -153,6 +154,7 @@ def create_app() -> FastAPI:
     app.include_router(share_pages_router)
     app.include_router(platform_settings_router)
     app.include_router(referrals_router)
+    app.include_router(platform_monitoring_router)
 
     # Legacy engine/debug routes
     app.include_router(engine_router)
