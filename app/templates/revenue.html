@@ -350,7 +350,7 @@
 
 <div class="revenue-hero">
     <h2>Revenue and payouts</h2>
-    <div class="muted">Track paid bundles, practitioner income, platform commission, Stripe fees, and Stripe Connect routing.</div>
+    <div class="muted">Track paid bundles, practitioner allocation, platform commission, Stripe fees, and Stripe Connect routing.</div>
 </div>
 
 <div class="revenue-notice success" id="fee-model-banner">
@@ -358,7 +358,7 @@
 </div>
 
 <div class="revenue-notice">
-    Stripe fees are shown separately from the platform commission so practitioner payout, platform commission, and true platform net revenue remain clear.
+    Stripe fees are shown separately from platform commission. For platform-only or fallback payments, the figures are tracked for reconciliation and must not be read as operational platform profit.
 </div>
 
 <div class="revenue-intelligence-grid">
@@ -435,8 +435,8 @@
                     <th>Gross</th>
                     <th>Platform commission</th>
                     <th>Stripe fee</th>
-                    <th>Platform net</th>
-                    <th>Practitioner payout</th>
+                    <th>Platform net / position</th>
+                    <th>Practitioner allocation</th>
                     <th>Connect</th>
                     <th>Stripe refs</th>
                     <th></th>
@@ -481,6 +481,47 @@ function moneyMinor(amount, currency) {
     const symbol = SYMBOLS[code] || `${code} `;
     if (ZERO_DECIMAL.has(code)) return `${symbol}${Math.round(value).toLocaleString()}`;
     return `${symbol}${(value / 100).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+}
+
+function isNegativeMoneyLabel(value) {
+    return /^\s*[A-Z]{0,3}\s*[-−]|^\s*[£$€¥₩]\s*[-−]/.test(String(value || ""));
+}
+
+function safePlatformNet(value) {
+    const label = String(value ?? "—");
+    if (isNegativeMoneyLabel(label)) {
+        return "Fee absorbed / not platform profit";
+    }
+    return esc(label);
+}
+
+function isPlatformFallbackMode(mode) {
+    const m = String(mode || "").toLowerCase();
+    return ["platform_only", "platform_fallback", "platform"].includes(m);
+}
+
+function connectModeDescription(mode) {
+    const m = String(mode || "").toLowerCase();
+    if (m === "destination_charge") return "Routed to connected Stripe account.";
+    if (m === "platform_fallback") return "Fallback: practitioner not fully connected; platform collected and allocation is tracked.";
+    if (m === "platform_only" || m === "platform") return "Platform-collected; allocation is tracked, not routed by Connect.";
+    return "—";
+}
+
+function platformNetCell(p) {
+    const platformNet = p.platform_net || "—";
+    const mode = String(p.connect_mode || "").toLowerCase();
+
+    if (isPlatformFallbackMode(mode)) {
+        const negative = isNegativeMoneyLabel(platformNet);
+        return `
+            <strong>${negative ? "Not operational profit" : esc(platformNet)}</strong>
+            <div class="revenue-small">${esc(connectModeDescription(mode))}</div>
+            ${negative ? `<div class="revenue-small">Stripe fee absorbed by platform for reconciliation.</div>` : ""}
+        `;
+    }
+
+    return `<strong>${esc(platformNet)}</strong>`;
 }
 
 function paymentDate(p) {
@@ -528,12 +569,12 @@ function isInRange(dateValue, bounds) {
 
 function feeModelLabel(model) {
     if (model === "practitioner_absorbs") {
-        return "Fee model: Stripe fees are deducted from practitioner payouts. Platform commission is preserved.";
+        return "Fee model: Stripe fees are deducted from practitioner allocations. Platform commission is preserved.";
     }
     if (model === "split_proportional") {
-        return "Fee model: Stripe fees are shared proportionally between practitioner payout and platform commission.";
+        return "Fee model: Stripe fees are shared proportionally between practitioner allocation and platform commission.";
     }
-    return "Fee model: Platform absorbs Stripe fees. Practitioner payout is calculated from gross minus platform commission.";
+    return "Fee model: Platform absorbs Stripe fees. Practitioner allocation is calculated from gross minus platform commission.";
 }
 
 function goalNote(valueMinor, goalMinor, currency, monthLabel) {
@@ -585,8 +626,8 @@ function renderSummary(summary) {
             <div class="revenue-money">${esc(c.gross)}</div>
             <div class="revenue-small">Platform commission: <strong>${esc(c.platform_fee)}</strong></div>
             <div class="revenue-small">Stripe fees: <strong>${esc(c.stripe_fee)}</strong></div>
-            <div class="revenue-small">Platform net: <strong>${esc(c.platform_net)}</strong></div>
-            <div class="revenue-small">Practitioner payout: <strong>${esc(c.practitioner_payout)}</strong></div>
+            <div class="revenue-small">Platform net / position: <strong>${safePlatformNet(c.platform_net)}</strong></div>
+            <div class="revenue-small">Practitioner allocation: <strong>${esc(c.practitioner_payout)}</strong></div>
             <div class="revenue-small">${esc(c.paid_count)} paid · ${esc(c.unpaid_count)} unpaid</div>
         </div>
     `).join("");
@@ -693,10 +734,11 @@ function renderPayments() {
             <td><strong>${esc(p.gross)}</strong><div class="revenue-small">${esc(p.currency)}</div></td>
             <td>${esc(p.platform_fee)}</td>
             <td>${esc(p.stripe_fee)}</td>
-            <td><strong>${esc(p.platform_net)}</strong></td>
+            <td>${platformNetCell(p)}</td>
             <td>${esc(p.practitioner_payout)}</td>
             <td>
                 <span class="revenue-badge ${cls(p.connect_mode)}">${esc(p.connect_mode)}</span>
+                <div class="revenue-small">${connectModeDescription(p.connect_mode)}</div>
                 <div class="revenue-detail">${esc(p.connected_account)}</div>
             </td>
             <td>

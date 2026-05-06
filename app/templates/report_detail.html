@@ -250,12 +250,9 @@ function renderActions(data) {
         grid.innerHTML = `
             <div class="action-card"><h4>Open assessment report</h4><p>View the full QRMA assessment with marker detail, recommendations, and system balance.</p><a class="btn" href="/app/reports/${reportId}/view">Open full report</a></div>
             <div class="action-card"><h4>Download PDF</h4><p>Download the generated PDF output for this assessment report.</p><a class="btn secondary" href="/api/reports/${reportId}/pdf" target="_blank">Download PDF</a></div>
-            <div class="action-card"><h4>Generate new version</h4><p>Create a new generated version from the same case data.</p><button class="btn secondary" id="generate-new-version-btn" type="button">Generate new version</button></div>
         `;
         document.getElementById("share-heading").textContent = "Share assessment report";
         document.getElementById("share-description").textContent = "Create a secure client link for this single assessment report.";
-        const generateBtn = document.getElementById("generate-new-version-btn");
-        if (generateBtn) generateBtn.addEventListener("click", generateNewVersion);
     }
 }
 
@@ -356,30 +353,6 @@ async function createShareLink() {
     } catch (err) {
         console.error(err);
         setError(`Unexpected error while creating share link${err && err.message ? `: ${err.message}` : "."}`);
-    }
-}
-
-async function generateNewVersion() {
-    clearError();
-    clearSuccess();
-    const btn = document.getElementById("generate-new-version-btn");
-    try {
-        if (btn) { btn.disabled = true; btn.textContent = "Generating…"; }
-        const res = await appFetch(`/api/reports/${reportId}/generate-new-version`, { method: "POST" });
-        if (await maybeHandleSubscription(res, "generate another report version")) return;
-
-        const data = await res.json().catch(() => ({}));
-        if (!res.ok) {
-            setError(data.detail || "Failed to generate new version.");
-            return;
-        }
-        setSuccess("New report version generated.");
-        await loadReport();
-    } catch (err) {
-        console.error(err);
-        setError(`Unexpected error while generating report${err && err.message ? `: ${err.message}` : "."}`);
-    } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "Generate new version"; }
     }
 }
 

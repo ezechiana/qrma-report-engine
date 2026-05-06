@@ -1,34 +1,141 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="card">
+<style>
+.billing-hero, .billing-card {
+    background:#fff; border:1px solid var(--line); border-radius:16px; padding:18px; margin-bottom:16px;
+}
+.billing-hero h2 { margin:0 0 6px; font-size:26px; }
+.billing-grid { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:12px; margin-top:14px; }
+.billing-stat { border:1px solid #e5e7eb; border-radius:14px; padding:14px; background:#fbfdff; }
+.billing-label { color:#64748b; font-size:12px; font-weight:800; text-transform:uppercase; letter-spacing:.04em; }
+.billing-value { margin-top:5px; font-size:20px; font-weight:950; color:#0f172a; }
+.billing-note { font-size:13px; color:#64748b; line-height:1.5; margin-top:6px; }
+.billing-status { padding:12px 14px; border-radius:14px; border:1px solid #bfdbfe; background:#eff6ff; color:#1e3a8a; margin-top:14px; line-height:1.45; }
+.billing-status.good { background:#ecfdf5; color:#065f46; border-color:#bbf7d0; }
+.billing-status.warn { background:#fff7ed; color:#92400e; border-color:#fed7aa; }
+.billing-status.bad { background:#fef2f2; color:#991b1b; border-color:#fecaca; }
+.billing-actions { display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; margin-top:14px; }
+.billing-actions .field { flex:1 1 280px; margin-bottom:0; }
+.billing-actions .btn-row { flex:2 1 420px; }
+@media(max-width:900px){ .billing-grid{grid-template-columns:1fr;} }
+</style>
+
+<div id="error-box" class="error" style="display:none;"></div>
+<div id="success-box" class="success" style="display:none;"></div>
+
+<div class="billing-hero">
     <h2>Billing</h2>
-    <p class="muted">Pilot-stage billing shell. Stripe checkout and subscription enforcement can be connected next without changing the practitioner UI shell.</p>
+    <div class="muted">Manage your go360 practitioner subscription, billing portal access, and payment status.</div>
+    <div id="billing-status-banner" class="billing-status">Loading subscription status…</div>
+</div>
 
-    <div class="grid-2">
-        <div class="card">
-            <div class="stat-label">Current plan</div>
-            <div class="stat-value" id="billing-plan">Practitioner</div>
+<div class="billing-card">
+    <h3 style="margin-top:0;">Subscription overview</h3>
+    <div class="billing-grid">
+        <div class="billing-stat">
+            <div class="billing-label">Current plan</div>
+            <div class="billing-value" id="billing-plan">—</div>
+            <div class="billing-note" id="billing-price-note">Practitioner workspace access.</div>
         </div>
-
-        <div class="card">
-            <div class="stat-label">Status</div>
-            <div class="stat-value">Pilot active</div>
+        <div class="billing-stat">
+            <div class="billing-label">Status</div>
+            <div class="billing-value" id="billing-status">—</div>
+            <div class="billing-note" id="billing-access-note">Checking access…</div>
+        </div>
+        <div class="billing-stat">
+            <div class="billing-label">Renewal / access until</div>
+            <div class="billing-value" id="billing-period-end">—</div>
+            <div class="billing-note" id="billing-days-note">—</div>
         </div>
     </div>
 
-    <div class="notice">
-        During the pilot, accounts can be manually activated while the billing layer is finalised.
+    <div class="billing-actions">
+        <div class="field">
+            <label>Voucher code (optional)</label>
+            <input id="subscription-voucher-code" placeholder="Enter voucher code, if issued to you">
+            <div class="billing-note">Voucher codes are applied securely at Stripe checkout.</div>
+        </div>
+        <div class="btn-row">
+            <button class="btn" type="button" id="subscription-upgrade-btn">Start / upgrade subscription</button>
+            <button class="btn secondary" type="button" id="subscription-portal-btn">Manage billing</button>
+            <button class="btn secondary" type="button" id="subscription-refresh-btn">Refresh</button>
+        </div>
     </div>
 </div>
 
+<div class="billing-card">
+    <h3 style="margin-top:0;">What billing controls</h3>
+    <p class="muted" style="margin-bottom:0;">Your subscription controls creation of new reports and new paid/share bundles. Existing reports, shares, and revenue history remain viewable.</p>
+</div>
+
 <script>
-    (function hydrateBilling() {
-        const user = getCurrentUser();
-        if (user) {
-            document.getElementById("billing-plan").textContent =
-                user.recommendation_mode_default || "Practitioner";
-        }
-    })();
+function setError(msg){ const box=document.getElementById('error-box'); box.style.display='block'; box.textContent=msg; }
+function clearError(){ const box=document.getElementById('error-box'); box.style.display='none'; box.textContent=''; }
+function formatDate(value){
+    if(!value) return '—';
+    const d=new Date(value);
+    if(Number.isNaN(d.getTime())) return '—';
+    return d.toLocaleDateString(undefined,{year:'numeric',month:'short',day:'numeric'});
+}
+function daysRemaining(value){
+    if(!value) return null;
+    const d=new Date(value);
+    if(Number.isNaN(d.getTime())) return null;
+    return Math.max(0, Math.ceil((d - new Date())/(1000*60*60*24)));
+}
+function statusLabel(status){
+    const s=String(status||'unknown').replaceAll('_',' ');
+    return s.charAt(0).toUpperCase()+s.slice(1);
+}
+function renderStatus(data){
+    const status=data.status || data.effective_status || 'unknown';
+    const effective=data.effective_status || status;
+    const end=data.current_period_end || data.trial_ends_at;
+    const days=daysRemaining(end);
+    const banner=document.getElementById('billing-status-banner');
+    document.getElementById('billing-plan').textContent=data.plan_code || 'Practitioner';
+    document.getElementById('billing-status').textContent=statusLabel(effective);
+    document.getElementById('billing-period-end').textContent=formatDate(end);
+    document.getElementById('billing-days-note').textContent=days===null ? 'No renewal date available yet.' : `${days} day${days===1?'':'s'} remaining.`;
+    document.getElementById('billing-access-note').textContent=(data.can_create_reports || data.can_create_share_bundles) ? 'Report and share creation enabled.' : 'Upgrade required for new report/share creation.';
+    banner.className='billing-status';
+    if(['active','trialing'].includes(String(effective).toLowerCase())) {
+        banner.classList.add('good');
+        banner.textContent = effective === 'trialing' ? `Trial active. Full access until ${formatDate(end)}.` : `Subscription active. Current billing period runs until ${formatDate(end)}.`;
+    } else if(['past_due','incomplete'].includes(String(effective).toLowerCase())) {
+        banner.classList.add('warn');
+        banner.textContent='Billing needs attention. Please update your payment method to avoid interruption.';
+    } else {
+        banner.classList.add('bad');
+        banner.textContent='Subscription inactive. Upgrade to create new reports and share bundles.';
+    }
+}
+async function loadBilling(){
+    clearError();
+    const res=await apiFetch('/api/subscription/status');
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ setError(data.detail || 'Could not load subscription status.'); return; }
+    renderStatus(data);
+}
+async function startCheckout(){
+    clearError();
+    const voucher=(document.getElementById('subscription-voucher-code').value || '').trim() || null;
+    const res=await apiFetch('/api/subscription/checkout',{method:'POST', body:JSON.stringify({voucher_code:voucher})});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ setError(data.detail || 'Could not start checkout.'); return; }
+    if(data.url) window.location.href=data.url;
+}
+async function openPortal(){
+    clearError();
+    const res=await apiFetch('/api/subscription/customer-portal',{method:'POST'});
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ setError(data.detail || 'Could not open billing portal. Start a subscription first if needed.'); return; }
+    if(data.url) window.location.href=data.url;
+}
+document.getElementById('subscription-upgrade-btn').addEventListener('click', startCheckout);
+document.getElementById('subscription-portal-btn').addEventListener('click', openPortal);
+document.getElementById('subscription-refresh-btn').addEventListener('click', loadBilling);
+loadBilling().catch(err => { console.error(err); setError('Could not load billing page.'); });
 </script>
 {% endblock %}
