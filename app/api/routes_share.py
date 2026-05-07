@@ -37,12 +37,44 @@ router = APIRouter(tags=["share"])
 templates = Jinja2Templates(directory="app/templates")
 
 
+def _ensure_share_link_events_table(db: Session) -> None:
+    """Create the optional share analytics table if this environment has not been migrated yet.
+
+    The Shares dashboard reads from share_link_events. Staging/prod databases may lag
+    behind the current codebase during rollout, so this keeps the dashboard and
+    client share analytics from failing with UndefinedTable.
+    """
+    try:
+        db.execute(
+            text(
+                """
+                CREATE TABLE IF NOT EXISTS share_link_events (
+                    id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    link_token TEXT NOT NULL,
+                    event_type TEXT NOT NULL,
+                    metadata JSONB,
+                    metadata_json JSONB,
+                    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+                )
+                """
+            )
+        )
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_share_link_events_token ON share_link_events(link_token)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_share_link_events_event_type ON share_link_events(event_type)"))
+        db.execute(text("CREATE INDEX IF NOT EXISTS idx_share_link_events_created_at ON share_link_events(created_at)"))
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        print(f"[share-analytics] could not ensure share_link_events table: {exc}")
+
+
 def _track_share_event(db: Session, token: str, event_type: str, metadata: dict | None = None) -> None:
     """Best-effort analytics logging for public share interactions.
 
     Analytics must never block a client from viewing or paying for a report.
     """
     try:
+        _ensure_share_link_events_table(db)
         log_share_event(db, token, event_type, metadata or {})
     except Exception as exc:
         db.rollback()
@@ -1408,6 +1440,10 @@ def list_share_links(db: Session = Depends(get_db), user=Depends(get_current_use
     - payment_conversion_rate = payment_completed / payment_started
     """
     base = os.getenv("BASE_URL", "http://127.0.0.1:8000").rstrip("/")
+
+    # The share analytics table was introduced after the original sharing MVP.
+    # Ensure it exists so the dashboard does not 500 on freshly deployed/staging DBs.
+    _ensure_share_link_events_table(db)
 
     def _dt(value):
         if not value:
