@@ -317,6 +317,80 @@
             line-height: 1.5;
         }
 
+
+        .social-auth {
+            display: grid;
+            gap: 12px;
+            margin: 0 0 22px;
+        }
+
+        .social-btn {
+            height: 56px;
+            border-radius: 16px;
+            border: 1px solid #d7e3dc;
+            background: rgba(255,255,255,0.96);
+            color: #17231f;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 12px;
+            font-size: 16px;
+            font-weight: 800;
+            text-decoration: none;
+            transition: transform .12s ease, border-color .15s ease, box-shadow .15s ease, background .15s ease;
+        }
+
+        .social-btn:hover {
+            transform: translateY(-1px);
+            border-color: rgba(30,166,114,0.42);
+            box-shadow: 0 10px 22px rgba(16,32,27,0.08);
+            background: #ffffff;
+        }
+
+        .social-icon {
+            width: 24px;
+            height: 24px;
+            border-radius: 6px;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 15px;
+            font-weight: 950;
+            flex: 0 0 24px;
+        }
+
+        .social-icon.google {
+            color: #1a73e8;
+            background: #f8fbff;
+            border: 1px solid #dbe8ff;
+        }
+
+        .social-icon.microsoft {
+            color: #2563eb;
+            background: linear-gradient(135deg, #f25022 0 49%, #7fba00 50% 100%);
+            box-shadow: inset 12px 0 0 rgba(0,164,239,.95), inset 0 -12px 0 rgba(255,185,0,.95);
+        }
+
+        .auth-divider {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin: 22px 0;
+            color: #7a8a83;
+            font-size: 13px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+        .auth-divider::before,
+        .auth-divider::after {
+            content: "";
+            height: 1px;
+            background: #dce7e0;
+            flex: 1;
+        }
+
         .field {
             margin-bottom: 18px;
         }
@@ -571,6 +645,20 @@
                 <div id="success-box" class="error" style="display:none; background:#ecfdf5; border-color:#bbf7d0; color:#065f46;"></div>
                 <div id="error-box" class="error"></div>
 
+
+                <div class="social-auth" aria-label="Social sign in options">
+                    <a class="social-btn" id="google-login-link" href="/auth/social/google/start">
+                        <span class="social-icon google">G</span>
+                        <span>Continue with Google</span>
+                    </a>
+                    <a class="social-btn" id="microsoft-login-link" href="/auth/social/microsoft/start">
+                        <span class="social-icon microsoft" aria-hidden="true"></span>
+                        <span>Continue with Microsoft</span>
+                    </a>
+                </div>
+
+                <div class="auth-divider">or sign in with email</div>
+
                 <form id="login-form">
                     <div class="field">
                         <label>Email address</label>
@@ -682,6 +770,30 @@
             showBox("success-box", "Account created. Please check your email to verify your account before signing in.");
             showResendRow();
         }
+
+        const socialError = params.get("social_error");
+        if (socialError) {
+            const messages = {
+                google_not_configured: "Google sign in is not configured yet.",
+                microsoft_not_configured: "Microsoft sign in is not configured yet.",
+                google_cancelled: "Google sign in was cancelled.",
+                microsoft_cancelled: "Microsoft sign in was cancelled.",
+                google_failed: "Google sign in failed. Please try again or sign in with email.",
+                microsoft_failed: "Microsoft sign in failed. Please try again or sign in with email.",
+                invalid_state: "Your social sign in session expired. Please try again.",
+                unsupported_provider: "That sign in provider is not supported yet."
+            };
+            showBox("error-box", messages[socialError] || "Social sign in failed. Please try again or sign in with email.");
+        }
+    }
+
+    function updateSocialLinks() {
+        const next = getNextParam() || getFallbackRedirect();
+        const suffix = next ? `?next=${encodeURIComponent(next)}` : "";
+        const google = document.getElementById("google-login-link");
+        const microsoft = document.getElementById("microsoft-login-link");
+        if (google) google.href = `/auth/social/google/start${suffix}`;
+        if (microsoft) microsoft.href = `/auth/social/microsoft/start${suffix}`;
     }
 
     document.getElementById("toggle-password").addEventListener("click", () => {
@@ -761,6 +873,7 @@
     });
 
     prefillEmailFromQuery();
+    updateSocialLinks();
     showSessionMessageIfNeeded();
 </script>
 </body>

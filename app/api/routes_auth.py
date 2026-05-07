@@ -20,6 +20,7 @@ from app.services.auth_service import (
     build_impersonation_response,
     change_password,
     create_email_verification_token,
+    get_or_create_social_user,
     get_user_by_email,
     login_user,
     log_auth_event,
@@ -29,6 +30,16 @@ from app.services.auth_service import (
     verify_email_token,
 )
 from app.services.email_service import send_verification_email, verification_url
+from app.services.social_auth_service import (
+    SUPPORTED_SOCIAL_PROVIDERS,
+    build_oauth_authorization_url,
+    build_social_state,
+    exchange_code_for_token,
+    get_provider_user_info,
+    normalise_social_profile,
+    safe_next_path,
+    verify_social_state,
+)
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 
@@ -88,6 +99,12 @@ def _send_verification_for_user(db: CurrentDB, user, *, event_context: str = "ve
         meta={"context": event_context, "provider": "resend", "error": result.get("error")},
     )
     return {"token": token, "email_result": result}
+
+
+def _login_redirect_response(auth: dict, *, next_path: str = "/app", status_code: int = status.HTTP_303_SEE_OTHER) -> RedirectResponse:
+    response = RedirectResponse(url=safe_next_path(next_path), status_code=status_code)
+    _set_session_cookies(response, auth)
+    return response
 
 
 @router.post("/register")
@@ -155,6 +172,91 @@ def login(payload: AuthLoginRequest, db: CurrentDB, response: Response):
     auth = login_user(db, payload)
     _set_session_cookies(response, auth)
     return auth
+
+
+@router.get("/social/{provider}/start")
+def social_login_start(provider: str, request: Request):
+    provider = provider.lower().strip()
+    if provider not in SUPPORTED_SOCIAL_PROVIDERS:
+        return RedirectResponse(url="/login?social_error=unsupported_provider", status_code=status.HTTP_303_SEE_OTHER)
+
+    next_path = safe_next_path(request.query_params.get("next"))
+    try:
+        state_value = build_social_state(provider=provider, next_path=next_path)
+        url = build_oauth_authorization_url(provider, state=state_value)
+        return RedirectResponse(url=url, status_code=status.HTTP_303_SEE_OTHER)
+    except Exception as exc:
+        print(f"[social-auth] {provider} start failed: {exc}")
+        return RedirectResponse(url=f"/login?social_error={provider}_not_configured", status_code=status.HTTP_303_SEE_OTHER)
+
+
+@router.get("/social/{provider}/callback")
+def social_login_callback(
+    provider: str,
+    request: Request,
+    db: CurrentDB,
+    code: str | None = None,
+    state: str | None = None,
+    error: str | None = None,
+    error_description: str | None = None,
+):
+    provider = provider.lower().strip()
+    if provider not in SUPPORTED_SOCIAL_PROVIDERS:
+        return RedirectResponse(url="/login?social_error=unsupported_provider", status_code=status.HTTP_303_SEE_OTHER)
+
+    if error:
+        print(f"[social-auth] {provider} callback error: {error} {error_description or ''}")
+        return RedirectResponse(url=f"/login?social_error={provider}_cancelled", status_code=status.HTTP_303_SEE_OTHER)
+
+    state_payload = verify_social_state(state)
+    if not state_payload.get("valid") or state_payload.get("provider") != provider:
+        log_auth_event(db, event_type="social_login", status="failed", email=None, request=request, meta={"provider": provider, "reason": "invalid_state"})
+        return RedirectResponse(url="/login?social_error=invalid_state", status_code=status.HTTP_303_SEE_OTHER)
+
+    if not code:
+        log_auth_event(db, event_type="social_login", status="failed", email=None, request=request, meta={"provider": provider, "reason": "missing_code"})
+        return RedirectResponse(url=f"/login?social_error={provider}_missing_code", status_code=status.HTTP_303_SEE_OTHER)
+
+    try:
+        token_data = exchange_code_for_token(provider, code)
+        access_token = token_data.get("access_token")
+        if not access_token:
+            raise RuntimeError("Provider did not return an access token.")
+
+        user_info = get_provider_user_info(provider, access_token)
+        profile = normalise_social_profile(provider, user_info)
+
+        if not profile.get("email"):
+            raise RuntimeError(f"{provider.title()} account did not return an email address.")
+        if not profile.get("email_verified"):
+            raise RuntimeError(f"{provider.title()} email is not verified.")
+
+        user = get_or_create_social_user(
+            db,
+            provider=provider,
+            provider_subject=profile.get("provider_subject"),
+            email=profile["email"],
+            full_name=profile.get("full_name"),
+        )
+
+        log_auth_event(
+            db,
+            event_type="login",
+            status="success",
+            user=user,
+            email=user.email,
+            request=request,
+            meta={"method": "social", "provider": provider, "provider_subject": profile.get("provider_subject")},
+        )
+
+        auth = build_auth_response(user)
+        return _login_redirect_response(auth, next_path=state_payload.get("next") or "/app")
+
+    except Exception as exc:
+        db.rollback()
+        print(f"[social-auth] {provider} callback failed: {exc}")
+        log_auth_event(db, event_type="social_login", status="failed", email=None, request=request, meta={"provider": provider, "reason": str(exc)[:250]})
+        return RedirectResponse(url=f"/login?social_error={provider}_failed", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/refresh", response_model=TokenPairResponse)

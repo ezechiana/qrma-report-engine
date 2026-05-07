@@ -180,8 +180,6 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
         full_name=(payload.full_name or f"{payload.first_name} {payload.last_name}").strip(),
         clinic_name=payload.clinic_name.strip() if payload.clinic_name else None,
         phone=payload.phone.strip() if payload.phone else None,
-        # Security-critical: all self-registered accounts must start as practitioners.
-        # Platform admin access is granted separately by role promotion or PLATFORM_ADMIN_EMAILS.
         role="practitioner",
         is_active=True,
         email_verified_at=None,
@@ -199,6 +197,79 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
     db.commit()
     db.refresh(user)
     log_auth_event(db, event_type="register", status="success", user=user, email=user.email)
+    return user
+
+
+def get_or_create_social_user(
+    db: Session,
+    *,
+    provider: str,
+    provider_subject: str | None,
+    email: str,
+    full_name: str | None = None,
+) -> User:
+    """Return an existing user or create a verified practitioner account from a trusted OAuth provider.
+
+    Social login must never grant platform-admin access by itself. Admin access remains
+    controlled by the role/platform-admin checks.
+    """
+    clean_email = email.lower().strip()
+    user = get_user_by_email(db, clean_email)
+
+    if user:
+        if not user.is_active:
+            log_auth_event(
+                db,
+                event_type="social_login",
+                status="failed",
+                user=user,
+                email=clean_email,
+                meta={"provider": provider, "reason": "inactive_user"},
+            )
+            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
+
+        # Provider-verified email is sufficient to mark an existing account verified.
+        if not user.email_verified_at:
+            user.email_verified_at = utcnow()
+        user.last_login_at = utcnow()
+        user.updated_at = utcnow()
+        db.commit()
+        db.refresh(user)
+        return user
+
+    generated_password = token_urlsafe(48)
+    display_name = (full_name or clean_email.split("@")[0]).strip()
+
+    user = User(
+        email=clean_email,
+        password_hash=hash_password(generated_password),
+        full_name=display_name,
+        clinic_name=None,
+        phone=None,
+        role="practitioner",
+        is_active=True,
+        email_verified_at=utcnow(),
+        last_login_at=utcnow(),
+        recommendation_mode_default=RecommendationMode.natural_approaches_clinical,
+        logo_url=None,
+        primary_color=None,
+        accent_color=None,
+        support_email=clean_email,
+        website_url=None,
+        timezone="Europe/London",
+    )
+    db.add(user)
+    db.commit()
+    db.refresh(user)
+
+    log_auth_event(
+        db,
+        event_type="register",
+        status="success",
+        user=user,
+        email=clean_email,
+        meta={"method": "social", "provider": provider, "provider_subject": provider_subject},
+    )
     return user
 
 
