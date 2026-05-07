@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -871,16 +870,23 @@
             return;
         }
 
-        if (data && (data.access_token || data.refresh_token || data.user)) {
-            setAuthSession(data);
-            window.location.href = "/app";
+        // Email verification flow: registration no longer logs users in automatically.
+        if (data && data.requires_email_verification) {
+            let message = data.message || "Account created. Please check your email to verify your account before signing in.";
+            if (data.dev_verification_url) {
+                message += "\n\nDevelopment verification link:\n" + data.dev_verification_url;
+            }
+            alert(message);
+            window.location.href = `/login?registered=1&email=${encodeURIComponent(email)}`;
             return;
         }
 
-        window.location.href = "/login";
+        window.location.href = `/login?registered=1&email=${encodeURIComponent(email)}`;
     });
 
     evaluatePassword();
 </script>
 </body>
 </html>
+
+

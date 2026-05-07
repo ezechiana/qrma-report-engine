@@ -568,6 +568,7 @@
                 <div id="session-box" class="error" style="display:none; background:#fff7ed; border-color:#fdba74; color:#9a3412;">
                     Your session expired. Please sign in again to continue where you left off.
                 </div>
+                <div id="success-box" class="error" style="display:none; background:#ecfdf5; border-color:#bbf7d0; color:#065f46;"></div>
                 <div id="error-box" class="error"></div>
 
                 <form id="login-form">
@@ -596,6 +597,10 @@
 
                     <button class="primary-btn" type="submit">Sign in →</button>
                 </form>
+
+                <div class="legal" id="resend-verification-row" style="display:none; margin-top:16px; padding:12px 14px; border:1px solid #d9e4dd; border-radius:14px; background:#f7fcf9;">
+                    Need a new verification email? <button type="button" id="resend-verification-btn" style="border:none;background:transparent;color:var(--green);font-weight:800;cursor:pointer;padding:0;">Resend verification</button>
+                </div>
 
                 <div class="legal">
                     By signing in, you agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
@@ -634,12 +639,48 @@
         return safeNextPath(localStorage.getItem("redirect_after_login"));
     }
 
+    function showBox(id, message) {
+        const box = document.getElementById(id);
+        if (!box) return;
+        box.textContent = message;
+        box.style.display = "block";
+    }
+
+    function hideBox(id) {
+        const box = document.getElementById(id);
+        if (!box) return;
+        box.textContent = "";
+        box.style.display = "none";
+    }
+
+    function showResendRow() {
+        const row = document.getElementById("resend-verification-row");
+        if (row) row.style.display = "block";
+    }
+
+    function prefillEmailFromQuery() {
+        const params = new URLSearchParams(window.location.search);
+        const email = params.get("email");
+        if (email) {
+            const input = document.getElementById("email");
+            if (input) input.value = email;
+        }
+    }
+
     function showSessionMessageIfNeeded() {
         const params = new URLSearchParams(window.location.search);
-        const box = document.getElementById("session-box");
-        if (!box) return;
+
         if (params.get("session") === "expired" || params.get("reason") === "session_expired") {
-            box.style.display = "block";
+            showBox("session-box", "Your session expired. Please sign in again to continue where you left off.");
+        }
+
+        if (params.get("verified") === "1") {
+            showBox("success-box", "Email verified. You can now sign in.");
+        }
+
+        if (params.get("registered") === "1" || params.get("verify") === "1") {
+            showBox("success-box", "Account created. Please check your email to verify your account before signing in.");
+            showResendRow();
         }
     }
 
@@ -651,9 +692,7 @@
     document.getElementById("login-form").addEventListener("submit", async (e) => {
         e.preventDefault();
 
-        const errorBox = document.getElementById("error-box");
-        errorBox.style.display = "none";
-        errorBox.textContent = "";
+        hideBox("error-box");
 
         const payload = {
             email: document.getElementById("email").value.trim(),
@@ -670,8 +709,11 @@
         const data = await response.json().catch(() => ({}));
 
         if (!response.ok) {
-            errorBox.textContent = data.detail || "Login failed.";
-            errorBox.style.display = "block";
+            const detail = String(data.detail || "Login failed.");
+            if (detail.toLowerCase().includes("verify your email")) {
+                showResendRow();
+            }
+            showBox("error-box", detail);
             return;
         }
 
@@ -694,6 +736,31 @@
         window.location.href = "/app";
     });
 
+    document.getElementById("resend-verification-btn")?.addEventListener("click", async () => {
+        hideBox("error-box");
+        const email = document.getElementById("email").value.trim();
+
+        if (!email) {
+            showBox("error-box", "Enter your email first, then click resend verification.");
+            return;
+        }
+
+        const response = await fetch("/auth/resend-verification", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+
+        const data = await response.json().catch(() => ({}));
+        showBox("success-box", data.message || "If your account exists, a verification email has been sent.");
+
+        if (data.dev_verification_url) {
+            console.log("Development verification link:", data.dev_verification_url);
+            showBox("success-box", "Verification email generated. Development link has been printed in the browser console.");
+        }
+    });
+
+    prefillEmailFromQuery();
     showSessionMessageIfNeeded();
 </script>
 </body>
