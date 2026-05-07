@@ -360,62 +360,30 @@ def _upsert_subscription_from_stripe(
 
 
 def _get_stripe_connect_status(db: Session, current_user: User) -> dict[str, Any]:
-    """Best-effort Stripe Connect status for subscription/settings UI.
+    try:
+        row = db.execute(
+            text(
+                """
+                SELECT
+                    stripe_connect_account_id,
+                    stripe_connect_onboarding_complete,
+                    stripe_connect_charges_enabled,
+                    stripe_connect_payouts_enabled
+                FROM practitioner_settings
+                WHERE user_id = :user_id
+                LIMIT 1
+                """
+            ),
+            {"user_id": current_user.id},
+        ).mappings().first()
+    except Exception:
+        db.rollback()
+        row = None
 
-    This is intentionally defensive because staging/prod schemas may differ while
-    the revenue/Connect module is evolving. Missing columns/tables should never
-    break subscription status.
-    """
-    candidates = [
-        (
-            "practitioner_settings",
-            """
-            SELECT
-                stripe_connect_account_id,
-                stripe_connect_onboarding_complete,
-                stripe_connect_charges_enabled,
-                stripe_connect_payouts_enabled
-            FROM practitioner_settings
-            WHERE user_id = :user_id
-            LIMIT 1
-            """,
-        ),
-        (
-            "stripe_connect_accounts",
-            """
-            SELECT
-                stripe_account_id AS stripe_connect_account_id,
-                onboarding_complete AS stripe_connect_onboarding_complete,
-                charges_enabled AS stripe_connect_charges_enabled,
-                payouts_enabled AS stripe_connect_payouts_enabled
-            FROM stripe_connect_accounts
-            WHERE user_id = :user_id
-            ORDER BY created_at DESC
-            LIMIT 1
-            """,
-        ),
-    ]
-
-    row = None
-    for _name, sql in candidates:
-        try:
-            row = db.execute(text(sql), {"user_id": current_user.id}).mappings().first()
-            if row:
-                break
-        except Exception:
-            db.rollback()
-            row = None
-
-    account_id = None
-    onboarding_complete = False
-    charges_enabled = False
-    payouts_enabled = False
-
-    if row:
-        account_id = row.get("stripe_connect_account_id")
-        onboarding_complete = bool(row.get("stripe_connect_onboarding_complete"))
-        charges_enabled = bool(row.get("stripe_connect_charges_enabled"))
-        payouts_enabled = bool(row.get("stripe_connect_payouts_enabled"))
+    account_id = row.get("stripe_connect_account_id") if row else None
+    onboarding_complete = bool(row.get("stripe_connect_onboarding_complete")) if row else False
+    charges_enabled = bool(row.get("stripe_connect_charges_enabled")) if row else False
+    payouts_enabled = bool(row.get("stripe_connect_payouts_enabled")) if row else False
 
     has_account = bool(account_id)
     ready = has_account and onboarding_complete and charges_enabled and payouts_enabled
