@@ -306,6 +306,32 @@ def get_subscription_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    if is_platform_admin_user(db, current_user):
+        return {
+            "id": None,
+            "subscription_id": None,
+            "plan_code": "internal_admin",
+            "status": "platform_admin",
+            "effective_status": "platform_admin",
+            "is_active": True,
+            "can_create_reports": True,
+            "can_create_shares": True,
+            "can_create_bundles": True,
+            "can_create_share_bundles": True,
+            "can_view_existing": True,
+            "current_period_end": None,
+            "trial_ends_at": None,
+            "days_remaining": None,
+            "cancel_at_period_end": False,
+            "stripe_customer_id": None,
+            "stripe_subscription_id": None,
+            "stripe_price_id": None,
+            "voucher_code": None,
+            "access_message": "Platform admin access.",
+        }
+
     sub = _ensure_subscription_record(db, current_user)
     return _subscription_payload(sub)
 

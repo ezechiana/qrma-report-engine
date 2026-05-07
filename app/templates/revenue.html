@@ -349,7 +349,7 @@
 </style>
 
 <div class="revenue-hero">
-    <h2>Revenue and payouts</h2>
+    <h2>Revenue and allocations</h2>
     <div class="muted">Track paid bundles, practitioner allocation, platform commission, Stripe fees, and Stripe Connect routing.</div>
 </div>
 
@@ -517,7 +517,7 @@ function platformNetCell(p) {
         return `
             <strong>${negative ? "Not operational profit" : esc(platformNet)}</strong>
             <div class="revenue-small">${esc(connectModeDescription(mode))}</div>
-            ${negative ? `<div class="revenue-small">Stripe fee absorbed by platform for reconciliation.</div>` : ""}
+            ${p.platform_net_note ? `<div class="revenue-small">${esc(p.platform_net_note)}</div>` : (negative ? `<div class="revenue-small">Stripe fee absorbed by platform for reconciliation.</div>` : "")}
         `;
     }
 

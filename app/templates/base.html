@@ -821,6 +821,10 @@
             }
         };
 
+        function isAccessActiveStatus(status) {
+            return ["trialing", "active", "platform_admin"].includes(String(status || "").toLowerCase());
+        }
+
         async function startSubscriptionCheckout(voucherCode = "") {
             const body = { voucher_code: voucherCode || "" };
             const response = await apiFetch("/api/subscription/checkout", {
@@ -875,7 +879,7 @@
                 period_end: periodEnd,
                 trial_end: trialEnd,
                 days_remaining: daysRemaining,
-                is_active: ["trialing", "active"].includes(String(data.status || "").toLowerCase()),
+                is_active: isAccessActiveStatus(data.status),
             };
 
             AppBus.emit("subscription:updated", AppState.subscription);
@@ -885,13 +889,13 @@
         function isSubscriptionActive() {
             const sub = AppState.subscription;
             if (!sub) return true;
-            return ["trialing", "active"].includes(String(sub.status || "").toLowerCase());
+            return isAccessActiveStatus(sub.status);
         }
 
         function subscriptionRequiresUpgrade() {
             const sub = AppState.subscription;
             if (!sub) return false;
-            return !["trialing", "active"].includes(String(sub.status || "").toLowerCase());
+            return !isAccessActiveStatus(sub.status);
         }
 
         function showAppBanner(config) {
@@ -1034,6 +1038,11 @@
             const periodEnd = sub.period_end || sub.trial_end;
             const endLabel = formatDate(periodEnd);
 
+            if (status === "platform_admin") {
+                clearAppBanner("subscription-global-banner");
+                return;
+            }
+
             if (status === "active") {
                 clearAppBanner("subscription-global-banner");
                 return;
@@ -1079,6 +1088,38 @@
                     },
                 ],
             });
+        }
+
+        async function refreshImpersonationBanner() {
+            if (!isAuthenticatedAppPage()) return;
+            try {
+                const res = await apiFetch("/auth/impersonation-status", { method: "GET" });
+                const data = await res.json().catch(() => ({}));
+                if (res.ok && data.impersonating) {
+                    showAppBanner({
+                        id: "impersonation-global-banner",
+                        variant: "warning",
+                        icon: "!",
+                        title: `Support mode: logged in as ${data.impersonated_email || "user"}`,
+                        body: `Original admin session: ${data.admin_email || "admin"}. Support actions are audited. Return to admin before making platform-level changes.`,
+                        dismissible: false,
+                        actions: [{
+                            label: "Return to admin",
+                            variant: "primary",
+                            onClick: async () => {
+                                const exitRes = await apiFetch("/auth/impersonate/exit", { method: "POST", body: JSON.stringify({}) });
+                                if (!exitRes.ok) { alert("Could not return to admin session."); return; }
+                                clearAuthSession();
+                                window.location.href = "/app/platform-settings";
+                            },
+                        }],
+                    });
+                } else {
+                    clearAppBanner("impersonation-global-banner");
+                }
+            } catch (err) {
+                clearAppBanner("impersonation-global-banner");
+            }
         }
 
         AppBus.on("subscription:updated", renderSubscriptionBanner);
@@ -1135,6 +1176,7 @@
                     <a href="/app/settings">Settings</a>
                     <a href="/app/billing">Billing</a>
                     <a href="/app/platform-settings" id="account-platform-settings-link" style="display:none;">Platform Settings</a>
+                    <a href="/app/platform-monitoring" id="account-platform-monitoring-link" style="display:none;">Platform Monitoring</a>
                     <button type="button" onclick="logoutNow()">Logout</button>
                 </div>
             </div>
@@ -1190,6 +1232,7 @@
                 document.getElementById('nav-platform-settings')?.style.removeProperty('display');
                 document.getElementById('account-platform-settings-link')?.style.removeProperty('display');
                 document.getElementById('nav-platform-monitoring')?.style.removeProperty('display');
+                document.getElementById('account-platform-monitoring-link')?.style.removeProperty('display');
             }
         } catch (err) {
             // Non-admin users simply do not see platform controls.
@@ -1298,6 +1341,7 @@
 
         if (isAuthenticatedAppPage() && !isPublicOrAuthPage()) {
             await refreshSubscriptionState();
+            await refreshImpersonationBanner();
         }
     })();
 </script>

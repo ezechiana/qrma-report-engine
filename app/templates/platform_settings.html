@@ -35,6 +35,41 @@
 .platform-source-pill.user { background:#f5f3ff; border-color:#ddd6fe; color:#5b21b6; }
 .platform-source-note { margin-top:10px; padding:10px 12px; border:1px solid #dbeafe; background:#eff6ff; color:#1e3a8a; border-radius:12px; font-size:13px; line-height:1.45; }
 @media(max-width:800px){ .platform-source-map,.platform-source-map tbody,.platform-source-map tr,.platform-source-map td,.platform-source-map th{display:block;} .platform-source-map thead{display:none;} .platform-source-map tr{border:1px solid #e2e8f0; border-radius:12px; margin-bottom:10px; overflow:hidden;} .platform-source-map td{border-bottom:none;} }
+.platform-user-summary { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; margin:14px 0; }
+.platform-user-summary-card { border:1px solid #e2e8f0; background:#f8fafc; border-radius:14px; padding:12px; }
+.platform-user-summary-label { color:#64748b; font-size:11px; font-weight:900; text-transform:uppercase; letter-spacing:.035em; }
+.platform-user-summary-value { color:#0f172a; font-size:22px; font-weight:950; margin-top:4px; }
+.platform-user-layout { display:grid; grid-template-columns: minmax(280px,.75fr) minmax(0,1.25fr); gap:14px; align-items:start; }
+.platform-user-panel { border:1px solid #e2e8f0; background:#f8fafc; border-radius:16px; padding:14px; }
+.platform-user-panel h4 { margin:0 0 10px; color:#0f172a; }
+.platform-user-actions { display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:12px; }
+.platform-user-actions .btn { width:100%; }
+.platform-user-table td .platform-muted { margin-top:2px; }
+.platform-user-action-row { display:flex; gap:6px; flex-wrap:wrap; }
+.platform-mini-btn { border:1px solid #dbe7f3; background:#fff; color:#0f172a; border-radius:999px; padding:6px 9px; font-weight:800; font-size:11px; cursor:pointer; }
+.platform-mini-btn:hover { background:#f8fafc; }
+.platform-mini-btn.primary { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+.platform-mini-btn.danger { background:#fff; border-color:#fecaca; color:#991b1b; }
+.platform-admin-source { display:inline-flex; margin-top:5px; border-radius:999px; padding:3px 7px; font-size:10px; font-weight:900; background:#eef2ff; color:#3730a3; border:1px solid #c7d2fe; }
+.platform-db-role { color:#64748b; font-size:11px; margin-top:4px; }
+.platform-access-wrap { display:grid; gap:5px; }
+.platform-access-pill { display:inline-flex; width:max-content; align-items:center; border-radius:999px; padding:4px 8px; font-size:11px; font-weight:950; white-space:nowrap; border:1px solid #e2e8f0; }
+.platform-access-pill.admin { background:#eef2ff; border-color:#c7d2fe; color:#3730a3; }
+.platform-access-pill.practitioner { background:#f8fafc; color:#475569; }
+.platform-source-badge { display:inline-flex; width:max-content; border-radius:999px; padding:3px 7px; font-size:10px; font-weight:900; border:1px solid #e2e8f0; background:#fff; color:#475569; }
+.platform-source-badge.db_role { background:#eef2ff; border-color:#c7d2fe; color:#3730a3; }
+.platform-source-badge.allowlist { background:#ecfdf5; border-color:#a7f3d0; color:#065f46; }
+.platform-source-badge.db_role_allowlist { background:#f5f3ff; border-color:#ddd6fe; color:#5b21b6; }
+.platform-admin-row td { background:#fbfbff; }
+.platform-row-actions { display:flex; gap:6px; flex-wrap:wrap; align-items:center; }
+.platform-row-action-primary { background:#1d4ed8; border-color:#1d4ed8; color:#fff; }
+.platform-row-action-secondary { background:#fff; }
+.platform-row-action-danger { background:#fff; border-color:#fecaca; color:#991b1b; }
+.platform-row-action-muted { background:#f8fafc; color:#475569; }
+.platform-audit-main span:first-child { text-transform:capitalize; }
+
+@media(max-width:1050px){ .platform-user-layout{grid-template-columns:1fr;} .platform-user-summary{grid-template-columns:repeat(2,minmax(0,1fr));} }
+
 @media(max-width:900px){ .platform-section-grid,.platform-snapshot,.platform-feature-grid{grid-template-columns:1fr;} }
 </style>
 
@@ -92,6 +127,58 @@
       <div class="platform-field"><label>Fallback rates JSON</label><textarea id="fx_default_rates_json" placeholder='{"USD":1,"GBP":0.79,"EUR":0.92,"AED":3.6725}'></textarea></div>
     </div>
     <div class="platform-snapshot" id="fx-snapshot-box"></div>
+  </div>
+
+
+  <div class="platform-card">
+    <h3>Platform users</h3>
+    <p>Manage user roles, account status, and support impersonation from one safe control panel. Platform admins can come from either the database role or the Admin Emails allowlist above.</p>
+
+    <div class="platform-user-summary" id="platform-user-summary">
+      <div class="platform-user-summary-card"><div class="platform-user-summary-label">Total users</div><div class="platform-user-summary-value">—</div></div>
+      <div class="platform-user-summary-card"><div class="platform-user-summary-label">Platform admins</div><div class="platform-user-summary-value">—</div></div>
+      <div class="platform-user-summary-card"><div class="platform-user-summary-label">Active users</div><div class="platform-user-summary-value">—</div></div>
+      <div class="platform-user-summary-card"><div class="platform-user-summary-label">Allowlist admins</div><div class="platform-user-summary-value">—</div></div>
+    </div>
+
+    <div class="platform-user-layout">
+      <div class="platform-user-panel">
+        <h4>Find and manage a user</h4>
+        <div class="platform-field">
+          <label>User email or name</label>
+          <input id="platform-user-email" placeholder="user@example.com">
+        </div>
+        <div class="platform-section-grid" style="grid-template-columns:1fr 1fr; gap:10px;">
+          <div class="platform-field"><label>Role filter</label><select id="platform-user-role-filter"><option value="all">All roles</option><option value="admin">Platform admins</option><option value="practitioner">Practitioners</option></select></div>
+          <div class="platform-field"><label>Status filter</label><select id="platform-user-status-filter"><option value="all">All statuses</option><option value="active">Active</option><option value="inactive">Inactive</option></select></div>
+        </div>
+        <div class="platform-actions" style="margin-top:8px;">
+          <button class="btn secondary" type="button" id="search-platform-users-btn">Search / refresh</button>
+        </div>
+        <div class="platform-muted">Select row actions for day-to-day work. Use the buttons below only when you have typed a specific email.</div>
+        <div class="platform-user-actions">
+          <button class="btn" type="button" id="promote-platform-user-btn">Promote typed email</button>
+          <button class="btn secondary" type="button" id="demote-platform-user-btn">Demote typed email</button>
+          <button class="btn secondary" type="button" id="deactivate-platform-user-btn">Deactivate typed email</button>
+          <button class="btn secondary" type="button" id="reactivate-platform-user-btn">Reactivate typed email</button>
+        </div>
+        <div class="platform-source-note" style="margin-top:12px;"><strong>Admin source rule:</strong> users with role <strong>admin</strong> or emails listed in <strong>Admin emails</strong> are platform admins. If a user is an allowlist admin, demoting their database role will not remove admin access until their email is removed from the allowlist.</div>
+      </div>
+
+      <div class="platform-user-panel">
+        <h4>Users</h4>
+        <div class="table-wrap">
+          <table class="platform-user-table">
+            <thead><tr><th>User</th><th>Access level</th><th>Source</th><th>Status</th><th>Created</th><th>Support</th><th>Admin actions</th></tr></thead>
+            <tbody id="platform-users-body"><tr><td colspan="7" class="platform-muted">Loading users…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <h3 style="margin-top:18px;">Admin activity timeline</h3>
+    <p>Recent platform administration events for accountability and launch troubleshooting.</p>
+    <div id="platform-audit-list" class="platform-audit-list"><div class="platform-muted">Loading audit log…</div></div>
   </div>
 
   <div class="platform-card">
@@ -276,6 +363,135 @@ function collectPlatformSettings(){ const defaultCurrency=document.getElementByI
 document.getElementById('save-platform-settings-btn').addEventListener('click',async()=>{ const res=await apiFetch('/api/platform-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(collectPlatformSettings())}); if(!res.ok){ setPlatformMessage('error','Could not save platform settings.'); return; } setPlatformMessage('success','Platform settings saved.'); await loadPlatformSettings(); });
 document.getElementById('reload-platform-settings-btn').addEventListener('click',loadPlatformSettings);
 document.getElementById('refresh-fx-btn').addEventListener('click',async()=>{ const res=await apiFetch('/api/platform-settings/fx/refresh-current',{method:'POST'}); if(!res.ok){ setPlatformMessage('error','Could not refresh FX snapshot.'); return; } setPlatformMessage('success','FX snapshot refreshed.'); await loadPlatformSettings(); });
+
+function escapePlatformUser(value) {
+  return String(value ?? "").replace(/[&<>"']/g, m => ({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[m]));
+}
+function platformUserDate(value) {
+  if (!value) return "—";
+  try { return new Date(value).toLocaleDateString(undefined,{year:"numeric",month:"short",day:"numeric"}); } catch { return value; }
+}
+function getPlatformUserEmail() { return (document.getElementById("platform-user-email")?.value || "").trim(); }
+function platformAccessPill(user) {
+  const effective = String(user.effective_role || user.role || "practitioner").toLowerCase();
+  const label = effective === "admin" ? "Platform admin" : "Practitioner";
+  const dbRole = user.role && user.role !== effective ? `<div class="platform-db-role">DB role: ${escapePlatformUser(user.role)}</div>` : "";
+  return `<div class="platform-access-wrap"><span class="platform-access-pill ${effective}">${label}</span>${dbRole}</div>`;
+}
+function adminSourcePill(user) {
+  const source = String(user.admin_source || "").toLowerCase();
+  if (!source) return `<span class="platform-source-badge">Standard user</span>`;
+  if (source === "db_role+allowlist") return `<span class="platform-source-badge db_role_allowlist">DB role + allowlist</span>`;
+  if (source === "db_role") return `<span class="platform-source-badge db_role">Database role</span>`;
+  if (source === "allowlist") return `<span class="platform-source-badge allowlist">Admin emails allowlist</span>`;
+  return `<span class="platform-source-badge">${escapePlatformUser(source)}</span>`;
+}
+function statusPill(active) { return `<span class="platform-status-pill ${active ? "active" : "inactive"}">${active ? "Active" : "Inactive"}</span>`; }
+function renderPlatformUserSummary(summary) {
+  const box = document.getElementById("platform-user-summary");
+  if (!box) return;
+  const values = [
+    ["Total users", summary?.total ?? "—"],
+    ["Platform admins", summary?.admins ?? "—"],
+    ["Active users", summary?.active ?? "—"],
+    ["Allowlist admins", summary?.allowlist_admins ?? "—"],
+  ];
+  box.innerHTML = values.map(([label,value]) => `<div class="platform-user-summary-card"><div class="platform-user-summary-label">${label}</div><div class="platform-user-summary-value">${value}</div></div>`).join("");
+}
+function currentUserEmailLower() {
+  try { return String(getCurrentUser()?.email || "").toLowerCase(); } catch { return ""; }
+}
+async function loadPlatformUsers() {
+  const body=document.getElementById("platform-users-body"); if(!body) return;
+  body.innerHTML=`<tr><td colspan="7" class="platform-muted">Loading users…</td></tr>`;
+  try {
+    const q=getPlatformUserEmail();
+    const role=document.getElementById("platform-user-role-filter")?.value || "all";
+    const status=document.getElementById("platform-user-status-filter")?.value || "all";
+    const res=await apiFetch(`/api/platform-users?q=${encodeURIComponent(q)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(status)}&limit=75`);
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ body.innerHTML=`<tr><td colspan="7" class="platform-muted">Could not load users.</td></tr>`; return; }
+    renderPlatformUserSummary(data.summary || {});
+    const rows=Array.isArray(data.items)?data.items:[];
+    if(!rows.length){ body.innerHTML=`<tr><td colspan="7" class="platform-muted">No users found. Try clearing the search or using All roles / All statuses.</td></tr>`; return; }
+    const selfEmail=currentUserEmailLower();
+    body.innerHTML=rows.map(user=>{
+      const email=String(user.email||"");
+      const isSelf=email.toLowerCase()===selfEmail;
+      const isAdmin=String(user.effective_role||user.role).toLowerCase()==="admin";
+      const active=Boolean(user.is_active);
+      const rowClass=isAdmin ? "platform-admin-row" : "";
+      const roleAction=isAdmin
+        ? `<button class="platform-mini-btn platform-row-action-secondary" type="button" data-user-action="demote" data-user-email="${escapePlatformUser(email)}" ${isSelf?"disabled title='You cannot demote yourself.'":""}>Demote</button>`
+        : `<button class="platform-mini-btn platform-row-action-primary" type="button" data-user-action="promote" data-user-email="${escapePlatformUser(email)}">Promote</button>`;
+      const statusAction=active
+        ? `<button class="platform-mini-btn platform-row-action-danger" type="button" data-user-action="deactivate" data-user-email="${escapePlatformUser(email)}" ${isSelf?"disabled title='You cannot deactivate yourself.'":""}>Deactivate</button>`
+        : `<button class="platform-mini-btn platform-row-action-secondary" type="button" data-user-action="reactivate" data-user-email="${escapePlatformUser(email)}">Reactivate</button>`;
+      const impersonate = `<button class="platform-mini-btn platform-row-action-primary" type="button" data-impersonate-user-id="${escapePlatformUser(user.id)}" data-impersonate-email="${escapePlatformUser(email)}" title="Impersonate for support. This action is audited." ${isSelf?"disabled":""}>Log in as user</button>`;
+      return `<tr class="${rowClass}">
+        <td><strong>${escapePlatformUser(user.full_name||"—")}</strong><div class="platform-muted">${escapePlatformUser(email)}</div></td>
+        <td>${platformAccessPill(user)}</td>
+        <td>${adminSourcePill(user)}</td>
+        <td>${statusPill(active)}</td>
+        <td>${platformUserDate(user.created_at)}</td>
+        <td><div class="platform-row-actions">${impersonate}</div></td>
+        <td><div class="platform-row-actions">${roleAction}${statusAction}</div></td>
+      </tr>`;
+    }).join("");
+  } catch(err) {
+    console.error("Platform users failed to load",err);
+    body.innerHTML=`<tr><td colspan="7" class="platform-muted">Could not load users.</td></tr>`;
+  }
+}
+async function loadPlatformAuditLog() {
+  const box=document.getElementById("platform-audit-list"); if(!box) return;
+  box.innerHTML=`<div class="platform-muted">Loading audit log…</div>`;
+  try {
+    const res=await apiFetch("/api/platform-users/audit-log?limit=30");
+    const data=await res.json().catch(()=>({}));
+    if(!res.ok){ box.innerHTML=`<div class="platform-muted">Could not load audit log.</div>`; return; }
+    const rows=Array.isArray(data.items)?data.items:[];
+    if(!rows.length){ box.innerHTML=`<div class="platform-muted">No admin actions recorded yet.</div>`; return; }
+    box.innerHTML=rows.map(item=>{
+      const detail = item.details && typeof item.details === "object" ? Object.entries(item.details).filter(([k,v])=>v!==null && v!==undefined && v!=="").slice(0,3).map(([k,v])=>`${escapePlatformUser(k.replaceAll("_"," "))}: ${escapePlatformUser(v)}`).join(" · ") : "";
+      return `<div class="platform-audit-item"><div class="platform-audit-main"><span>${escapePlatformUser(item.action).replaceAll("_"," ")} ${escapePlatformUser(item.target_email||"")}</span><span>${platformUserDate(item.created_at)}</span></div><div class="platform-audit-meta">By ${escapePlatformUser(item.actor_email||"system")}${detail ? " · " + detail : ""}</div></div>`;
+    }).join("");
+  } catch(err) {
+    console.error("Platform audit failed to load",err);
+    box.innerHTML=`<div class="platform-muted">Could not load audit log.</div>`;
+  }
+}
+async function platformUserAction(action, explicitEmail) {
+  const email=(explicitEmail || getPlatformUserEmail()).trim();
+  if(!email){ setPlatformMessage("error","Enter or select a user email first."); return; }
+  const labels={promote:"promote to platform admin",demote:"demote to practitioner",deactivate:"deactivate",reactivate:"reactivate"};
+  if(!confirm(`Are you sure you want to ${labels[action] || action} ${email}?`)) return;
+  const res=await apiFetch(`/api/platform-users/${action}`,{method:"POST",body:JSON.stringify({email})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){ setPlatformMessage("error",data.detail || `Could not ${action} user.`); return; }
+  setPlatformMessage("success",data.message || "User updated.");
+  await loadPlatformUsers(); await loadPlatformAuditLog();
+}
+async function impersonatePlatformUser(userId,email){
+  if(!userId) return;
+  if(!confirm(`Log in as ${email || "this user"}? Your admin session can be restored using the Return to admin banner.`)) return;
+  const res=await apiFetch(`/auth/impersonate/${encodeURIComponent(userId)}`,{method:"POST",body:JSON.stringify({})});
+  const data=await res.json().catch(()=>({}));
+  if(!res.ok){ setPlatformMessage("error",data.detail || "Could not impersonate user."); return; }
+  clearAuthSession();
+  window.location.href="/app";
+}
+document.getElementById("search-platform-users-btn")?.addEventListener("click",loadPlatformUsers);
+document.getElementById("platform-user-email")?.addEventListener("keydown",e=>{ if(e.key==="Enter") loadPlatformUsers(); });
+document.getElementById("platform-user-role-filter")?.addEventListener("change",loadPlatformUsers);
+document.getElementById("platform-user-status-filter")?.addEventListener("change",loadPlatformUsers);
+document.getElementById("promote-platform-user-btn")?.addEventListener("click",()=>platformUserAction("promote"));
+document.getElementById("demote-platform-user-btn")?.addEventListener("click",()=>platformUserAction("demote"));
+document.getElementById("deactivate-platform-user-btn")?.addEventListener("click",()=>platformUserAction("deactivate"));
+document.getElementById("reactivate-platform-user-btn")?.addEventListener("click",()=>platformUserAction("reactivate"));
+document.addEventListener("click",e=>{ const actionBtn=e.target.closest("[data-user-action]"); if(actionBtn) platformUserAction(actionBtn.dataset.userAction, actionBtn.dataset.userEmail); const impBtn=e.target.closest("[data-impersonate-user-id]"); if(impBtn) impersonatePlatformUser(impBtn.dataset.impersonateUserId,impBtn.dataset.impersonateEmail); });
+
 loadPlatformSettings();
+setTimeout(()=>{ loadPlatformUsers(); loadPlatformAuditLog(); },250);
 </script>
 {% endblock %}

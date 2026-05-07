@@ -14,13 +14,57 @@ from app.schemas.auth import (
     TokenPairResponse,
 )
 from app.services.auth_service import (
+    build_auth_response,
+    build_impersonation_response,
     change_password,
     login_user,
     refresh_user_tokens,
     register_and_login_user,
+    restore_admin_from_token,
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+
+
+def _cookie_secure() -> bool:
+    import os
+    return os.getenv("APP_ENV", "development").lower() == "production"
+
+
+def _set_session_cookies(response: Response, auth: dict) -> None:
+    response.set_cookie(
+        key="access_token",
+        value=auth["access_token"],
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="lax",
+        max_age=60 * 60,
+        path="/",
+    )
+    response.set_cookie(
+        key="refresh_token",
+        value=auth["refresh_token"],
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="lax",
+        max_age=60 * 60 * 24 * 7,
+        path="/",
+    )
+
+
+def _audit_admin_action(db, *, actor, action: str, target=None, details=None) -> None:
+    try:
+        from app.api.routes_platform_users import _audit
+        target_payload = None
+        if target is not None:
+            target_payload = {
+                "id": getattr(target, "id", None),
+                "email": getattr(target, "email", None),
+            }
+        _audit(db, actor=actor, action=action, target=target_payload, details=details or {})
+    except Exception as exc:
+        db.rollback()
+        print(f"[admin-audit] failed to record {action}: {exc}")
 
 
 @router.post("/register", response_model=AuthResponse)
@@ -159,6 +203,102 @@ def get_me(
     return AuthMeResponse(user=current_user)
 
 
+
+
+@router.get("/impersonation-status")
+def impersonation_status(
+    request: Request,
+    db: CurrentDB,
+    current_user: CurrentActiveUser,
+):
+    restore_token = request.cookies.get("admin_restore_token")
+    if not restore_token:
+        return {"impersonating": False}
+
+    try:
+        admin_user = restore_admin_from_token(db, restore_token)
+    except Exception:
+        return {"impersonating": False}
+
+    return {
+        "impersonating": True,
+        "admin_email": admin_user.email,
+        "admin_user_id": str(admin_user.id),
+        "impersonated_email": current_user.email,
+        "impersonated_user_id": str(current_user.id),
+    }
+
+
+@router.post("/impersonate/exit")
+def exit_impersonation(
+    request: Request,
+    response: Response,
+    db: CurrentDB,
+    current_user: CurrentActiveUser,
+):
+    restore_token = request.cookies.get("admin_restore_token")
+    if not restore_token:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No admin impersonation session found.")
+
+    admin_user = restore_admin_from_token(db, restore_token)
+    auth = build_auth_response(admin_user)
+    _set_session_cookies(response, auth)
+    response.delete_cookie("admin_restore_token", path="/")
+    response.delete_cookie("impersonated_user_id", path="/")
+
+    _audit_admin_action(
+        db,
+        actor=admin_user,
+        action="admin_exited_impersonation",
+        target=current_user,
+        details={"impersonated_email": current_user.email},
+    )
+
+    return {"message": "Returned to admin session.", "user": admin_user}
+
+
+@router.post("/impersonate/{user_id}")
+def start_impersonation(
+    user_id: str,
+    request: Request,
+    response: Response,
+    db: CurrentDB,
+    current_user: CurrentActiveUser,
+):
+    auth = build_impersonation_response(db, current_user, user_id)
+    target = auth["impersonated_user"]
+
+    _set_session_cookies(response, auth)
+    response.set_cookie(
+        key="admin_restore_token",
+        value=auth["admin_restore_token"],
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="lax",
+        max_age=60 * 60 * 2,
+        path="/",
+    )
+    response.set_cookie(
+        key="impersonated_user_id",
+        value=str(target.id),
+        httponly=True,
+        secure=_cookie_secure(),
+        samesite="lax",
+        max_age=60 * 60 * 2,
+        path="/",
+    )
+
+    _audit_admin_action(
+        db,
+        actor=current_user,
+        action="admin_started_impersonation",
+        target=target,
+        details={"target_email": target.email, "ip": request.client.host if request.client else None},
+    )
+
+    return {"message": "Impersonation started.", "user": target}
+
+
 @router.post("/change-password", response_model=AuthMessageResponse)
 def update_password(
     payload: PasswordChangeRequest,
@@ -178,6 +318,8 @@ def update_password(
 def logout(response: Response):
     response.delete_cookie("access_token", path="/")
     response.delete_cookie("refresh_token", path="/")
+    response.delete_cookie("admin_restore_token", path="/")
+    response.delete_cookie("impersonated_user_id", path="/")
     return AuthMessageResponse(message="Logged out successfully.")
 
 

@@ -82,6 +82,25 @@ def ensure_subscription_record(db: Session, user) -> dict[str, Any]:
 
 
 def subscription_status(db: Session, user) -> dict[str, Any]:
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    if is_platform_admin_user(db, user):
+        return {
+            "subscription_id": None,
+            "status": "platform_admin",
+            "effective_status": "platform_admin",
+            "plan_code": "internal_admin",
+            "trial_ends_at": None,
+            "current_period_end": None,
+            "days_remaining": None,
+            "can_create_reports": True,
+            "can_create_share_bundles": True,
+            "can_view_existing": True,
+            "stripe_customer_id": None,
+            "stripe_subscription_id": None,
+            "cancel_at_period_end": False,
+        }
+
     sub = ensure_subscription_record(db, user)
     status = str(sub.get("status") or "incomplete")
     current_period_end = _as_aware(sub.get("current_period_end"))
@@ -120,6 +139,11 @@ def subscription_status(db: Session, user) -> dict[str, Any]:
 def require_subscription_feature(db: Session, user, feature: str = "create") -> None:
     if not SUBSCRIPTION_REQUIRED:
         return
+
+    from app.services.platform_settings_service import is_platform_admin_user
+    if is_platform_admin_user(db, user):
+        return
+
     state = subscription_status(db, user)
     if feature == "report_generation" and state["can_create_reports"]:
         return

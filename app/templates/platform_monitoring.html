@@ -232,12 +232,14 @@ async function loadMonitoring() {
     row("Frontend URL", health.frontend_url),
   ].join("");
 
-  const platformNetDisplay = Math.max(0, Number(today.platform_commission_minor || 0) - Number(today.stripe_fee_minor || 0));
+  const platformNetDisplay = Number(today.platform_net_display_minor || 0);
+  const platformNetRaw = Number(today.platform_net_raw_minor || 0);
   document.getElementById("revenue-rows").innerHTML = [
     row("Gross", minorMoney(today.gross_minor || 0, currency)),
     row("Platform commission", minorMoney(today.platform_commission_minor || 0, currency)),
     row("Stripe fees", minorMoney(today.stripe_fee_minor || 0, currency)),
     row("Display-safe platform net", minorMoney(platformNetDisplay, currency)),
+    row("Raw reconciliation position", minorMoney(platformNetRaw, currency)),
     row("Practitioner allocation", minorMoney(today.practitioner_allocation_minor || 0, currency)),
   ].join("");
 

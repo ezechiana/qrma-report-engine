@@ -221,3 +221,55 @@ def change_password(
     db.commit()
     db.refresh(user)
     return user
+
+def build_admin_restore_token(admin_user: User) -> str:
+    """Create a short-lived restore token used only to return from impersonation."""
+    return create_refresh_token(
+        subject=str(admin_user.id),
+        extra_claims={
+            "email": admin_user.email,
+            "purpose": "admin_impersonation_restore",
+        },
+    )
+
+
+def restore_admin_from_token(db: Session, restore_token: str) -> User:
+    """Resolve the original admin from an impersonation restore token."""
+    try:
+        require_refresh_token(restore_token)
+        subject = get_token_subject(restore_token)
+    except TokenError as exc:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
+
+    admin = get_user_by_id(db, subject)
+    if not admin or not admin.is_active:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin restore session is invalid.")
+
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    if not is_platform_admin_user(db, admin):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Restored user is not a platform admin.")
+
+    return admin
+
+
+def build_impersonation_response(db: Session, admin_user: User, target_user_id: str) -> dict:
+    """Build auth tokens for a target user after validating platform-admin access."""
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    if not is_platform_admin_user(db, admin_user):
+        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Platform administrator access required.")
+
+    target = get_user_by_id(db, target_user_id)
+    if not target:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Target user not found.")
+    if not target.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Cannot impersonate an inactive user.")
+    if str(target.id) == str(admin_user.id):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are already signed in as this admin user.")
+
+    auth = build_auth_response(target)
+    auth["admin_restore_token"] = build_admin_restore_token(admin_user)
+    auth["admin_user"] = admin_user
+    auth["impersonated_user"] = target
+    return auth
