@@ -74,7 +74,7 @@ def _is_subscription_usable(sub: dict[str, Any] | None) -> bool:
         return False
     status = (sub.get("status") or "").lower()
     if status in {"active", "trialing"}:
-        end = sub.get("current_period_end") or sub.get("trial_ends_at")
+        end = sub.get("current_period_end")
         if not end:
             return True
         if isinstance(end, str):
@@ -121,7 +121,6 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
                 plan_code,
                 status,
                 current_period_end,
-                trial_ends_at,
                 cancel_at_period_end,
                 created_at,
                 updated_at
@@ -130,7 +129,6 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
                 :user_id,
                 :plan_code,
                 'trialing',
-                :trial_end,
                 :trial_end,
                 false,
                 NOW(),
@@ -149,34 +147,94 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
     return dict(row)
 
 
-def _subscription_payload(sub: dict[str, Any]) -> dict[str, Any]:
+def _days_remaining(end: Any) -> int | None:
+    if not end:
+        return None
+    try:
+        if isinstance(end, str):
+            end = datetime.fromisoformat(end.replace("Z", "+00:00"))
+        if end.tzinfo is None:
+            end = end.replace(tzinfo=timezone.utc)
+        seconds = (end - _now()).total_seconds()
+        if seconds < 0:
+            return 0
+        return int((seconds + 86399) // 86400)
+    except Exception:
+        return None
+
+
+def _subscription_payload(sub: dict[str, Any], *, stripe_connect: dict[str, Any] | None = None) -> dict[str, Any]:
     status = sub.get("status") or "incomplete"
     usable = _is_subscription_usable(sub)
-    end = sub.get("current_period_end") or sub.get("trial_ends_at")
-    trial_end = sub.get("trial_ends_at")
+    end = sub.get("current_period_end")
+    trial_end = sub.get("current_period_end") if status == "trialing" else None
+    days_remaining = _days_remaining(end)
+
+    if usable and status == "active":
+        access_message = "Subscription active."
+        trial_banner = None
+        upgrade_nudge = None
+    elif usable and status == "trialing":
+        label = f"{days_remaining} day{'s' if days_remaining != 1 else ''}" if days_remaining is not None else "your trial period"
+        access_message = f"Trial active — {label} remaining."
+        trial_banner = {
+            "show": True,
+            "level": "info" if (days_remaining or 30) > 7 else "warning",
+            "title": "30-day trial active",
+            "message": f"You have {label} remaining. Upgrade before the trial ends to keep creating reports and paid share bundles.",
+            "days_remaining": days_remaining,
+            "cta_label": "Start / upgrade subscription",
+            "cta_action": "checkout",
+        }
+        upgrade_nudge = {
+            "show": True,
+            "reason": "trialing",
+            "message": "Add billing now so your reporting workflow continues uninterrupted after the trial.",
+        }
+    else:
+        access_message = "Subscription required to create new reports and share bundles."
+        trial_banner = None
+        upgrade_nudge = {
+            "show": True,
+            "reason": "subscription_required",
+            "message": "Start or upgrade your subscription to create new reports and share bundles.",
+        }
+
+    stripe_connect = stripe_connect or {}
+    connect_reminder = {
+        "show": not bool(stripe_connect.get("has_stripe_connect_account")),
+        "level": "warning",
+        "title": "Stripe Connect setup recommended",
+        "message": "Set up Stripe Connect so paid report/share-bundle revenue can be routed directly to your practitioner account.",
+        "cta_label": "Set up Stripe Connect",
+        "cta_url": stripe_connect.get("onboarding_url") or "/app/revenue",
+    }
 
     return {
         "id": str(sub.get("id")) if sub.get("id") else None,
+        "subscription_id": str(sub.get("id")) if sub.get("id") else None,
         "plan_code": sub.get("plan_code") or DEFAULT_PLAN_CODE,
         "status": status,
+        "effective_status": status,
         "is_active": usable,
         "can_create_reports": usable,
         "can_create_shares": usable,
         "can_create_bundles": usable,
+        "can_create_share_bundles": usable,
+        "can_view_existing": True,
         "current_period_end": _dt_to_iso(end),
         "trial_ends_at": _dt_to_iso(trial_end),
+        "days_remaining": days_remaining,
         "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
         "stripe_customer_id": sub.get("stripe_customer_id"),
         "stripe_subscription_id": sub.get("stripe_subscription_id"),
         "stripe_price_id": sub.get("stripe_price_id"),
         "voucher_code": sub.get("voucher_code"),
-        "access_message": (
-            "Subscription active."
-            if usable and status == "active"
-            else "Trial active."
-            if usable and status == "trialing"
-            else "Subscription required to create new reports and share bundles."
-        ),
+        "access_message": access_message,
+        "trial_banner": trial_banner,
+        "upgrade_nudge": upgrade_nudge,
+        "stripe_connect": stripe_connect,
+        "stripe_connect_reminder": connect_reminder,
     }
 
 
@@ -301,6 +359,78 @@ def _upsert_subscription_from_stripe(
     db.commit()
 
 
+def _get_stripe_connect_status(db: Session, current_user: User) -> dict[str, Any]:
+    """Best-effort Stripe Connect status for subscription/settings UI.
+
+    This is intentionally defensive because staging/prod schemas may differ while
+    the revenue/Connect module is evolving. Missing columns/tables should never
+    break subscription status.
+    """
+    candidates = [
+        (
+            "practitioner_settings",
+            """
+            SELECT
+                stripe_connect_account_id,
+                stripe_connect_onboarding_complete,
+                stripe_connect_charges_enabled,
+                stripe_connect_payouts_enabled
+            FROM practitioner_settings
+            WHERE user_id = :user_id
+            LIMIT 1
+            """,
+        ),
+        (
+            "stripe_connect_accounts",
+            """
+            SELECT
+                stripe_account_id AS stripe_connect_account_id,
+                onboarding_complete AS stripe_connect_onboarding_complete,
+                charges_enabled AS stripe_connect_charges_enabled,
+                payouts_enabled AS stripe_connect_payouts_enabled
+            FROM stripe_connect_accounts
+            WHERE user_id = :user_id
+            ORDER BY created_at DESC
+            LIMIT 1
+            """,
+        ),
+    ]
+
+    row = None
+    for _name, sql in candidates:
+        try:
+            row = db.execute(text(sql), {"user_id": current_user.id}).mappings().first()
+            if row:
+                break
+        except Exception:
+            db.rollback()
+            row = None
+
+    account_id = None
+    onboarding_complete = False
+    charges_enabled = False
+    payouts_enabled = False
+
+    if row:
+        account_id = row.get("stripe_connect_account_id")
+        onboarding_complete = bool(row.get("stripe_connect_onboarding_complete"))
+        charges_enabled = bool(row.get("stripe_connect_charges_enabled"))
+        payouts_enabled = bool(row.get("stripe_connect_payouts_enabled"))
+
+    has_account = bool(account_id)
+    ready = has_account and onboarding_complete and charges_enabled and payouts_enabled
+
+    return {
+        "has_stripe_connect_account": has_account,
+        "stripe_connect_account_id": account_id,
+        "onboarding_complete": onboarding_complete,
+        "charges_enabled": charges_enabled,
+        "payouts_enabled": payouts_enabled,
+        "ready_for_direct_payouts": ready,
+        "onboarding_url": "/app/revenue",
+    }
+
+
 @router.get("/api/subscription/status")
 def get_subscription_status(
     db: Session = Depends(get_db),
@@ -330,10 +460,15 @@ def get_subscription_status(
             "stripe_price_id": None,
             "voucher_code": None,
             "access_message": "Platform admin access.",
+            "trial_banner": None,
+            "upgrade_nudge": None,
+            "stripe_connect": {"has_stripe_connect_account": True, "ready_for_direct_payouts": True},
+            "stripe_connect_reminder": {"show": False},
         }
 
     sub = _ensure_subscription_record(db, current_user)
-    return _subscription_payload(sub)
+    stripe_connect = _get_stripe_connect_status(db, current_user)
+    return _subscription_payload(sub, stripe_connect=stripe_connect)
 
 
 @router.post("/api/subscription/checkout")
