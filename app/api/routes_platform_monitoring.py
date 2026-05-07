@@ -17,7 +17,7 @@ router = APIRouter(tags=["platform-monitoring"])
 templates = Jinja2Templates(directory="app/templates")
 
 ZERO_DECIMAL_CURRENCIES = {"jpy", "krw"}
-
+    
 
 def _iso(value: Any) -> str | None:
     if not value:
@@ -317,6 +317,64 @@ def platform_monitoring_data(
         """,
     )
 
+
+    auth_metrics = _safe_one(
+        db,
+        """
+        SELECT
+        COUNT(*) FILTER (WHERE event_type = 'login' AND status = 'success' AND DATE(created_at) = CURRENT_DATE) AS logins_success,
+        COUNT(*) FILTER (WHERE event_type = 'login' AND status = 'failed' AND DATE(created_at) = CURRENT_DATE) AS logins_failed,
+        COUNT(*) FILTER (WHERE event_type = 'login' AND status = 'blocked_unverified' AND DATE(created_at) = CURRENT_DATE) AS unverified_blocks,
+        COUNT(*) FILTER (WHERE event_type = 'email_verify' AND status = 'success' AND DATE(created_at) = CURRENT_DATE) AS verifications,
+        COUNT(*) FILTER (WHERE event_type = 'resend_verification' AND DATE(created_at) = CURRENT_DATE) AS resends,
+        COUNT(*) FILTER (WHERE event_type = 'email_send' AND status = 'success' AND DATE(created_at) = CURRENT_DATE) AS email_sends_success,
+        COUNT(*) FILTER (WHERE event_type = 'email_send' AND status = 'failed' AND DATE(created_at) = CURRENT_DATE) AS email_sends_failed
+        FROM auth_events
+        """
+    )
+
+    # ✅ SAFE fallback
+    auth_metrics = auth_metrics or {
+        "logins_success": 0,
+        "logins_failed": 0,
+        "unverified_blocks": 0,
+        "verifications": 0,
+        "resends": 0,
+        "email_sends_success": 0,
+        "email_sends_failed": 0,
+    }
+
+    unverified_backlog = _safe_scalar(
+        db,
+        """
+        SELECT COUNT(*)
+        FROM users
+        WHERE email_verified_at IS NULL
+        AND is_active = true
+        """
+    )
+
+    unverified_older_24h = _safe_scalar(
+        db,
+        """
+        SELECT COUNT(*)
+        FROM users
+        WHERE email_verified_at IS NULL
+        AND is_active = true
+        AND created_at < NOW() - INTERVAL '24 hours'
+        """
+    )
+
+    auth_metrics = auth_metrics or {
+        "logins_success": 0,
+        "logins_failed": 0,
+        "unverified_blocks": 0,
+        "verifications": 0,
+        "resends": 0,
+        "email_sends_success": 0,
+        "email_sends_failed": 0,
+    }
+
     webhook_age_hours = _event_age_hours(latest_webhook.get("processed_at"))
 
     anomalies = []
@@ -365,6 +423,15 @@ def platform_monitoring_data(
     if int(fallback_paid or 0) > 0:
         add_anomaly("amber", "Platform fallback payments detected", "These payments were collected by the platform because Stripe Connect was not fully routed for the practitioner.", fallback_paid, "platform_fallback_paid")
 
+    if int((auth_metrics or {}).get("email_sends_failed") or 0) > 0:
+        add_anomaly("red", "Verification email send failures today", "One or more authentication emails failed to send. Check Resend configuration and delivery logs.", (auth_metrics or {}).get("email_sends_failed"), "auth_email_send_failed")
+
+    if int(unverified_older_24h or 0) > 0:
+        add_anomaly("amber", "Unverified accounts older than 24 hours", "Users may be stuck before activation. Review email delivery and resend behaviour.", unverified_older_24h, "unverified_backlog")
+
+    if int((auth_metrics or {}).get("logins_failed") or 0) >= 10:
+        add_anomaly("amber", "High login failure count today", "Multiple failed logins were recorded today. Review for user friction or suspicious activity.", (auth_metrics or {}).get("logins_failed"), "login_failure_spike")
+
     if not anomalies:
         add_anomaly("green", "No launch-critical anomalies detected", "Core monitoring checks are currently green.", code="healthy")
 
@@ -411,6 +478,11 @@ def platform_monitoring_data(
             "paid_missing_stripe_refs": paid_missing_stripe_refs,
             "negative_platform_net_rows": negative_platform_net_rows,
             "fallback_paid": fallback_paid,
+        },
+        "auth": {
+            **(auth_metrics or {}),
+            "unverified_backlog": unverified_backlog,
+            "unverified_older_24h": unverified_older_24h,
         },
         "anomalies": sorted(anomalies, key=lambda a: _severity_rank(a["level"]), reverse=True),
     }

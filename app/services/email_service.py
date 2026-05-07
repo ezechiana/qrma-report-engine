@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import os
-import requests
 import smtplib
 from email.mime.text import MIMEText
 from email.utils import formataddr
@@ -19,30 +18,54 @@ def verification_url(token: str) -> str:
     return f"{_base_url()}/auth/verify-email?token={token}"
 
 
-RESEND_API_KEY = os.getenv("RESEND_API_KEY")
-FROM_EMAIL = os.getenv("FROM_EMAIL", "no-reply@mail.go360.io")
-FROM_NAME = os.getenv("FROM_NAME", "go360")
+def send_email(*, to_email: str, subject: str, html: str, text: str | None = None) -> dict:
+    """Send an email using SMTP.
 
-def send_email(to_email: str, subject: str, html: str):
-    if not RESEND_API_KEY:
-        raise Exception("RESEND_API_KEY not configured")
+    Environment variables:
+    - SMTP_HOST
+    - SMTP_PORT, default 587
+    - SMTP_USER
+    - SMTP_PASS
+    - SMTP_USE_TLS, default true
+    - FROM_EMAIL, default no-reply@go360.io
+    - FROM_NAME, default go360
 
-    response = requests.post(
-        "https://api.resend.com/emails",
-        headers={
-            "Authorization": f"Bearer {RESEND_API_KEY}",
-            "Content-Type": "application/json",
-        },
-        json={
-            "from": f"{FROM_NAME} <{FROM_EMAIL}>",
-            "to": [to_email],
-            "subject": subject,
-            "html": html,
-        },
-    )
+    In non-production, if SMTP is not configured, the email is logged and the app
+    continues. In production, missing SMTP configuration raises RuntimeError so
+    registrations cannot silently fail.
+    """
+    app_env = (os.getenv("APP_ENV") or "development").lower()
+    smtp_host = os.getenv("SMTP_HOST")
+    smtp_port = int(os.getenv("SMTP_PORT", "587"))
+    smtp_user = os.getenv("SMTP_USER")
+    smtp_pass = os.getenv("SMTP_PASS")
+    smtp_use_tls = _env_bool("SMTP_USE_TLS", True)
+    from_email = os.getenv("FROM_EMAIL", "no-reply@go360.io")
+    from_name = os.getenv("FROM_NAME", "go360")
 
-    if response.status_code >= 300:
-        raise Exception(f"Email send failed: {response.text}")
+    if not smtp_host:
+        if app_env == "production":
+            raise RuntimeError("SMTP_HOST is not configured. Email cannot be sent in production.")
+        print("[email:dev] SMTP not configured; email not sent.")
+        print(f"[email:dev] To: {to_email}")
+        print(f"[email:dev] Subject: {subject}")
+        print(f"[email:dev] Body: {text or html}")
+        return {"sent": False, "dev_logged": True}
+
+    msg = MIMEText(html if html else (text or ""), "html" if html else "plain", "utf-8")
+    msg["Subject"] = subject
+    msg["From"] = formataddr((from_name, from_email))
+    msg["To"] = to_email
+
+    with smtplib.SMTP(smtp_host, smtp_port, timeout=20) as server:
+        if smtp_use_tls:
+            server.starttls()
+        if smtp_user and smtp_pass:
+            server.login(smtp_user, smtp_pass)
+        server.send_message(msg)
+
+    return {"sent": True, "dev_logged": False}
+
 
 def send_verification_email(*, to_email: str, full_name: str | None, token: str) -> dict:
     url = verification_url(token)
@@ -62,5 +85,6 @@ def send_verification_email(*, to_email: str, full_name: str | None, token: str)
     </div>
     """
     text = f"Verify your go360 email: {url}"
-    send_email(to_email=to_email, subject="Verify your go360 account", html=html)
-    return {"verification_url": url}
+    result = send_email(to_email=to_email, subject="Verify your go360 account", html=html, text=text)
+    result["verification_url"] = url
+    return result

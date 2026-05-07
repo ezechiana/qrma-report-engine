@@ -72,6 +72,10 @@
       <h3>Operational activity today</h3>
       <div id="activity-rows"></div>
     </div>
+    <div class="monitor-card">
+      <h3>Authentication & email today</h3>
+      <div id="auth-rows"></div>
+    </div>
   </div>
 
   <div class="monitor-grid-3">
@@ -252,6 +256,22 @@ async function loadMonitoring() {
     row("Bundles created", activity.bundles_created),
     row("Settings updated", activity.settings_updated),
   ].join("");
+
+  const auth = data.auth || {};
+  const authRows = document.getElementById("auth-rows");
+  if (authRows) {
+    authRows.innerHTML = [
+      row("Logins success", auth.logins_success ?? 0),
+      row("Logins failed", auth.logins_failed ?? 0),
+      row("Unverified login blocks", auth.unverified_blocks ?? 0),
+      row("Email verifications", auth.verifications ?? 0),
+      row("Verification resends", auth.resends ?? 0),
+      row("Email sends success", auth.email_sends_success ?? 0),
+      row("Email sends failed", auth.email_sends_failed ?? 0),
+      row("Unverified backlog", auth.unverified_backlog ?? 0),
+      row("Unverified >24h", auth.unverified_older_24h ?? 0),
+    ].join("");
+  }
 
   document.getElementById("anomaly-list").innerHTML = (data.anomalies || []).map(a => `
     <div class="monitor-alert ${esc(a.level)}">

@@ -68,6 +68,11 @@
 .platform-row-action-muted { background:#f8fafc; color:#475569; }
 .platform-audit-main span:first-child { text-transform:capitalize; }
 
+.platform-admin-warning { display:none; margin-top:8px; padding:10px 12px; border-radius:12px; border:1px solid #fde68a; background:#fffbeb; color:#92400e; font-size:12px; line-height:1.45; }
+.platform-admin-warning.show { display:block; }
+.platform-admin-preview { display:none; margin-top:8px; padding:10px 12px; border-radius:12px; border:1px solid #dbeafe; background:#eff6ff; color:#1e3a8a; font-size:12px; line-height:1.45; }
+.platform-admin-preview.show { display:block; }
+
 @media(max-width:1050px){ .platform-user-layout{grid-template-columns:1fr;} .platform-user-summary{grid-template-columns:repeat(2,minmax(0,1fr));} }
 
 @media(max-width:900px){ .platform-section-grid,.platform-snapshot,.platform-feature-grid{grid-template-columns:1fr;} }
@@ -90,7 +95,7 @@
     <h3>Platform access & feature flags</h3>
     <p>Controls administrator access and feature availability without redeploying code. Secrets still remain in environment variables.</p>
     <div class="platform-section-grid">
-      <div class="platform-field"><label>Admin emails</label><input id="platform_admin_emails" placeholder="admin@example.com, owner@example.com"><div class="platform-muted">Users with role <strong>admin</strong> also have access. Email allowlist is a safe fallback.</div></div>
+      <div class="platform-field"><label>Admin emails</label><input id="platform_admin_emails" placeholder="admin@example.com, owner@example.com"><div class="platform-muted">Users with role <strong>admin</strong> also have access. Email allowlist is a safe fallback. Use commas between multiple emails.</div><div id="admin-email-warning" class="platform-admin-warning"></div><div id="admin-email-preview" class="platform-admin-preview"></div></div>
       <div class="platform-field"><label>Platform support email</label><input id="platform_support_email"></div>
       <div class="platform-field"><label>Terms URL</label><input id="platform_terms_url"></div>
       <div class="platform-field"><label>Privacy URL</label><input id="platform_privacy_url"></div>
@@ -338,8 +343,74 @@ function fillInput(id,value){ const el=document.getElementById(id); if(el) el.va
 function fillCheckbox(id,value){ const el=document.getElementById(id); if(el) el.checked=Boolean(value); }
 function readCheckbox(id){ const el=document.getElementById(id); return Boolean(el && el.checked); }
 function renderFxSnapshot(snapshot){ const box=document.getElementById('fx-snapshot-box'); if(!snapshot){ box.innerHTML='<div class="platform-stat"><div class="platform-stat-label">Snapshot</div><div class="platform-stat-value">No FX snapshot yet</div></div>'; return; } const rates=snapshot.rates||{}; box.innerHTML=`<div class="platform-stat"><div class="platform-stat-label">Effective month</div><div class="platform-stat-value">${snapshot.effective_month||'—'}</div></div><div class="platform-stat"><div class="platform-stat-label">Source</div><div class="platform-stat-value">${snapshot.source||'—'}</div></div><div class="platform-stat"><div class="platform-stat-label">Key rates</div><div class="platform-stat-value">${Object.entries(rates).map(([k,v])=>`${k}: ${v}`).join(' · ') || '—'}</div></div>`; }
+
+function parseAdminEmails(raw){
+  return String(raw || "")
+    .split(/[\s,;]+/)
+    .map(v => v.trim().toLowerCase())
+    .filter(Boolean);
+}
+function uniqueValues(values){ return Array.from(new Set(values)); }
+function updateAdminEmailGuardrails(previousRaw){
+  const input = document.getElementById('platform_admin_emails');
+  const warning = document.getElementById('admin-email-warning');
+  const preview = document.getElementById('admin-email-preview');
+  if(!input || !warning || !preview) return;
+
+  const emails = uniqueValues(parseAdminEmails(input.value));
+  const previous = uniqueValues(parseAdminEmails(previousRaw || input.dataset.previousAdminEmails || ""));
+  const added = emails.filter(e => !previous.includes(e));
+  const removed = previous.filter(e => !emails.includes(e));
+
+  warning.classList.remove('show');
+  warning.textContent = '';
+  preview.classList.remove('show');
+  preview.innerHTML = '';
+
+  if(!emails.length){
+    warning.textContent = '⚠️ No admin emails are configured. Only users with database role admin will have platform admin access. New registered users will remain practitioners.';
+    warning.classList.add('show');
+    return;
+  }
+
+  const risky = emails.filter(e => /@(badgerhole\.com|mailinator\.com|tempmail\.|10minutemail\.|guerrillamail\.|yopmail\.)$/i.test(e));
+  if(risky.length){
+    warning.textContent = '⚠️ Disposable/test-looking admin email detected: ' + risky.join(', ') + '. Remove these before staging/production use.';
+    warning.classList.add('show');
+  }
+
+  const parts = [];
+  parts.push('<strong>Current admin allowlist:</strong> ' + emails.map(escapePlatformUser).join(', '));
+  if(added.length) parts.push('<strong>Newly added:</strong> ' + added.map(escapePlatformUser).join(', '));
+  if(removed.length) parts.push('<strong>Removed:</strong> ' + removed.map(escapePlatformUser).join(', '));
+  preview.innerHTML = parts.join('<br>');
+  preview.classList.add('show');
+}
+function confirmAdminEmailChanges(){
+  const input = document.getElementById('platform_admin_emails');
+  if(!input) return true;
+  const current = uniqueValues(parseAdminEmails(input.value));
+  const previous = uniqueValues(parseAdminEmails(input.dataset.previousAdminEmails || ""));
+  const added = current.filter(e => !previous.includes(e));
+  const removed = previous.filter(e => !current.includes(e));
+  const risky = current.filter(e => /@(badgerhole\.com|mailinator\.com|tempmail\.|10minutemail\.|guerrillamail\.|yopmail\.)$/i.test(e));
+
+  if(!current.length){
+    return confirm('No admin emails are configured. Only users with database role admin will keep platform admin access. Continue saving?');
+  }
+  if(added.length || removed.length || risky.length){
+    let msg = 'You are changing the platform admin email allowlist.\n\n';
+    if(added.length) msg += 'Added: ' + added.join(', ') + '\n';
+    if(removed.length) msg += 'Removed: ' + removed.join(', ') + '\n';
+    if(risky.length) msg += '\nWarning: test/disposable-looking admin email(s): ' + risky.join(', ') + '\n';
+    msg += '\nOnly trusted operator emails should be in this list. Continue?';
+    return confirm(msg);
+  }
+  return true;
+}
+
 async function loadPlatformSettings(){ const res=await apiFetch('/api/platform-settings'); if(!res.ok){ setPlatformMessage('error','Could not load platform settings.'); return; } const data=await res.json();
-  fillInput('platform_admin_emails',data.platform?.admin_emails); fillInput('platform_support_email',data.platform?.support_email); fillInput('platform_terms_url',data.platform?.terms_url); fillInput('platform_privacy_url',data.platform?.privacy_url);
+  fillInput('platform_admin_emails',data.platform?.admin_emails); const adminEmailInput=document.getElementById('platform_admin_emails'); if(adminEmailInput){ adminEmailInput.dataset.previousAdminEmails=data.platform?.admin_emails || ''; updateAdminEmailGuardrails(data.platform?.admin_emails || ''); } fillInput('platform_support_email',data.platform?.support_email); fillInput('platform_terms_url',data.platform?.terms_url); fillInput('platform_privacy_url',data.platform?.privacy_url);
   fillCheckbox('feature_referrals_enabled',data.features?.referrals_enabled); fillCheckbox('feature_subscriptions_enabled',data.features?.subscriptions_enabled); fillCheckbox('feature_paid_shares_enabled',data.features?.paid_shares_enabled); fillCheckbox('feature_stripe_connect_enabled',data.features?.stripe_connect_enabled); fillCheckbox('feature_revenue_dashboard_enabled',data.features?.revenue_dashboard_enabled); fillCheckbox('feature_trend_reports_enabled',data.features?.trend_reports_enabled); fillCheckbox('feature_ai_recommendations_enabled',data.features?.ai_recommendations_enabled); fillCheckbox('feature_platform_settings_enabled',data.features?.platform_settings_enabled);
   fillSelect('revenue_fee_model',data.revenue?.fee_model); fillSelect('revenue_default_currency',data.revenue?.default_currency); fillInput('revenue_default_monthly_goal',minorToMajor(data.revenue?.default_monthly_goal_minor,data.revenue?.default_currency));
   fillInput('fx_provider_url',data.fx?.provider_url); fillInput('fx_update_schedule_label',data.fx?.update_schedule_label); fillInput('fx_provider_timeout_seconds',data.fx?.provider_timeout_seconds); fillInput('fx_default_rates_json',data.fx?.default_rates_json); renderFxSnapshot(data.fx?.latest_snapshot);
@@ -360,7 +431,7 @@ function collectPlatformSettings(){ const defaultCurrency=document.getElementByI
   stripe_connect:{enabled:asBool(document.getElementById('stripe_connect_enabled').value),account_type:document.getElementById('stripe_connect_account_type').value,country:document.getElementById('stripe_connect_country').value,fallback_to_platform:asBool(document.getElementById('stripe_connect_fallback').value),platform_fee_percent:Number(document.getElementById('stripe_platform_fee_percent').value||0),platform_fee_fixed_amount:Number(document.getElementById('stripe_platform_fee_fixed').value||0)},
   report:{recommendation_mode:document.getElementById('report_recommendation_mode').value,tone:document.getElementById('report_tone').value,max_sections:Number(document.getElementById('report_max_sections').value||6),max_markers_per_section:Number(document.getElementById('report_max_markers').value||3),include_product_recommendations:asBool(document.getElementById('report_include_products').value),include_appendix:asBool(document.getElementById('report_include_appendix').value)}
 }; }
-document.getElementById('save-platform-settings-btn').addEventListener('click',async()=>{ const res=await apiFetch('/api/platform-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(collectPlatformSettings())}); if(!res.ok){ setPlatformMessage('error','Could not save platform settings.'); return; } setPlatformMessage('success','Platform settings saved.'); await loadPlatformSettings(); });
+document.getElementById('save-platform-settings-btn').addEventListener('click',async()=>{ if(!confirmAdminEmailChanges()) return; const res=await apiFetch('/api/platform-settings',{method:'PUT',headers:{'Content-Type':'application/json'},body:JSON.stringify(collectPlatformSettings())}); if(!res.ok){ setPlatformMessage('error','Could not save platform settings.'); return; } setPlatformMessage('success','Platform settings saved.'); await loadPlatformSettings(); await loadPlatformUsers(); await loadPlatformAuditLog(); });
 document.getElementById('reload-platform-settings-btn').addEventListener('click',loadPlatformSettings);
 document.getElementById('refresh-fx-btn').addEventListener('click',async()=>{ const res=await apiFetch('/api/platform-settings/fx/refresh-current',{method:'POST'}); if(!res.ok){ setPlatformMessage('error','Could not refresh FX snapshot.'); return; } setPlatformMessage('success','FX snapshot refreshed.'); await loadPlatformSettings(); });
 
@@ -490,6 +561,7 @@ document.getElementById("demote-platform-user-btn")?.addEventListener("click",()
 document.getElementById("deactivate-platform-user-btn")?.addEventListener("click",()=>platformUserAction("deactivate"));
 document.getElementById("reactivate-platform-user-btn")?.addEventListener("click",()=>platformUserAction("reactivate"));
 document.addEventListener("click",e=>{ const actionBtn=e.target.closest("[data-user-action]"); if(actionBtn) platformUserAction(actionBtn.dataset.userAction, actionBtn.dataset.userEmail); const impBtn=e.target.closest("[data-impersonate-user-id]"); if(impBtn) impersonatePlatformUser(impBtn.dataset.impersonateUserId,impBtn.dataset.impersonateEmail); });
+document.getElementById('platform_admin_emails')?.addEventListener('input',()=>updateAdminEmailGuardrails());
 
 loadPlatformSettings();
 setTimeout(()=>{ loadPlatformUsers(); loadPlatformAuditLog(); },250);

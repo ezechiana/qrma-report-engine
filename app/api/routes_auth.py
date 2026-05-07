@@ -22,6 +22,7 @@ from app.services.auth_service import (
     create_email_verification_token,
     get_user_by_email,
     login_user,
+    log_auth_event,
     refresh_user_tokens,
     register_user,
     restore_admin_from_token,
@@ -74,9 +75,18 @@ def _audit_admin_action(db, *, actor, action: str, target=None, details=None) ->
         print(f"[admin-audit] failed to record {action}: {exc}")
 
 
-def _send_verification_for_user(db: CurrentDB, user) -> dict:
+def _send_verification_for_user(db: CurrentDB, user, *, event_context: str = "verification_email") -> dict:
     token = create_email_verification_token(db, user)
     result = send_verification_email(to_email=user.email, full_name=user.full_name, token=token)
+    status_value = "success" if result.get("status") in {"sent", "success"} or result.get("sent") is True else "failed"
+    log_auth_event(
+        db,
+        event_type="email_send",
+        status=status_value,
+        user=user,
+        email=user.email,
+        meta={"context": event_context, "provider": "resend", "error": result.get("error")},
+    )
     return {"token": token, "email_result": result}
 
 
@@ -98,7 +108,7 @@ def register(payload: AuthRegisterRequest, db: CurrentDB, request: Request):
             db.rollback()
             print(f"[referrals] failed to register referral signup: {exc}")
 
-    email_payload = _send_verification_for_user(db, user)
+    email_payload = _send_verification_for_user(db, user, event_context="registration")
     response = {
         "ok": True,
         "message": "Account created. Please check your email to verify your account before signing in.",
@@ -129,7 +139,8 @@ def resend_verification(payload: ResendVerificationRequest, db: CurrentDB):
     if user.email_verified_at:
         return {"ok": True, "message": "This email is already verified. You can sign in."}
 
-    email_payload = _send_verification_for_user(db, user)
+    email_payload = _send_verification_for_user(db, user, event_context="resend_verification")
+    log_auth_event(db, event_type="resend_verification", status="requested", user=user, email=user.email)
     response = {"ok": True, "message": "If an unverified account exists for this email, a verification email has been sent."}
 
     import os

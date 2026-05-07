@@ -209,12 +209,23 @@ def _admin_email_set_from_settings(db: Session | None = None) -> set[str]:
     return {item.strip().lower() for item in raw.split(",") if item.strip()}
 
 
+
 def is_platform_admin_email(email: str | None, db: Session | None = None) -> bool:
-    app_env = os.getenv("APP_ENV", "development").lower()
+    """Return True only when the email is explicitly allow-listed as a platform super admin.
+
+    The allow-list comes from Platform Settings first, falling back to the
+    PLATFORM_ADMIN_EMAILS environment variable. There is intentionally no
+    permissive development fallback: an empty allow-list means no email-based
+    platform admin access.
+    """
+    if not email:
+        return False
+
+    email = email.lower().strip()
     allowed = _admin_email_set_from_settings(db)
-    if not allowed and app_env != "production":
-        return True
-    return bool(email and email.lower() in allowed)
+    return email in allowed if allowed else False
+
+
 
 
 def get_user_role(user: Any) -> str:
@@ -222,6 +233,15 @@ def get_user_role(user: Any) -> str:
 
 
 def is_platform_admin_user(db: Session | None, user: Any) -> bool:
+    """Authoritative platform-admin gate.
+
+    Access is granted only when:
+    1) users.role is explicitly set to 'admin', or
+    2) the user's email is explicitly listed in PLATFORM_ADMIN_EMAILS / Platform Settings.
+
+    New self-registered users should still have role='practitioner'; the env
+    allow-list is reserved for trusted super-admin owner accounts.
+    """
     if get_user_role(user) == "admin":
         return True
     return is_platform_admin_email(getattr(user, "email", None), db=db)

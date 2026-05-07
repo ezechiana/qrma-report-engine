@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
 from uuid import UUID
@@ -23,6 +24,47 @@ from app.utils.security import (
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _ensure_auth_events_table(db: Session) -> None:
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS auth_events (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NULL,
+            email TEXT NULL,
+            event_type TEXT NOT NULL,
+            status TEXT NOT NULL,
+            ip_address TEXT NULL,
+            user_agent TEXT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            meta JSONB NOT NULL DEFAULT '{}'::jsonb
+        )
+    """))
+    db.execute(text("CREATE INDEX IF NOT EXISTS idx_auth_events_created_at ON auth_events (created_at DESC)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS idx_auth_events_type_status ON auth_events (event_type, status, created_at DESC)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS idx_auth_events_email ON auth_events (LOWER(email))"))
+    db.commit()
+
+
+def log_auth_event(db: Session, *, event_type: str, status: str, user=None, email=None, request=None, meta=None) -> None:
+    try:
+        _ensure_auth_events_table(db)
+        db.execute(text("""
+            INSERT INTO auth_events (user_id, email, event_type, status, ip_address, user_agent, meta)
+            VALUES (:user_id, :email, :event_type, :status, :ip, :ua, CAST(:meta AS JSONB))
+        """), {
+            "user_id": str(user.id) if user else None,
+            "email": (str(email).lower().strip() if email else getattr(user, "email", None)),
+            "event_type": event_type,
+            "status": status,
+            "ip": request.client.host if request and request.client else None,
+            "ua": request.headers.get("user-agent") if request else None,
+            "meta": json.dumps(meta or {}),
+        })
+        db.commit()
+    except Exception as exc:
+        db.rollback()
+        print(f"[auth-events] failed to record {event_type}/{status}: {exc}")
 
 
 def _validate_password_strength(password: str) -> None:
@@ -121,6 +163,7 @@ def verify_email_token(db: Session, token: str) -> User:
     db.execute(text("UPDATE email_verification_tokens SET used_at = NOW() WHERE token = :token"), {"token": token})
     db.commit()
     db.refresh(user)
+    log_auth_event(db, event_type="email_verify", status="success", user=user, email=user.email)
     return user
 
 
@@ -137,6 +180,9 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
         full_name=(payload.full_name or f"{payload.first_name} {payload.last_name}").strip(),
         clinic_name=payload.clinic_name.strip() if payload.clinic_name else None,
         phone=payload.phone.strip() if payload.phone else None,
+        # Security-critical: all self-registered accounts must start as practitioners.
+        # Platform admin access is granted separately by role promotion or PLATFORM_ADMIN_EMAILS.
+        role="practitioner",
         is_active=True,
         email_verified_at=None,
         last_login_at=None,
@@ -152,6 +198,7 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    log_auth_event(db, event_type="register", status="success", user=user, email=user.email)
     return user
 
 
@@ -165,16 +212,20 @@ def _is_platform_admin(db: Session, user: User) -> bool:
 
 
 def authenticate_user(db: Session, payload: AuthLoginRequest) -> User:
-    user = get_user_by_email(db, payload.email)
+    email = str(payload.email).lower().strip()
+    user = get_user_by_email(db, email)
     if not user or not verify_password(payload.password, user.password_hash):
+        log_auth_event(db, event_type="login", status="failed", email=email, meta={"reason": "invalid_credentials"})
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid email or password.")
 
     if not user.is_active:
+        log_auth_event(db, event_type="login", status="failed", user=user, email=email, meta={"reason": "inactive_user"})
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
 
     # Platform admins may need emergency access before email verification, especially
     # when founder/admin access is configured through the env/UI allowlist.
     if not user.email_verified_at and not _is_platform_admin(db, user):
+        log_auth_event(db, event_type="login", status="blocked_unverified", user=user, email=email)
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Please verify your email before signing in. Check your inbox or request a new verification email.",
@@ -194,7 +245,9 @@ def build_auth_response(user: User) -> dict:
 
 
 def login_user(db: Session, payload: AuthLoginRequest) -> dict:
-    return build_auth_response(authenticate_user(db, payload))
+    user = authenticate_user(db, payload)
+    log_auth_event(db, event_type="login", status="success", user=user, email=user.email)
+    return build_auth_response(user)
 
 
 def register_and_login_user(db: Session, payload: AuthRegisterRequest) -> dict:
