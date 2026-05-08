@@ -23,6 +23,7 @@ STRIPE_ALLOW_PROMOTION_CODES = os.getenv("STRIPE_ALLOW_PROMOTION_CODES", "true")
 SUBSCRIPTION_PORTAL_RETURN_PATH = os.getenv("SUBSCRIPTION_PORTAL_RETURN_PATH", "/app/settings")
 DEFAULT_PLAN_CODE = os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", "practitioner_monthly")
 TRIAL_DAYS = int(os.getenv("SUBSCRIPTION_TRIAL_DAYS", "30"))
+_STRIPE_PRICE_NAME_CACHE: dict[str, str] = {}
 
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
@@ -84,7 +85,7 @@ def _is_subscription_usable(sub: dict[str, Any] | None) -> bool:
                 return True
         if end.tzinfo is None:
             end = end.replace(tzinfo=timezone.utc)
-        return end >= _now()
+        return end > _now()
     return False
 
 
@@ -163,12 +164,55 @@ def _days_remaining(end: Any) -> int | None:
         return None
 
 
+
+def _stripe_display_plan_name(price_id: str | None = None) -> str:
+    """Resolve the practitioner-facing plan name from Stripe Price/Product.
+
+    We prefer Stripe as source of truth because go360 may later offer more than one
+    subscription plan. This function is best-effort and cached per process so a
+    Stripe outage never breaks the app shell.
+    """
+    price_id = (price_id or STRIPE_SUBSCRIPTION_PRICE_ID or "").strip()
+    if not price_id:
+        return str(os.getenv("SUBSCRIPTION_PLAN_DISPLAY_NAME") or os.getenv("SUBSCRIPTION_PLAN_NAME") or DEFAULT_PLAN_CODE)
+
+    if price_id in _STRIPE_PRICE_NAME_CACHE:
+        return _STRIPE_PRICE_NAME_CACHE[price_id]
+
+    fallback = str(os.getenv("SUBSCRIPTION_PLAN_DISPLAY_NAME") or os.getenv("SUBSCRIPTION_PLAN_NAME") or DEFAULT_PLAN_CODE)
+
+    if not STRIPE_SECRET_KEY:
+        return fallback
+
+    try:
+        price = stripe.Price.retrieve(price_id, expand=["product"])
+        product = price.get("product") if hasattr(price, "get") else getattr(price, "product", None)
+        name = None
+        if isinstance(product, str):
+            product = stripe.Product.retrieve(product)
+        if isinstance(product, dict) or hasattr(product, "get"):
+            name = product.get("name")
+        if not name:
+            name = price.get("nickname") if hasattr(price, "get") else getattr(price, "nickname", None)
+        if name:
+            _STRIPE_PRICE_NAME_CACHE[price_id] = str(name)
+            return str(name)
+    except Exception as exc:
+        print(f"[subscriptions] could not resolve Stripe plan name for {price_id}: {exc}")
+
+    return fallback
+
 def _subscription_payload(sub: dict[str, Any], *, stripe_connect: dict[str, Any] | None = None) -> dict[str, Any]:
     status = sub.get("status") or "incomplete"
     usable = _is_subscription_usable(sub)
     end = sub.get("current_period_end")
     trial_end = sub.get("current_period_end") if status == "trialing" else None
     days_remaining = _days_remaining(end)
+
+    if status == "trialing" and days_remaining is not None and days_remaining <= 0:
+        usable = False
+        status = "expired"
+        trial_end = None
 
     if usable and status == "active":
         access_message = "Subscription active."
@@ -214,6 +258,7 @@ def _subscription_payload(sub: dict[str, Any], *, stripe_connect: dict[str, Any]
         "id": str(sub.get("id")) if sub.get("id") else None,
         "subscription_id": str(sub.get("id")) if sub.get("id") else None,
         "plan_code": sub.get("plan_code") or DEFAULT_PLAN_CODE,
+        "display_plan_name": _stripe_display_plan_name(sub.get("stripe_price_id")),
         "status": status,
         "effective_status": status,
         "is_active": usable,
@@ -360,6 +405,11 @@ def _upsert_subscription_from_stripe(
 
 
 def _get_stripe_connect_status(db: Session, current_user: User) -> dict[str, Any]:
+    """Best-effort Stripe Connect status for subscription/settings UI.
+
+    practitioner_settings is the current source of truth. Do not query a future
+    stripe_connect_accounts table until the migration has definitely shipped.
+    """
     try:
         row = db.execute(
             text(
@@ -398,7 +448,6 @@ def _get_stripe_connect_status(db: Session, current_user: User) -> dict[str, Any
         "onboarding_url": "/app/revenue",
     }
 
-
 @router.get("/api/subscription/status")
 def get_subscription_status(
     db: Session = Depends(get_db),
@@ -411,6 +460,7 @@ def get_subscription_status(
             "id": None,
             "subscription_id": None,
             "plan_code": "internal_admin",
+            "display_plan_name": "Platform Admin",
             "status": "platform_admin",
             "effective_status": "platform_admin",
             "is_active": True,
@@ -450,6 +500,27 @@ def create_subscription_checkout(
         raise HTTPException(status_code=500, detail="Stripe is not configured. Set STRIPE_SECRET_KEY.")
     if not STRIPE_SUBSCRIPTION_PRICE_ID:
         raise HTTPException(status_code=500, detail="Subscription price is not configured. Set STRIPE_SUBSCRIPTION_PRICE_ID.")
+
+    existing_paid_subscription = db.execute(
+        text(
+            """
+            SELECT id, stripe_subscription_id, status
+            FROM subscriptions
+            WHERE user_id = :user_id
+              AND stripe_subscription_id IS NOT NULL
+              AND status IN ('active', 'trialing', 'past_due', 'incomplete')
+            ORDER BY created_at DESC
+            LIMIT 1
+            """
+        ),
+        {"user_id": current_user.id},
+    ).mappings().first()
+
+    if existing_paid_subscription:
+        raise HTTPException(
+            status_code=409,
+            detail="An active subscription already exists. Please manage your billing instead.",
+        )
 
     sub = _ensure_subscription_record(db, current_user)
     customer_id = sub.get("stripe_customer_id")

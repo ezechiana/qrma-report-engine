@@ -94,7 +94,7 @@ function renderStatus(data){
     const end=data.current_period_end || data.trial_ends_at;
     const days=daysRemaining(end);
     const banner=document.getElementById('billing-status-banner');
-    document.getElementById('billing-plan').textContent=data.plan_code || 'Practitioner';
+    document.getElementById('billing-plan').textContent=data.display_plan_name || data.plan_code || 'Practitioner';
     document.getElementById('billing-status').textContent=statusLabel(effective);
     document.getElementById('billing-period-end').textContent=formatDate(end);
     document.getElementById('billing-days-note').textContent=days===null ? 'No renewal date available yet.' : `${days} day${days===1?'':'s'} remaining.`;
@@ -123,7 +123,15 @@ async function startCheckout(){
     const voucher=(document.getElementById('subscription-voucher-code').value || '').trim() || null;
     const res=await apiFetch('/api/subscription/checkout',{method:'POST', body:JSON.stringify({voucher_code:voucher})});
     const data=await res.json().catch(()=>({}));
-    if(!res.ok){ setError(data.detail || 'Could not start checkout.'); return; }
+    if(!res.ok){
+        if(res.status === 409){
+            setError(data.detail || 'An active subscription already exists. Opening the billing portal instead.');
+            await openPortal();
+            return;
+        }
+        setError(data.detail || 'Could not start checkout.');
+        return;
+    }
     if(data.url) window.location.href=data.url;
 }
 async function openPortal(){

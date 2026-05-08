@@ -203,9 +203,9 @@ def _serialise_payment_row(r: dict[str, Any], fee_model: str) -> dict[str, Any]:
 
     platform_net_note = None
     if figures["platform_net_kind"] == "reconciliation_only":
-        platform_net_note = "Stripe fee absorbed by platform for reconciliation; not operating profit/loss."
+        platform_net_note = "Platform collected this payment temporarily; practitioner payable must be reconciled manually."
     elif figures["is_platform_collected"]:
-        platform_net_note = "Platform-collected payment; reconcile allocation separately."
+        platform_net_note = "Platform-collected payment; practitioner payable is tracked for manual reconciliation."
 
     return {
         "id": str(r["id"]),
@@ -230,6 +230,9 @@ def _serialise_payment_row(r: dict[str, Any], fee_model: str) -> dict[str, Any]:
         "platform_net_note": platform_net_note,
         "practitioner_payout": _money(int(figures["practitioner_allocation_minor"]), curr),
         "practitioner_allocation": _money(int(figures["practitioner_allocation_minor"]), curr),
+        "practitioner_payable": _money(int(figures["practitioner_allocation_minor"]), curr),
+        "is_connect_ready": connect_mode == "destination_charge",
+        "requires_manual_payout": connect_mode in {"platform_fallback", "platform_only", "platform"},
         "stripe_fee": _money(stripe_fee, r.get("stripe_fee_currency") or curr) if stripe_fee else "—",
         "gross_minor": gross,
         "price_amount": gross,

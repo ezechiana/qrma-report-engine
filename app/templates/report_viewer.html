@@ -9,5 +9,20 @@
 <body>
     {% include "report_viewer_partial.html" %}
     {% include "report_viewer_scripts.html" %}
+
+<script>
+(function(){
+  const viewerMode = "{{ viewer_mode|default('patient') }}";
+  if (viewerMode === "patient") {
+    document.querySelectorAll('a').forEach(function(a){
+      const text = (a.textContent || '').toLowerCase();
+      const href = (a.getAttribute('href') || '').toLowerCase();
+      if (text.includes('back to report workspace') || (text.includes('workspace') && href.startsWith('/app'))) {
+        a.remove();
+      }
+    });
+  }
+})();
+</script>
 </body>
 </html>

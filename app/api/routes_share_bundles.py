@@ -250,7 +250,7 @@ def _get_practitioner_connect_state(db: Session, user_id) -> dict:
         "charges_enabled": charges_enabled,
         "payouts_enabled": payouts_enabled,
         "details_submitted": details_submitted,
-        "can_receive_destination_charges": bool(account_id and charges_enabled),
+        "can_receive_destination_charges": bool(account_id and charges_enabled and payouts_enabled and details_submitted),
         "country": row.get("stripe_connect_country"),
         "last_sync_at": row.get("stripe_connect_last_sync_at").isoformat() if row.get("stripe_connect_last_sync_at") else None,
     }
@@ -267,16 +267,33 @@ def _connect_destination_for_bundle(db: Session, bundle: ShareBundle) -> dict:
     state = _get_practitioner_connect_state(db, owner_id)
     account_id = state.get("account_id")
 
-    if account_id and state.get("charges_enabled"):
+    platform_fee = _calculate_platform_fee(int(bundle.price_amount or 0))
+
+    # Only route directly when onboarding is fully complete. A partially created
+    # Connect account must not be treated as payout-ready.
+    if (
+        account_id
+        and state.get("charges_enabled")
+        and state.get("payouts_enabled")
+        and state.get("details_submitted")
+    ):
         return {
             "mode": "destination_charge",
             "account_id": account_id,
             "reason": "connect_ready",
-            "platform_fee_amount": _calculate_platform_fee(int(bundle.price_amount or 0)),
+            "platform_fee_amount": platform_fee,
         }
 
     if STRIPE_CONNECT_FALLBACK_TO_PLATFORM:
-        return {"mode": "platform_fallback", "account_id": account_id, "reason": "connect_not_ready", "platform_fee_amount": 0}
+        return {
+            "mode": "platform_fallback",
+            "account_id": account_id,
+            "reason": "connect_not_ready",
+            # Keep platform commission even when Stripe Connect is incomplete.
+            # The platform collected the gross payment and must manually reconcile
+            # practitioner payable later.
+            "platform_fee_amount": platform_fee,
+        }
 
     raise HTTPException(status_code=409, detail="Practitioner Stripe account is not ready to receive payments yet.")
 

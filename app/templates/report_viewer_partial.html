@@ -27,7 +27,9 @@
     <div class="report-command-header">
         <div class="report-command-main"{% if tenant.cover_image_url %} style="background-image: linear-gradient(180deg, rgba(255,255,255,0.95), rgba(249,251,248,0.97)), url('{{ tenant.cover_image_url }}'); background-size: cover; background-position: center;"{% endif %}>
             <div class="report-command-topline">
-                <a href="/app/reports/{{ report.id }}" class="report-backlink">← Back to report workspace</a>
+                {% if viewer_mode != "patient" %}
+                    <a href="/app/reports/{{ report.id }}" class="report-backlink">← Back to report workspace</a>
+                {% endif %}
 
                 {% if tenant.logo_url %}
                     <div class="report-brand-mini">
