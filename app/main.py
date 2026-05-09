@@ -12,7 +12,7 @@ from fastapi.templating import Jinja2Templates
 
 from app.api import routes_share
 from app.api.routes import router as engine_router
-from app.api.routes_auth import router as auth_router
+from app.api.routes_auth import router as auth_router, pages_router as auth_pages_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_patients import router as patients_router
 from app.api.routes_reports import router as reports_router
@@ -137,6 +137,7 @@ def create_app() -> FastAPI:
         return response
 
     # Auth
+    app.include_router(auth_pages_router)
     app.include_router(auth_router)
 
     # SaaS application routes

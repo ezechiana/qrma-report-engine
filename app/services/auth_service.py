@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import json
 from datetime import datetime, timedelta, timezone
 from secrets import token_urlsafe
@@ -17,6 +18,7 @@ from app.utils.security import (
     create_refresh_token,
     get_token_subject,
     hash_password,
+    require_access_token,
     require_refresh_token,
     verify_password,
 )
@@ -24,6 +26,10 @@ from app.utils.security import (
 
 def utcnow() -> datetime:
     return datetime.now(timezone.utc)
+
+
+def _token_hash(token: str) -> str:
+    return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
 def _ensure_auth_events_table(db: Session) -> None:
@@ -111,7 +117,6 @@ def create_email_verification_token(db: Session, user: User, *, expires_hours: i
     token = token_urlsafe(32)
     expires_at = utcnow() + timedelta(hours=expires_hours)
 
-    # Keep only the latest active token per user to reduce confusion.
     db.execute(
         text("DELETE FROM email_verification_tokens WHERE user_id = :user_id AND used_at IS NULL"),
         {"user_id": str(user.id)},
@@ -167,6 +172,110 @@ def verify_email_token(db: Session, token: str) -> User:
     return user
 
 
+def _ensure_password_reset_table(db: Session) -> None:
+    db.execute(text("""
+        CREATE TABLE IF NOT EXISTS password_reset_tokens (
+            id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+            user_id UUID NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+            token_hash TEXT NOT NULL UNIQUE,
+            expires_at TIMESTAMPTZ NOT NULL,
+            created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            used_at TIMESTAMPTZ NULL
+        )
+    """))
+    db.execute(text("CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_user_id ON password_reset_tokens (user_id)"))
+    db.execute(text("CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at ON password_reset_tokens (expires_at)"))
+    db.commit()
+
+
+def create_password_reset_token(db: Session, user: User, *, expires_minutes: int = 60) -> str:
+    """Create a single-use password reset token.
+
+    The raw token is returned once for email delivery. Only its SHA-256 hash is stored.
+    """
+    _ensure_password_reset_table(db)
+    token = token_urlsafe(40)
+    token_hash = _token_hash(token)
+    expires_at = utcnow() + timedelta(minutes=expires_minutes)
+
+    # Invalidate older unused reset tokens for this user.
+    db.execute(
+        text("UPDATE password_reset_tokens SET used_at = NOW() WHERE user_id = :user_id AND used_at IS NULL"),
+        {"user_id": str(user.id)},
+    )
+    db.execute(
+        text(
+            """
+            INSERT INTO password_reset_tokens (user_id, token_hash, expires_at)
+            VALUES (:user_id, :token_hash, :expires_at)
+            """
+        ),
+        {"user_id": str(user.id), "token_hash": token_hash, "expires_at": expires_at},
+    )
+    db.commit()
+    return token
+
+
+def verify_password_reset_token(db: Session, token: str) -> User:
+    _ensure_password_reset_table(db)
+    token_hash = _token_hash(token)
+
+    row = db.execute(
+        text(
+            """
+            SELECT id, user_id, expires_at, used_at
+            FROM password_reset_tokens
+            WHERE token_hash = :token_hash
+            LIMIT 1
+            """
+        ),
+        {"token_hash": token_hash},
+    ).mappings().first()
+
+    if not row or row.get("used_at"):
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This password reset link is invalid or has already been used.")
+
+    expires_at = row["expires_at"]
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    if expires_at < utcnow():
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This password reset link has expired. Please request a new one.")
+
+    user = get_user_by_id(db, row["user_id"])
+    if not user or not user.is_active:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="This password reset link is invalid.")
+
+    return user
+
+
+def reset_password_from_token(db: Session, token: str, new_password: str) -> User:
+    _validate_password_strength(new_password)
+    user = verify_password_reset_token(db, token)
+    token_hash = _token_hash(token)
+
+    user.password_hash = hash_password(new_password)
+    user.updated_at = utcnow()
+
+    # If the user can prove control of the mailbox through reset email, mark verified.
+    if not user.email_verified_at:
+        user.email_verified_at = utcnow()
+
+    db.execute(
+        text("UPDATE password_reset_tokens SET used_at = NOW() WHERE token_hash = :token_hash AND used_at IS NULL"),
+        {"token_hash": token_hash},
+    )
+    db.commit()
+    db.refresh(user)
+
+    log_auth_event(db, event_type="password_reset", status="success", user=user, email=user.email)
+    return user
+
+
+def reset_password_with_token(db: Session, token: str, new_password: str) -> User:
+    """Backward-compatible alias used by routes_auth.py."""
+    return reset_password_from_token(db, token, new_password)
+
+
 def register_user(db: Session, payload: AuthRegisterRequest) -> User:
     existing = get_user_by_email(db, payload.email)
     if existing:
@@ -211,7 +320,7 @@ def get_or_create_social_user(
     """Return an existing user or create a verified practitioner account from a trusted OAuth provider.
 
     Social login must never grant platform-admin access by itself. Admin access remains
-    controlled by the role/platform-admin checks.
+    controlled by role/platform-admin checks.
     """
     clean_email = email.lower().strip()
     user = get_user_by_email(db, clean_email)
@@ -228,7 +337,6 @@ def get_or_create_social_user(
             )
             raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
 
-        # Provider-verified email is sufficient to mark an existing account verified.
         if not user.email_verified_at:
             user.email_verified_at = utcnow()
         user.last_login_at = utcnow()
@@ -293,8 +401,6 @@ def authenticate_user(db: Session, payload: AuthLoginRequest) -> User:
         log_auth_event(db, event_type="login", status="failed", user=user, email=email, meta={"reason": "inactive_user"})
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
 
-    # Platform admins may need emergency access before email verification, especially
-    # when founder/admin access is configured through the env/UI allowlist.
     if not user.email_verified_at and not _is_platform_admin(db, user):
         log_auth_event(db, event_type="login", status="blocked_unverified", user=user, email=email)
         raise HTTPException(
@@ -322,8 +428,6 @@ def login_user(db: Session, payload: AuthLoginRequest) -> dict:
 
 
 def register_and_login_user(db: Session, payload: AuthRegisterRequest) -> dict:
-    # Backwards-compatible helper; new browser registration flow should use
-    # register_user + email verification before login.
     user = register_user(db, payload)
     return build_auth_response(user)
 
@@ -346,8 +450,6 @@ def refresh_user_tokens(db: Session, refresh_token: str) -> dict:
 
 
 def get_current_user_from_token(db: Session, token: str) -> User:
-    from app.utils.security import require_access_token
-
     try:
         require_access_token(token)
         subject = get_token_subject(token)
@@ -367,6 +469,7 @@ def change_password(db: Session, user: User, current_password: str, new_password
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Current password is incorrect.")
     _validate_password_strength(new_password)
     user.password_hash = hash_password(new_password)
+    user.updated_at = utcnow()
     db.commit()
     db.refresh(user)
     return user

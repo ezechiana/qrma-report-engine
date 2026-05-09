@@ -18,6 +18,10 @@ def verification_url(token: str) -> str:
     return f"{_base_url()}/auth/verify-email?token={token}"
 
 
+def password_reset_url(token: str) -> str:
+    return f"{_base_url()}/reset-password?token={token}"
+
+
 def send_email(*, to_email: str, subject: str, html: str, text: str | None = None) -> dict:
     """Send an email using SMTP.
 
@@ -87,4 +91,28 @@ def send_verification_email(*, to_email: str, full_name: str | None, token: str)
     text = f"Verify your go360 email: {url}"
     result = send_email(to_email=to_email, subject="Verify your go360 account", html=html, text=text)
     result["verification_url"] = url
+    return result
+
+
+
+def send_password_reset_email(*, to_email: str, full_name: str | None, token: str) -> dict:
+    url = password_reset_url(token)
+    name = (full_name or "there").strip() or "there"
+    html = f"""
+    <div style=\"font-family:Arial,sans-serif;line-height:1.55;color:#10201b;max-width:620px;margin:0 auto;padding:24px;\">
+      <h2 style=\"margin:0 0 12px;color:#10201b;\">Reset your go360 password</h2>
+      <p>Hi {name},</p>
+      <p>We received a request to reset the password for your go360 account.</p>
+      <p style=\"margin:24px 0;\">
+        <a href=\"{url}\" style=\"display:inline-block;background:#1d4ed8;color:#fff;text-decoration:none;padding:12px 18px;border-radius:10px;font-weight:700;\">Reset password</a>
+      </p>
+      <p>If the button does not work, copy and paste this link into your browser:</p>
+      <p style=\"word-break:break-all;color:#5f6f68;\">{url}</p>
+      <p>This link expires in 1 hour and can only be used once.</p>
+      <p style=\"color:#5f6f68;font-size:13px;\">If you did not request this, you can safely ignore this email.</p>
+    </div>
+    """
+    text = f"Reset your go360 password: {url}"
+    result = send_email(to_email=to_email, subject="Reset your go360 password", html=html, text=text)
+    result["password_reset_url"] = url
     return result

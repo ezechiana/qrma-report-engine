@@ -680,7 +680,7 @@
                             <input id="remember-me" type="checkbox" />
                             <span>Keep me signed in</span>
                         </label>
-                        <a class="forgot-link" href="#">Forgot password?</a>
+                        <a class="forgot-link" href="/forgot-password">Forgot password?</a>
                     </div>
 
                     <button class="primary-btn" type="submit">Sign in →</button>
@@ -764,6 +764,10 @@
 
         if (params.get("verified") === "1") {
             showBox("success-box", "Email verified. You can now sign in.");
+        }
+
+        if (params.get("password_reset") === "1") {
+            showBox("success-box", "Password updated. You can now sign in.");
         }
 
         if (params.get("registered") === "1" || params.get("verify") === "1") {

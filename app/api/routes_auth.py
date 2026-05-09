@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import os
 from fastapi import APIRouter, Body, HTTPException, Request, Response, status
-from fastapi.responses import RedirectResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
+from fastapi.templating import Jinja2Templates
 from pydantic import BaseModel, EmailStr
 
 from app.api.deps import CurrentActiveUser, CurrentDB
@@ -20,16 +22,23 @@ from app.services.auth_service import (
     build_impersonation_response,
     change_password,
     create_email_verification_token,
+    create_password_reset_token,
     get_or_create_social_user,
     get_user_by_email,
     login_user,
     log_auth_event,
     refresh_user_tokens,
     register_user,
+    reset_password_with_token,
     restore_admin_from_token,
     verify_email_token,
 )
-from app.services.email_service import send_verification_email, verification_url
+from app.services.email_service import (
+    password_reset_url,
+    send_password_reset_email,
+    send_verification_email,
+    verification_url,
+)
 from app.services.social_auth_service import (
     SUPPORTED_SOCIAL_PROVIDERS,
     build_oauth_authorization_url,
@@ -42,14 +51,25 @@ from app.services.social_auth_service import (
 )
 
 router = APIRouter(prefix="/auth", tags=["auth"])
+pages_router = APIRouter(tags=["auth-pages"])
+templates = Jinja2Templates(directory="app/templates")
 
 
 class ResendVerificationRequest(BaseModel):
     email: EmailStr
 
 
+class ForgotPasswordRequest(BaseModel):
+    email: EmailStr
+
+
+class ResetPasswordRequest(BaseModel):
+    token: str
+    new_password: str
+    confirm_password: str
+
+
 def _cookie_secure() -> bool:
-    import os
     return os.getenv("APP_ENV", "development").lower() == "production"
 
 
@@ -96,7 +116,7 @@ def _send_verification_for_user(db: CurrentDB, user, *, event_context: str = "ve
         status=status_value,
         user=user,
         email=user.email,
-        meta={"context": event_context, "provider": "resend", "error": result.get("error")},
+        meta={"context": event_context, "provider": "smtp", "error": result.get("error")},
     )
     return {"token": token, "email_result": result}
 
@@ -107,13 +127,19 @@ def _login_redirect_response(auth: dict, *, next_path: str = "/app", status_code
     return response
 
 
+@pages_router.get("/forgot-password", response_class=HTMLResponse)
+def forgot_password_page(request: Request):
+    return templates.TemplateResponse(request=request, name="forgot_password.html", context={"request": request})
+
+
+@pages_router.get("/reset-password", response_class=HTMLResponse)
+def reset_password_page(request: Request, token: str | None = None):
+    return templates.TemplateResponse(request=request, name="reset_password.html", context={"request": request, "token": token or ""})
+
+
 @router.post("/register")
 def register(payload: AuthRegisterRequest, db: CurrentDB, request: Request):
-    """Create an unverified user and send a verification email.
-
-    Deliberately does not log the user in. This prevents fake/unreachable emails
-    from immediately accessing the platform.
-    """
+    """Create an unverified user and send a verification email."""
     user = register_user(db, payload)
 
     referral_code = request.query_params.get("ref") or request.query_params.get("referral_code") or payload.referral_code
@@ -133,8 +159,6 @@ def register(payload: AuthRegisterRequest, db: CurrentDB, request: Request):
         "requires_email_verification": True,
     }
 
-    # Helpful in local/dev when SMTP is not configured. Do not expose this in production.
-    import os
     if os.getenv("APP_ENV", "development").lower() != "production":
         response["dev_verification_url"] = verification_url(email_payload["token"])
 
@@ -149,7 +173,6 @@ def verify_email(token: str, db: CurrentDB):
 
 @router.post("/resend-verification")
 def resend_verification(payload: ResendVerificationRequest, db: CurrentDB):
-    # Always return a generic success shape to avoid account enumeration.
     user = get_user_by_email(db, str(payload.email))
     if not user:
         return {"ok": True, "message": "If an unverified account exists for this email, a verification email has been sent."}
@@ -160,11 +183,54 @@ def resend_verification(payload: ResendVerificationRequest, db: CurrentDB):
     log_auth_event(db, event_type="resend_verification", status="requested", user=user, email=user.email)
     response = {"ok": True, "message": "If an unverified account exists for this email, a verification email has been sent."}
 
-    import os
     if os.getenv("APP_ENV", "development").lower() != "production":
         response["dev_verification_url"] = verification_url(email_payload["token"])
 
     return response
+
+
+@router.post("/forgot-password")
+def forgot_password(payload: ForgotPasswordRequest, request: Request, db: CurrentDB):
+    """Request a password reset link.
+
+    Always returns a generic response to avoid account enumeration.
+    """
+    email = str(payload.email).lower().strip()
+    generic = {"ok": True, "message": "If an account exists for this email, a password reset link has been sent."}
+
+    user = get_user_by_email(db, email)
+    if not user or not getattr(user, "is_active", False):
+        log_auth_event(db, event_type="password_reset_request", status="requested", email=email, request=request, meta={"account_found": False})
+        return generic
+
+    token = create_password_reset_token(db, user)
+    result = send_password_reset_email(to_email=user.email, full_name=user.full_name, token=token)
+    email_status = "success" if result.get("status") in {"sent", "success"} or result.get("sent") is True else "failed"
+    log_auth_event(
+        db,
+        event_type="email_send",
+        status=email_status,
+        user=user,
+        email=user.email,
+        request=request,
+        meta={"context": "password_reset", "provider": "smtp", "error": result.get("error")},
+    )
+    log_auth_event(db, event_type="password_reset_request", status="requested", user=user, email=user.email, request=request)
+
+    if os.getenv("APP_ENV", "development").lower() != "production":
+        generic["dev_reset_url"] = password_reset_url(token)
+
+    return generic
+
+
+@router.post("/reset-password")
+def reset_password(payload: ResetPasswordRequest, request: Request, db: CurrentDB):
+    if payload.new_password != payload.confirm_password:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Passwords do not match.")
+
+    user = reset_password_with_token(db, token=payload.token, new_password=payload.new_password)
+    log_auth_event(db, event_type="password_reset", status="success", user=user, email=user.email, request=request)
+    return {"ok": True, "message": "Password updated. You can now sign in."}
 
 
 @router.post("/login", response_model=AuthResponse)
