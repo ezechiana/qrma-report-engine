@@ -5,140 +5,58 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
+  <link rel="stylesheet" href="/static/css/cookie-consent.css">
   <meta name="theme-color" content="#1d4ed8">
   <style>
     :root { --blue:#1d4ed8; --blue-dark:#1e40af; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; }
     * { box-sizing:border-box; }
     body { margin:0; font-family:Arial,sans-serif; color:var(--ink); background:linear-gradient(180deg,#ffffff,#f8fafc); }
-    .legal-nav { border-bottom:1px solid var(--line); background:rgba(255,255,255,.92); position:sticky; top:0; backdrop-filter:blur(14px); }
+    .legal-nav { border-bottom:1px solid var(--line); background:rgba(255,255,255,.94); position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); }
     .legal-nav-inner { width:min(980px,calc(100% - 36px)); margin:0 auto; min-height:72px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
     .brand-logo-img { width:150px; height:auto; display:block; }
-    .nav-links { display:flex; gap:12px; align-items:center; font-size:14px; font-weight:800; }
+    .nav-links { display:flex; gap:14px; align-items:center; font-size:14px; font-weight:800; flex-wrap:wrap; }
     .nav-links a { color:var(--blue); text-decoration:none; }
     .policy-card { width:min(980px,calc(100% - 36px)); margin:28px auto 64px; background:#fff; border:1px solid var(--line); border-radius:22px; padding:30px; line-height:1.65; box-shadow:0 18px 50px rgba(15,23,42,.06); }
     h1 { margin:0 0 8px; font-size:36px; letter-spacing:-.03em; }
-    h2 { margin-top:30px; font-size:21px; }
-    h3 { margin-top:20px; font-size:17px; }
-    .muted { color:var(--muted); }
-    .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:14px; padding:14px; margin:18px 0; }
-    a { color:var(--blue); }
-    ul { padding-left:22px; }
+    h2 { margin-top:30px; font-size:21px; } h3 { margin-top:20px; font-size:17px; }
+    .muted { color:var(--muted); } .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:14px; padding:14px; margin:18px 0; }
+    a { color:var(--blue); } ul { padding-left:22px; }
+    table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; } th,td { border:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; } th { background:#f8fafc; }
+    @media(max-width:700px) { .legal-nav-inner { align-items:flex-start; flex-direction:column; padding:14px 0; } .policy-card { padding:20px; } h1 { font-size:30px; } }
   </style>
 </head>
 <body>
-  <nav class="legal-nav">
-    <div class="legal-nav-inner">
-      <a href="/"><img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo"></a>
-      <div class="nav-links"><a href="/login">Sign in</a><a href="/register">Create account</a></div>
-    </div>
-  </nav>
-    <main class="policy-card">
-<div class="policy-card">
+  <nav class="legal-nav"><div class="legal-nav-inner">
+    <a href="/"><img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo"></a>
+    <div class="nav-links"><a href="/login">Sign in</a><a href="/register">Create account</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/cookies">Cookies</a></div>
+  </div></nav>
+  <main class="policy-card">
   <h1>Privacy Policy</h1>
   <p class="muted">Last updated: May 2026</p>
-
-  <div class="notice">
-    <strong>Summary:</strong> go360 processes practitioner account data, uploaded scan/report data, client report data, share-link activity, subscription and payment information, and support/security logs so that we can provide the Platform securely. We do not sell personal data.
-  </div>
-
-  <h2>1. Who we are</h2>
-  <p>This Privacy Policy explains how ABEEBA LTD, trading as go360 (“go360”, “we”, “us” or “our”), collects and uses personal data when you use the go360 platform, practitioner workspace, shared report links, billing features, referral tools and related services.</p>
-  <p>Contact: <a href="mailto:support@go360.io">support@go360.io</a>.</p>
-
-  <h2>2. Scope</h2>
-  <p>This policy applies to practitioners, clinic users, account administrators, report recipients, clients who access shared reports, referral participants and website/platform visitors.</p>
-
-  <h2>3. Roles under data protection law</h2>
-  <p>For practitioner account, billing, security, product analytics and support data, go360 generally acts as a data controller.</p>
-  <p>For client scan data, uploaded client information and practitioner-created reports, the practitioner or clinic will often be the controller and go360 may act as a processor or service provider. The exact role may depend on how the practitioner uses the Platform and any applicable agreement.</p>
-
-  <h2>4. Personal data we collect</h2>
-  <h3>Practitioner and account data</h3>
-  <ul>
-    <li>name, email address, login credentials or social login identifiers;</li>
-    <li>clinic, branding, report settings and practitioner preferences;</li>
-    <li>subscription status, billing history, referral information and Stripe customer identifiers;</li>
-    <li>Stripe Connect status, payout readiness and connected account identifiers where used.</li>
-  </ul>
-
-  <h3>Client and report data</h3>
-  <ul>
-    <li>client name, age, sex, scan metadata and case information entered or uploaded by a practitioner;</li>
-    <li>QRMA or similar scan exports, parsed markers, report JSON, generated reports, PDFs and trend data;</li>
-    <li>practitioner notes, report settings and recommendations where entered or generated.</li>
-  </ul>
-
-  <h3>Usage, security and technical data</h3>
-  <ul>
-    <li>IP address, device/browser information, session data, log files and security events;</li>
-    <li>share-link access events, report views, payment-started events and download activity;</li>
-    <li>support messages, troubleshooting data and audit logs.</li>
-  </ul>
-
-  <h2>5. Special category health data</h2>
-  <p>Some uploaded or generated data may include health-related information or information that could be treated as special category data under UK GDPR. Practitioners must obtain appropriate client consent or identify another valid lawful basis before uploading or sharing such data. We process this data to provide the Platform and related services.</p>
-
-  <h2>6. How we use personal data</h2>
-  <p>We use personal data to:</p>
-  <ul>
-    <li>create and manage practitioner accounts;</li>
-    <li>authenticate users, verify email addresses and reset passwords;</li>
-    <li>generate, store, display and share reports;</li>
-    <li>operate subscriptions, billing, refunds, referrals, paid bundles and Stripe Connect workflows;</li>
-    <li>provide customer support and troubleshoot issues;</li>
-    <li>maintain security, audit logs, fraud prevention and platform integrity;</li>
-    <li>improve reliability, product design and user experience;</li>
-    <li>comply with legal, tax, accounting, regulatory or dispute-resolution requirements.</li>
-  </ul>
-
-  <h2>7. Lawful bases</h2>
-  <p>Depending on the context, we rely on one or more of the following lawful bases: contract, legitimate interests, legal obligation, consent, and where applicable for health-related data, explicit consent or provision/management of health or social care by an appropriate professional where available under applicable law. Practitioners are responsible for confirming the lawful basis for client data they upload.</p>
-
-  <h2>8. Sharing personal data</h2>
-  <p>We may share personal data with:</p>
-  <ul>
-    <li>authorised practitioner account users and clinic team members;</li>
-    <li>clients or recipients where a practitioner creates a share link;</li>
-    <li>hosting, storage, database, monitoring, email and security providers;</li>
-    <li>Stripe for payment processing, subscriptions, billing portal, refunds, disputes and Stripe Connect;</li>
-    <li>professional advisers, insurers, auditors or legal authorities where required;</li>
-    <li>successors or purchasers if our business or assets are reorganised or transferred.</li>
-  </ul>
-  <p>We do not sell personal data.</p>
-
-  <h2>9. International transfers</h2>
-  <p>Some providers may process data outside the UK or EEA. Where required, we use appropriate safeguards such as adequacy decisions, standard contractual clauses or equivalent protections.</p>
-
-  <h2>10. Retention</h2>
-  <p>We retain personal data for as long as needed to provide the Platform, meet contractual obligations, support practitioners, maintain records, comply with legal/accounting requirements, resolve disputes and preserve security/audit logs. Where no fixed period applies, we use criteria such as account status, report retention needs, legal limitation periods, backup cycles and practitioner deletion requests.</p>
-
-  <h2>11. Security</h2>
-  <p>We use technical and organisational safeguards designed to protect personal data, including access controls, authentication, secure infrastructure, audit logging, encrypted transport, role-based restrictions and operational monitoring. No system can be guaranteed completely secure.</p>
-
-  <h2>12. Cookies and similar technologies</h2>
-  <p>We use cookies and similar technologies for login sessions, security, preferences, share-link access and platform functionality. We may also use limited analytics or diagnostic tooling to improve reliability and usability.</p>
-
-  <h2>13. Automated and AI-assisted processing</h2>
-  <p>The Platform may use automated or AI-assisted tools to structure report content, identify patterns, summarise scan data or support practitioner workflows. These outputs are intended for practitioner review and are not solely automated clinical decisions about clients.</p>
-
-  <h2>14. Your rights</h2>
-  <p>Depending on your location and the circumstances, you may have rights to access, rectification, erasure, restriction, portability, objection, withdrawal of consent, and not to be subject to solely automated decisions with legal or similarly significant effects. Some rights are subject to exemptions, professional obligations and retention requirements.</p>
-
-  <h2>15. Client requests</h2>
-  <p>If you are a client of a practitioner and want to access, correct or delete report data, you should usually contact the practitioner or clinic that created the report. We may need to refer client data requests to the relevant practitioner where they are the controller of that information.</p>
-
-  <h2>16. Complaints</h2>
-  <p>You can contact us first at <a href="mailto:support@go360.io">support@go360.io</a>. If you are in the UK and remain concerned, you may contact the Information Commissioner’s Office.</p>
-
-  <h2>17. Children</h2>
-  <p>The Platform is not intended for direct use by children. Practitioners are responsible for obtaining appropriate parental/guardian consent and complying with applicable laws when uploading or sharing information about minors.</p>
-
-  <h2>18. Changes to this policy</h2>
-  <p>We may update this Privacy Policy from time to time. The latest version will be posted on the Platform with an updated date.</p>
-
-  <h2>19. Contact</h2>
-  <p>Questions or requests can be sent to <a href="mailto:support@go360.io">support@go360.io</a>.</p>
-</div>
-</main>
+  <div class="notice"><strong>Summary:</strong> go360 processes practitioner account data, uploaded scan/report data, client report data, share-link activity, subscription and payment information, authentication data, cookies and support/security logs so that we can provide the Platform securely. We do not sell personal data.</div>
+  <h2>1. Who we are</h2><p>This Privacy Policy explains how ABEEBA LTD, trading as go360 (“go360”, “we”, “us” or “our”), collects and uses personal data when you use the go360 platform, practitioner workspace, shared report links, billing features, referral tools, cookie consent tools and related services.</p><p>Contact: <a href="mailto:support@go360.io">support@go360.io</a>.</p>
+  <h2>2. Scope</h2><p>This policy applies to practitioners, clinic users, account administrators, report recipients, clients who access shared reports, referral participants and website/platform visitors.</p>
+  <h2>3. Roles under data protection law</h2><p>For practitioner account, billing, security, product analytics, support, website and cookie consent data, go360 generally acts as a data controller.</p><p>For client scan data, uploaded client information and practitioner-created reports, the practitioner or clinic will often be the controller and go360 may act as a processor or service provider. The exact role may depend on how the practitioner uses the Platform and any applicable agreement.</p><p>Practitioners remain responsible for obtaining lawful client consent, providing appropriate client notices, and confirming the lawful basis before uploading, generating, storing or sharing client information through the Platform.</p>
+  <h2>4. Personal data we collect</h2><h3>Practitioner and account data</h3><ul><li>name, email address, password hash, login credentials, social login identifiers, verification status and password reset events;</li><li>clinic, branding, report settings and practitioner preferences;</li><li>subscription status, billing history, referral information and Stripe customer identifiers;</li><li>Stripe Connect status, payout readiness and connected account identifiers where used.</li></ul>
+  <h3>Client and report data</h3><ul><li>client name, age, sex, scan metadata and case information entered or uploaded by a practitioner;</li><li>QRMA or similar scan exports, parsed markers, report JSON, generated reports, PDFs and trend data;</li><li>practitioner notes, report settings and recommendations where entered or generated.</li></ul>
+  <h3>Social login and authentication providers</h3><ul><li>When you sign in using Google or Microsoft OAuth, we may receive your name, verified email address, provider profile identifier and basic account profile information from the provider.</li><li>We use this information solely for authentication, account creation, account linking, security and account management.</li></ul>
+  <h3>Usage, security, cookies and technical data</h3><ul><li>IP address, device/browser information, session data, cookie consent preference, log files and security events;</li><li>share-link access events, report views, payment-started events and download activity;</li><li>support messages, troubleshooting data and audit logs.</li></ul>
+  <h2>5. Special category health data</h2><p>Some uploaded or generated data may include health-related information or information that could be treated as special category data under UK GDPR. Practitioners must obtain appropriate client consent or identify another valid lawful basis before uploading or sharing such data. We process this data to provide the Platform and related services.</p>
+  <h2>6. How we use personal data</h2><ul><li>create and manage practitioner accounts;</li><li>authenticate users, verify email addresses, process social login and reset passwords;</li><li>generate, store, display and share reports;</li><li>operate subscriptions, billing, refunds, referrals, paid bundles and Stripe Connect workflows;</li><li>remember cookie choices and provide essential platform functions;</li><li>provide support, troubleshoot issues, maintain security, audit logs, fraud prevention and platform integrity;</li><li>improve reliability, product design and user experience; and comply with legal, tax, accounting, regulatory or dispute-resolution requirements.</li></ul>
+  <h2>7. Lawful bases</h2><p>Depending on the context, we rely on one or more of the following lawful bases: contract, legitimate interests, legal obligation, consent, and where applicable for health-related data, explicit consent or provision/management of health or social care by an appropriate professional where available under applicable law. Practitioners are responsible for confirming the lawful basis for client data they upload.</p>
+  <h2>8. Sharing personal data</h2><ul><li>authorised practitioner account users and clinic team members;</li><li>clients or recipients where a practitioner creates a share link;</li><li>hosting, storage, database, monitoring, email and security providers;</li><li>Stripe for payment processing, subscriptions, billing portal, refunds, disputes and Stripe Connect;</li><li>Google and Microsoft authentication services where social login is used;</li><li>professional advisers, insurers, auditors or legal authorities where required;</li><li>successors or purchasers if our business or assets are reorganised or transferred.</li></ul><p>We do not sell personal data.</p>
+  <h2>9. Cookies and similar technologies</h2><p>We use essential cookies and similar technologies for authentication, security, account access, cookie preference storage, OAuth state checks, billing redirection and platform operation. These are required for the Platform to work and do not require opt-in consent.</p><p>Optional analytics or marketing cookies will only be used where they are implemented and permitted by your cookie choice. For full details, see our <a href="/cookies">Cookie Policy</a>.</p>
+  <h2>10. International transfers</h2><p>Some providers may process data outside the UK or EEA. Where required, we use appropriate safeguards such as adequacy decisions, standard contractual clauses or equivalent protections.</p>
+  <h2>11. Retention</h2><p>We retain personal data for as long as needed to provide the Platform, meet contractual obligations, support practitioners, maintain records, comply with legal/accounting requirements, resolve disputes and preserve security/audit logs.</p>
+  <h2>12. Security</h2><p>We use technical and organisational safeguards designed to protect personal data, including access controls, authentication, secure infrastructure, audit logging, encrypted transport, role-based restrictions and operational monitoring. No system can be guaranteed completely secure.</p>
+  <h2>13. Automated and AI-assisted processing</h2><p>The Platform may use automated or AI-assisted tools to structure report content, identify patterns, summarise scan data or support practitioner workflows. These outputs are intended for practitioner review and are not solely automated clinical decisions about clients.</p>
+  <h2>14. Your rights</h2><p>Depending on your location and the circumstances, you may have rights to access, rectification, erasure, restriction, portability, objection, withdrawal of consent, and not to be subject to solely automated decisions with legal or similarly significant effects.</p>
+  <h2>15. Client requests</h2><p>If you are a client of a practitioner and want to access, correct or delete report data, you should usually contact the practitioner or clinic that created the report. We may need to refer client data requests to the relevant practitioner where they are the controller of that information.</p>
+  <h2>16. Children</h2><p>The Platform is not intended for direct use by children. Practitioners are responsible for obtaining appropriate parental/guardian consent and complying with applicable laws when uploading or sharing information about minors.</p>
+  <h2>17. Complaints</h2><p>You can contact us first at <a href="mailto:support@go360.io">support@go360.io</a>. If you are in the UK and remain concerned, you may contact the Information Commissioner’s Office.</p>
+  <h2>18. Changes to this policy</h2><p>We may update this Privacy Policy from time to time. The latest version will be posted on the Platform with an updated date.</p>
+  <h2>19. Contact</h2><p>Questions or requests can be sent to <a href="mailto:support@go360.io">support@go360.io</a>.</p>
+  </main>
+  <script src="/static/js/cookie-consent.js" defer></script>
 </body>
 </html>

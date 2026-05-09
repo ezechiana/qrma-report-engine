@@ -5,137 +5,60 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
   <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
+  <link rel="stylesheet" href="/static/css/cookie-consent.css">
   <meta name="theme-color" content="#1d4ed8">
   <style>
     :root { --blue:#1d4ed8; --blue-dark:#1e40af; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; }
     * { box-sizing:border-box; }
     body { margin:0; font-family:Arial,sans-serif; color:var(--ink); background:linear-gradient(180deg,#ffffff,#f8fafc); }
-    .legal-nav { border-bottom:1px solid var(--line); background:rgba(255,255,255,.92); position:sticky; top:0; backdrop-filter:blur(14px); }
+    .legal-nav { border-bottom:1px solid var(--line); background:rgba(255,255,255,.94); position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); }
     .legal-nav-inner { width:min(980px,calc(100% - 36px)); margin:0 auto; min-height:72px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
     .brand-logo-img { width:150px; height:auto; display:block; }
-    .nav-links { display:flex; gap:12px; align-items:center; font-size:14px; font-weight:800; }
+    .nav-links { display:flex; gap:14px; align-items:center; font-size:14px; font-weight:800; flex-wrap:wrap; }
     .nav-links a { color:var(--blue); text-decoration:none; }
     .policy-card { width:min(980px,calc(100% - 36px)); margin:28px auto 64px; background:#fff; border:1px solid var(--line); border-radius:22px; padding:30px; line-height:1.65; box-shadow:0 18px 50px rgba(15,23,42,.06); }
     h1 { margin:0 0 8px; font-size:36px; letter-spacing:-.03em; }
-    h2 { margin-top:30px; font-size:21px; }
-    h3 { margin-top:20px; font-size:17px; }
-    .muted { color:var(--muted); }
-    .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:14px; padding:14px; margin:18px 0; }
-    a { color:var(--blue); }
-    ul { padding-left:22px; }
+    h2 { margin-top:30px; font-size:21px; } h3 { margin-top:20px; font-size:17px; }
+    .muted { color:var(--muted); } .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:14px; padding:14px; margin:18px 0; }
+    a { color:var(--blue); } ul { padding-left:22px; }
+    table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; } th,td { border:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; } th { background:#f8fafc; }
+    @media(max-width:700px) { .legal-nav-inner { align-items:flex-start; flex-direction:column; padding:14px 0; } .policy-card { padding:20px; } h1 { font-size:30px; } }
   </style>
 </head>
 <body>
-  <nav class="legal-nav">
-    <div class="legal-nav-inner">
-      <a href="/"><img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo"></a>
-      <div class="nav-links"><a href="/login">Sign in</a><a href="/register">Create account</a></div>
-    </div>
-  </nav>
+  <nav class="legal-nav"><div class="legal-nav-inner">
+    <a href="/"><img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo"></a>
+    <div class="nav-links"><a href="/login">Sign in</a><a href="/register">Create account</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/cookies">Cookies</a></div>
+  </div></nav>
   <main class="policy-card">
-<div class="policy-card">
   <h1>Terms of Service</h1>
   <p class="muted">Last updated: May 2026</p>
-
-  <div class="notice">
-    <strong>Plain-English summary:</strong> go360 is a practitioner software platform for generating, reviewing and sharing wellness scan reports. It is not an emergency, diagnostic, prescribing, medical-device or clinical decision-making service. Practitioners remain responsible for their professional judgement, client consent, lawful use and the advice they give.
-  </div>
-
-  <h2>1. Who we are</h2>
-  <p>These Terms of Service (“Terms”) govern your access to and use of go360, the practitioner workspace, reporting tools, share links, paid report bundles, billing features and related services (“Platform”). The Platform is operated by ABEEBA LTD, trading as go360 (“go360”, “we”, “us” or “our”).</p>
-  <p>Contact: <a href="mailto:support@go360.io">support@go360.io</a>.</p>
-
-  <h2>2. Acceptance of these Terms</h2>
-  <p>By creating an account, using the Platform, purchasing a subscription, generating a report, creating a share link, or receiving a shared report, you agree to these Terms. If you use the Platform on behalf of a clinic, company or organisation, you confirm that you have authority to bind that organisation.</p>
-
-  <h2>3. Who may use the Platform</h2>
-  <p>The Platform is intended primarily for wellness practitioners, clinics, health coaches, complementary health professionals, functional wellness providers and authorised team members. You must not use the Platform if you are prohibited from doing so under applicable law.</p>
-
-  <h2>4. Practitioner responsibility</h2>
-  <p>Practitioners are solely responsible for:</p>
-  <ul>
-    <li>obtaining appropriate client consent before uploading, processing, interpreting or sharing client information;</li>
-    <li>checking the accuracy and suitability of all uploaded data, client details, reports and recommendations;</li>
-    <li>reviewing, editing and approving any report before relying on it or sharing it;</li>
-    <li>complying with professional, advertising, clinical, data protection and consumer protection obligations that apply to their practice;</li>
-    <li>ensuring that any advice, recommendation, product suggestion or referral is within their scope of practice and appropriate for the client;</li>
-    <li>maintaining appropriate professional insurance, licences, registrations and permissions where required.</li>
-  </ul>
-
-  <h2>5. Clients and report recipients</h2>
-  <p>Clients or recipients may access reports through secure share links or paid bundle links created by a practitioner. Clients should understand that reports are informational wellness reports and should be interpreted with a suitably qualified practitioner. Clients should contact their practitioner directly about clinical meaning, recommendations, refunds for practitioner services, appointments or product fulfilment.</p>
-
-  <h2>6. Wellness and medical disclaimer</h2>
-  <p>The Platform provides software-generated, practitioner-reviewed wellness information. It does not diagnose, treat, cure or prevent disease. It does not provide emergency care, medical advice, prescribing advice, or a substitute for consultation with a doctor or other regulated healthcare professional.</p>
-  <p>Report outputs may include wellness interpretations, trend summaries, educational information, product mapping or practitioner-facing insights. These are decision-support materials only. Practitioners must apply their own professional judgement before sharing or acting on any output.</p>
-  <p>If a client has urgent, severe or worsening symptoms, they should seek urgent medical care or contact emergency services.</p>
-
-  <h2>7. Accounts and security</h2>
-  <p>You are responsible for safeguarding your login credentials, maintaining accurate account information and ensuring that only authorised users access your account. You must notify us promptly if you suspect unauthorised access, misuse or a data incident.</p>
-
-  <h2>8. Subscriptions, trials and billing</h2>
-  <p>Subscriptions are billed through Stripe. Available plans, prices, trial periods and billing intervals are shown at checkout or within the billing area. Unless cancelled, subscriptions may renew automatically according to the plan selected.</p>
-  <p>Access to features such as report generation, share links, paid bundles, analytics and revenue tools may depend on your subscription status. If a payment fails, is disputed, refunded or cancelled, we may restrict access to creating new reports or paid share bundles while preserving access to existing records where reasonably possible.</p>
-
-  <h2>9. Refunds and cancellations</h2>
-  <p>You may cancel your subscription through the billing portal where available. Cancellation normally stops future renewals but does not automatically refund amounts already paid.</p>
-  <p>Unless required by law, subscription fees are non-refundable once a billing period has started, particularly where digital access, report generation, storage or paid features have been made available. We may consider refunds at our discretion for duplicate charges, technical billing errors or exceptional circumstances.</p>
-  <p>Refunds for services, consultations, products or client-facing work provided by an independent practitioner are the responsibility of that practitioner or clinic, not go360, unless go360 is explicitly the seller of record for that item.</p>
-  <p>If a client pays for access to a practitioner-created report bundle through the Platform, the relevant practitioner remains responsible for the underlying client relationship, report content and service delivery. Payment processing and platform access do not make go360 the provider of clinical advice.</p>
-
-  <h2>10. Stripe Connect, practitioner payouts and platform fees</h2>
-  <p>Where Stripe Connect is enabled, eligible practitioner payments may be routed to the practitioner’s connected Stripe account, less any platform fees, Stripe fees or applicable adjustments. If a practitioner has not completed Stripe onboarding or their account is not ready, payments may be collected by the platform temporarily and marked for reconciliation.</p>
-  <p>Practitioners are responsible for completing Stripe onboarding, maintaining payout information, resolving Stripe account requirements and meeting tax obligations for amounts received or payable to them.</p>
-
-  <h2>11. Referral programme</h2>
-  <p>We may offer referral rewards, such as free subscription months or credits, when a referred practitioner becomes a paying subscriber. Referral rewards are discretionary, non-transferable and may be modified, paused or withdrawn if we suspect misuse, self-referral, fraud, spam, abuse or breach of these Terms.</p>
-
-  <h2>12. Data, uploads and generated outputs</h2>
-  <p>You retain responsibility for the information you upload and for generated reports you create. You grant us permission to process uploaded data as needed to provide the Platform, generate reports, maintain security, troubleshoot issues, provide support, improve reliability and comply with legal obligations.</p>
-  <p>You must not upload information unless you have the necessary rights, permissions and consent to do so.</p>
-
-  <h2>13. AI-assisted and automated outputs</h2>
-  <p>The Platform may use algorithmic, rules-based or AI-assisted processes. Outputs may contain errors, omissions or unsuitable suggestions. Practitioners must review and approve outputs before use. We do not guarantee that generated outputs are clinically complete, accurate or appropriate for any individual.</p>
-
-  <h2>14. Acceptable use</h2>
-  <p>You must not use the Platform to:</p>
-  <ul>
-    <li>upload unlawful, misleading, fraudulent or unauthorised data;</li>
-    <li>attempt to access another user’s account, data or tenant;</li>
-    <li>reverse engineer, scrape, overload or interfere with the Platform;</li>
-    <li>make unlawful medical, advertising, product, therapeutic or regulatory claims;</li>
-    <li>share reports with people who are not authorised to receive them;</li>
-    <li>use the Platform for emergency, diagnostic or high-risk clinical decisions without appropriate independent professional assessment.</li>
-  </ul>
-
-  <h2>15. Availability and changes</h2>
-  <p>We aim to provide a reliable service but do not guarantee uninterrupted availability. We may modify, suspend or discontinue features to improve the Platform, maintain security, comply with law or manage commercial requirements.</p>
-
-  <h2>16. Intellectual property</h2>
-  <p>The Platform, templates, software, branding, workflows and underlying technology belong to us or our licensors. You may use generated reports for your practice and authorised client communications, subject to these Terms. You must not copy, resell or commercialise the Platform itself without written permission.</p>
-
-  <h2>17. Confidentiality</h2>
-  <p>Both parties should treat non-public business, technical, client and platform information as confidential and use it only for authorised purposes.</p>
-
-  <h2>18. Data protection</h2>
-  <p>Our handling of personal data is described in our Privacy Policy. Practitioners are responsible for determining their own data protection obligations to their clients, including whether they act as controller, joint controller or processor in relation to client data.</p>
-
-  <h2>19. Suspension and termination</h2>
-  <p>We may suspend or terminate access if you breach these Terms, fail to pay, create security or compliance risks, misuse the Platform, or where required by law. You may stop using the Platform at any time and may cancel subscriptions through the billing portal where available.</p>
-
-  <h2>20. Limitation of liability</h2>
-  <p>To the maximum extent permitted by law, we are not liable for clinical decisions, practitioner interpretations, client outcomes, loss of profit, loss of business, loss of goodwill, indirect or consequential loss, or issues caused by third-party services such as payment processors, hosting providers, email providers or external diagnostic devices.</p>
-  <p>Nothing in these Terms limits liability that cannot legally be limited, including liability for fraud or fraudulent misrepresentation, or death or personal injury caused by negligence where applicable.</p>
-
-  <h2>21. Governing law</h2>
-  <p>These Terms are governed by the laws of England and Wales, unless mandatory consumer laws require otherwise. The courts of England and Wales will have jurisdiction, subject to any mandatory rights available to consumers or data subjects.</p>
-
-  <h2>22. Changes to these Terms</h2>
-  <p>We may update these Terms from time to time. The updated version will be posted on the Platform with a new “Last updated” date. Continued use after changes means you accept the updated Terms.</p>
-
-  <h2>23. Contact</h2>
-  <p>Questions about these Terms can be sent to <a href="mailto:support@go360.io">support@go360.io</a>.</p>
-</div>
+  <div class="notice"><strong>Plain-English summary:</strong> go360 is a practitioner software platform for generating, reviewing and sharing wellness scan reports. It is not an emergency, diagnostic, prescribing, medical-device or clinical decision-making service. Practitioners remain responsible for their professional judgement, client consent, lawful use and the advice they give.</div>
+  <h2>1. Who we are</h2><p>These Terms of Service (“Terms”) govern your access to and use of go360, the practitioner workspace, reporting tools, share links, paid report bundles, billing features, cookie preference tools and related services (“Platform”). The Platform is operated by ABEEBA LTD, trading as go360 (“go360”, “we”, “us” or “our”).</p><p>Contact: <a href="mailto:support@go360.io">support@go360.io</a>.</p>
+  <h2>2. Acceptance of these Terms</h2><p>By creating an account, using the Platform, purchasing a subscription, generating a report, creating a share link, or receiving a shared report, you agree to these Terms. If you use the Platform on behalf of a clinic, company or organisation, you confirm that you have authority to bind that organisation.</p>
+  <h2>3. Who may use the Platform</h2><p>The Platform is intended primarily for wellness practitioners, clinics, health coaches, complementary health professionals, functional wellness providers and authorised team members. You must not use the Platform if you are prohibited from doing so under applicable law.</p>
+  <h2>4. Practitioner responsibility</h2><ul><li>obtaining appropriate client consent before uploading, processing, interpreting or sharing client information;</li><li>checking the accuracy and suitability of uploaded data, client details, reports and recommendations;</li><li>reviewing, editing and approving reports before relying on or sharing them;</li><li>complying with professional, advertising, clinical, data protection, cookie/communications and consumer protection obligations;</li><li>ensuring advice, recommendations or referrals are within their scope of practice and appropriate for the client;</li><li>maintaining appropriate insurance, licences, registrations and permissions where required.</li></ul>
+  <h2>5. Clients and report recipients</h2><p>Clients or recipients may access reports through secure share links or paid bundle links created by a practitioner. Clients should understand that reports are informational wellness reports and should be interpreted with a suitably qualified practitioner.</p>
+  <h2>6. Wellness and medical disclaimer</h2><p>The Platform provides software-generated, practitioner-reviewed wellness information. It does not diagnose, treat, cure or prevent disease. It does not provide emergency care, medical advice, prescribing advice, or a substitute for consultation with a doctor or regulated healthcare professional.</p><p>Report outputs are decision-support materials only. Practitioners must apply their own professional judgement before sharing or acting on any output.</p><p>If a client has urgent, severe or worsening symptoms, they should seek urgent medical care or contact emergency services.</p>
+  <h2>7. Accounts, security and social login</h2><p>You are responsible for safeguarding your login credentials, maintaining accurate account information and ensuring only authorised users access your account.</p><p>You may choose to authenticate using supported third-party identity providers such as Google or Microsoft. By using social login, you authorise us to receive and process account information necessary to authenticate and manage your account.</p>
+  <h2>8. Subscriptions, trials and billing</h2><p>Subscriptions are billed through Stripe. Available plans, prices, trial periods and billing intervals are shown at checkout or within the billing area. Unless cancelled, subscriptions may renew automatically according to the plan selected.</p><p>Access to features such as report generation, share links, paid bundles, analytics and revenue tools may depend on subscription status.</p>
+  <h2>9. Refunds and cancellations</h2><p>You may cancel your subscription through the billing portal where available. Cancellation normally stops future renewals but does not automatically refund amounts already paid.</p><p>Unless required by law, subscription fees are non-refundable once a billing period has started, particularly where digital access, report generation, storage or paid features have been made available. We may consider refunds at our discretion for duplicate charges, technical billing errors or exceptional circumstances.</p><p>Refunds for services, consultations, products or client-facing work provided by an independent practitioner are the responsibility of that practitioner or clinic, not go360, unless go360 is explicitly the seller of record.</p>
+  <h2>10. Stripe Connect, practitioner payouts and platform fees</h2><p>Where Stripe Connect is enabled, eligible practitioner payments may be routed to the practitioner’s connected Stripe account, less platform fees, Stripe fees or applicable adjustments. If a practitioner has not completed Stripe onboarding or their account is not ready, payments may be collected by the platform temporarily and marked for reconciliation.</p>
+  <h2>11. Cookies and platform operation</h2><p>The Platform uses essential cookies and similar technologies for authentication, security, cookie preference storage, OAuth state checks, billing redirection and core platform operation. Optional cookies, where used, are controlled through the cookie banner and explained in our <a href="/cookies">Cookie Policy</a>.</p>
+  <h2>12. Referral programme</h2><p>Referral rewards are discretionary, non-transferable and may be modified, paused or withdrawn if we suspect misuse, self-referral, fraud, spam, abuse or breach of these Terms.</p>
+  <h2>13. Data, uploads and generated outputs</h2><p>You retain responsibility for information you upload and generated reports you create. You grant us permission to process uploaded data as needed to provide the Platform, generate reports, maintain security, troubleshoot issues, provide support, improve reliability and comply with legal obligations.</p><p>You must not upload information unless you have the necessary rights, permissions and consent to do so.</p>
+  <h2>14. AI-assisted and automated outputs</h2><p>The Platform may use algorithmic, rules-based or AI-assisted processes. Outputs may contain errors, omissions or unsuitable suggestions. Practitioners must review and approve outputs before use.</p>
+  <h2>15. Acceptable use</h2><ul><li>do not upload unlawful, misleading, fraudulent or unauthorised data;</li><li>do not attempt to access another user’s account, data or tenant;</li><li>do not reverse engineer, scrape, overload or interfere with the Platform;</li><li>do not make unlawful medical, advertising, product, therapeutic or regulatory claims;</li><li>do not share reports with people who are not authorised to receive them;</li><li>do not use the Platform for emergency, diagnostic or high-risk clinical decisions without appropriate independent professional assessment.</li></ul>
+  <h2>16. Availability and changes</h2><p>We aim to provide a reliable service but do not guarantee uninterrupted availability. We may modify, suspend or discontinue features to improve the Platform, maintain security, comply with law or manage commercial requirements.</p>
+  <h2>17. Intellectual property</h2><p>The Platform, templates, software, branding, workflows and underlying technology belong to us or our licensors. You may use generated reports for your practice and authorised client communications, subject to these Terms.</p>
+  <h2>18. Confidentiality</h2><p>Both parties should treat non-public business, technical, client and platform information as confidential and use it only for authorised purposes.</p>
+  <h2>19. Data protection</h2><p>Our handling of personal data is described in our Privacy Policy. Practitioners are responsible for determining their own data protection obligations to their clients.</p>
+  <h2>20. Suspension and termination</h2><p>We may suspend or terminate access if you breach these Terms, fail to pay, create security or compliance risks, misuse the Platform, or where required by law.</p>
+  <h2>21. Limitation of liability</h2><p>To the maximum extent permitted by law, we are not liable for clinical decisions, practitioner interpretations, client outcomes, loss of profit, loss of business, indirect or consequential loss, or issues caused by third-party services such as payment processors, hosting providers, email providers, authentication providers or external diagnostic devices.</p><p>Nothing limits liability that cannot legally be limited.</p>
+  <h2>22. Governing law</h2><p>These Terms are governed by the laws of England and Wales, unless mandatory consumer laws require otherwise.</p>
+  <h2>23. Changes to these Terms</h2><p>We may update these Terms from time to time. Continued use after changes means you accept the updated Terms.</p>
+  <h2>24. Contact</h2><p>Questions about these Terms can be sent to <a href="mailto:support@go360.io">support@go360.io</a>.</p>
   </main>
+  <script src="/static/js/cookie-consent.js" defer></script>
 </body>
 </html>

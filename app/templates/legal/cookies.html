@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <title>Cookie Policy · go360</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
+  <link rel="stylesheet" href="/static/css/cookie-consent.css">
+  <meta name="theme-color" content="#1d4ed8">
+  <style>
+    :root { --blue:#1d4ed8; --blue-dark:#1e40af; --ink:#0f172a; --muted:#64748b; --line:#e2e8f0; --bg:#f8fafc; }
+    * { box-sizing:border-box; }
+    body { margin:0; font-family:Arial,sans-serif; color:var(--ink); background:linear-gradient(180deg,#ffffff,#f8fafc); }
+    .legal-nav { border-bottom:1px solid var(--line); background:rgba(255,255,255,.94); position:sticky; top:0; z-index:20; backdrop-filter:blur(14px); }
+    .legal-nav-inner { width:min(980px,calc(100% - 36px)); margin:0 auto; min-height:72px; display:flex; justify-content:space-between; align-items:center; gap:16px; }
+    .brand-logo-img { width:150px; height:auto; display:block; }
+    .nav-links { display:flex; gap:14px; align-items:center; font-size:14px; font-weight:800; flex-wrap:wrap; }
+    .nav-links a { color:var(--blue); text-decoration:none; }
+    .policy-card { width:min(980px,calc(100% - 36px)); margin:28px auto 64px; background:#fff; border:1px solid var(--line); border-radius:22px; padding:30px; line-height:1.65; box-shadow:0 18px 50px rgba(15,23,42,.06); }
+    h1 { margin:0 0 8px; font-size:36px; letter-spacing:-.03em; }
+    h2 { margin-top:30px; font-size:21px; } h3 { margin-top:20px; font-size:17px; }
+    .muted { color:var(--muted); } .notice { background:#eff6ff; border:1px solid #bfdbfe; color:#1e3a8a; border-radius:14px; padding:14px; margin:18px 0; }
+    a { color:var(--blue); } ul { padding-left:22px; }
+    table { width:100%; border-collapse:collapse; margin:16px 0; font-size:14px; } th,td { border:1px solid var(--line); padding:10px; text-align:left; vertical-align:top; } th { background:#f8fafc; }
+    @media(max-width:700px) { .legal-nav-inner { align-items:flex-start; flex-direction:column; padding:14px 0; } .policy-card { padding:20px; } h1 { font-size:30px; } }
+  </style>
+</head>
+<body>
+  <nav class="legal-nav"><div class="legal-nav-inner">
+    <a href="/"><img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo"></a>
+    <div class="nav-links"><a href="/login">Sign in</a><a href="/register">Create account</a><a href="/terms">Terms</a><a href="/privacy">Privacy</a><a href="/cookies">Cookies</a></div>
+  </div></nav>
+  <main class="policy-card">
+  <h1>Cookie Policy</h1>
+  <p class="muted">Last updated: May 2026</p>
+  <div class="notice"><strong>Summary:</strong> go360 uses essential cookies and similar technologies to keep the platform secure and operational. Optional analytics cookies will only be used where implemented and permitted by your cookie choice.</div>
+  <h2>1. What are cookies?</h2><p>Cookies are small text files placed on your device. Similar technologies include local storage, session storage and pixels. They help websites remember choices, maintain sessions and protect accounts.</p>
+  <h2>2. How go360 uses cookies</h2><p>We use cookies and similar technologies for authentication, session management, security, OAuth login, billing redirects, cookie preference storage and platform operation.</p>
+  <h2>3. Essential cookies</h2><p>Essential cookies are required for the Platform to work and cannot be disabled through the cookie banner.</p><table><thead><tr><th>Category</th><th>Purpose</th><th>Examples</th><th>Typical duration</th></tr></thead><tbody><tr><td>Authentication and session</td><td>Keep you signed in and maintain secure access.</td><td>Session or auth cookies set by go360.</td><td>Session to several days.</td></tr><tr><td>Security</td><td>Protect accounts, validate requests, support audit logging and reduce abuse.</td><td>Security/session identifiers, OAuth state values.</td><td>Session to short-term.</td></tr><tr><td>Cookie preferences</td><td>Remember whether you accepted all cookies or chose essential-only mode.</td><td><code>go360_cookie_consent</code></td><td>Up to 6 months.</td></tr><tr><td>Billing and payment flow</td><td>Allow secure redirects to and from Stripe billing, checkout or portal pages.</td><td>Stripe operational cookies and go360 billing state.</td><td>Controlled by Stripe/go360 flow.</td></tr></tbody></table>
+  <h2>4. Optional analytics cookies</h2><p>We may later use optional analytics to understand aggregate usage, improve platform reliability and prioritise product improvements. These cookies are not required for the Platform to operate and should only run when you have accepted them.</p><p>At launch, go360 may operate without optional analytics cookies. If analytics are added, this policy should be updated with the provider, purpose and duration.</p>
+  <h2>5. Third-party cookies and services</h2><ul><li><strong>Stripe</strong> for subscription billing, billing portal access, payment processing and Stripe Connect workflows.</li><li><strong>Google</strong> where Google OAuth social login is used.</li><li><strong>Microsoft</strong> where Microsoft OAuth social login is used.</li><li><strong>Hosting, monitoring and email providers</strong> for security, reliability and operational delivery.</li></ul>
+  <h2>6. Managing your cookie choices</h2><p>You can choose “Accept all” or “Essential only” from the cookie banner. You can reset your choice by clearing browser storage for go360 or by using the button below.</p><p><button type="button" id="go360-reset-cookie-consent" style="border:1px solid #bfdbfe;background:#eff6ff;color:#1e3a8a;border-radius:999px;padding:10px 14px;font-weight:800;cursor:pointer;">Reset cookie choice</button></p>
+  <h2>7. Browser controls</h2><p>You can control cookies through your browser settings. Blocking essential cookies may prevent login, billing, secure sharing or practitioner workspace features from working properly.</p>
+  <h2>8. Changes to this Cookie Policy</h2><p>We may update this Cookie Policy from time to time, especially if we add optional analytics, marketing tools or additional third-party services.</p>
+  <h2>9. Contact</h2><p>Questions can be sent to <a href="mailto:support@go360.io">support@go360.io</a>.</p>
+  </main>
+  <script src="/static/js/cookie-consent.js" defer></script>
+</body>
+</html>

@@ -8,13 +8,13 @@
             --bg: #eef3ef;
             --panel: #ffffff;
             --panel-soft: rgba(255,255,255,0.88);
-            --text: #0f172a;
+            --text: #10201b;
             --muted: #5f6f68;
             --line: #d9e4dd;
-            --green: #1d4ed8;
-            --green-dark: #1e40af;
-            --green-soft: #dbeafe;
-            --gold: #93c5fd;
+            --green: #1ea672;
+            --green-dark: #17865c;
+            --green-soft: #e9f7f0;
+            --gold: #d2b03f;
             --danger: #b42318;
             --danger-bg: #fef3f2;
             --shadow: 0 20px 50px rgba(16, 32, 27, 0.10);
@@ -592,15 +592,6 @@
             font-weight: 700;
         }
 
-        .brand-logo-img {
-            display:block;
-            width:min(320px, 82vw);
-            height:auto;
-            object-fit:contain;
-            filter: drop-shadow(0 14px 28px rgba(15,23,42,.14));
-        }
-
-
         @media (max-width: 1160px) {
             .auth-shell {
                 grid-template-columns: 1fr;
@@ -618,8 +609,6 @@
                 font-size: 48px;
             }
         }
-
-
 
         @media (max-width: 760px) {
             .brand-panel {
@@ -674,17 +663,15 @@
             }
         }
     </style>
-    <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
-    <link rel="manifest" href="/static/favicons/site.webmanifest">
-    <meta name="theme-color" content="#1d4ed8">
+    <link rel="stylesheet" href="/static/css/cookie-consent.css">
 </head>
 <body>
 <div class="auth-shell">
     <section class="brand-panel">
         <div class="brand-top">
-            <img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo" />
+            <div class="logo-wordmark" aria-label="go360 logo">
+                <span class="logo-go">g</span><span class="logo-o-wrap"><span class="logo-o-inner"></span></span><span>360</span>
+            </div>
         </div>
 
         <div class="brand-middle">
@@ -840,7 +827,7 @@
                 </form>
 
                 <div class="legal">
-                    By creating an account, you agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>.
+                    By creating an account, you agree to our <a href="/terms" target="_blank" rel="noopener">Terms of Service</a>, <a href="/privacy" target="_blank" rel="noopener">Privacy Policy</a>, and <a href="/cookies" target="_blank" rel="noopener">Cookie Policy</a>.
                 </div>
             </div>
         </div>
@@ -1010,6 +997,7 @@
     showSocialErrorIfNeeded();
     evaluatePassword();
 </script>
+    <script src="/static/js/cookie-consent.js" defer></script>
 </body>
 </html>
 

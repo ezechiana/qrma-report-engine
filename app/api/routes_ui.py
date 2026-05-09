@@ -75,7 +75,6 @@ def register_page(request: Request):
 
 
 
-
 @router.get("/terms", response_class=HTMLResponse)
 def terms_page(request: Request):
     return templates.TemplateResponse(request=request, name="legal/terms.html", context={"request": request, "title": "Terms of Service"})
@@ -84,6 +83,10 @@ def terms_page(request: Request):
 @router.get("/privacy", response_class=HTMLResponse)
 def privacy_page(request: Request):
     return templates.TemplateResponse(request=request, name="legal/privacy.html", context={"request": request, "title": "Privacy Policy"})
+
+@router.get("/cookies", response_class=HTMLResponse)
+def cookies_page(request: Request):
+    return templates.TemplateResponse(request=request, name="legal/cookies.html", context={"request": request, "title": "Cookie Policy"})
 
 @router.get("/logout")
 def logout():
