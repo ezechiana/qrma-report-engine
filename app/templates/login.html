@@ -5,19 +5,19 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         :root {
-            --bg: #eef3ef;
+            --bg: #f8fafc;
             --panel: #ffffff;
-            --panel-soft: rgba(255,255,255,0.88);
-            --text: #10201b;
-            --muted: #5f6f68;
-            --line: #d9e4dd;
-            --green: #1ea672;
-            --green-dark: #17865c;
-            --green-soft: #e9f7f0;
-            --gold: #d2b03f;
+            --panel-soft: rgba(255,255,255,0.92);
+            --text: #0f172a;
+            --muted: #64748b;
+            --line: #dbe7f3;
+            --green: #1d4ed8;
+            --green-dark: #1e40af;
+            --green-soft: #dbeafe;
+            --gold: #93c5fd;
             --danger: #b42318;
             --danger-bg: #fef3f2;
-            --shadow: 0 20px 50px rgba(16, 32, 27, 0.10);
+            --shadow: 0 24px 70px rgba(15, 23, 42, 0.12);
             --radius-xl: 28px;
             --radius-lg: 18px;
             --radius-md: 14px;
@@ -31,8 +31,8 @@
             font-family: Arial, sans-serif;
             color: var(--text);
             background:
-                radial-gradient(circle at top left, rgba(210,176,63,0.18), transparent 26%),
-                radial-gradient(circle at bottom right, rgba(30,166,114,0.18), transparent 25%),
+                radial-gradient(circle at top left, rgba(147,197,253,0.24), transparent 26%),
+                radial-gradient(circle at bottom right, rgba(29,78,216,0.16), transparent 25%),
                 linear-gradient(180deg, #f7faf8 0%, #eef3ef 100%);
         }
 
@@ -51,10 +51,10 @@
             overflow: hidden;
             padding: 40px 42px;
             background:
-                linear-gradient(180deg, rgba(250,252,251,0.72) 0%, rgba(240,247,243,0.45) 36%, rgba(27,76,60,0.38) 100%),
-                radial-gradient(circle at 12% 25%, rgba(255,226,120,0.9) 0%, rgba(255,226,120,0.15) 18%, transparent 32%),
-                radial-gradient(circle at 80% 20%, rgba(30,166,114,0.22) 0%, transparent 30%),
-                linear-gradient(135deg, #eff6f1 0%, #dceee2 48%, #2e6a58 100%);
+                linear-gradient(180deg, rgba(250,252,251,0.72) 0%, rgba(240,247,243,0.45) 36%, rgba(30,64,175,0.24) 100%),
+                radial-gradient(circle at 12% 25%, rgba(147,197,253,0.78) 0%, rgba(147,197,253,0.16) 18%, transparent 32%),
+                radial-gradient(circle at 80% 20%, rgba(59,130,246,0.18) 0%, transparent 30%),
+                linear-gradient(135deg, #eff6ff 0%, #dbeafe 48%, #1e3a8a 100%);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -67,7 +67,7 @@
             height: 52%;
             background:
                 radial-gradient(ellipse at 20% 20%, rgba(19,66,51,0.0) 0%, rgba(19,66,51,0.0) 36%, rgba(14,45,35,0.16) 70%, rgba(10,31,24,0.28) 100%),
-                linear-gradient(180deg, rgba(16,64,50,0) 0%, rgba(16,64,50,0.1) 20%, rgba(16,64,50,0.28) 100%);
+                linear-gradient(180deg, rgba(15,23,42,0) 0%, rgba(30,64,175,0.08) 20%, rgba(30,64,175,0.18) 100%);
             clip-path: ellipse(74% 76% at 50% 100%);
             pointer-events: none;
         }
@@ -104,7 +104,7 @@
         }
 
         .logo-go {
-            color: #15b400;
+            color: #1d4ed8;
         }
 
         .logo-o-wrap {
@@ -114,7 +114,7 @@
             border-radius: 999px;
             align-items: center;
             justify-content: center;
-            background: #15b400;
+            background: #1d4ed8;
             position: relative;
             top: 0.02em;
         }
@@ -132,9 +132,9 @@
             display: inline-flex;
             align-items: center;
             gap: 8px;
-            background: rgba(231, 247, 238, 0.95);
-            color: #1f7f5c;
-            border: 1px solid rgba(31, 127, 92, 0.10);
+            background: rgba(239,246,255,0.96);
+            color: #1d4ed8;
+            border: 1px solid rgba(29,78,216,0.12);
             border-radius: 999px;
             padding: 8px 14px;
             font-size: 13px;
@@ -150,7 +150,7 @@
             line-height: 0.96;
             letter-spacing: -0.05em;
             font-weight: 800;
-            color: #122132;
+            color: #0f172a;
         }
 
         .headline .accent {
@@ -162,7 +162,7 @@
             margin: 0 0 28px;
             font-size: 18px;
             line-height: 1.7;
-            color: #334a41;
+            color: #334155;
         }
 
         .feature-list {
@@ -182,8 +182,8 @@
             width: 56px;
             height: 56px;
             border-radius: 999px;
-            background: rgba(234, 247, 239, 0.94);
-            border: 1px solid rgba(30,166,114,0.08);
+            background: rgba(239,246,255,0.96);
+            border: 1px solid rgba(29,78,216,0.10);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -196,11 +196,11 @@
             font-size: 18px;
             font-weight: 800;
             margin: 3px 0 4px;
-            color: #142934;
+            color: #0f172a;
         }
 
         .feature-text {
-            color: #425b52;
+            color: #475569;
             line-height: 1.55;
             font-size: 15px;
         }
@@ -211,9 +211,9 @@
             padding: 24px 24px 20px;
             border-radius: 24px;
             color: #f6fcf8;
-            background: rgba(14, 42, 33, 0.52);
+            background: rgba(15,23,42,0.70);
             backdrop-filter: blur(12px);
-            box-shadow: 0 18px 36px rgba(8, 28, 21, 0.16);
+            box-shadow: 0 18px 36px rgba(15,23,42,0.18);
         }
 
         .testimonial-quote {
@@ -279,7 +279,7 @@
 
         .auth-card {
             background: var(--panel-soft);
-            border: 1px solid rgba(217,228,221,0.92);
+            border: 1px solid rgba(219,231,243,0.96);
             border-radius: 30px;
             box-shadow: var(--shadow);
             padding: 38px;
@@ -291,7 +291,7 @@
             line-height: 0.98;
             letter-spacing: -0.05em;
             font-weight: 800;
-            color: #122132;
+            color: #0f172a;
         }
 
         .auth-card h1 .accent {
@@ -327,7 +327,7 @@
         .social-btn {
             height: 56px;
             border-radius: 16px;
-            border: 1px solid #d7e3dc;
+            border: 1px solid #dbe7f3;
             background: rgba(255,255,255,0.96);
             color: #17231f;
             display: flex;
@@ -342,8 +342,8 @@
 
         .social-btn:hover {
             transform: translateY(-1px);
-            border-color: rgba(30,166,114,0.42);
-            box-shadow: 0 10px 22px rgba(16,32,27,0.08);
+            border-color: rgba(29,78,216,0.35);
+            box-shadow: 0 10px 22px rgba(15,23,42,0.08);
             background: #ffffff;
         }
 
@@ -376,7 +376,7 @@
             align-items: center;
             gap: 12px;
             margin: 22px 0;
-            color: #7a8a83;
+            color: #94a3b8;
             font-size: 13px;
             font-weight: 800;
             text-transform: uppercase;
@@ -387,7 +387,7 @@
         .auth-divider::after {
             content: "";
             height: 1px;
-            background: #dce7e0;
+            background: #e2e8f0;
             flex: 1;
         }
 
@@ -411,7 +411,7 @@
             width: 100%;
             height: 60px;
             padding: 0 52px 0 18px;
-            border: 1px solid #cfe0d6;
+            border: 1px solid #cbd5e1;
             border-radius: 18px;
             font-size: 16px;
             color: var(--text);
@@ -421,8 +421,8 @@
         }
 
         .input-wrap input:focus {
-            border-color: rgba(30,166,114,0.85);
-            box-shadow: 0 0 0 4px rgba(30,166,114,0.10);
+            border-color: rgba(29,78,216,0.85);
+            box-shadow: 0 0 0 4px rgba(29,78,216,0.12);
             background: #ffffff;
         }
 
@@ -433,7 +433,7 @@
             transform: translateY(-50%);
             border: none;
             background: transparent;
-            color: #62746c;
+            color: #64748b;
             cursor: pointer;
             font-size: 18px;
             padding: 6px;
@@ -444,7 +444,7 @@
             align-items: center;
             gap: 10px;
             margin: 12px 0 26px;
-            color: #40554d;
+            color: #475569;
             font-size: 15px;
         }
 
@@ -472,7 +472,7 @@
             font-weight: 800;
             cursor: pointer;
             transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
-            box-shadow: 0 12px 24px rgba(30,166,114,0.20);
+            box-shadow: 0 12px 24px rgba(29,78,216,0.22);
         }
 
         .primary-btn:hover {
@@ -564,16 +564,99 @@
                 margin-left: 0;
             }
         }
+    
+        /* go360 blue brand refresh — additive and regression-safe */
+        .brand-panel {
+            background:
+                radial-gradient(circle at 12% 18%, rgba(147,197,253,0.42) 0%, rgba(147,197,253,0.12) 24%, transparent 38%),
+                radial-gradient(circle at 82% 20%, rgba(29,78,216,0.22) 0%, transparent 34%),
+                linear-gradient(135deg, #f8fbff 0%, #eff6ff 42%, #dbeafe 74%, #1e3a8a 100%);
+        }
+        .brand-panel::before {
+            background:
+                radial-gradient(ellipse at 20% 20%, rgba(15,23,42,0.0) 0%, rgba(15,23,42,0.0) 36%, rgba(30,64,175,0.12) 70%, rgba(15,23,42,0.24) 100%),
+                linear-gradient(180deg, rgba(30,64,175,0) 0%, rgba(30,64,175,0.08) 20%, rgba(15,23,42,0.24) 100%);
+        }
+        .brand-logo-link {
+            display:inline-flex;
+            align-items:center;
+            width:min(360px, 82vw);
+            text-decoration:none;
+        }
+        .brand-logo-img {
+            display:block;
+            width:100%;
+            max-width:360px;
+            height:auto;
+            object-fit:contain;
+            filter: drop-shadow(0 18px 36px rgba(15,23,42,.14));
+        }
+        .badge {
+            background: rgba(239,246,255,0.96);
+            color: #1e40af;
+            border-color: rgba(29,78,216,.14);
+        }
+        .headline .accent,
+        .auth-card h1 .accent,
+        .form-toplink a,
+        .forgot-link,
+        .legal a {
+            color:#1d4ed8;
+        }
+        .feature-icon {
+            background: rgba(239,246,255,0.96);
+            border-color: rgba(29,78,216,0.12);
+            color:#1d4ed8;
+        }
+        .auth-card {
+            border-color: rgba(219,231,243,0.96);
+            box-shadow: 0 24px 70px rgba(15,23,42,0.10);
+        }
+        .input-wrap input:focus {
+            border-color: rgba(29,78,216,0.85);
+            box-shadow: 0 0 0 4px rgba(29,78,216,0.12);
+        }
+        .primary-btn {
+            background: linear-gradient(135deg,#1d4ed8,#2563eb);
+            box-shadow: 0 14px 28px rgba(29,78,216,0.22);
+        }
+        .primary-btn:hover {
+            background: linear-gradient(135deg,#1e40af,#1d4ed8);
+        }
+        .testimonial {
+            background: rgba(15,23,42,0.72);
+            border:1px solid rgba(255,255,255,.10);
+        }
+        .brand-foot {
+            color:#eff6ff;
+        }
+        .requirement.valid,
+        .match-row.valid {
+            color:#1d4ed8;
+        }
+        .requirement.valid .dot,
+        .match-row.valid .dot {
+            background:#dbeafe;
+            border-color:#93c5fd;
+            color:#1d4ed8;
+        }
+        .strength-bars span.active {
+            background:linear-gradient(90deg,#1d4ed8,#60a5fa);
+        }
+
     </style>
     <link rel="stylesheet" href="/static/css/cookie-consent.css">
+    <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
+    <link rel="manifest" href="/static/favicons/site.webmanifest">
+    <meta name="theme-color" content="#1d4ed8">
 </head>
 <body>
 <div class="auth-shell">
     <section class="brand-panel">
         <div class="brand-top">
-            <div class="logo-wordmark" aria-label="go360 logo">
-                <span class="logo-go">g</span><span class="logo-o-wrap"><span class="logo-o-inner"></span></span><span>360</span>
-            </div>
+            <a class="brand-logo-link" href="/" aria-label="go360 home"><img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo"></a>
         </div>
 
         <div class="brand-middle">
@@ -687,7 +770,7 @@
                     <button class="primary-btn" type="submit">Sign in →</button>
                 </form>
 
-                <div class="legal" id="resend-verification-row" style="display:none; margin-top:16px; padding:12px 14px; border:1px solid #d9e4dd; border-radius:14px; background:#f7fcf9;">
+                <div class="legal" id="resend-verification-row" style="display:none; margin-top:16px; padding:12px 14px; border:1px solid #d9e4dd; border-radius:14px; background:#f8fafc;">
                     Need a new verification email? <button type="button" id="resend-verification-btn" style="border:none;background:transparent;color:var(--green);font-weight:800;cursor:pointer;padding:0;">Resend verification</button>
                 </div>
 
