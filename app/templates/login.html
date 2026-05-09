@@ -8,13 +8,13 @@
             --bg: #eef3ef;
             --panel: #ffffff;
             --panel-soft: rgba(255,255,255,0.88);
-            --text: #10201b;
+            --text: #0f172a;
             --muted: #5f6f68;
             --line: #d9e4dd;
-            --green: #1ea672;
-            --green-dark: #17865c;
-            --green-soft: #e9f7f0;
-            --gold: #d2b03f;
+            --green: #1d4ed8;
+            --green-dark: #1e40af;
+            --green-soft: #dbeafe;
+            --gold: #93c5fd;
             --danger: #b42318;
             --danger-bg: #fef3f2;
             --shadow: 0 20px 50px rgba(16, 32, 27, 0.10);
@@ -31,8 +31,8 @@
             font-family: Arial, sans-serif;
             color: var(--text);
             background:
-                radial-gradient(circle at top left, rgba(210,176,63,0.18), transparent 26%),
-                radial-gradient(circle at bottom right, rgba(30,166,114,0.18), transparent 25%),
+                radial-gradient(circle at top left, rgba(147,197,253,0.22), transparent 26%),
+                radial-gradient(circle at bottom right, rgba(29,78,216,0.16), transparent 25%),
                 linear-gradient(180deg, #f7faf8 0%, #eef3ef 100%);
         }
 
@@ -53,8 +53,8 @@
             background:
                 linear-gradient(180deg, rgba(250,252,251,0.72) 0%, rgba(240,247,243,0.45) 36%, rgba(27,76,60,0.38) 100%),
                 radial-gradient(circle at 12% 25%, rgba(255,226,120,0.9) 0%, rgba(255,226,120,0.15) 18%, transparent 32%),
-                radial-gradient(circle at 80% 20%, rgba(30,166,114,0.22) 0%, transparent 30%),
-                linear-gradient(135deg, #eff6f1 0%, #dceee2 48%, #2e6a58 100%);
+                radial-gradient(circle at 80% 20%, rgba(29,78,216,0.22) 0%, transparent 30%),
+                linear-gradient(135deg, #eff6ff 0%, #dbeafe 48%, #0f172a 100%);
             display: flex;
             flex-direction: column;
             justify-content: space-between;
@@ -104,7 +104,7 @@
         }
 
         .logo-go {
-            color: #15b400;
+            color: #1d4ed8;
         }
 
         .logo-o-wrap {
@@ -114,7 +114,7 @@
             border-radius: 999px;
             align-items: center;
             justify-content: center;
-            background: #15b400;
+            background: #1d4ed8;
             position: relative;
             top: 0.02em;
         }
@@ -150,7 +150,7 @@
             line-height: 0.96;
             letter-spacing: -0.05em;
             font-weight: 800;
-            color: #122132;
+            color: #0f172a;
         }
 
         .headline .accent {
@@ -183,7 +183,7 @@
             height: 56px;
             border-radius: 999px;
             background: rgba(234, 247, 239, 0.94);
-            border: 1px solid rgba(30,166,114,0.08);
+            border: 1px solid rgba(29,78,216,0.08);
             display: flex;
             align-items: center;
             justify-content: center;
@@ -291,7 +291,7 @@
             line-height: 0.98;
             letter-spacing: -0.05em;
             font-weight: 800;
-            color: #122132;
+            color: #0f172a;
         }
 
         .auth-card h1 .accent {
@@ -342,7 +342,7 @@
 
         .social-btn:hover {
             transform: translateY(-1px);
-            border-color: rgba(30,166,114,0.42);
+            border-color: rgba(29,78,216,0.42);
             box-shadow: 0 10px 22px rgba(16,32,27,0.08);
             background: #ffffff;
         }
@@ -421,8 +421,8 @@
         }
 
         .input-wrap input:focus {
-            border-color: rgba(30,166,114,0.85);
-            box-shadow: 0 0 0 4px rgba(30,166,114,0.10);
+            border-color: rgba(29,78,216,0.85);
+            box-shadow: 0 0 0 4px rgba(29,78,216,0.10);
             background: #ffffff;
         }
 
@@ -472,7 +472,7 @@
             font-weight: 800;
             cursor: pointer;
             transition: transform .12s ease, background .15s ease, box-shadow .15s ease;
-            box-shadow: 0 12px 24px rgba(30,166,114,0.20);
+            box-shadow: 0 12px 24px rgba(29,78,216,0.20);
         }
 
         .primary-btn:hover {
@@ -564,15 +564,28 @@
                 margin-left: 0;
             }
         }
+    
+        .brand-logo-img {
+            display:block;
+            width:min(280px, 74vw);
+            height:auto;
+            object-fit:contain;
+        }
+        .nav .brand-logo-img { width:154px; }
+        .brand-panel .brand-logo-img { width:min(360px, 82vw); filter: drop-shadow(0 14px 28px rgba(15,23,42,.14)); }
+
     </style>
+    <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
+    <link rel="manifest" href="/static/favicons/site.webmanifest">
+    <meta name="theme-color" content="#1d4ed8">
 </head>
 <body>
 <div class="auth-shell">
     <section class="brand-panel">
         <div class="brand-top">
-            <div class="logo-wordmark" aria-label="go360 logo">
-                <span class="logo-go">g</span><span class="logo-o-wrap"><span class="logo-o-inner"></span></span><span>360</span>
-            </div>
+            <img class="brand-logo-img" src="/static/brand/go360-logo-blue-transparent.png" alt="go360 logo" />
         </div>
 
         <div class="brand-middle">
