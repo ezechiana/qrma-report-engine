@@ -239,6 +239,35 @@
 </div>
 
 <div class="card">
+    <h3 class="section-title">Dashboard revenue goal</h3>
+    <p class="muted">
+        Set your personal dashboard currency and monthly revenue goal. This controls the progress bar shown on your practitioner dashboard only.
+        Platform defaults remain managed separately by platform administrators.
+    </p>
+
+    <div class="grid-2">
+        <div class="field">
+            <label>Dashboard currency</label>
+            <select id="preferred_currency">
+                <option value="USD">USD</option>
+                <option value="GBP">GBP</option>
+                <option value="EUR">EUR</option>
+                <option value="AED">AED</option>
+                <option value="JPY">JPY</option>
+                <option value="KRW">KRW</option>
+            </select>
+            <div class="help-text">Used for dashboard goal tracking and converted performance summaries. Actual transactions remain reported in their original currencies.</div>
+        </div>
+
+        <div class="field">
+            <label>Monthly revenue goal</label>
+            <input id="monthly_goal_major" type="number" min="0" step="1" placeholder="e.g. 5000">
+            <div class="help-text">Enter the normal major-unit amount, e.g. 5000 for $5,000 / £5,000 / €5,000. Stored internally in minor units.</div>
+        </div>
+    </div>
+</div>
+
+<div class="card">
   <h3>Subscription</h3>
   <p class="muted">
     Your subscription controls creation of new reports and new paid/share bundles. Existing reports, shares, and revenue remain viewable.
@@ -382,6 +411,18 @@
         });
     }
 
+    function minorToMajor(minor) {
+        const parsed = Number(minor || 0);
+        if (!Number.isFinite(parsed)) return "";
+        return Math.round(parsed / 100);
+    }
+
+    function majorToMinor(major) {
+        const parsed = Number(major || 0);
+        if (!Number.isFinite(parsed) || parsed < 0) return 0;
+        return Math.round(parsed * 100);
+    }
+
     function updatePreview(imgId, metaId, previewUrl, storedValue) {
         const img = document.getElementById(imgId);
         const meta = document.getElementById(metaId);
@@ -430,6 +471,12 @@
         document.getElementById("clinic_tagline").value = data.clinic_tagline || "";
         document.getElementById("show_powered_by_go360").value = String(data.show_powered_by_go360 ?? true);
         document.getElementById("report_theme").value = data.report_theme || "default";
+        if (document.getElementById("preferred_currency")) {
+            document.getElementById("preferred_currency").value = data.preferred_currency || "USD";
+        }
+        if (document.getElementById("monthly_goal_major")) {
+            document.getElementById("monthly_goal_major").value = minorToMajor(data.monthly_goal_minor || 200000);
+        }
 
         setSwatchActive(data.accent_color || "#2f6fed");
         updatePreview("logo_preview", "logo_meta", data.logo_preview_url || data.logo_url || "", data.logo_url || "");
@@ -454,8 +501,8 @@
             show_powered_by_go360: document.getElementById("show_powered_by_go360").value === "true",
             report_theme: document.getElementById("report_theme").value || "default",
             recommendation_mode_default: document.getElementById("recommendation_mode_default").value,
-            preferred_currency: latestSettings.preferred_currency || "USD",
-            monthly_goal_minor: latestSettings.monthly_goal_minor || 200000,
+            preferred_currency: document.getElementById("preferred_currency")?.value || latestSettings.preferred_currency || "USD",
+            monthly_goal_minor: majorToMinor(document.getElementById("monthly_goal_major")?.value || minorToMajor(latestSettings.monthly_goal_minor || 200000)),
         };
     }
 
@@ -931,6 +978,9 @@
     document.getElementById("save-settings-btn").addEventListener("click", () => saveSettings({ silent: false, reloadAfterSave: true }));
 
     loadSubscriptionStatus();
+    document.getElementById("preferred_currency")?.addEventListener("change", () => markUnsaved());
+    document.getElementById("monthly_goal_major")?.addEventListener("input", () => markUnsaved());
+
     loadSettings();
     loadReferralSummary();
 </script>
