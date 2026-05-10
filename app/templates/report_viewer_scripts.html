@@ -51,3 +51,71 @@ function toggleMarkerDetail(id) {
     if (el) el.classList.toggle('open');
 }
 </script>
+
+<script>
+(function () {
+  function openMarkerCategoryFromHash() {
+    const hash = window.location.hash || "";
+    if (!hash.startsWith("#marker-category-")) return;
+
+    const target = document.querySelector(hash);
+    if (!target) return;
+
+    const group = target.closest(".marker-group");
+    if (group) {
+      const body = group.querySelector(".marker-group-body");
+      if (body) body.classList.add("open");
+      const toggle = group.querySelector("[aria-expanded]");
+      if (toggle) toggle.setAttribute("aria-expanded", "true");
+    }
+
+    setTimeout(function () {
+      target.scrollIntoView({ behavior: "smooth", block: "start" });
+    }, 50);
+  }
+
+  window.addEventListener("hashchange", openMarkerCategoryFromHash);
+  document.addEventListener("DOMContentLoaded", openMarkerCategoryFromHash);
+})();
+</script>
+
+
+<script>
+(function () {
+    function toInt(value) {
+        const parsed = parseInt(value || "0", 10);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+
+    function applyMarkerCategoryFilter(filter) {
+        const groups = document.querySelectorAll("#markers .marker-group[data-flagged-count]");
+        groups.forEach(function (group) {
+            const flagged = toInt(group.getAttribute("data-flagged-count"));
+            const watchlist = toInt(group.getAttribute("data-watchlist-count"));
+
+            let show = true;
+            if (filter === "flagged") show = flagged > 0;
+            if (filter === "watchlist") show = watchlist > 0;
+            if (filter === "no-flagged") show = flagged === 0;
+
+            group.classList.toggle("marker-filter-hidden", !show);
+        });
+    }
+
+    document.addEventListener("click", function (event) {
+        const btn = event.target.closest(".marker-filter-btn");
+        if (!btn) return;
+
+        const bar = btn.closest(".marker-filter-bar");
+        if (bar) {
+            bar.querySelectorAll(".marker-filter-btn").forEach(function (item) {
+                item.classList.remove("active");
+            });
+        }
+
+        btn.classList.add("active");
+        applyMarkerCategoryFilter(btn.getAttribute("data-marker-filter") || "all");
+    });
+})();
+</script>
+

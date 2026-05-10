@@ -236,12 +236,19 @@
                                 </div>
                             </div>
 
-                            <div class="score-card-stats">
-                                <div class="score-card-stat">{{ card.flagged_count }} flagged</div>
-                                <div class="score-card-stat">{{ card.within_count }} within range</div>
+                            <div class="score-card-stats score-card-chip-row">
+                                <span class="score-card-stat stat-flagged">
+                                    {{ card.flagged_count or 0 }} flagged
+                                </span>
+                                <span class="score-card-stat stat-watchlist">
+                                    {{ card.watchlist_count or 0 }} watchlist
+                                </span>
+                                <span class="score-card-stat stat-within">
+                                    {{ card.within_count or 0 }} within range
+                                </span>
                             </div>
 
-                            {% if card.included_sections %}
+                                                   {% if card.included_sections %}
                                 <div class="score-card-includes link-list">
                                     Includes:
                                     {% for section in card.included_sections %}
@@ -443,16 +450,35 @@
                 <h2>Marker detail</h2>
                 <p class="subtle">Detailed marker explanations are best interpreted as part of a pattern rather than in isolation.</p>
 
+                <div class="marker-filter-bar" role="group" aria-label="Marker category filters">
+                    <button type="button" class="marker-filter-btn active" data-marker-filter="all">All categories</button>
+                    <button type="button" class="marker-filter-btn" data-marker-filter="flagged">Flagged</button>
+                    <button type="button" class="marker-filter-btn" data-marker-filter="watchlist">Watchlist</button>
+                    <button type="button" class="marker-filter-btn" data-marker-filter="no-flagged">No flagged markers</button>
+                </div>
+
                 {% if detail.full_marker_tables %}
                     {% for section in detail.full_marker_tables %}
                         {% set section_idx = loop.index0 %}
-                        <div class="marker-group" id="marker-section-{{ section_slug(section.title) }}">
+                        <div class="marker-group{% if (section.flagged_count or 0) == 0 %} marker-group-no-flagged{% endif %}" id="marker-section-{{ section_slug(section.title) }}" data-flagged-count="{{ section.flagged_count or 0 }}" data-watchlist-count="{{ section.watchlist_count or 0 }}" data-within-count="{{ section.within_count or 0 }}">
                             <div class="marker-group-header" onclick="toggleMarkerGroup('group-{{ section_idx }}')">
                                 <h3>{{ section.title }}</h3>
                                 <div class="marker-group-meta">
                                     {% if section.priority_label %}{{ section.priority_label }} · {% endif %}
-                                    {{ section.abnormal_count }} flagged · {{ section.normal_count }} within range
-                                </div>
+                                    <div class="marker-group-summary">
+                                        <span class="marker-summary-chip stat-flagged">
+                                            {{ section.flagged_count or 0 }} flagged
+                                        </span>
+
+                                        <span class="marker-summary-chip stat-watchlist">
+                                            {{ section.watchlist_count or 0 }} watchlist
+                                        </span>
+
+                                        <span class="marker-summary-chip stat-within">
+                                            {{ section.within_count or 0 }} within expected range
+                                        </span>
+                                    </div>
+                                                                    </div>
                             </div>
 
                             <div class="marker-group-body" id="group-{{ section_idx }}">
@@ -487,7 +513,7 @@
                                                 <span>Optimal</span>
                                                 <span>High</span>
                                             </div>
-                                            <div class="range-bar">
+                                            <div class="range-bar range-bar-{{ row.status_bar_variant or 'standard' }}">
                                                 <div class="range-indicator" style="left: {{ pos }};"></div>
                                             </div>
                                         </div>

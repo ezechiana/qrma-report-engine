@@ -8,6 +8,8 @@ from app.services.marker_definition_service import (
 
 SEVERITY_SCORES = {
     "normal": 0,
+    "low": 1,
+    "high": 1,
     "low_mild": 1,
     "high_mild": 1,
     "low_moderate": 3,
@@ -21,6 +23,8 @@ SEVERITY_SCORES = {
 def severity_label(severity: str | None) -> str:
     labels = {
         "normal": "within range",
+        "low": "below range",
+        "high": "above range",
         "low_mild": "mildly reduced",
         "high_mild": "mildly elevated",
         "low_moderate": "moderately reduced",
@@ -32,8 +36,25 @@ def severity_label(severity: str | None) -> str:
     return labels.get(severity or "unknown", "unclear")
 
 
+def severity_score_for_marker(param: ParameterResult) -> int:
+    tier = getattr(param, "severity_tier", None)
+    if tier is not None:
+        try:
+            tier = int(tier)
+            if tier <= 0:
+                return 0
+            if tier == 1:
+                return 1
+            if tier == 2:
+                return 3
+            return 6
+        except Exception:
+            pass
+    return SEVERITY_SCORES.get(param.severity or "unknown", 0)
+
+
 def compute_section_score(section: ReportSection) -> int:
-    return sum(SEVERITY_SCORES.get(param.severity or "unknown", 0) for param in section.parameters)
+    return sum(severity_score_for_marker(param) for param in section.parameters)
 
 
 def classify_priority(score: int, abnormal_count: int) -> str:
@@ -51,7 +72,7 @@ def sort_abnormal_parameters(section: ReportSection) -> list[ParameterResult]:
 
     def sort_key(param: ParameterResult):
         return (
-            SEVERITY_SCORES.get(param.severity or "unknown", 0),
+            severity_score_for_marker(param),
             param.marker_priority == "high",
             param.source_name.lower(),
         )
@@ -72,9 +93,9 @@ def count_direction(section: ReportSection) -> tuple[int, int]:
 
     for param in section.parameters:
         sev = param.severity or ""
-        if sev.startswith("low_"):
+        if sev == "low" or sev.startswith("low_"):
             low_count += 1
-        elif sev.startswith("high_"):
+        elif sev == "high" or sev.startswith("high_"):
             high_count += 1
 
     return low_count, high_count
@@ -251,7 +272,7 @@ def build_overall_summary(report: ParsedReport) -> str:
 
 
 def assign_marker_priority(param: ParameterResult) -> str:
-    severity_score = SEVERITY_SCORES.get(param.severity or "unknown", 0)
+    severity_score = severity_score_for_marker(param)
 
     if severity_score >= 2:
         return "high"

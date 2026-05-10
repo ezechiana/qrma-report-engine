@@ -348,6 +348,80 @@ def _norm(text: str | None) -> str:
     return (text or "").strip().lower()
 
 
+# -----------------------------------------
+# QRMA CALIBRATION MODEL C HELPERS
+# -----------------------------------------
+
+THREE_BAND_SECTION_TITLES = {
+    "lung function",
+    "gallbladder function",
+    "pancreatic function",
+    "blood sugar",
+}
+
+THREE_BAND_MARKER_NAMES = {"ph"}
+THREE_BAND_MODELS = {"three_band", "3_band", "three", "three-band", "lung"}
+
+
+def _is_three_band_marker(section_title: str | None, marker: Any | None = None) -> bool:
+    section_norm = _norm(section_title)
+    model = ""
+    marker_name = ""
+
+    if marker is not None:
+        model = str(getattr(marker, "band_model", "") or "").strip().lower()
+        marker_name = str(
+            getattr(marker, "display_label", None)
+            or getattr(marker, "clinical_label", None)
+            or getattr(marker, "source_name", None)
+            or getattr(marker, "name", None)
+            or ""
+        ).strip().lower()
+
+    if model in THREE_BAND_MODELS:
+        return True
+    if section_norm in THREE_BAND_SECTION_TITLES:
+        return True
+    if section_norm == "basic physical quality" and marker_name in THREE_BAND_MARKER_NAMES:
+        return True
+    return False
+
+
+def _collapse_three_band_severity(severity: str | None) -> str:
+    sev = (severity or "unknown").strip().lower()
+    if sev in {"normal", "", "within range"}:
+        return "normal"
+    if sev == "unknown":
+        return "unknown"
+    if sev.startswith("low") or "reduced" in sev or sev == "below range":
+        return "low"
+    if sev.startswith("high") or "elevated" in sev or sev == "above range":
+        return "high"
+    return sev
+
+
+def _calibrated_marker_severity(marker: Any, section_title: str | None = None) -> str:
+    sev = str(getattr(marker, "severity", None) or "unknown").strip().lower()
+    if _is_three_band_marker(section_title, marker):
+        return _collapse_three_band_severity(sev)
+    return sev
+
+
+def _severity_zone(severity: str | None) -> str:
+    sev = (severity or "unknown").strip().lower()
+    if sev in {"normal", "within range", ""}:
+        return "green"
+    if sev in {"low_mild", "high_mild", "mildly reduced", "mildly elevated"}:
+        return "blue"
+    if sev in {"low_moderate", "high_moderate", "moderately reduced", "moderately elevated"}:
+        return "yellow"
+    if sev in {"low_severe", "high_severe", "markedly reduced", "markedly elevated"}:
+        return "red"
+    if sev in {"low", "high", "below range", "above range"}:
+        return "red"
+    return "unknown"
+
+
 def _clamp(value: float, low: float, high: float) -> float:
     return max(low, min(high, value))
 
@@ -964,13 +1038,21 @@ V3_DEFAULT_SYSTEM_WEIGHT = 1.0
 # Stronger severity burden than V2, but explicit and bounded.
 V3_SEVERITY_BURDEN = {
     "normal": 0.0,
-    "unknown": 0.35,
-    "low_mild": 1.0,
-    "high_mild": 1.0,
-    "low_moderate": 2.25,
-    "high_moderate": 2.25,
-    "low_severe": 3.75,
-    "high_severe": 3.75,
+    "unknown": 0.45,
+
+    # Model C: watchlist is meaningful, yellow is strong, red is drastic.
+    "low_mild": 1.45,
+    "high_mild": 1.45,
+
+    # Three-band abnormal markers are red-equivalent because the source model
+    # has no blue/yellow subdivision.
+    "low": 4.25,
+    "high": 4.25,
+
+    "low_moderate": 3.10,
+    "high_moderate": 3.10,
+    "low_severe": 6.25,
+    "high_severe": 6.25,
 }
 
 V3_HEALTH_INDEX_BANDS = [
@@ -1010,9 +1092,8 @@ def _v3_is_hidden_section(title: str | None) -> bool:
     return (title or "").strip().lower() in NON_DISPLAY_SECTIONS
 
 
-def _v3_marker_severity(marker: Any) -> str:
-    sev = getattr(marker, "severity", None) or "unknown"
-    return str(sev).strip().lower()
+def _v3_marker_severity(marker: Any, section_title: str | None = None) -> str:
+    return _calibrated_marker_severity(marker, section_title)
 
 
 def _v3_marker_weight(marker: Any) -> float:
@@ -1061,6 +1142,18 @@ def _v3_band_for_score(score: float) -> tuple[str, str]:
     return "Priority review recommended", "#d6523c"
 
 
+def _v3_severity_zone(severity: str | None) -> str:
+    return _severity_zone(severity)
+
+
+def _v3_is_flagged_severity(severity: str | None) -> bool:
+    return _v3_severity_zone(severity) in {"yellow", "red"}
+
+
+def _v3_is_watchlist_severity(severity: str | None) -> bool:
+    return _v3_severity_zone(severity) == "blue"
+
+
 def _v3_visible_sections(sections: List[Any]) -> List[Any]:
     out = []
     seen = set()
@@ -1086,46 +1179,52 @@ def _v3_visible_sections(sections: List[Any]) -> List[Any]:
 
 def _v3_compute_section_score(section: Any) -> Dict[str, Any]:
     """
-    V3 section score:
-    - starts at 100
-    - subtracts weighted severity burden
-    - stronger for moderate/severe abnormalities
-    - still bounded and readable
+    Model C section score:
+    - green: no penalty
+    - blue/watchlist: meaningful trend penalty
+    - yellow/flagged: strong penalty
+    - red/three-band abnormal: drastic penalty
     """
     title = getattr(section, "display_title", None) or getattr(section, "source_title", None) or "Untitled"
     params = getattr(section, "parameters", None) or []
 
     total_burden = 0.0
     flagged_count = 0
+    watchlist_count = 0
     within_count = 0
+    unknown_count = 0
     severity_mix = defaultdict(int)
+    zone_mix = defaultdict(int)
 
     for marker in params:
-        severity = _v3_marker_severity(marker)
+        severity = _v3_marker_severity(marker, title)
+        zone = _v3_severity_zone(severity)
         marker_weight = _v3_marker_weight(marker)
-        severity_burden = V3_SEVERITY_BURDEN.get(severity, 0.35)
+        severity_burden = V3_SEVERITY_BURDEN.get(severity, 0.45)
 
-        if severity == "normal":
+        if zone == "green":
             within_count += 1
-        else:
+        elif zone == "blue":
+            watchlist_count += 1
+            severity_mix[severity] += 1
+        elif zone in {"yellow", "red"}:
             flagged_count += 1
             severity_mix[severity] += 1
+        else:
+            unknown_count += 1
+            severity_mix[severity] += 1
 
+        zone_mix[zone] += 1
         total_burden += severity_burden * marker_weight
 
     section_weight = _v3_section_weight(title)
-
-    # Stronger differentiation than your earlier model, but still bounded.
-    # The denominator prevents very large sections from collapsing unrealistically.
     load_factor = total_burden / max(len(params), 1)
     raw_penalty = (load_factor * 22.0) * (0.82 + (0.18 * section_weight))
 
-    # Mild additional clustering penalty for multiple moderate/severe markers.
     clustering_penalty = (
-        severity_mix.get("low_moderate", 0) * 0.9
-        + severity_mix.get("high_moderate", 0) * 0.9
-        + severity_mix.get("low_severe", 0) * 1.5
-        + severity_mix.get("high_severe", 0) * 1.5
+        zone_mix.get("blue", 0) * 0.12
+        + zone_mix.get("yellow", 0) * 0.65
+        + zone_mix.get("red", 0) * 2.00
     )
 
     score = 100.0 - raw_penalty - clustering_penalty
@@ -1135,13 +1234,17 @@ def _v3_compute_section_score(section: Any) -> Dict[str, Any]:
         "title": title,
         "score": int(score),
         "flagged_count": int(flagged_count),
+        "watchlist_count": int(watchlist_count),
         "within_count": int(within_count),
+        "unknown_count": int(unknown_count),
         "total_count": len(params),
         "priority": _v3_section_priority_bucket(score),
         "priority_label": _v3_priority_label(_v3_section_priority_bucket(score)),
         "severity_mix": dict(severity_mix),
+        "zone_mix": dict(zone_mix),
         "section_weight": section_weight,
     }
+
 
 def _v3_group_sections_into_body_systems(section_cards: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
     grouped: Dict[str, List[Dict[str, Any]]] = defaultdict(list)
@@ -1164,25 +1267,33 @@ def _v3_group_sections_into_body_systems(section_cards: List[Dict[str, Any]]) ->
 
     for system_name, cards in grouped.items():
         weight = _v3_body_system_weight(system_name)
-
-        # Weighted average within system, but lightly penalise burden concentration.
         weighted_avg = sum(c["score"] for c in cards) / max(len(cards), 1)
 
-        flagged_total = sum(c["flagged_count"] for c in cards)
-        within_total = sum(c["within_count"] for c in cards)
-        total_markers = max(flagged_total + within_total, 1)
+        flagged_total = sum(c.get("flagged_count", 0) for c in cards)
+        watchlist_total = sum(c.get("watchlist_count", 0) for c in cards)
+        within_total = sum(c.get("within_count", 0) for c in cards)
+        unknown_total = sum(c.get("unknown_count", 0) for c in cards)
+        total_markers = max(flagged_total + watchlist_total + within_total + unknown_total, 1)
+
         flagged_ratio = flagged_total / total_markers
+        watchlist_ratio = watchlist_total / total_markers
 
-        moderate_severe_count = 0
+        red_count = 0
+        yellow_count = 0
+        blue_count = 0
         for c in cards:
-            mix = c.get("severity_mix", {})
-            moderate_severe_count += mix.get("low_moderate", 0)
-            moderate_severe_count += mix.get("high_moderate", 0)
-            moderate_severe_count += mix.get("low_severe", 0)
-            moderate_severe_count += mix.get("high_severe", 0)
+            zones = c.get("zone_mix", {})
+            red_count += int(zones.get("red", 0))
+            yellow_count += int(zones.get("yellow", 0))
+            blue_count += int(zones.get("blue", 0))
 
-        # Option B: stronger system-level differentiation.
-        concentration_penalty = min(6.0, flagged_ratio * 7.0 + (moderate_severe_count * 0.30))
+        concentration_penalty = min(
+            12.0,
+            (watchlist_ratio * 4.0)
+            + (flagged_ratio * 10.0)
+            + (yellow_count * 0.35)
+            + (red_count * 1.25)
+        )
         system_score = _v3_clamp(round(weighted_avg - concentration_penalty), 18, 100)
 
         band_label, band_color = _v3_band_for_score(system_score)
@@ -1192,26 +1303,28 @@ def _v3_group_sections_into_body_systems(section_cards: List[Dict[str, Any]]) ->
             "score": int(system_score),
             "weight": weight,
             "flagged_count": int(flagged_total),
+            "watchlist_count": int(watchlist_total),
             "within_count": int(within_total),
+            "unknown_count": int(unknown_total),
             "flagged_ratio": round(flagged_ratio, 3),
+            "watchlist_ratio": round(watchlist_ratio, 3),
             "included_sections": [c["title"] for c in cards],
             "cards": cards,
             "band_label": band_label,
-            "gauge_color": band_color,   # important for PDF ring gauge
-            "band_color": band_color,    # optional alias for future use
+            "gauge_color": band_color,
+            "band_color": band_color,
         })
 
-    # Lowest / most active first for interpretation, higher first can be handled in UI if desired
     system_cards.sort(key=lambda x: x["score"])
     return system_cards
 
 
 def compute_health_index_v3(body_system_cards: List[Dict[str, Any]]) -> Dict[str, Any]:
     """
-    Explainable Health Index:
-    1. weighted average of visible body-system scores
-    2. minus a bounded, explicit burden penalty
-    3. never falls into a 'magic gap' far below visible systems
+    Model C Health Index:
+    weighted system average minus a bounded burden penalty.
+    Watchlist markers matter; flagged markers matter more; red-dominant systems
+    should leave visible room for future improvement.
     """
     if not body_system_cards:
         label, color = _v3_band_for_score(0)
@@ -1228,9 +1341,11 @@ def compute_health_index_v3(body_system_cards: List[Dict[str, Any]]) -> Dict[str
     weight_sum = 0.0
 
     total_flagged = 0
+    total_watchlist = 0
     total_within = 0
+    total_unknown = 0
     lower_systems = 0
-    moderate_severe_proxy = 0
+    red_dominant_systems = 0
 
     for card in body_system_cards:
         score = float(card["score"])
@@ -1240,42 +1355,41 @@ def compute_health_index_v3(body_system_cards: List[Dict[str, Any]]) -> Dict[str
         weight_sum += weight
 
         total_flagged += int(card.get("flagged_count", 0))
+        total_watchlist += int(card.get("watchlist_count", 0))
         total_within += int(card.get("within_count", 0))
+        total_unknown += int(card.get("unknown_count", 0))
 
         if score < 72:
             lower_systems += 1
-
-        # proxy from system score + flagged density
-        if score < 70:
-            moderate_severe_proxy += 1
         if score < 60:
-            moderate_severe_proxy += 1
+            red_dominant_systems += 1
 
     visible_average = weighted_total / max(weight_sum, 1.0)
 
-    total_markers = max(total_flagged + total_within, 1)
+    total_markers = max(total_flagged + total_watchlist + total_within + total_unknown, 1)
     flagged_ratio = total_flagged / total_markers
+    watchlist_ratio = total_watchlist / total_markers
 
-    # Option B: stronger but explicit burden penalty.
     burden_penalty = (
-        (flagged_ratio * 5.5)
+        (watchlist_ratio * 4.0)
+        + (flagged_ratio * 9.0)
         + (lower_systems * 0.9)
-        + (moderate_severe_proxy * 0.5)
+        + (red_dominant_systems * 0.8)
     )
-    burden_penalty = _v3_clamp(burden_penalty, 0.0, 8.0)
+    burden_penalty = _v3_clamp(burden_penalty, 0.0, 11.0)
 
     raw_score = visible_average - burden_penalty
 
-    # Guardrail: avoid credibility-breaking gaps below visible systems.
     lowest_visible = min(card["score"] for card in body_system_cards)
-    floor_limit = lowest_visible - 2.0
+    floor_limit = lowest_visible - 3.0
     floor_guard_applied = raw_score < floor_limit
 
     final_score = max(raw_score, floor_limit)
     final_score = _v3_clamp(round(final_score), 18, 100)
-    # Prevent score exceeding visible average illusion
+
     if final_score > visible_average:
         final_score = round(visible_average)
+
     label, color = _v3_band_for_score(final_score)
 
     return {
@@ -1286,6 +1400,8 @@ def compute_health_index_v3(body_system_cards: List[Dict[str, Any]]) -> Dict[str
         "burden_penalty": round(burden_penalty, 1),
         "floor_guard_applied": floor_guard_applied,
         "lowest_visible_system_score": int(lowest_visible),
+        "flagged_ratio": round(flagged_ratio, 3),
+        "watchlist_ratio": round(watchlist_ratio, 3),
     }
 
 

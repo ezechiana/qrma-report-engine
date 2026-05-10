@@ -410,6 +410,69 @@ def _attach_reference_bands(parameters, reference_map: dict):
     return parameters
 
 
+def _is_known_three_band_marker(section_title: str | None, marker_name: str | None) -> bool:
+    section = (section_title or "").strip().lower()
+    marker = (marker_name or "").strip().lower()
+
+    if section in {
+        "lung function",
+        "gallbladder function",
+        "pancreatic function",
+        "blood sugar",
+    }:
+        return True
+
+    # pH is a special red-green-red marker inside Basic Physical Quality.
+    if section == "basic physical quality" and marker in {"ph", "p h", "p.h", "p-h"}:
+        return True
+
+    return False
+
+
+def _detect_band_model_from_reference_bands(reference_bands_raw) -> str | None:
+    """Infer the source QRMA calibration model from parsed Reference Standard rows.
+
+    The device does not use the same visual band model for every marker. Most
+    markers are seven-band, but some sections use red-green-red only. We keep
+    this function conservative: known section rules are applied separately, and
+    this parser-level inference is only used where the reference table clearly
+    exposes a compressed model.
+    """
+    bands = [str(x or "").strip().lower() for x in (reference_bands_raw or []) if str(x or "").strip()]
+    if not bands:
+        return None
+
+    joined = " ".join(bands)
+
+    # Seven-band sections usually expose (+), (++), (+++) and mirrored high/low ranges.
+    if "(+++)" in joined or "(++)" in joined or "(+)" in joined:
+        # If the only abnormal category exposed is severe and there are no mild/moderate
+        # bands, treat as compressed red-green-red. Otherwise keep seven-band.
+        has_mild_or_moderate = "(+)" in joined or "(++)" in joined
+        if not has_mild_or_moderate and "(+++)" in joined:
+            return "three_band"
+        return "seven_band"
+
+    # A single normal range in the reference table, with no explicit mild/moderate/severe
+    # ranges, behaves as red-green-red in the QRMA output.
+    if len(bands) <= 2 and any("(-)" in b or "normal" in b for b in bands):
+        return "three_band"
+
+    return None
+
+
+def _attach_band_models(parameters, source_title: str | None):
+    for param in parameters or []:
+        if _is_known_three_band_marker(source_title, getattr(param, "source_name", None)):
+            param.band_model = "three_band"
+            continue
+
+        inferred = _detect_band_model_from_reference_bands(getattr(param, "reference_bands_raw", None))
+        param.band_model = inferred or "seven_band"
+
+    return parameters
+
+
 BODY_COMP_PATTERNS = [
     (r"\(1\)\s*Intracellular\s*Fluid\s*\(L\)", "1.The componential analysis of body: (1)Intracellular Fluid (L)"),
     (r"\(2\)\s*Extracellular\s*Fluid\s*\(L\)", "1.The componential analysis of body: (2) Extracellular Fluid(L)"),
@@ -670,6 +733,8 @@ def parse_html_report(html: str) -> ParsedReport:
             if source_title.lower() in NON_STANDARD_REPORTS
             else f"({source_title}) Analysis Report Card"
         )
+
+        params = _attach_band_models(params or [], source_title)
 
         sections.append(
             ReportSection(

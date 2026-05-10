@@ -40,6 +40,13 @@ class ParameterResult(BaseModel):
     severity_rank: Optional[int] = 0
     marker_priority: Optional[str] = None
 
+    # Calibration v2.1
+    # band_model is used to distinguish QRMA's standard 7-band marker model
+    # from the 3-band red/green/red model used by Lung, Gallbladder,
+    # Pancreatic, Blood Sugar, and pH under Basic Physical Quality.
+    band_model: Optional[str] = None
+    severity_tier: Optional[int] = 0
+
     control_id: Optional[str] = None
     canonical_system: Optional[str] = None
     clinical_label: Optional[str] = None

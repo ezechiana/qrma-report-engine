@@ -610,6 +610,41 @@
         margin-top: 2px;
     }
 
+
+    .stat-flagged {
+        background: #fff1f1;
+        border: 1px solid #f3c2c2;
+        color: #c53030;
+    }
+
+    .stat-watchlist {
+        background: #eef4ff;
+        border: 1px solid #c7d7ff;
+        color: #1e63d6;
+    }
+
+    .stat-within {
+        background: #eef8f0;
+        border: 1px solid #cfe7d2;
+        color: #2e7d32;
+    }
+
+    .marker-group-summary {
+        display: flex;
+        gap: 8px;
+        flex-wrap: wrap;
+        align-items: center;
+    }
+
+    .marker-summary-chip {
+        display: inline-flex;
+        align-items: center;
+        padding: 4px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
     .link-list,
     .rec-link-list {
         color: var(--muted);
@@ -878,4 +913,263 @@
             gap: 12px;
         }
     }
+
+    /* Model C marker summaries */
+    .marker-summary-chips {
+        display: inline-flex;
+        flex-wrap: wrap;
+        justify-content: flex-end;
+        gap: 6px;
+        align-items: center;
+    }
+    .summary-chip,
+    .score-card-stat {
+        display: inline-flex;
+        align-items: center;
+        gap: 4px;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        font-size: 11px;
+        font-weight: 700;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+    .summary-chip-flagged,
+    .score-card-stat-flagged {
+        border-color: rgba(214,82,60,.24);
+        background: rgba(214,82,60,.10);
+        color: var(--danger);
+    }
+    .summary-chip-watchlist,
+    .score-card-stat-watchlist {
+        border-color: rgba(21,101,192,.24);
+        background: rgba(21,101,192,.10);
+        color: var(--info);
+    }
+    .summary-chip-within,
+    .score-card-stat-within {
+        border-color: rgba(46,125,50,.24);
+        background: rgba(46,125,50,.10);
+        color: var(--success);
+    }
+
+    /* True 3-band marker rendering: red | green | red */
+    .range-bar-three_band,
+    .range-bar-lung {
+        background: linear-gradient(
+            90deg,
+            var(--danger) 0%,
+            var(--danger) 35%,
+            var(--success) 35%,
+            var(--success) 65%,
+            var(--danger) 65%,
+            var(--danger) 100%
+        ) !important;
+    }
+
+
+/* Model C coloured marker count chips */
+.score-card-stat-row,
+.marker-summary-chips {
+    display: inline-flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    align-items: center;
+}
+.score-card-stat,
+.summary-chip {
+    display: inline-flex;
+    align-items: center;
+    padding: 3px 8px;
+    border-radius: 999px;
+    border: 1px solid var(--line);
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1.2;
+    white-space: nowrap;
+}
+.score-card-stat-flagged,
+.summary-chip-flagged {
+    border-color: rgba(214,82,60,.28) !important;
+    background: rgba(214,82,60,.10) !important;
+    color: var(--danger) !important;
+}
+.score-card-stat-watchlist,
+.summary-chip-watchlist {
+    border-color: rgba(21,101,192,.28) !important;
+    background: rgba(21,101,192,.10) !important;
+    color: var(--info) !important;
+}
+.score-card-stat-within,
+.summary-chip-within {
+    border-color: rgba(46,125,50,.28) !important;
+    background: rgba(46,125,50,.10) !important;
+    color: var(--success) !important;
+}
+.marker-group-meta.marker-summary-chips {
+    justify-content: flex-end;
+}
+
+
+/* Final Model C label chips: System Balance + Marker Detail */
+.score-card-stat-row,
+.marker-summary-chips {
+    display: inline-flex !important;
+    flex-wrap: wrap !important;
+    gap: 6px !important;
+    align-items: center !important;
+}
+
+.score-card-stat,
+.summary-chip {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 4px !important;
+    padding: 3px 8px !important;
+    border-radius: 999px !important;
+    border: 1px solid var(--line) !important;
+    font-size: 11px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+}
+
+.score-card-stat-number,
+.summary-chip-number {
+    font-weight: 900 !important;
+}
+
+.score-card-stat-flagged,
+.summary-chip-flagged {
+    border-color: rgba(214,82,60,.34) !important;
+    background: rgba(214,82,60,.12) !important;
+    color: var(--danger) !important;
+}
+
+.score-card-stat-watchlist,
+.summary-chip-watchlist {
+    border-color: rgba(21,101,192,.34) !important;
+    background: rgba(21,101,192,.12) !important;
+    color: var(--info) !important;
+}
+
+.score-card-stat-within,
+.summary-chip-within {
+    border-color: rgba(46,125,50,.34) !important;
+    background: rgba(46,125,50,.12) !important;
+    color: var(--success) !important;
+}
+
+.marker-group-meta.marker-summary-chips {
+    justify-content: flex-end !important;
+}
+
+
+/* System Balance Overview count chips — final scoped fix */
+#systems-overview .score-card-chip-row {
+    display: flex !important;
+    gap: 8px !important;
+    flex-wrap: wrap !important;
+    align-items: center !important;
+    margin-top: 2px !important;
+}
+
+#systems-overview .score-card-stat {
+    display: inline-flex !important;
+    align-items: center !important;
+    padding: 4px 9px !important;
+    border-radius: 999px !important;
+    font-size: 12px !important;
+    font-weight: 800 !important;
+    line-height: 1.2 !important;
+    white-space: nowrap !important;
+    border: 1px solid var(--line) !important;
+    background: var(--surface-soft) !important;
+}
+
+#systems-overview .score-card-stat.stat-flagged {
+    background: #fff1f1 !important;
+    border-color: #f3c2c2 !important;
+    color: #c53030 !important;
+}
+
+#systems-overview .score-card-stat.stat-watchlist {
+    background: #eef4ff !important;
+    border-color: #c7d7ff !important;
+    color: #1e63d6 !important;
+}
+
+#systems-overview .score-card-stat.stat-within {
+    background: #eef8f0 !important;
+    border-color: #cfe7d2 !important;
+    color: #2e7d32 !important;
+}
+
+
+/* Marker Detail green emphasis cue + filters */
+#markers .marker-group.marker-group-no-flagged {
+    border-color: rgba(46,125,50,.32) !important;
+    background: linear-gradient(90deg, rgba(46,125,50,.055), rgba(255,255,255,0) 56%) !important;
+}
+
+#markers .marker-group.marker-group-no-flagged > .marker-group-header {
+    border-left: 4px solid var(--success) !important;
+    padding-left: 11px !important;
+}
+
+#markers .marker-group.marker-group-no-flagged .marker-group-header h3::after {
+    content: "Lower emphasis";
+    display: inline-flex;
+    margin-left: 10px;
+    padding: 2px 7px;
+    border-radius: 999px;
+    background: var(--success-soft);
+    border: 1px solid rgba(46,125,50,.22);
+    color: var(--success);
+    font-size: 10px;
+    font-weight: 800;
+    vertical-align: middle;
+}
+
+.marker-filter-bar {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+    margin: 14px 0 16px;
+    padding: 8px;
+    border: 1px solid var(--line);
+    border-radius: 999px;
+    background: var(--surface-soft);
+    width: fit-content;
+    max-width: 100%;
+}
+
+.marker-filter-btn {
+    border: 1px solid transparent;
+    background: transparent;
+    color: var(--muted);
+    border-radius: 999px;
+    padding: 7px 11px;
+    font-size: 12px;
+    font-weight: 800;
+    cursor: pointer;
+}
+
+.marker-filter-btn:hover {
+    background: var(--surface);
+    border-color: var(--line);
+    color: var(--text);
+}
+
+.marker-filter-btn.active {
+    background: var(--brand);
+    border-color: var(--brand);
+    color: #fff;
+}
+
+#markers .marker-group.marker-filter-hidden {
+    display: none !important;
+}
+
 </style>

@@ -34,6 +34,136 @@ TEMPLATES_DIR = ROOT / "app" / "templates"
 NON_DISPLAY_SECTIONS = {"expert analysis", "hand analysis"}
 EXCLUDED_PRIORITY_SECTIONS = {"element of human", "basic physical quality"}
 
+
+# -----------------------------------------
+# CALIBRATION V2.1
+# -----------------------------------------
+
+THREE_BAND_SECTION_TITLES = {
+    "lung function",
+    "gallbladder function",
+    "pancreatic function",
+    "blood sugar",
+}
+
+THREE_BAND_MARKER_NAMES_BY_SECTION = {
+    "basic physical quality": {"ph"},
+}
+
+THREE_BAND_MODELS = {"three_band", "3_band", "three", "three-band", "lung"}
+
+
+def _norm_key(value: str | None) -> str:
+    return (value or "").strip().lower()
+
+
+def _is_three_band_marker(section_title: str | None, marker=None) -> bool:
+    section_norm = _norm_key(section_title)
+    model = ""
+    marker_name = ""
+    if marker is not None:
+        model = str(getattr(marker, "band_model", "") or "").strip().lower()
+        marker_name = str(
+            getattr(marker, "source_name", None)
+            or getattr(marker, "name", None)
+            or getattr(marker, "display_label", None)
+            or getattr(marker, "clinical_label", None)
+            or ""
+        ).strip().lower()
+
+    if model in THREE_BAND_MODELS:
+        return True
+    if section_norm in THREE_BAND_SECTION_TITLES:
+        return True
+    if marker_name in THREE_BAND_MARKER_NAMES_BY_SECTION.get(section_norm, set()):
+        return True
+    if section_norm == "basic physical quality" and marker_name in {"ph", "p.h", "p h"}:
+        return True
+    return False
+
+
+def _collapse_three_band_severity(severity: str | None) -> str:
+    sev = (severity or "unknown").strip().lower()
+    if sev in {"normal", "", "within range"}:
+        return "normal"
+    if sev == "unknown":
+        return "unknown"
+    if sev.startswith("low") or "reduced" in sev or sev == "below range":
+        return "low"
+    if sev.startswith("high") or "elevated" in sev or sev == "above range":
+        return "high"
+    return sev
+
+
+def _severity_tier_from_label(severity: str | None) -> int:
+    sev = (severity or "").strip().lower()
+    if sev in {"", "normal", "within range"}:
+        return 0
+    if sev in {"low", "high", "low_mild", "high_mild", "mildly reduced", "mildly elevated", "below range", "above range"}:
+        return 1
+    if sev in {"low_moderate", "high_moderate", "moderately reduced", "moderately elevated"}:
+        return 2
+    if sev in {"low_severe", "high_severe", "markedly reduced", "markedly elevated"}:
+        return 3
+    return 1
+
+
+def apply_calibration_v2_1(report):
+    """Mutate the in-memory parsed report before scoring/rendering.
+
+    This is a deliberate pre-live one-time calibration correction. Three-band
+    QRMA sections are normalized to low/normal/high so scoring, patterns,
+    recommendations, Health Index and the online viewer all consume the same
+    semantics.
+    """
+    for section in getattr(report, "sections", []) or []:
+        section_title = getattr(section, "display_title", None) or getattr(section, "source_title", None) or ""
+        normal_count = 0
+        abnormal_count = 0
+        max_tier = 0
+
+        for marker in getattr(section, "parameters", []) or []:
+            if _is_three_band_marker(section_title, marker):
+                try:
+                    marker.band_model = "three_band"
+                except Exception:
+                    pass
+                try:
+                    marker.severity = _collapse_three_band_severity(getattr(marker, "severity", None))
+                except Exception:
+                    pass
+
+            tier = _severity_tier_from_label(getattr(marker, "severity", None))
+            try:
+                marker.severity_tier = tier
+            except Exception:
+                pass
+            try:
+                marker.is_abnormal = tier > 0
+            except Exception:
+                pass
+            if tier > 0:
+                abnormal_count += 1
+            else:
+                normal_count += 1
+            max_tier = max(max_tier, tier)
+
+        try:
+            section.abnormal_count = abnormal_count
+            section.normal_count = normal_count
+            if max_tier >= 3:
+                section.priority = "high"
+            elif max_tier == 2:
+                section.priority = "medium"
+            elif max_tier == 1:
+                section.priority = "low"
+            else:
+                section.priority = "normal"
+        except Exception:
+            pass
+
+    return report
+
 USE_V3_SCORING = True
 USE_V3_PATTERN_ENGINE = True
 USE_V3_CLINICAL_SUMMARY = True
@@ -45,6 +175,14 @@ def _plain(value) -> str:
     if value is None:
         return ""
     return str(value).strip()
+
+
+def marker_category_anchor(title: str | None) -> str:
+    """Stable marker-category anchor used by system links and marker detail groups."""
+    text = _plain(title).lower()
+    text = text.replace("&", " and ")
+    text = re.sub(r"[^a-z0-9]+", "-", text).strip("-")
+    return text or "marker-category"
 
 
 def _default_logo_data_uri(clinic_name: str = "Clinic") -> str:
@@ -486,6 +624,8 @@ def polished_overall_band_label(score: float | int | None) -> str:
 def severity_display(severity: str | None) -> str:
     mapping = {
         "normal": "Within range",
+        "low": "Below range",
+        "high": "Above range",
         "low_mild": "Mildly reduced",
         "low_moderate": "Moderately reduced",
         "low_severe": "Markedly reduced",
@@ -502,36 +642,65 @@ def severity_class(severity: str | None) -> str:
         return "sev-severe"
     if severity in {"high_moderate", "low_moderate"}:
         return "sev-moderate"
-    if severity in {"high_mild", "low_mild"}:
+    if severity in {"high", "low", "high_mild", "low_mild"}:
         return "sev-mild"
     return "sev-normal"
 
 
 def status_pointer_position(severity: str | None, variant: str = "standard") -> str:
-    """
-    7-band QRMA-style layout:
-    red | yellow | blue | green | blue | yellow | red
+    severity = (severity or "unknown").strip().lower()
+    variant = (variant or "standard").strip().lower()
 
-    Reduced values sit LEFT of green.
-    Elevated values sit RIGHT of green.
-    Tightened slightly for better visual alignment.
-    """
+    if variant in {"three_band", "three", "lung"}:
+        mapping = {
+            "low": "18%",
+            "low_mild": "18%",
+            "low_moderate": "18%",
+            "low_severe": "18%",
+            "normal": "50%",
+            "high": "82%",
+            "high_mild": "82%",
+            "high_moderate": "82%",
+            "high_severe": "82%",
+            "unknown": "50%",
+        }
+        return mapping.get(severity, "50%")
+
     mapping = {
         "low_severe": "6%",
         "low_moderate": "18%",
         "low_mild": "34%",
+        "low": "6%",
         "normal": "50%",
+        "high": "94%",
         "high_mild": "66%",
         "high_moderate": "82%",
         "high_severe": "94%",
         "unknown": "50%",
     }
-    return mapping.get(severity or "unknown", "50%")
-
+    return mapping.get(severity, "50%")
 
 
 def status_bar_variant_for_section(section_title: str | None) -> str:
-    return "lung" if (section_title or "").strip().lower() == "lung function" else "standard"
+    return "three_band" if _norm_key(section_title) in THREE_BAND_SECTION_TITLES else "standard"
+
+
+def status_bar_variant_for_marker(section_title: str | None, marker=None) -> str:
+    return "three_band" if _is_three_band_marker(section_title, marker) else status_bar_variant_for_section(section_title)
+
+
+def marker_analytics_severity(section_title: str | None, marker=None) -> str:
+    """
+    Return the calibrated marker severity used for display/priority selection.
+
+    Three-band QRMA markers should remain low/normal/high. They do not have
+    source-device mild/moderate/severe sub-bands, so report-builder display and
+    priority logic must consume the same calibrated severity as scoring.
+    """
+    sev = str(getattr(marker, "severity", None) or "unknown").strip().lower()
+    if _is_three_band_marker(section_title, marker):
+        return _collapse_three_band_severity(sev)
+    return sev
 
 
 def is_body_composition_section(section_title: str | None) -> bool:
@@ -551,6 +720,7 @@ def dedupe_sections_by_title(sections):
 
 
 def _section_card_map(report: ParsedReport):
+    report = apply_calibration_v2_1(report)
     all_non_body = [
         s for s in dedupe_sections_by_title(report.sections)
         if not is_body_composition_section(s.display_title or s.source_title)
@@ -604,18 +774,53 @@ def select_report_sections(report: ParsedReport, max_sections: int = 6):
 
 
 def select_priority_marker_cards(section, max_markers: int = 4):
+    """
+    Select marker cards for priority/category sections.
+
+    Calibration v2.3:
+    - standard sections still require tier >= 2 (moderate/severe)
+    - three-band QRMA sections include tier >= 1 because the device only has
+      low/normal/high and no moderate/severe concept
+    """
     section_title = section.display_title or section.source_title
-    candidates = [
-        p for p in section.parameters
-        if p.severity in {"high_moderate", "low_moderate", "high_severe", "low_severe"}
-        and not _should_skip_output_marker(p, section_title)
-    ]
-    weights = {"high_severe": 6, "low_severe": 6, "high_moderate": 5, "low_moderate": 5}
-    return sorted(
-        candidates,
-        key=lambda p: (weights.get(p.severity or "unknown", 0), (p.source_name or "").lower()),
-        reverse=True,
-    )[:max_markers]
+    candidates = []
+
+    for p in section.parameters:
+        if _should_skip_output_marker(p, section_title):
+            continue
+
+        severity = marker_analytics_severity(section_title, p)
+        tier = _severity_tier_from_label(severity)
+
+        if _is_three_band_marker(section_title, p):
+            include = tier >= 1
+        else:
+            include = tier >= 2
+
+        if include:
+            candidates.append(p)
+
+    weights = {
+        "high_severe": 6,
+        "low_severe": 6,
+        "high_moderate": 5,
+        "low_moderate": 5,
+        "high": 3,
+        "low": 3,
+        "high_mild": 3,
+        "low_mild": 3,
+    }
+
+    def _key(p):
+        severity = marker_analytics_severity(section_title, p)
+        return (
+            _severity_tier_from_label(severity),
+            weights.get(severity, 0),
+            1 if getattr(p, "marker_priority", None) == "high" else 0,
+            (getattr(p, "source_name", "") or "").lower(),
+        )
+
+    return sorted(candidates, key=_key, reverse=True)[:max_markers]
 
 
 def build_priority_overview(report):
@@ -650,6 +855,7 @@ def build_priority_overview(report):
 
         out.append({
             "title": normalise_display_term(section_title),
+            "anchor_id": marker_category_anchor(section_title),
             "priority": priority,
             "priority_label": priority_label(priority),
             "activity_label": activity_label(priority),
@@ -1182,6 +1388,9 @@ def build_body_composition_block(report: ParsedReport):
     }
 
 def build_full_marker_tables(report: ParsedReport):
+    # Safety net: ensure table rendering sees the same calibrated severity model
+    # even if caller order changes.
+    report = apply_calibration_v2_1(report)
     tables = []
     for section in dedupe_sections_by_title(report.sections):
         if not getattr(section, "parameters", None) or len(section.parameters) == 0:
@@ -1191,8 +1400,8 @@ def build_full_marker_tables(report: ParsedReport):
         if is_body_composition_section(section.display_title or section.source_title):
             continue
 
-        bar_variant = status_bar_variant_for_section(section.display_title or section.source_title)
         section_title = section.display_title or section.source_title
+        bar_variant = status_bar_variant_for_section(section_title)
         rows = []
         seen = set()
         for param in section.parameters:
@@ -1205,16 +1414,20 @@ def build_full_marker_tables(report: ParsedReport):
             seen.add(key)
 
             param = _overlay_definition(section_title, param)
+            marker_severity = marker_analytics_severity(section_title, param)
+            marker_bar_variant = status_bar_variant_for_marker(section_title, param)
 
             rows.append({
                 "marker": param.source_name,
                 "display_name": param.display_label or param.source_name,
                 "range": param.normal_range_text or "",
                 "value": param.actual_value_text or "",
-                "severity": severity_display(param.severity),
-                "severity_class": severity_class(param.severity),
-                "status_pointer_position": status_pointer_position(param.severity, bar_variant),
-                "status_bar_variant": bar_variant,
+                "severity": severity_display(marker_severity),
+                "severity_class": severity_class(marker_severity),
+                "severity_raw": marker_severity,
+                "severity_tier": _severity_tier_from_label(marker_severity),
+                "status_pointer_position": status_pointer_position(marker_severity, marker_bar_variant),
+                "status_bar_variant": marker_bar_variant,
                 "meaning": _meaning_text(param),
                 "what_it_means": getattr(param, "what_it_means", None) or _meaning_text(param),
                 "why_it_matters": getattr(param, "why_it_matters", None) or "",
@@ -1229,6 +1442,7 @@ def build_full_marker_tables(report: ParsedReport):
         tables.append({
             "title": normalise_display_term(section.display_title or section.source_title),
             "source_title": section.source_title,
+            "anchor_id": marker_category_anchor(section.display_title or section.source_title),
             "priority": section.priority or "normal",
             "priority_label": priority_label(section.priority),
             "abnormal_count": section.abnormal_count,
@@ -1238,6 +1452,36 @@ def build_full_marker_tables(report: ParsedReport):
         })
     return tables
 
+
+def attach_marker_category_links_to_systems(viewer_data: dict) -> dict:
+    """Attach exact marker-category anchors to system-card included sections."""
+    try:
+        detail = viewer_data.get("detail") or {}
+        tables = detail.get("full_marker_tables") or []
+        anchor_by_title = {}
+        for table in tables:
+            title = table.get("title") or table.get("source_title")
+            source = table.get("source_title") or title
+            anchor = table.get("anchor_id") or marker_category_anchor(source or title)
+            if title:
+                anchor_by_title[_plain(title).lower()] = anchor
+            if source:
+                anchor_by_title[_plain(source).lower()] = anchor
+
+        systems = (viewer_data.get("systems") or {}).get("body_system_cards") or (viewer_data.get("systems") or {}).get("system_score_cards") or []
+        for card in systems:
+            links = []
+            for name in card.get("included_sections", []) or []:
+                key = _plain(name).lower()
+                links.append({
+                    "title": normalise_display_term(name),
+                    "anchor_id": anchor_by_title.get(key) or marker_category_anchor(name),
+                })
+            card["section_links"] = links
+    except Exception:
+        pass
+    viewer_data = attach_marker_category_links_to_systems(viewer_data)
+    return viewer_data
 
 def build_toc_items(
     section_blocks,
@@ -1475,6 +1719,8 @@ def build_report_context(
     recommendation_mode: str | None = None,
     practitioner_settings=None,
 ):
+    report = apply_calibration_v2_1(report)
+
     config = _config_from_practitioner_settings(
         practitioner_settings,
         base_config=load_practitioner_config(),
@@ -1541,8 +1787,8 @@ def build_report_context(
     section_blocks = []
     for section in selected_sections:
         marker_cards = []
-        bar_variant = status_bar_variant_for_section(section.display_title or section.source_title)
         section_title = section.display_title or section.source_title
+        bar_variant = status_bar_variant_for_section(section_title)
         section_card = section_card_map.get((section_title or "").strip().lower(), {})
         derived_score = section_card.get("score", section.section_score)
         derived_flagged = section_card.get("flagged_count", section.abnormal_count)
