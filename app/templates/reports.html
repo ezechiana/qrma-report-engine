@@ -53,6 +53,17 @@
     .modal-card { padding: 16px; border-radius: 20px; }
 }
 
+
+/* === go360 surgical reports mobile patch v1 === */
+@media (max-width:760px){
+ .reports-toolbar,.reports-left,.reports-right,.share-toolbar{max-width:100%;min-width:0}
+ .reports-left,.reports-right{display:grid!important;grid-template-columns:1fr!important;width:100%}
+ .reports-search,.reports-sort{width:100%!important;max-width:none!important;min-width:0!important;min-height:44px}
+ .share-toolbar{overflow:hidden}
+ .card:has(> table.table){overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+ table.table{min-width:860px}
+}
+
 </style>
 
 <div id="reports-error" class="error" style="display:none;"></div>

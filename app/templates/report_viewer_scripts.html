@@ -82,39 +82,46 @@ function toggleMarkerDetail(id) {
 
 <script>
 (function () {
+    if (window.__go360MarkerFilterBound) return;
+    window.__go360MarkerFilterBound = true;
     function toInt(value) {
         const parsed = parseInt(value || "0", 10);
         return Number.isFinite(parsed) ? parsed : 0;
     }
-
     function applyMarkerCategoryFilter(filter) {
+        const safeFilter = ["all", "flagged", "watchlist", "no-flagged"].includes(filter) ? filter : "all";
         const groups = document.querySelectorAll("#markers .marker-group[data-flagged-count]");
         groups.forEach(function (group) {
             const flagged = toInt(group.getAttribute("data-flagged-count"));
             const watchlist = toInt(group.getAttribute("data-watchlist-count"));
-
             let show = true;
-            if (filter === "flagged") show = flagged > 0;
-            if (filter === "watchlist") show = watchlist > 0;
-            if (filter === "no-flagged") show = flagged === 0;
-
+            if (safeFilter === "flagged") show = flagged > 0;
+            if (safeFilter === "watchlist") show = watchlist > 0;
+            if (safeFilter === "no-flagged") show = flagged === 0;
             group.classList.toggle("marker-filter-hidden", !show);
         });
     }
-
     document.addEventListener("click", function (event) {
         const btn = event.target.closest(".marker-filter-btn");
         if (!btn) return;
-
+        event.preventDefault();
         const bar = btn.closest(".marker-filter-bar");
         if (bar) {
             bar.querySelectorAll(".marker-filter-btn").forEach(function (item) {
                 item.classList.remove("active");
+                item.setAttribute("aria-pressed", "false");
             });
         }
-
         btn.classList.add("active");
+        btn.setAttribute("aria-pressed", "true");
         applyMarkerCategoryFilter(btn.getAttribute("data-marker-filter") || "all");
+    }, { passive: false });
+    document.addEventListener("DOMContentLoaded", function () {
+        const active = document.querySelector(".marker-filter-btn.active");
+        if (active) {
+            active.setAttribute("aria-pressed", "true");
+            applyMarkerCategoryFilter(active.getAttribute("data-marker-filter") || "all");
+        }
     });
 })();
 </script>

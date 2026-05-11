@@ -1172,4 +1172,37 @@
     display: none !important;
 }
 
+
+/* === go360 surgical report viewer mobile patch v1 === */
+@media (max-width:760px){
+ :root{--section-gap:14px}
+ html,body{overflow-x:hidden}
+ .shell{width:100%;max-width:100%;padding:10px 12px 20px;overflow-x:hidden}
+ .report-command-main,.workspace,.content,.panel,.card,.summary-card,.recommendation-card,.marker-group,.marker-detail-card{max-width:100%;min-width:0}
+ .report-command-main{padding:14px;border-radius:18px;overflow:hidden}
+ .report-command-grid,.workspace,.overview-layout,.grid-2,.system-grid,.recommendations-grid,.body-composition-grid{display:grid!important;grid-template-columns:1fr!important}
+ .left-rail,.right-rail{position:static!important;max-height:none!important;overflow:visible!important;width:100%}
+ .left-rail{order:-1}.right-rail{order:99}
+ .report-command-title{font-size:clamp(28px,8vw,38px);overflow-wrap:anywhere}
+ .report-command-actions .btn,.report-command-actions a.btn{width:100%;min-height:44px}
+ .report-health-index-score{font-size:36px}
+ .nav-list{display:flex;gap:8px;overflow-x:auto;-webkit-overflow-scrolling:touch;padding-bottom:4px}
+ .nav-list li{margin:0!important;flex:0 0 auto}.nav-list a{white-space:nowrap}
+ .system-card,.summary-card,.recommendation-card,.marker-group{overflow:hidden}
+ .score-card-chip-row,.marker-summary-chips{display:flex!important;flex-wrap:wrap!important;gap:6px!important;justify-content:flex-start!important}
+ .score-card-stat,.summary-chip,.marker-summary-chip{font-size:11px!important;white-space:nowrap}
+ .marker-filter-bar{display:flex!important;flex-wrap:nowrap!important;overflow-x:auto!important;-webkit-overflow-scrolling:touch;gap:8px!important;width:100%!important;max-width:100%!important;border-radius:18px!important;padding:8px!important}
+ .marker-filter-btn{flex:0 0 auto!important;min-height:40px!important;white-space:nowrap!important;padding:8px 12px!important}
+ .marker-group-header,.marker-group-toggle{display:grid!important;grid-template-columns:1fr!important;gap:8px!important;align-items:start!important}
+ .marker-group-meta,.marker-group-summary,.marker-summary-chips{justify-content:flex-start!important;width:100%}
+ .marker-detail-card{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .range-bar-wrap,.range-bar,.score-bar{max-width:100%}
+ .tab-list,.tab-buttons{display:flex;overflow-x:auto;-webkit-overflow-scrolling:touch;gap:8px;flex-wrap:nowrap}
+ .tab-btn{flex:0 0 auto;white-space:nowrap}
+ .body-composition-tabs,.body-tabs{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .body-composition-tabs button,.body-tabs button{flex:0 0 auto;white-space:nowrap}
+ .recommendation-card a,.summary-card a,.marker-detail-card a{overflow-wrap:anywhere}
+}
+#markers .marker-group.marker-filter-hidden{display:none!important}
+
 </style>

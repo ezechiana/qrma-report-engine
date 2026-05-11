@@ -155,6 +155,30 @@
   .reports-table{min-width:760px;}
 }
 
+
+/* === go360 surgical dashboard mobile patch v1 === */
+@media (max-width:760px){
+ .dashboard-v2,.dashboard-shell,.hero-panel,.kpi-grid,.panel-grid,.dashboard-panel,.onboarding-card,.hero-copy,.hero-title{max-width:100%;min-width:0}
+ .dashboard-v2{display:grid;gap:16px;overflow-x:hidden}
+ .hero-panel{grid-template-columns:1fr!important;padding:18px;border-radius:20px;overflow:hidden}
+ .hero-title{font-size:clamp(28px,9vw,42px);line-height:1.05;overflow-wrap:anywhere}
+ .hero-copy{font-size:16px;line-height:1.55}
+ .hero-actions{display:grid;grid-template-columns:1fr;gap:10px;width:100%}
+ .hero-actions .btn{width:100%;min-height:48px;justify-content:center;white-space:normal;text-align:center}
+ .hero-goal{width:100%;min-width:0;overflow:hidden}
+ .goal-header{display:grid;grid-template-columns:1fr;gap:4px}
+ .goal-value{font-size:18px;overflow-wrap:anywhere}
+ .kpi-grid,.panel-grid,.dashboard-shell,.onboarding-steps{grid-template-columns:1fr!important}
+ .dashboard-panel,.kpi-card,.onboarding-step,.chart-card,.referral-mini{overflow:hidden}
+ .reports-table-wrap,.dashboard-table-wrap,.dashboard-panel:has(table),.chart-card,.revenue-column-chart{overflow-x:auto;-webkit-overflow-scrolling:touch}
+ .reports-table{min-width:760px}
+ .revenue-column-bars{min-width:560px}
+ .action-item{display:grid;grid-template-columns:1fr;align-items:stretch}
+ .action-item .btn,.quick-actions .btn{width:100%}
+ .referral-link-row{display:grid;grid-template-columns:1fr}
+ .referral-link-row .btn{width:100%}
+}
+
 </style>
 
 <div class="dashboard-v2">

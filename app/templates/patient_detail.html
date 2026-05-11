@@ -300,6 +300,17 @@
     .edit-grid { grid-template-columns: 1fr; }
 }
 
+
+/* === go360 surgical patient detail mobile patch v1 === */
+@media (max-width:760px){
+ .patient-hero,.summary-grid,.trend-grid,.edit-grid,.option-grid{max-width:100%;min-width:0}
+ .trend-summary-panel,.trend-chart-panel,.trend-card,.chart-wrap{overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+ .trend-controls,#trend-key-wrap{display:grid!important;grid-template-columns:1fr!important;width:100%}
+ #trend-key-search,#trend-key,#trend-type,#trend-group{width:100%!important;min-width:0!important;max-width:100%!important;min-height:44px}
+ .chart-svg{min-width:640px}
+ .trend-summary-panel table.table{min-width:680px}
+}
+
 </style>
 
 <div id="patient-error" class="error" style="display:none;"></div>

@@ -44,6 +44,15 @@
   .card > table.table{min-width:680px;}
 }
 
+
+/* === go360 surgical patients mobile patch v1 === */
+@media (max-width:760px){
+ .patients-toolbar,.patients-toolbar-left,.patients-toolbar-right{max-width:100%;min-width:0}
+ .card:has(> table.table){overflow-x:auto!important;-webkit-overflow-scrolling:touch}
+ table.table{min-width:680px}
+ .grid-2{grid-template-columns:1fr!important}
+}
+
 </style>
 
 <div id="patients-error" class="error" style="display:none;"></div>
