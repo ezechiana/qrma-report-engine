@@ -13,6 +13,7 @@ from app.services.scoring_engine import compute_scan_scores, compute_scan_scores
 from datetime import datetime
 from zoneinfo import ZoneInfo
 import os
+import re
 from app.services.ai_narrative_engine_v3 import (
     enrich_protocol_plan_with_narrative_v3,
     rewrite_clinical_recommendations_v3,
@@ -1388,10 +1389,9 @@ def build_body_composition_block(report: ParsedReport):
     }
 
 def build_full_marker_tables(report: ParsedReport):
-    # Safety net: ensure table rendering sees the same calibrated severity model
-    # even if caller order changes.
     report = apply_calibration_v2_1(report)
     tables = []
+
     for section in dedupe_sections_by_title(report.sections):
         if not getattr(section, "parameters", None) or len(section.parameters) == 0:
             continue
@@ -1404,6 +1404,7 @@ def build_full_marker_tables(report: ParsedReport):
         bar_variant = status_bar_variant_for_section(section_title)
         rows = []
         seen = set()
+
         for param in section.parameters:
             if _should_skip_output_marker(param, section_title):
                 continue
@@ -1416,6 +1417,7 @@ def build_full_marker_tables(report: ParsedReport):
             param = _overlay_definition(section_title, param)
             marker_severity = marker_analytics_severity(section_title, param)
             marker_bar_variant = status_bar_variant_for_marker(section_title, param)
+            severity_tier = _severity_tier_from_label(marker_severity)
 
             rows.append({
                 "marker": param.source_name,
@@ -1425,7 +1427,7 @@ def build_full_marker_tables(report: ParsedReport):
                 "severity": severity_display(marker_severity),
                 "severity_class": severity_class(marker_severity),
                 "severity_raw": marker_severity,
-                "severity_tier": _severity_tier_from_label(marker_severity),
+                "severity_tier": severity_tier,
                 "status_pointer_position": status_pointer_position(marker_severity, marker_bar_variant),
                 "status_bar_variant": marker_bar_variant,
                 "meaning": _meaning_text(param),
@@ -1439,17 +1441,26 @@ def build_full_marker_tables(report: ParsedReport):
         if not rows:
             continue
 
+        flagged_count = sum(1 for row in rows if int(row.get("severity_tier") or 0) >= 2)
+        watchlist_count = sum(1 for row in rows if int(row.get("severity_tier") or 0) == 1)
+        within_count = sum(1 for row in rows if int(row.get("severity_tier") or 0) == 0)
+
         tables.append({
             "title": normalise_display_term(section.display_title or section.source_title),
             "source_title": section.source_title,
             "anchor_id": marker_category_anchor(section.display_title or section.source_title),
             "priority": section.priority or "normal",
             "priority_label": priority_label(section.priority),
-            "abnormal_count": section.abnormal_count,
-            "normal_count": section.normal_count,
+            "abnormal_count": flagged_count + watchlist_count,
+            "normal_count": within_count,
+            "flagged_count": flagged_count,
+            "watchlist_count": watchlist_count,
+            "within_count": within_count,
+            "total_count": len(rows),
             "status_bar_variant": bar_variant,
             "rows": rows,
         })
+
     return tables
 
 

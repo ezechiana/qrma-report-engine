@@ -50,63 +50,109 @@
     }
 
     .report-command-header {
-        margin-bottom: 16px;
+        margin-bottom: 20px;
     }
 
     .report-command-main {
-        padding: 18px 20px;
-        border-radius: 18px;
-        background: linear-gradient(180deg, var(--surface), var(--surface-soft));
-        box-shadow: var(--shadow);
-        border: 1px solid var(--line);
+        position: relative;
+        overflow: hidden;
+        padding: 28px;
+        border-radius: 28px;
+        background:
+            radial-gradient(circle at top right,
+                color-mix(in srgb, var(--brand) 10%, transparent),
+                transparent 34%),
+            linear-gradient(
+                180deg,
+                color-mix(in srgb, var(--surface) 92%, white),
+                var(--surface-soft)
+            );
+        border: 1px solid color-mix(in srgb, var(--brand) 10%, var(--line));
+        box-shadow:
+            0 10px 40px rgba(15, 23, 42, 0.06),
+            0 2px 8px rgba(15, 23, 42, 0.03);
+    }
+
+    .report-command-main::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        background:
+            linear-gradient(
+                120deg,
+                transparent 0%,
+                rgba(255, 255, 255, 0.35) 45%,
+                transparent 100%
+            );
+        pointer-events: none;
+    }
+
+    .report-command-main > * {
+        position: relative;
+        z-index: 1;
     }
 
     .report-command-topline {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 14px;
+        gap: 14px;
+        margin-bottom: 20px;
     }
 
     .report-backlink {
         display: inline-flex;
         align-items: center;
         gap: 8px;
+        padding: 8px 14px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.82);
+        border: 1px solid var(--line);
         font-size: 13px;
         font-weight: 700;
         color: var(--brand);
+        transition: all .18s ease;
+        backdrop-filter: blur(10px);
     }
 
     .report-backlink:hover {
-        text-decoration: underline;
+        transform: translateY(-1px);
+        background: white;
+        box-shadow: var(--shadow-soft);
+        text-decoration: none;
     }
 
     .report-brand-mini {
         display: inline-flex;
         align-items: center;
-        gap: 10px;
+        gap: 12px;
+        padding: 8px 12px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid rgba(255, 255, 255, 0.6);
+        backdrop-filter: blur(12px);
     }
 
     .report-brand-mini .brand-logo {
-        width: 32px;
-        height: 32px;
-        border-radius: 10px;
+        width: 36px;
+        height: 36px;
+        border-radius: 12px;
         padding: 4px;
-        background: #fff;
+        background: white;
         border: 1px solid var(--line);
     }
 
     .report-brand-mini-text {
         font-size: 12px;
-        font-weight: 700;
-        color: var(--muted);
+        font-weight: 800;
+        color: var(--text);
+        letter-spacing: .02em;
     }
 
     .report-command-grid {
         display: grid;
-        grid-template-columns: minmax(0, 1.4fr) minmax(300px, 0.72fr);
-        gap: 16px;
+        grid-template-columns: minmax(0, 1.35fr) 360px;
+        gap: 22px;
         align-items: stretch;
     }
 
@@ -118,97 +164,150 @@
     }
 
     .report-patient-name {
-        font-size: 14px;
-        font-weight: 700;
+        display: inline-flex;
+        align-items: center;
+        width: fit-content;
+        padding: 7px 14px;
+        border-radius: 999px;
+        background: color-mix(in srgb, var(--brand) 10%, white);
+        border: 1px solid color-mix(in srgb, var(--brand) 18%, white);
         color: var(--brand);
-        margin-bottom: 6px;
+        font-size: 13px;
+        font-weight: 800;
+        margin-bottom: 12px;
     }
 
     .report-patient-meta {
         display: flex;
         flex-wrap: wrap;
-        gap: 8px;
+        gap: 10px;
+        margin-bottom: 18px;
+    }
+
+    .report-patient-meta span {
+        display: inline-flex;
         align-items: center;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 255, 255, 0.72);
+        border: 1px solid var(--line);
         color: var(--muted);
-        font-size: 13px;
-        margin-bottom: 12px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .report-patient-meta span:nth-child(2),
+    .report-patient-meta span:nth-child(4) {
+        display: none;
     }
 
     .report-command-title {
-        margin: 0 0 8px;
-        font-size: 32px;
-        line-height: 1.08;
-        letter-spacing: -0.02em;
+        margin: 0 0 12px;
+        font-size: clamp(34px, 4vw, 54px);
+        line-height: 1.02;
+        letter-spacing: -0.04em;
+        max-width: 900px;
+        color: #0f172a;
     }
 
     .report-command-subtitle {
         margin: 0;
-        color: var(--muted);
-        font-size: 14px;
-        line-height: 1.55;
         max-width: 760px;
+        color: var(--muted);
+        font-size: 15px;
+        line-height: 1.7;
     }
 
     .report-command-side {
         display: flex;
         flex-direction: column;
-        gap: 10px;
+        gap: 14px;
     }
 
     .report-health-index-card {
-        border: 1px solid var(--line);
-        border-radius: 16px;
-        background: var(--surface);
-        padding: 14px;
-        box-shadow: var(--shadow-soft);
+        position: relative;
+        overflow: hidden;
+        padding: 18px;
+        border-radius: 22px;
+        background:
+            linear-gradient(
+                180deg,
+                rgba(255, 255, 255, 0.95),
+                rgba(255, 255, 255, 0.88)
+            );
+        border: 1px solid color-mix(in srgb, var(--brand) 10%, var(--line));
+        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.05);
+        backdrop-filter: blur(12px);
     }
 
     .report-health-index-label {
         font-size: 11px;
         text-transform: uppercase;
-        letter-spacing: .05em;
+        letter-spacing: .12em;
         color: var(--muted);
-        margin-bottom: 8px;
-        font-weight: 700;
+        margin-bottom: 10px;
+        font-weight: 800;
     }
 
     .report-health-index-main {
         display: flex;
-        align-items: baseline;
+        align-items: flex-start;
         justify-content: space-between;
-        gap: 12px;
-        margin-bottom: 10px;
+        gap: 16px;
+        margin-bottom: 14px;
     }
 
     .report-health-index-score {
-        font-size: 40px;
-        line-height: 1;
-        font-weight: 700;
+        font-size: 56px;
+        line-height: .95;
+        font-weight: 900;
+        letter-spacing: -0.05em;
         color: #0f172a;
     }
 
     .report-health-index-band {
-        font-size: 13px;
-        font-weight: 700;
-        color: var(--muted);
-        text-align: right;
-        max-width: 120px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 40px;
+        padding: 10px 12px;
+        border-radius: 14px;
+        background: color-mix(in srgb, var(--brand) 8%, white);
+        border: 1px solid color-mix(in srgb, var(--brand) 16%, white);
+        color: var(--brand);
+        font-size: 12px;
+        font-weight: 800;
+        text-align: center;
         line-height: 1.35;
+        max-width: 120px;
     }
 
     .report-health-index-bar {
-        margin-top: 2px;
+        margin-top: 6px;
     }
 
     .report-command-actions {
         display: flex;
         flex-direction: column;
-        gap: 8px;
+        gap: 10px;
+    }
+
+    .report-command-actions .btn.primary {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        height: 48px;
+        border-radius: 14px;
+        font-size: 14px;
+        font-weight: 800;
+        box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
     }
 
     .report-tools-card {
-        padding: 10px 12px;
-        margin: 0;
+        padding: 12px 14px;
+        border-radius: 16px;
+        background: rgba(255, 255, 255, 0.72);
+        backdrop-filter: blur(12px);
         box-shadow: var(--shadow-soft);
     }
 

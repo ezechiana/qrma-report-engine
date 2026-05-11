@@ -38,7 +38,16 @@ def _get_tenant_theme_for_report(report: ReportVersion) -> dict:
 
 def _get_viewer_payload_for_report(report: ReportVersion) -> dict:
     report_json = report.report_json or {}
-    viewer = dict(report_json.get("viewer") or {})
+
+    viewer = {}
+    if isinstance(report_json, dict):
+        if isinstance(report_json.get("viewer"), dict) and report_json["viewer"]:
+            viewer = dict(report_json["viewer"])
+        elif isinstance(report_json.get("viewer_payload"), dict) and report_json["viewer_payload"]:
+            viewer = dict(report_json["viewer_payload"])
+        elif any(key in report_json for key in ("overview", "systems", "recommendations", "detail")):
+            viewer = dict(report_json)
+
     tenant = dict(viewer.get("tenant") or {})
 
     settings = getattr(report, "_practitioner_settings", None)
@@ -55,14 +64,15 @@ def _get_viewer_payload_for_report(report: ReportVersion) -> dict:
         "case_id": str(report.case_id),
         "version_number": report.version_number,
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
-        "recommendation_mode": report.recommendation_mode.value if hasattr(report.recommendation_mode, "value") else str(report.recommendation_mode),
+        "recommendation_mode": report.recommendation_mode.value
+        if hasattr(report.recommendation_mode, "value")
+        else str(report.recommendation_mode),
         "generated_at": report.generated_at.isoformat() if report.generated_at else None,
         "pdf_url": f"/api/reports/{report.id}/pdf",
         "html_url": f"/api/reports/{report.id}/html",
         "data_url": f"/api/reports/{report.id}/json",
         "viewer": viewer,
     }
-
 
 @router.get("/login")
 def login_page(request: Request):
@@ -156,7 +166,7 @@ def report_view_router(
 
     return templates.TemplateResponse(
         request=request,
-        name="report_full.html",
+        name="report_viewer.html",
         context={
             "request": request,
             "title": "",
