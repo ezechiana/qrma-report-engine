@@ -166,7 +166,7 @@ def report_view_router(
 
     return templates.TemplateResponse(
         request=request,
-        name="report_viewer.html",
+        name="report_viewer_frame.html",
         context={
             "request": request,
             "title": "",

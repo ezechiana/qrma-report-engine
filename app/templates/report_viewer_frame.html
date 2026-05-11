@@ -1,0 +1,26 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="page-header" style="margin-bottom:16px;">
+    <div>
+        <h1 style="margin:0;">Report viewer</h1>
+        <p class="muted" style="margin-top:4px;">
+            Use the workspace navigation on the left while reviewing the full assessment report.
+        </p>
+    </div>
+
+    <div class="btn-row">
+        <a class="btn secondary" href="/app/reports/{{ report.id }}">
+            Report detail
+        </a>
+
+        <a class="btn secondary" href="/reports">
+            All reports
+        </a>
+    </div>
+</div>
+
+<div class="card" style="padding:0; overflow:hidden;">
+    {% include "report_viewer.html" %}
+</div>
+{% endblock %}

@@ -622,6 +622,22 @@ def polished_overall_band_label(score: float | int | None) -> str:
     return "Priority review recommended"
 
 
+def health_index_color(score: float | int | None) -> str:
+    """Return the canonical Health Index colour for PDF and viewer output."""
+    if score is None:
+        return "#94a3b8"
+
+    score = float(score)
+
+    if score >= 85:
+        return "#2e7d32"
+    if score >= 70:
+        return "#1565c0"
+    if score >= 55:
+        return "#f1c40f"
+    return "#e53935"
+
+
 def severity_display(severity: str | None) -> str:
     mapping = {
         "normal": "Within range",
@@ -1491,7 +1507,6 @@ def attach_marker_category_links_to_systems(viewer_data: dict) -> dict:
             card["section_links"] = links
     except Exception:
         pass
-    viewer_data = attach_marker_category_links_to_systems(viewer_data)
     return viewer_data
 
 def build_toc_items(
@@ -2091,8 +2106,8 @@ def build_report_context(
 
         "category_completeness": getattr(report, "category_completeness", {}),
         "overall_scan_score": scan_scores["overall_score"],
-        "overall_scan_band_label": scan_scores["overall_band_label"],
-        "overall_scan_gauge_color": scan_scores.get("overall_gauge_color") or scan_scores.get("overall_band_color"),
+        "overall_scan_band_label": polished_overall_band_label(scan_scores["overall_score"]),
+        "overall_scan_gauge_color": health_index_color(scan_scores["overall_score"]),
         "system_score_cards": system_score_cards,
         "section_score_cards": scan_scores.get("section_score_cards", []),
         "body_system_cards": scan_scores.get("body_system_cards", []),
@@ -2188,7 +2203,7 @@ def build_viewer_payload(
             "key_patterns": _safe_list(ctx.get("key_patterns")),
             "overall_scan_score": ctx.get("overall_scan_score"),
             "overall_scan_band_label": polished_overall_band_label(ctx.get("overall_scan_score")),
-            "overall_scan_gauge_color": ctx.get("overall_scan_gauge_color"),
+            "overall_scan_gauge_color": health_index_color(ctx.get("overall_scan_score")),
         },
         "systems": {
             "system_score_cards": _safe_list(ctx.get("system_score_cards")),
