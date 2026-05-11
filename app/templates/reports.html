@@ -35,6 +35,24 @@
 .currency-row { display:grid; grid-template-columns:1.2fr .8fr; gap:12px; }
 .success-box { border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; border-radius:14px; padding:12px; margin-top:12px; display:none; }
 @media(max-width:900px){ .modal-grid,.currency-row{grid-template-columns:1fr;} }
+/* reports mobile responsive consolidation */
+
+@media (max-width: 760px) {
+    .report-tabs { gap: 8px; overflow-x: auto; -webkit-overflow-scrolling: touch; flex-wrap: nowrap; padding-bottom: 4px; }
+    .report-tab { flex: 0 0 auto; min-height: 42px; }
+    .share-toolbar { display: grid; grid-template-columns: 1fr; padding: 14px; }
+    .share-toolbar .btn-row { display: grid; grid-template-columns: 1fr; width: 100%; }
+    .reports-toolbar,
+    .reports-left,
+    .reports-right { width: 100%; align-items: stretch; }
+    .reports-left { display: grid; grid-template-columns: 1fr; }
+    .reports-search,
+    .reports-sort { width: 100%; max-width: none; }
+    .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .table { min-width: 860px; }
+    .modal-card { padding: 16px; border-radius: 20px; }
+}
+
 </style>
 
 <div id="reports-error" class="error" style="display:none;"></div>

@@ -32,6 +32,18 @@
     text-align: center;
     color: #64748b;
 }
+
+
+/* Safe mobile Phase 1b patients refinements */
+@media(max-width:700px){
+  .patients-toolbar,
+  .patients-toolbar-left,
+  .patients-toolbar-right{display:grid; grid-template-columns:1fr; width:100%; gap:10px; align-items:stretch;}
+  .patients-search,.patients-sort{width:100%; max-width:100%; min-height:44px;}
+  #new-patient-btn{width:100%; min-height:46px;}
+  .card > table.table{min-width:680px;}
+}
+
 </style>
 
 <div id="patients-error" class="error" style="display:none;"></div>

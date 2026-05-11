@@ -657,6 +657,184 @@
             }
         }
 
+
+
+        /* Safe mobile Phase 1b responsive layer — additive only */
+        @media (max-width: 960px) {
+            html, body {
+                max-width: 100%;
+                overflow-x: hidden;
+            }
+
+            .app {
+                width: 100%;
+                max-width: 100vw;
+            }
+
+            .main,
+            .content {
+                width: 100%;
+                max-width: 100vw;
+                overflow-x: hidden;
+            }
+
+            .content {
+                padding: 14px 12px 22px;
+            }
+
+            .card {
+                border-radius: 18px;
+            }
+
+            .table-wrap,
+            .scroll-x,
+            .card:has(> table.table) {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+            }
+
+            table.table,
+            .reports-table {
+                min-width: 680px;
+            }
+
+            input,
+            select,
+            textarea {
+                max-width: 100%;
+            }
+
+            .btn-row {
+                width: 100%;
+                align-items: stretch;
+            }
+
+            .btn-row > .btn,
+            .btn-row > button,
+            .btn-row > a,
+            .btn-row > input,
+            .btn-row > select {
+                min-height: 44px;
+            }
+
+            .app-banner-region {
+                padding: 12px 12px 0;
+            }
+
+            .app-banner {
+                border-radius: 18px;
+                padding: 16px;
+                gap: 12px;
+            }
+
+            .app-banner-title {
+                font-size: 17px;
+                line-height: 1.25;
+            }
+
+            .app-banner-body {
+                font-size: 14px;
+                line-height: 1.45;
+            }
+
+            .mobile-account-panel {
+                position: fixed;
+                top: 72px;
+                right: 12px;
+                left: 12px;
+                background: #fff;
+                border: 1px solid var(--line);
+                border-radius: 18px;
+                box-shadow: 0 20px 60px rgba(15,23,42,.20);
+                padding: 10px;
+                z-index: 120;
+                display: none;
+            }
+
+            .mobile-account-panel.open {
+                display: block;
+            }
+
+            .mobile-account-panel-header {
+                padding: 12px;
+                border-bottom: 1px solid var(--line);
+                margin-bottom: 6px;
+            }
+
+            .mobile-account-panel-name {
+                font-size: 14px;
+                font-weight: 800;
+                color: var(--text);
+            }
+
+            .mobile-account-panel-email {
+                margin-top: 4px;
+                font-size: 12px;
+                color: var(--muted);
+                word-break: break-word;
+            }
+
+            .mobile-account-panel a,
+            .mobile-account-panel button {
+                display: flex;
+                width: 100%;
+                min-height: 44px;
+                align-items: center;
+                justify-content: space-between;
+                padding: 11px 12px;
+                border-radius: 12px;
+                border: 0;
+                background: #fff;
+                color: var(--text);
+                font: inherit;
+                font-weight: 700;
+                text-align: left;
+                cursor: pointer;
+            }
+
+            .mobile-account-panel a:hover,
+            .mobile-account-panel button:hover {
+                background: #f8fafc;
+            }
+
+            .mobile-account-panel-backdrop {
+                position: fixed;
+                inset: 0;
+                background: transparent;
+                z-index: 119;
+                display: none;
+            }
+
+            .mobile-account-panel-backdrop.open {
+                display: block;
+            }
+        }
+
+        @media (max-width: 640px) {
+            .mobile-topbar {
+                padding: 12px 14px;
+            }
+
+            .mobile-menu-btn,
+            .mobile-close-btn,
+            .account-trigger {
+                min-width: 44px;
+                min-height: 44px;
+            }
+
+            .mobile-topbar-title {
+                font-size: 18px;
+            }
+
+            .content {
+                padding: 12px 10px 20px;
+            }
+
+            .card {
+                padding: 14px;
+            }
+        }
+
         @media (max-width: 640px) {
             .topbar {
                 display: none;

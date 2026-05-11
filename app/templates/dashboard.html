@@ -131,6 +131,30 @@
 @media(max-width:1280px){ .dashboard-shell,.hero-panel{grid-template-columns:1fr;} .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
 @media(max-width:900px){ .panel-grid,.onboarding-steps{grid-template-columns:1fr;} }
 @media(max-width:700px){ .kpi-grid{grid-template-columns:1fr;} .hero-title{font-size:24px;} .funnel-row{grid-template-columns:90px 1fr 34px;} }
+
+
+/* Safe mobile Phase 1b dashboard refinements */
+@media(max-width:700px){
+  .dashboard-v2{gap:14px; overflow:hidden;}
+  .hero-panel{padding:20px; border-radius:22px; overflow:hidden;}
+  .hero-title{font-size:28px; line-height:1.12; letter-spacing:-.035em; max-width:100%;}
+  .hero-copy{font-size:15px; line-height:1.55; max-width:100%;}
+  .hero-actions{display:grid; grid-template-columns:1fr; gap:10px;}
+  .hero-actions .btn{width:100%; min-height:46px;}
+  .hero-goal{min-width:0; width:100%; padding:16px;}
+  .dashboard-shell{grid-template-columns:1fr; gap:14px;}
+  .dashboard-panel{border-radius:20px; padding:16px; overflow:hidden;}
+  .dashboard-section .section-header,
+  .section-header{align-items:stretch; flex-direction:column; gap:12px;}
+  .section-header .btn-row{display:grid; grid-template-columns:1fr; gap:10px;}
+  .search-input,#dashboard-search{width:100%; max-width:100%; min-height:44px;}
+  .dashboard-tabs{overflow-x:auto; flex-wrap:nowrap; padding-bottom:4px; -webkit-overflow-scrolling:touch;}
+  .dashboard-tab{white-space:nowrap; min-height:42px;}
+  .quick-actions{display:grid; grid-template-columns:1fr; gap:10px;}
+  .quick-actions .btn{width:100%; min-height:46px;}
+  .reports-table{min-width:760px;}
+}
+
 </style>
 
 <div class="dashboard-v2">

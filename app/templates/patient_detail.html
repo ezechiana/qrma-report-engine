@@ -279,6 +279,27 @@
     .option-grid { grid-template-columns: 1fr; }
 }
 
+/* patient detail mobile responsive consolidation */
+
+@media (max-width: 760px) {
+    .patient-hero { display: grid; grid-template-columns: 1fr; }
+    .patient-hero-text h2 { font-size: 30px; }
+    .patient-hero .btn-row { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
+    .patient-hero .btn-row .btn { width: 100%; }
+    .patient-hero .btn-row .btn:nth-child(3) { grid-column: 1 / -1; }
+    .summary-grid { grid-template-columns: 1fr; gap: 12px; }
+    .section-toolbar { align-items: flex-start; }
+    .trend-summary-panel,
+    .trend-chart-panel,
+    .trend-card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .trend-summary-panel .table { min-width: 680px; }
+    .trend-controls { display: grid !important; grid-template-columns: 1fr !important; }
+    #trend-key-wrap { display: grid !important; grid-template-columns: 1fr !important; }
+    #trend-key-search, #trend-key, #trend-type, #trend-group { width: 100%; min-width: 0 !important; }
+    .chart-svg { min-width: 720px; }
+    .edit-grid { grid-template-columns: 1fr; }
+}
+
 </style>
 
 <div id="patient-error" class="error" style="display:none;"></div>
