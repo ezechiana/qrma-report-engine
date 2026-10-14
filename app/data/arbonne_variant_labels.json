@@ -1,0 +1,194 @@
+{
+  "ARB-P001": [
+    {
+      "variant_id": "ARB-001",
+      "label": "Chocolate Flavour"
+    },
+    {
+      "variant_id": "ARB-002",
+      "label": "Vanilla Flavour"
+    }
+  ],
+  "ARB-P002": [
+    {
+      "variant_id": "ARB-003",
+      "label": "Chocolate Flavour"
+    },
+    {
+      "variant_id": "ARB-004",
+      "label": "Strawberry Flavour"
+    },
+    {
+      "variant_id": "ARB-005",
+      "label": "Vanilla Flavour"
+    },
+    {
+      "variant_id": "ARB-006",
+      "label": "Coffee Flavour"
+    }
+  ],
+  "ARB-P003": [
+    {
+      "variant_id": "ARB-007",
+      "label": "Vanilla Flavour"
+    },
+    {
+      "variant_id": "ARB-008",
+      "label": "Fudgy Cake Flavour"
+    },
+    {
+      "variant_id": "ARB-009",
+      "label": "Chocolate Flavour"
+    }
+  ],
+  "ARB-P004": [
+    {
+      "variant_id": "ARB-010",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P005": [
+    {
+      "variant_id": "ARB-011",
+      "label": "Strawberry Flavour"
+    },
+    {
+      "variant_id": "ARB-012",
+      "label": "Mango Peach Flavour"
+    },
+    {
+      "variant_id": "ARB-013",
+      "label": "Blackberry  Flavour"
+    },
+    {
+      "variant_id": "ARB-014",
+      "label": "Pomegranate Flavour"
+    },
+    {
+      "variant_id": "ARB-015",
+      "label": "Blood Orange  Flavour"
+    },
+    {
+      "variant_id": "ARB-016",
+      "label": "Guava Flavour"
+    }
+  ],
+  "ARB-P006": [
+    {
+      "variant_id": "ARB-017",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P007": [
+    {
+      "variant_id": "ARB-018",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P008": [
+    {
+      "variant_id": "ARB-019",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P009": [
+    {
+      "variant_id": "ARB-020",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P010": [
+    {
+      "variant_id": "ARB-021",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P011": [
+    {
+      "variant_id": "ARB-022",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P012": [
+    {
+      "variant_id": "ARB-023",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P013": [
+    {
+      "variant_id": "ARB-024",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P014": [
+    {
+      "variant_id": "ARB-025",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P015": [
+    {
+      "variant_id": "ARB-026",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P016": [
+    {
+      "variant_id": "ARB-027",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P017": [
+    {
+      "variant_id": "ARB-028",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P018": [
+    {
+      "variant_id": "ARB-029",
+      "label": "Cucumber Watermelon Flavour"
+    },
+    {
+      "variant_id": "ARB-030",
+      "label": "Tropical Berry Flavour"
+    }
+  ],
+  "ARB-P019": [
+    {
+      "variant_id": "ARB-031",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P020": [
+    {
+      "variant_id": "ARB-032",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P021": [
+    {
+      "variant_id": "ARB-033",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P022": [
+    {
+      "variant_id": "ARB-034",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P023": [
+    {
+      "variant_id": "ARB-035",
+      "label": "Standard / as listed"
+    }
+  ],
+  "ARB-P024": [
+    {
+      "variant_id": "ARB-036",
+      "label": "Standard / as listed"
+    }
+  ]
+}

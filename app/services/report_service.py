@@ -322,6 +322,8 @@ def create_report_version(
     This is the SaaS-safe lifecycle entry point.
     """
     version_number = get_next_version_number(db, case.id)
+    settings = get_or_create_settings(db, user)
+    effective_mode = settings.recommendation_mode_default or case.recommendation_mode
 
     report = ReportVersion(
         case_id=case.id,
@@ -332,7 +334,7 @@ def create_report_version(
         html_path=None,
         pdf_path=None,
         build_version=os.getenv("REPORT_BUILD_VERSION", "dev"),
-        recommendation_mode=case.recommendation_mode,
+        recommendation_mode=effective_mode,
         job_id=job_id,
         started_at=None,
         completed_at=None,
@@ -385,13 +387,51 @@ async def build_report_version(
 
         enriched_report = parse_and_enrich_case_html(case)
 
-        recommendation_mode = (
-            case.recommendation_mode.value
-            if hasattr(case.recommendation_mode, "value")
-            else str(case.recommendation_mode)
-        )
+        # B.3.14.5.1B.2: AI practitioner intelligence once per report build.
+        # Do not invoke final_enrichment_pipeline here: its recommendation engine
+        # can duplicate/mutate mode-specific recommendation processing.
+        # AI service supplies its own deterministic fallback when unavailable.
+        # Internal report-linked provenance; never copied into patient-facing viewer.
+        from datetime import datetime, timezone
+        import uuid
+        ai_provenance = {
+            "schema_version": 1, "status": "AI_OUTCOME_UNKNOWN", "model": None,
+            "fallback_used": None, "correlation_id": uuid.uuid4().hex,
+            "execution_timestamp": datetime.now(timezone.utc).isoformat(),
+            "reason_code": "not_executed",
+        }
+        try:
+            from app.services.ai_practitioner_intelligence import apply_practitioner_intelligence
+            enriched_report = apply_practitioner_intelligence(enriched_report, provenance_sink=ai_provenance)
+        except Exception:
+            ai_provenance.update({
+                "status": "AI_PIPELINE_FAILED", "fallback_used": True,
+                "reason_code": "integration_exception",
+                "execution_timestamp": datetime.now(timezone.utc).isoformat(),
+            })
+            import logging
+            logging.getLogger("go360.ai_practitioner_intelligence").exception(
+                "GO360_AI_ENRICHMENT_FAILED_USING_EXISTING_V3_FALLBACK"
+            )
+
 
         practitioner_settings = get_or_create_settings(db, user)
+        # Practitioner default governs regeneration. The existing Case mode is a
+        # legacy captured value; no explicit override flag exists in this schema.
+        effective_mode = practitioner_settings.recommendation_mode_default or case.recommendation_mode
+        recommendation_mode = effective_mode.value if hasattr(effective_mode, "value") else str(effective_mode)
+        report.recommendation_mode = effective_mode
+
+        # Persist a non-secret snapshot of the effective inputs for reproducibility.
+        generation_settings = {
+            "recommendation_mode": recommendation_mode,
+            "recommendation_mode_source": "practitioner_default",
+            "legacy_case_recommendation_mode": (case.recommendation_mode.value if hasattr(case.recommendation_mode, "value") else str(case.recommendation_mode)),
+            "arbonne_marketplace": getattr(practitioner_settings, "arbonne_marketplace", None),
+            "arbonne_language": getattr(practitioner_settings, "arbonne_language", None),
+            "arbonne_consultant_identifier": getattr(practitioner_settings, "arbonne_consultant_identifier", None),
+            "report_build_version": report.build_version,
+        }
 
         built = await build_report(
             enriched_report,
@@ -412,6 +452,8 @@ async def build_report_version(
             "case_id": str(case.id),
             "version_number": version_number,
             "recommendation_mode": recommendation_mode,
+            "generation_settings": generation_settings,
+            "ai_provenance": dict(ai_provenance),
             "html_path": html_path,
             "pdf_path": pdf_path,
             "viewer": viewer_payload,

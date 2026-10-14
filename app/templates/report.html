@@ -234,6 +234,16 @@
       padding:12px;
       margin-bottom:12px
     }
+    /* B.3.4B.2A: retain concluding marker interpretation together. */
+    .marker-card .marker-tail{
+      break-inside:avoid-page;
+      page-break-inside:avoid;
+    }
+    .marker-card .marker-tail p:first-child{break-after:avoid-page;page-break-after:avoid;}
+    /* B.3.4B.2A: compact only the overview panels, not marker text. */
+    .overview-pagination .panel{padding:10px 12px;margin-bottom:9px;}
+    .overview-pagination .panel p{margin-top:5px;margin-bottom:5px;}
+    .overview-pagination .panel ul{margin-top:5px;margin-bottom:5px;}
     .marker-card.sev-normal{border-left-color:#4caf50}
     .marker-card.sev-mild{border-left-color:#3b82f6}
     .marker-card.sev-moderate{border-left-color:#eab308}
@@ -541,9 +551,11 @@
       margin-bottom:0;
     }
 
+    /* B.3.1: allow a long recommendation phase to flow to the next PDF page.
+       Individual product cards remain unbroken. */
     .phase-panel{
-      page-break-inside: avoid;
-      break-inside: avoid-page;
+      page-break-inside: auto;
+      break-inside: auto;
     }
 
     .phase-panel .mini-card{
@@ -833,7 +845,7 @@
     </div>
   {% endif %}
 
-  <div class="page" style="page-break-before:always;">
+  <div class="page overview-pagination" style="page-break-before:always;">
     {{ page_header(patient_header) }}
     
     {{ section_hero(
@@ -888,6 +900,18 @@
               <strong>{{ item.title }}</strong>
               {% if item.clinical_summary %} — {{ item.clinical_summary }}{% endif %}
             </li>
+          {% endfor %}
+        </ul>
+      </div>
+    {% endif %}
+
+    {# B.3.14.4B.1: selected practitioner key patterns, printable report. #}
+    {% if key_patterns is defined and key_patterns %}
+      <div class="panel">
+        <h3>Key patterns identified</h3>
+        <ul>
+          {% for pattern in key_patterns %}
+            {% if pattern %}<li>{{ pattern }}</li>{% endif %}
           {% endfor %}
         </ul>
       </div>
@@ -1036,7 +1060,7 @@
         {{ section_hero(
           "Recommendations",
           protocol_plan.section_heading or "Recommended support plan",
-          "This section organises suggested support options into a staged plan, combining foundational and targeted measures based on the dominant scan patterns."
+          ""
         ) }}
       <div class="panel">
         <h3>{{ protocol_plan.title }}</h3>
@@ -1048,6 +1072,37 @@
       
       
         {% for phase in protocol_plan.phases %}
+        {% if recommendation_mode == 'consultant_arbonne' %}
+          {% set primary_pdf_products = phase.products %}
+          {% for category_key, category_label in [('nutrition', 'Nutrition & Wellness'), ('skin', 'Beauty & Skincare')] %}
+          {% set category_pdf_products = [] %}
+          {% for product in primary_pdf_products %}
+            {% set product_name = (product.product_name_display or product.name or '')|lower %}
+            {% set is_skin = (product.product_category_label|default('', true)|lower in ['beauty & skincare', 'beauty and skincare', 'skin care', 'skincare']) %}
+            {% if (category_key == 'skin' and is_skin) or (category_key == 'nutrition' and not is_skin) %}
+              {% set _ = category_pdf_products.append(product) %}
+            {% endif %}
+          {% endfor %}
+          {% if category_pdf_products %}
+          <h3 style="margin:8px 0 4px;font-size:13px;break-after:avoid;page-break-after:avoid;">{{ category_label }}</h3>
+          {% for pair in category_pdf_products | batch(2) %}
+          <table class="go360-product-pair" style="width:100%;table-layout:fixed;border-collapse:separate;border-spacing:6px 0;margin:0 0 6px;break-inside:avoid;page-break-inside:avoid;">
+            <tr>
+            {% for p in pair %}
+              <td style="width:50%;vertical-align:top;border:1px solid #d1d5db;border-radius:8px;padding:7px 9px;break-inside:avoid;page-break-inside:avoid;">
+                <strong>{% if p.url %}<a href="{{ p.url | e }}">{{ p.product_name_display or p.name }}</a>{% else %}{{ p.product_name_display or p.name }}{% endif %}</strong>
+                {% if p.image_url and p.image_match_status|default('') not in ['ambiguous','unmatched'] %}<div style="text-align:center;margin:6px 0;"><img src="{{ p.image_url | e }}" alt="{{ (p.product_name_display or p.name) | e }}" style="height:65px;max-width:96%;object-fit:contain;" /></div>{% endif %}
+                {% if p.supporting_sections or p.role %}<p style="margin:6px 0 0;font-size:10px;line-height:1.35;"><strong>Why recommended:</strong> {% if p.supporting_sections %}Relevant assessment areas: {{ p.supporting_sections[:3]|join(', ') }}.{% endif %} {% if p.role and p.role != 'Product category for individual suitability review' %}{{ p.role }}.{% endif %}</p>{% elif p.display_rationale or p.rationale %}<p style="margin:6px 0 0;font-size:10px;line-height:1.35;">{{ p.display_rationale or p.rationale }}</p>{% endif %}
+              </td>
+            {% endfor %}
+            {% if pair|length == 1 %}<td style="width:50%;border:0;"></td>{% endif %}
+            </tr>
+          </table>
+          {% endfor %}
+          {% endif %}
+          {% endfor %}
+        {% else %}
+
         <div class="panel phase-panel">
           <h3>{{ phase.title }}</h3>
 
@@ -1060,7 +1115,9 @@
               <div class="mini-card">
                 <div class="section-header" style="margin-bottom:6px;">
                   <div>
-                    <div class="mini-card-title" style="margin-bottom:4px;">{{ p.name }}</div>
+                    <div class="mini-card-title" style="margin-bottom:4px;">
+                      {% if p.url %}<a href="{{ p.url | e }}" target="_blank" rel="noopener noreferrer">{{ p.product_name_display or p.name }}</a>{% else %}{{ p.product_name_display or p.name }}{% endif %}
+                    </div>
                     {% if p.is_core %}
                       <span class="severity-pill sev-moderate">Core</span>
                     {% endif %}
@@ -1068,14 +1125,16 @@
                   <span class="severity-pill sev-normal">{{ p.source_label }}</span>
                 </div>
 
-                {% if p.display_rationale %}
-                  <p>{{ p.display_rationale }}</p>
+                {% if p.variants %}<div class="small-note" style="margin-top:8px;"><strong>Available options:</strong> {% for v in p.variants %}{% if not loop.first %} · {% endif %}{% if v.url %}<a href="{{ v.url | e }}" target="_blank" rel="noopener noreferrer">{{ v.label }}</a>{% else %}<span>{{ v.label }}</span>{% endif %}{% endfor %}</div>{% endif %}
+                {% if p.display_rationale or p.rationale %}
+                  <p>{{ p.display_rationale or p.rationale }}</p>
                 {% endif %}
               </div>
             {% endfor %}
           </div>
         </div>
-      {% endfor %}
+        {% endif %}
+        {% endfor %}
     </div>
   {% endif %}
 
@@ -1085,7 +1144,14 @@
   {% if complete_product_mapping %}
     <div class="page" style="page-break-before:always;">
       {{ page_header(patient_header) }}
-
+      {% if recommendation_mode == 'consultant_arbonne' %}
+        {{ section_hero("Recommendation context", "Product recommendation overview", "Assessment-indicated wellness themes are discussion prompts, not confirmed deficiencies or validated product-to-marker associations.") }}
+        <table style="width:100%; border-collapse:collapse; font-size:10.5px;line-height:1.3;">
+          <thead><tr style="background:#f3f4f6;"><th style="padding:8px;text-align:left;">Product</th><th style="padding:8px;text-align:left;">Assessment context</th><th style="padding:8px;text-align:left;">Matched product role</th></tr></thead>
+          <tbody>{% for p in complete_product_mapping %}<tr style="border-bottom:1px solid #e5e7eb;"><td style="padding:8px;"><strong>{{ p.name }}</strong><br><span class="severity-pill sev-normal">{{ p.source_label or "Arbonne" }}</span><br><span class="small-note">{{ 'Beauty & Skincare' if (('clear future' in (p.name or '')|lower and 'cleanser' in (p.name or '')|lower) or ('hydrateme' in (p.name or '')|lower and 'cleanser' in (p.name or '')|lower)) else (p.product_category_label or 'Nutrition & Wellness') }}</span>{% if p.variants %}<div class="small-note" style="margin-top:8px;"><strong>Available options:</strong> {% for v in p.variants %}{% if not loop.first %} · {% endif %}{% if v.url %}<a href="{{ v.url | e }}" target="_blank" rel="noopener noreferrer">{{ v.label }}</a>{% else %}<span>{{ v.label }}</span>{% endif %}{% endfor %}</div>{% endif %}{% if p.url and not p.variants %}<br><a href="{{ p.url | e }}" target="_blank" rel="noopener noreferrer">{{ 'View individual product' if p.link_type == 'product' else 'Visit consultant storefront' }}</a>{% endif %}</td><td style="padding:5px 8px;">{{ p.sections | join(', ') if p.sections else 'No product-specific assessment association established' }}</td><td style="padding:5px 8px;">{{ p.role }}</td></tr>{% endfor %}</tbody>
+        </table>
+        <p class="small-note">The listed assessment areas are contextual associations only. No QRMA marker is presented as proof of product need or efficacy.</p>
+      {% else %}
           {{ section_hero(
             "Reference mapping",
             "Complete product recommendation mapping",
@@ -1116,9 +1182,9 @@
           {% endfor %}
         </tbody>
       </table>
+      {% endif %}
     </div>
   {% endif %}
-
 
     {% if priority_section_intro %}
       <div class="page section-intro-page">
@@ -1260,18 +1326,12 @@
     </div>
   {% endif %}
 
-    <div class="page">
-      {{ page_header(patient_header) }}
-      {{ section_hero(
-        "Technical reference",
-        "Complete system marker tables",
-        "This section includes every parsed system and every marker across the report, including those within range, as the full explained reference layer."
-      ) }}
-    </div>
-
    {% for table in full_marker_tables %}
     <div class="page">
       {{ page_header(patient_header) }}
+      {% if loop.first %}
+      {{ section_hero("Technical reference", "Complete system marker tables", "This section includes every parsed system and every marker across the report, including those within range, as the full explained reference layer.") }}
+      {% endif %}
 
       <div class="section-header">
         <h2>{{ table.title }}</h2>
@@ -1320,6 +1380,7 @@
               <p><strong>Functional significance:</strong> {{ row.functional_significance }}</p>
             {% endif %}
 
+            <div class="marker-tail">
             {% if row.common_patterns %}
               <p><strong>Common patterns:</strong> {{ row.common_patterns }}</p>
             {% endif %}
@@ -1327,6 +1388,7 @@
             {% if row.your_result_summary %}
               <p><strong>Your result in this scan:</strong> {{ row.your_result_summary }}</p>
             {% endif %}
+            </div>
           </div>
         {% endfor %}
       </div>
@@ -1360,7 +1422,7 @@
               {% endfor %}
             </ul>
           {% endif %}
-          {% if product.url %}<p><span class="label">Product link:</span> {{ product.url }}</p>{% endif %}
+          {% if product.url %}<p><a href="{{ product.url | e }}" target="_blank" rel="noopener noreferrer">View product on Arbonne storefront</a></p>{% endif %}
         </div>
       {% endfor %}
     </div>

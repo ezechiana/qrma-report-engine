@@ -1,0 +1,30 @@
+{
+  "schema_version": "7G.4A",
+  "mechanisms": {
+    "vitamin_mineral_support": {
+      "category": "foundation_nutrition",
+      "activation": "general nutritional context only; not deficiency"
+    },
+    "micronutrient_repletion": {
+      "category": "foundation_nutrition",
+      "activation": "requires independently substantiated dietary/laboratory evidence; NOT activated by QRMA alone"
+    },
+    "skin_hydration_support": {
+      "category": "skin_barrier",
+      "activation": "customer-stated cosmetic concern + verified product suitability"
+    },
+    "skin_barrier_support": {
+      "category": "skin_barrier",
+      "activation": "customer-stated cosmetic concern + verified product suitability"
+    },
+    "skin_appearance_support": {
+      "category": "skin_barrier",
+      "activation": "customer-stated cosmetic concern + verified product suitability"
+    },
+    "blemish_prone_skin_support": {
+      "category": "skin_barrier",
+      "activation": "customer-stated cosmetic concern + verified product suitability"
+    }
+  },
+  "note": "Vocabulary registry; not a change to VitalHealth maps. Skincare remains inactive until product validation."
+}

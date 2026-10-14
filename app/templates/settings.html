@@ -227,10 +227,23 @@
                 <option value="mixed_clinical">mixed_clinical</option>
                 <option value="vitalhealth_clinical_optimised">vitalhealth_clinical_optimised</option>
                 <option value="affiliate_vitalhealth">affiliate_vitalhealth</option>
+                <option value="consultant_arbonne">Arbonne Independent Consultant</option>
                 <option value="recommendations_off">recommendations_off</option>
             </select>
         </div>
 
+        <div class="field">
+            <label>Arbonne marketplace</label>
+            <select id="arbonne_marketplace"><option value="gb">United Kingdom</option><option value="us">United States</option><option value="ca">Canada</option></select>
+        </div>
+        <div class="field">
+            <label>Arbonne storefront language</label>
+            <select id="arbonne_language"></select>
+        </div>
+        <div class="field" style="grid-column: 1 / -1;">
+            <label>Arbonne Independent Consultant identifier</label>
+            <input id="arbonne_consultant_identifier" placeholder="e.g. lisaincaudo" autocomplete="off">
+        </div>
         <div class="field" style="grid-column: 1 / -1;">
             <label>Report subtitle</label>
             <input id="report_subtitle">
@@ -466,6 +479,9 @@
         document.getElementById("report_subtitle").value = data.report_subtitle || "";
         document.getElementById("support_email").value = data.support_email || "";
         document.getElementById("website_url").value = data.website_url || "";
+        document.getElementById("arbonne_marketplace").value = data.arbonne_marketplace || "gb";
+        refreshArbonneLanguages(data.arbonne_language || "en");
+        document.getElementById("arbonne_consultant_identifier").value = data.arbonne_consultant_identifier || "";
         document.getElementById("recommendation_mode_default").value =
             data.recommendation_mode_default || "natural_approaches_clinical";
         document.getElementById("clinic_tagline").value = data.clinic_tagline || "";
@@ -485,6 +501,22 @@
         markSaved();
     }
 
+    function refreshArbonneLanguages(preferred) {
+        const market = document.getElementById("arbonne_marketplace").value;
+        const allowed = {gb: ["en", "fr", "es"], us: ["en", "es"], ca: ["en", "fr"]};
+        const names = {en: "English", fr: "French", es: "Spanish"};
+        const select = document.getElementById("arbonne_language");
+        const current = preferred || select.value || "en";
+        select.replaceChildren();
+        for (const code of allowed[market] || ["en"]) {
+            const opt = document.createElement("option");
+            opt.value = code; opt.textContent = names[code]; select.appendChild(opt);
+        }
+        select.value = (allowed[market] || []).includes(current) ? current : "en";
+    }
+    document.getElementById("arbonne_marketplace").addEventListener("change", () => refreshArbonneLanguages());
+    refreshArbonneLanguages("en");
+
     function collectSettingsPayload(existing = {}) {
         const logoVal = document.getElementById("logo_url").value.trim();
         const coverVal = document.getElementById("cover_image_url").value.trim();
@@ -501,6 +533,9 @@
             show_powered_by_go360: document.getElementById("show_powered_by_go360").value === "true",
             report_theme: document.getElementById("report_theme").value || "default",
             recommendation_mode_default: document.getElementById("recommendation_mode_default").value,
+            arbonne_marketplace: document.getElementById("arbonne_marketplace").value,
+            arbonne_language: document.getElementById("arbonne_language").value,
+            arbonne_consultant_identifier: document.getElementById("arbonne_consultant_identifier").value.trim() || null,
             preferred_currency: document.getElementById("preferred_currency")?.value || latestSettings.preferred_currency || "USD",
             monthly_goal_minor: majorToMinor(document.getElementById("monthly_goal_major")?.value || minorToMajor(latestSettings.monthly_goal_minor || 200000)),
         };
@@ -962,7 +997,7 @@
         }
     });
 
-    document.querySelectorAll("#clinic_name, #clinic_tagline, #report_theme, #show_powered_by_go360, #report_title, #recommendation_mode_default, #report_subtitle, #support_email, #website_url").forEach(el => {
+    document.querySelectorAll("#clinic_name, #clinic_tagline, #report_theme, #show_powered_by_go360, #report_title, #recommendation_mode_default, #arbonne_marketplace, #arbonne_language, #arbonne_consultant_identifier, #report_subtitle, #support_email, #website_url").forEach(el => {
         const eventName = el.tagName === "SELECT" ? "change" : "input";
         el.addEventListener(eventName, () => markUnsaved("Unsaved changes"));
     });

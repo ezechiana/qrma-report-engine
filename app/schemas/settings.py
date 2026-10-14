@@ -28,6 +28,9 @@ class PractitionerSettingsRead(BaseModel):
     report_theme: Optional[str] = "default"
 
     recommendation_mode_default: str = "natural_approaches_clinical"
+    arbonne_marketplace: str = "gb"
+    arbonne_language: str = "en"
+    arbonne_consultant_identifier: Optional[str] = None
 
     logo_preview_url: Optional[str] = None
     cover_image_preview_url: Optional[str] = None
@@ -56,6 +59,9 @@ class PractitionerSettingsUpdate(BaseModel):
     report_theme: Optional[str] = None
 
     recommendation_mode_default: Optional[str] = None
+    arbonne_marketplace: Optional[str] = None
+    arbonne_language: Optional[str] = None
+    arbonne_consultant_identifier: Optional[str] = None
 
 
 class BrandAssetUploadResponse(BaseModel):

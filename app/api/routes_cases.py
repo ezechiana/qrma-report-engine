@@ -271,6 +271,30 @@ def get_case_status(
     }
 
 
+@router.get("/{case_id}/report-versions")
+def list_case_report_versions(
+    case_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    case = _get_owned_case(db, current_user, case_id)
+    if not case:
+        raise HTTPException(status_code=404, detail="Case not found")
+    rows = (db.query(ReportVersion)
+            .filter(ReportVersion.case_id == case.id)
+            .order_by(ReportVersion.version_number.desc(), ReportVersion.generated_at.desc())
+            .all())
+    return [{
+        "id": str(r.id), "version_number": r.version_number,
+        "status": _enum_value(r.status),
+        "generated_at": r.generated_at.isoformat() if r.generated_at else None,
+        "recommendation_mode": _enum_value(r.recommendation_mode),
+        "build_version": r.build_version,
+        "has_pdf": bool(r.pdf_path),
+        "generation_settings": ((r.report_json or {}).get("generation_settings") or {}),
+    } for r in rows]
+
+
 @router.get("/{case_id}/latest-report")
 def get_latest_report_for_case(
     case_id: UUID,
@@ -287,7 +311,7 @@ def get_latest_report_for_case(
 
     report = (
         db.query(ReportVersion)
-        .filter(ReportVersion.case_id == case.id)
+        .filter(ReportVersion.case_id == case.id, ReportVersion.status.in_(["ready", "final"]))
         .order_by(ReportVersion.version_number.desc(), ReportVersion.generated_at.desc())
         .first()
     )

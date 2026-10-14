@@ -51,6 +51,7 @@ class ReportStatus(str, enum.Enum):
 class RecommendationMode(str, enum.Enum):
     recommendations_off = "recommendations_off"
     affiliate_vitalhealth = "affiliate_vitalhealth"
+    consultant_arbonne = "consultant_arbonne"
     vitalhealth_clinical_optimised = "vitalhealth_clinical_optimised"
     natural_approaches_clinical = "natural_approaches_clinical"
     mixed_clinical = "mixed_clinical"
@@ -87,6 +88,11 @@ class PractitionerSettings(Base):
         Enum(RecommendationMode),
         default=RecommendationMode.natural_approaches_clinical,
     )
+
+    arbonne_marketplace: Mapped[str] = mapped_column(String(2), default="gb", nullable=False)
+    arbonne_language: Mapped[str] = mapped_column(String(2), default="en", nullable=False)
+    arbonne_consultant_identifier: Mapped[Optional[str]] = mapped_column(String(100), nullable=True)
+
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())

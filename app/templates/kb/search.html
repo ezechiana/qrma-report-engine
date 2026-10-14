@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Search | Go360 Knowledge Base</title>
+<style>
+:root{--navy:#0d2745;--ink:#192634;--muted:#657587;--line:#dbe4ec;--gold:#d0ad63;--blue:#2563a6;--max:1120px}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#eef3f7;line-height:1.5}
+a{color:inherit}.top{background:var(--navy);color:#fff;border-bottom:3px solid var(--gold)}.topin,.wrap{width:min(calc(100% - 32px),var(--max));margin:auto}.topin{min-height:70px;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:800;text-decoration:none}.brand span{font-weight:500;opacity:.7}.nav{display:flex;gap:18px}.nav a{font-size:.86rem;text-decoration:none;opacity:.82}
+.page{padding:30px 0 70px}.search{display:flex;gap:8px;background:#fff;border:1px solid var(--line);padding:7px;border-radius:14px;max-width:820px}.search input{flex:1;border:0;outline:none;padding:10px 12px;font-size:1rem}.search button{border:0;background:var(--navy);color:#fff;border-radius:9px;padding:0 18px;font-weight:700}
+h1{color:var(--navy);margin:22px 0 18px}.group{margin-top:26px}.group h2{font-size:1rem;text-transform:uppercase;letter-spacing:.1em;color:var(--muted);margin:0 0 10px}.group-note{font-size:.86rem;color:var(--muted);margin:-3px 0 11px}
+.results{display:grid;gap:10px}.result{background:#fff;border:1px solid var(--line);border-radius:14px;padding:16px 18px;text-decoration:none;box-shadow:0 4px 14px rgba(15,39,66,.045)}.result:hover{border-color:#9bb8d2}.type{text-transform:uppercase;font-size:.68rem;letter-spacing:.11em;color:var(--blue);font-weight:800}.title{font-weight:800;color:var(--navy);font-size:1.07rem;margin:3px 0}.idline{font-size:.82rem;color:#485a6d;margin-bottom:2px}.sub,.meta{color:var(--muted);font-size:.86rem}.meta{margin-top:2px}
+.explore-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:10px}.explore{border-left:4px solid var(--gold)}
+.more{margin-top:10px}.more summary{cursor:pointer;color:var(--navy);font-weight:750;display:inline-block;padding:8px 0}.more[open] summary{margin-bottom:8px}.empty{padding:25px;background:#fff;border:1px solid var(--line);border-radius:14px}
+</style>
+</head>
+<body>
+<header class="top"><div class="topin"><a class="brand" href="/kb/">Go360 <span>Knowledge Base</span></a><nav class="nav"><a href="/kb/a-z">A–Z</a></nav></div></header>
+<main class="wrap page">
+<form class="search" action="/kb/search" method="get">
+<input name="q" value="{{ query }}" type="search" placeholder="Search markers, IDs, systems or patterns"><button>Search</button>
+</form>
+<h1>{% if query %}Results for “{{ query }}”{% else %}Search{% endif %}</h1>
+
+{% if results %}
+{% set strong = results | selectattr('match_group','equalto','strong') | list %}
+{% set qrma = results | selectattr('match_group','equalto','qrma') | list %}
+{% set explore = results | selectattr('match_group','equalto','explore') | list %}
+{% set direct = results | selectattr('match_group','equalto','direct') | list %}
+{% set contextual = results | selectattr('match_group','equalto','contextual') | list %}
+
+{% macro card(r, extra='') -%}
+<a class="result {{ extra }}" href="{{ r.url }}">
+<div class="type">{{ r.result_type }}</div><div class="title">{{ r.title }}</div>
+{% if r.id_line %}<div class="idline">{{ r.id_line }}</div>{% endif %}
+{% if r.subtitle %}<div class="sub">{{ r.subtitle }}</div>{% endif %}
+{% if r.meta %}<div class="meta">{{ r.meta }}</div>{% endif %}
+</a>
+{%- endmacro %}
+
+{% if strong %}
+<section class="group"><h2>{% if strong|length == 1 %}Best match{% else %}Best matches{% endif %}</h2><div class="results">
+{% for r in strong %}{{ card(r) }}{% endfor %}
+</div></section>
+{% endif %}
+
+{% if qrma %}
+<section class="group"><h2>QRMA software {% if qrma|length == 1 %}match{% else %}matches{% endif %}</h2><div class="results">
+{% for r in qrma %}{{ card(r) }}{% endfor %}
+</div></section>
+{% endif %}
+
+{% if explore %}
+<section class="group"><h2>Explore</h2><p class="group-note">Browse the matching Go360 system or functional pattern.</p><div class="explore-grid">
+{% for r in explore %}{{ card(r,'explore') }}{% endfor %}
+</div></section>
+{% endif %}
+
+{% if direct %}
+<section class="group"><h2>Related markers</h2><div class="results">
+{% for r in direct %}{{ card(r) }}{% endfor %}
+</div></section>
+{% endif %}
+
+{% if contextual %}
+<section class="group"><h2>Clinically related</h2><p class="group-note">Additional markers linked through the clinical content model.</p>
+<div class="results">
+{% for r in contextual[:6] %}{{ card(r) }}{% endfor %}
+</div>
+{% if contextual|length > 6 %}
+<details class="more"><summary>Show {{ contextual|length - 6 }} more clinically related results</summary><div class="results">
+{% for r in contextual[6:20] %}{{ card(r) }}{% endfor %}
+</div></details>
+{% endif %}
+</section>
+{% endif %}
+
+{% else %}
+<div class="empty">{% if query %}No matching knowledge-base entries were found.{% else %}Enter a search term above.{% endif %}</div>
+{% endif %}
+</main></body></html>

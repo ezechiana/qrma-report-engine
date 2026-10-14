@@ -748,6 +748,7 @@ def _section_card_map(report: ParsedReport):
     scan_scores = compute_scan_scores_v3(all_non_body) if USE_V3_SCORING else compute_scan_scores(all_non_body)
     # 🔥 ADD THIS LINE (Pattern Engine V2)
     report = attach_pattern_engine_v3_output(report) if USE_V3_PATTERN_ENGINE else attach_pattern_engine_v2_output(report)
+    # B.3.11.4: experimental shadow scoring is invoked once by build_report.
 
     if USE_V3_CLINICAL_SUMMARY:
         report = build_clinical_summary_v3(report)
@@ -1764,6 +1765,7 @@ def build_report_context(
     scan_scores = compute_scan_scores_v3(all_non_body) if USE_V3_SCORING else compute_scan_scores(all_non_body)
 
     report = attach_pattern_engine_v3_output(report) if USE_V3_PATTERN_ENGINE else attach_pattern_engine_v2_output(report)
+    # B.3.11.4: experimental shadow scoring is invoked once by build_report.
 
     if USE_V3_CLINICAL_SUMMARY:
         report = build_clinical_summary_v3(report)
@@ -1790,7 +1792,24 @@ def build_report_context(
     priority_sections = sorted(priority_sections, key=_priority_sort_key)
     priority_section_intro = build_priority_category_review_intro(priority_sections)
 
+    # ARB-MVP-01B.3: only Arbonne consumes these practitioner-specific fields.
+    # Other modes retain the exact previous clinical_context=None behaviour.
     clinical_context = None
+    if normalize_recommendation_mode(recommendation_mode or os.getenv(
+        "REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical"
+    )) == "consultant_arbonne":
+        def _arb_setting(name, default=None):
+            if practitioner_settings is None:
+                return default
+            if isinstance(practitioner_settings, dict):
+                return practitioner_settings.get(name, default)
+            return getattr(practitioner_settings, name, default)
+
+        clinical_context = {
+            "arbonne_marketplace": _arb_setting("arbonne_marketplace", "gb"),
+            "arbonne_language": _arb_setting("arbonne_language", "en"),
+            "arbonne_consultant_identifier": _arb_setting("arbonne_consultant_identifier"),
+        }
 
     recommendation_mode = normalize_recommendation_mode(
         recommendation_mode or os.getenv("REPORT_RECOMMENDATION_MODE", "natural_approaches_clinical")
@@ -1806,6 +1825,45 @@ def build_report_context(
         protocol = compose_protocol(report, products)
         protocol = enrich_protocol_plan_with_narrative_v3(report, protocol)
         complete_mapping = build_complete_product_mapping(products)
+        arbonne_category_rankings = {}
+        if recommendation_mode == "consultant_arbonne":
+            from app.services.arbonne_categories import display_name
+            import os as _arb_os
+            if _arb_os.environ.get('GO360_ARB_WEIGHTED_RUNTIME_OPT_IN') == '1':
+                from app.services.arbonne_weighted_runtime import resolve_by_category
+                _cfg = clinical_context or {}
+                arbonne_category_rankings = resolve_by_category(
+                    report, market=str(_cfg.get('arbonne_marketplace') or 'gb').lower(),
+                    language=str(_cfg.get('arbonne_language') or 'en').lower(),
+                    consultant=_cfg.get('arbonne_consultant_identifier'), limit=10,
+                )
+                # The support plan is nutrition-only; category discovery remains independent.
+                products = (list(arbonne_category_rankings.get('nutrition_wellness') or [])[:6] + list(arbonne_category_rankings.get('beauty_skincare') or [])[:2])
+            else:
+                arbonne_category_rankings = {'nutrition_wellness': products, 'beauty_skincare': [], 'body_personal_care': []}
+            if isinstance(protocol, dict):
+                protocol['phases'] = ([{
+                    'title': 'Nutrition & Wellness',
+                    'summary': 'Assessment-context product options for consultant review.',
+                    'products': products,
+                }] if products else [])
+            complete_mapping = []
+            for product in products:
+                sections = list(product.get('supporting_sections') or [])
+                role = ', '.join(str(m).replace('_', ' ') for m in (product.get('matched_mechanisms') or [])[:2])
+                if not role:
+                    role = ', '.join(str(m).replace('_', ' ') for m in (product.get('matched_categories') or [])[:2])
+                complete_mapping.append({
+                    'name': product.get('product_name_display') or display_name(product.get('name')),
+                    'source_label': product.get('source_label', 'Arbonne'),
+                    'product_category': product.get('product_category'),
+                    'product_category_label': product.get('product_category_label'),
+                    'image_url': product.get('image_url'),
+                    'sections': sections, 'role': product.get('role') or role or 'Product category for individual suitability review',
+                    'rationale': product.get('rationale'), 'url': product.get('url'),
+                    'link_type': product.get('link_type'), 'variants': product.get('variants', []),
+                    'marker_evidence_status': product.get('marker_evidence_status', 'not_established'),
+                })
     else:
         protocol = None
         complete_mapping = []
@@ -1912,12 +1970,14 @@ def build_report_context(
 
     practitioner_summary = normalise_recommendation_narrative(
         normalise_narrative_text(
-            clinical_summary_v3.get("practitioner_summary")
-            or getattr(report, "practitioner_summary", None)
+            getattr(report, "practitioner_summary", None)
+            or clinical_summary_v3.get("practitioner_summary")
         )
     )
 
-    key_patterns = []
+    ai_key_patterns = getattr(report, "key_patterns", None)
+    key_patterns = [x.strip() for x in ai_key_patterns if isinstance(x, str) and x.strip()] if isinstance(ai_key_patterns, list) else []
+    v3_key_patterns = []
     for text in [
         clinical_summary_v3.get("dominant_driver"),
         clinical_summary_v3.get("secondary_drivers"),
@@ -1925,9 +1985,11 @@ def build_report_context(
         clinical_summary_v3.get("why_this_matters"),
     ]:
         if text:
-            key_patterns.append(
+            v3_key_patterns.append(
                 normalise_recommendation_narrative(normalise_narrative_text(text))
             )
+    if not key_patterns:
+        key_patterns = v3_key_patterns
 
     if not key_patterns and getattr(report, "patterns", None):
         key_patterns = [
@@ -1935,7 +1997,8 @@ def build_report_context(
             for x in build_v2_key_patterns(report)
         ]
 
-    raw_actions = clinical_summary_v3.get("priority_actions")
+    ai_priority_actions = getattr(report, "priority_actions", None)
+    raw_actions = ai_priority_actions if isinstance(ai_priority_actions, list) and any(isinstance(x, str) and x.strip() for x in ai_priority_actions) else clinical_summary_v3.get("priority_actions")
 
     if isinstance(raw_actions, list):
         priority_actions = [
@@ -2033,7 +2096,10 @@ def build_report_context(
         contributing_patterns_context,
     )
     overall_summary = glance_narrative["overall_summary"]
-    practitioner_summary = glance_narrative["practitioner_summary"]
+    # B.3.14.2: preserve calibrated practitioner intelligence when present;
+    # retain the legacy V3 rewrite only as fallback.
+    ai_practitioner_summary = getattr(report, "practitioner_summary", None)
+    practitioner_summary = ai_practitioner_summary.strip() if isinstance(ai_practitioner_summary, str) and ai_practitioner_summary.strip() else glance_narrative["practitioner_summary"]
     primary_pattern_context = glance_narrative["primary_pattern"]
     contributing_patterns_context = glance_narrative["contributing_patterns"]
 
@@ -2086,6 +2152,7 @@ def build_report_context(
         "product_recommendations": products, #
         "protocol_plan": protocol, # 
         "complete_product_mapping": complete_mapping,
+        "arbonne_category_rankings": arbonne_category_rankings if recommendation_mode == "consultant_arbonne" else {},
 
         "primary_pattern": primary_pattern_context,
 
@@ -2214,9 +2281,11 @@ def build_viewer_payload(
             "body_system_cards": _safe_list(ctx.get("body_system_cards")),
         },
         "recommendations": {
+            "recommendation_mode": ctx.get("recommendation_mode"),
             "clinical_recommendations": _safe_list(ctx.get("clinical_recommendations")),
             "protocol_plan": _safe_dict(ctx.get("protocol_plan")),
             "complete_product_mapping": _safe_list(ctx.get("complete_product_mapping")),
+            "arbonne_category_rankings": _safe_dict(ctx.get("arbonne_category_rankings")),
             "product_recommendations": _safe_list(ctx.get("product_recommendations")),
         },
         "detail": {
@@ -2282,6 +2351,16 @@ async def build_report(
         recommendation_mode=recommendation_mode,
         practitioner_settings=practitioner_settings,
     )
+
+    # B.3.11.4: one diagnostic evaluation per build_report invocation.
+    # This is observational only; never mutate or attach shadow results.
+    if os.getenv("GO360_DIRECTIONAL_PATTERN_SHADOW", "0") == "1":
+        try:
+            from app.services.go360_directional_shadow import run_shadow as _go360_shadow_run
+            _go360_shadow_run(report)
+        except Exception:
+            import logging
+            logging.getLogger("go360.directional_shadow").exception("GO360_SHADOW_INVOCATION_FAILED")
 
     if not isinstance(viewer_payload, dict) or not viewer_payload:
         raise ValueError("Report builder produced an empty viewer_payload.")

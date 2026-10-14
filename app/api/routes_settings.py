@@ -66,6 +66,9 @@ def _serialise_settings(settings) -> PractitionerSettingsRead:
         "clinic_tagline": getattr(settings, "clinic_tagline", None),
         "show_powered_by_go360": getattr(settings, "show_powered_by_go360", True),
         "report_theme": getattr(settings, "report_theme", None) or "default",
+        "arbonne_marketplace": settings.arbonne_marketplace,
+        "arbonne_language": settings.arbonne_language,
+        "arbonne_consultant_identifier": settings.arbonne_consultant_identifier,
         "recommendation_mode_default": settings.recommendation_mode_default.value
             if hasattr(settings.recommendation_mode_default, "value")
             else settings.recommendation_mode_default,

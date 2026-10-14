@@ -29,6 +29,7 @@ from app.api.routes_platform_settings import router as platform_settings_router
 from app.api.routes_referrals import router as referrals_router
 from app.api.routes_platform_monitoring import router as platform_monitoring_router
 from app.api.routes_platform_users import router as platform_users_router
+from app.api.routes_kb import router as kb_router
 
 
 from app.db.base import Base
@@ -159,7 +160,15 @@ def create_app() -> FastAPI:
     app.include_router(referrals_router)
     app.include_router(platform_monitoring_router)
     app.include_router(platform_users_router)
+    app.include_router(kb_router)
 
+    # GO360_ARB_2F2D11_7_PRIVATE_LOCAL_PREVIEW_BEGIN
+    import os as _go360_preview_os
+    if (_go360_preview_os.environ.get('GO360_ENV', '').lower() in ('local', 'development', 'test')
+            and _go360_preview_os.environ.get('GO360_ARB_PRIVATE_PREVIEW_117') == '1'):
+        from app.services.go360_private_preview_117 import router as _go360_private_preview_router
+        app.include_router(_go360_private_preview_router)
+    # GO360_ARB_2F2D11_7_PRIVATE_LOCAL_PREVIEW_END
     # Legacy engine/debug routes
     app.include_router(engine_router)
 

@@ -54,6 +54,23 @@ def update_settings(db: Session, settings: PractitionerSettings, payload: dict) 
             normalize_recommendation_mode(payload["recommendation_mode_default"])
         )
 
+    # Validate the combined effective locale before mutating the ORM instance.
+    import re
+    allowed = {"gb": {"en", "fr", "es"}, "us": {"en", "es"}, "ca": {"en", "fr"}, "au": {"en"}, "nz": {"en"}}
+    market = (payload.get("arbonne_marketplace") or settings.arbonne_marketplace or "gb").strip().lower()
+    language = (payload.get("arbonne_language") or settings.arbonne_language or "en").strip().lower()
+    if market not in allowed or language not in allowed[market]:
+        raise ValueError("Unsupported Arbonne marketplace/language combination")
+    if "arbonne_marketplace" in payload:
+        payload["arbonne_marketplace"] = market
+    if "arbonne_language" in payload:
+        payload["arbonne_language"] = language
+    if "arbonne_consultant_identifier" in payload:
+        identifier = (payload["arbonne_consultant_identifier"] or "").strip()
+        if identifier and not re.fullmatch(r"[A-Za-z0-9_-]{1,100}", identifier):
+            raise ValueError("Invalid Arbonne consultant identifier")
+        payload["arbonne_consultant_identifier"] = identifier or None
+
     for field, value in payload.items():
         value = _clean_placeholder(value)
 

@@ -1,8 +1,0 @@
-{
-    "clinical_context": {
-        "conditions": ["ADHD", "Colds and Flu"],
-        "symptoms": ["immunity", "gut healing"],
-        "contraindications": ["stimulants"],
-        "priority_focus": ["immunity", "energy"]
-    }
-}

@@ -1,6 +1,9 @@
 from __future__ import annotations
 
 import tempfile
+import base64
+import mimetypes
+import re
 from pathlib import Path
 
 from playwright.async_api import async_playwright
@@ -66,6 +69,19 @@ def build_footer_template(config: dict) -> str:
     """
 
 
+def _embed_arbonne_static_images(html_content: str) -> str:
+    """Embed local Arbonne images for Chromium set_content; no network requests."""
+    static_dir = Path(__file__).resolve().parents[1] / "static" / "arbonne" / "products"
+    pattern = re.compile(r"(src=[\"'])(/static/arbonne/products/([a-zA-Z0-9_-]+\.(?:png|jpg|jpeg|webp)))([\"'])", re.I)
+    def replace(match):
+        image_path = static_dir / match.group(3)
+        if not image_path.is_file():
+            return match.group(0)
+        data_uri = 'data:' + (mimetypes.guess_type(image_path.name)[0] or 'image/png') + ';base64,' + base64.b64encode(image_path.read_bytes()).decode('ascii')
+        return match.group(1) + data_uri + match.group(4)
+    return pattern.sub(replace, html_content)
+
+
 async def save_pdf(html_content: str, filename: str) -> str:
     """
     Render to a temporary local file, then upload to S3.
@@ -90,7 +106,7 @@ async def save_pdf(html_content: str, filename: str) -> str:
             browser = await p.chromium.launch(headless=True)
             page = await browser.new_page()
 
-            await page.set_content(html_content, wait_until="networkidle")
+            await page.set_content(_embed_arbonne_static_images(html_content), wait_until="networkidle")
 
             await page.pdf(
                 path=str(temp_pdf_path),

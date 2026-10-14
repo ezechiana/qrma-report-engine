@@ -18,6 +18,7 @@
 {% set primary_pattern = ov.get('primary_pattern') if ov is mapping else none %}
 {% set contributing_patterns = ov.get('contributing_patterns', []) if ov is mapping else [] %}
 {% set priority_actions = ov.get('priority_actions', []) if ov is mapping else [] %}
+{% set key_patterns = ov.get('key_patterns', []) if ov is mapping else [] %}
 {% set clinical_summary_v3 = ov.get('clinical_summary_v3', {}) if ov is mapping else {} %}
 
 {% macro section_slug(value) -%}
@@ -172,6 +173,17 @@
                         </div>
                         {% endif %}
 
+                        {% if key_patterns %}
+                        <div class="summary-card">
+                            <h3>Key patterns identified</h3>
+                            <ul>
+                                {% for item in key_patterns %}
+                                    <li>{{ item }}</li>
+                                {% endfor %}
+                            </ul>
+                        </div>
+                        {% endif %}
+
                         {% if priority_actions %}
                         <div class="summary-card">
                             <h3>Immediate priorities for follow-up</h3>
@@ -205,7 +217,7 @@
             </section>
 
             <section id="systems-overview" class="panel card">
-                <h2 style="font-size: 28px; margin-bottom: 6px;">System balance overview</h2>
+                <h2>System balance overview</h2>
                 <p class="subtle" style="font-size:15px; margin-bottom:18px;">
                     A system-level view showing where the main functional activity and clustering appear across the scan.
                 </p>
@@ -269,8 +281,7 @@
 
                 <div class="tabs">
                     <button class="tab-btn active" data-tab="clinical-tab">Clinical</button>
-                    <button class="tab-btn" data-tab="plan-tab">Support plan</button>
-                    <button class="tab-btn" data-tab="products-tab">Products</button>
+                    <button class="tab-btn" data-tab="plan-tab">Support Plan &amp; Products</button>
                 </div>
 
                 <div id="clinical-tab" class="tab-panel active">
@@ -332,55 +343,127 @@
                             {% endif %}
                         </div>
 
+                        <h3 style="margin:16px 0 5px;">Recommended Products</h3>
                         {% if recs.protocol_plan.phases %}
-                            <div class="grid-2" style="margin-top:14px;">
-                                {% for phase in recs.protocol_plan.phases %}
-                                    <div class="mini-card">
-                                        <div class="mini-card-title">{{ phase.title }}</div>
-                                        {% if phase.summary %}<p>{{ phase.summary }}</p>{% endif %}
-                                        {% if phase.products %}
-                                            <ul>
-                                                {% for product in phase.products %}
-                                                    <li>
-                                                        <strong>{{ product.name or product.title }}</strong>
-                                                        {% if product.display_rationale %}
-                                                            — {{ product.display_rationale }}
-                                                        {% endif %}
-                                                    </li>
-                                                {% endfor %}
-                                            </ul>
+                            {% set primary_products = [] %}
+                            {% for phase in recs.protocol_plan.phases %}
+                              {% for product in phase.products %}
+                                {% set _ = primary_products.append(product) %}
+                              {% endfor %}
+                            {% endfor %}
+                            {% for category_key, category_label in [('nutrition', 'Nutrition & Wellness'), ('skin', 'Beauty & Skincare')] %}
+                              {% set category_items = [] %}
+                              {% for product in primary_products %}
+                                {% set product_name = (product.product_name_display or product.name or product.title or '')|lower %}
+                                {% set product_category = (product.category|default('', true) or product.product_category|default('', true) or product.category_label|default('', true) or '')|lower %}
+                                {% set is_skin = ('skincare' in product_category or 'skin care' in product_category or 'beauty' in product_category or 'lip balm' in product_name or 'eye mask' in product_name or ('clear future' in product_name and 'cleanser' in product_name) or ('hydrateme' in product_name and 'cleanser' in product_name)) %}
+                                {% if (category_key == 'skin' and is_skin) or (category_key == 'nutrition' and not is_skin) %}
+                                  {% set _ = category_items.append(product) %}
+                                {% endif %}
+                              {% endfor %}
+                              {% if category_items %}
+                                <div class="mini-card" style="margin-top:14px;">
+                                  <div class="mini-card-title">{{ category_label }}</div>
+                                  <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin-top:12px;">
+                                    {% for product in category_items %}
+                                      <div class="mini-card" style="min-width:0;">
+                                        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:8px;">
+                                          <strong>{{ product.product_name_display or product.name or product.title }}</strong>
+                                          {% set product_brand = product.source_label|default('', true) or product.brand|default('', true) or ('Arbonne' if recs.recommendation_mode == 'consultant_arbonne' else 'VitalHealth') %}
+                                          <span style="background:#e6f4e5;color:#246c35;border-radius:18px;padding:3px 8px;font-size:11px;white-space:nowrap;">{{ product_brand }}</span>
+                                        </div>
+                                        {% set product_image = namespace(url=product.image_url|default('', true), status=product.image_match_status|default('', true)) %}
+                                        {% if not product_image.url %}
+                                          {% for rank_key in ['nutrition_wellness','beauty_skincare','body_personal_care'] %}
+                                            {% for candidate in (recs.arbonne_category_rankings or {}).get(rank_key, []) %}
+                                              {% if (candidate.product_name_display or candidate.name or '')|lower|trim == (product.product_name_display or product.name or product.title or '')|lower|trim and candidate.image_url and candidate.image_match_status not in ['ambiguous','unmatched'] %}
+                                                {% set product_image.url = candidate.image_url %}
+                                                {% set product_image.status = candidate.image_match_status %}
+                                              {% endif %}
+                                            {% endfor %}
+                                          {% endfor %}
                                         {% endif %}
-                                    </div>
-                                {% endfor %}
-                            </div>
+                                        {% if product_image.url and product_image.status not in ['ambiguous','unmatched'] %}
+                                          <img src="{{ product_image.url | e }}" alt="{{ (product.product_name_display or product.name or product.title) | e }}" loading="lazy" style="max-width:120px;max-height:115px;object-fit:contain;display:block;margin:10px auto;" onerror="this.style.display='none'">
+                                        {% endif %}
+                                        {% set why_sections = product.supporting_sections|default([], true) %}
+                                         {% set why_role = product.role|default('', true) %}
+                                         {% if why_sections or why_role %}
+                                           <p class="go360-product-why"><strong>Why recommended:</strong>
+                                           {% if why_sections %}Relevant assessment areas: {{ why_sections[:3]|join(', ') }}.{% endif %}
+                                           {% if why_role and why_role != 'Product category for individual suitability review' %} {{ why_role }}.{% endif %}
+                                           </p>
+                                         {% endif %}
+                                         {% if product.variants %}<div class="small-note" style="margin-top:8px;"><strong>Available options:</strong> {% for variant in product.variants %}{% if not loop.first %} · {% endif %}{% if variant.url %}<a href="{{ variant.url | e }}" target="_blank" rel="noopener noreferrer">{{ variant.label }}</a>{% else %}<span>{{ variant.label }}</span>{% endif %}{% endfor %}</div>{% endif %}
+                                        {% if product.url and not product.variants %}<div style="margin-top:8px;"><a href="{{ product.url | e }}" target="_blank" rel="noopener noreferrer">{{ 'View Arbonne product' if recs.recommendation_mode == 'consultant_arbonne' and product.link_type == 'consultant_product_url_candidate' else ('View product' if product.link_type in ['product', 'consultant_product_url_candidate'] else 'Visit product storefront') }}</a></div>{% endif %}
+                                      </div>
+                                    {% endfor %}
+                                  </div>
+                                </div>
+                              {% endif %}
+                            {% endfor %}
                         {% endif %}
                     {% else %}
                         <p class="subtle">No support plan available.</p>
                     {% endif %}
-                </div>
-
-                <div id="products-tab" class="tab-panel">
-                    {% if recs.complete_product_mapping %}
-                        <div class="mini-card">
-                            <div class="mini-card-title">Product mapping</div>
-                            <ul>
-                                {% for item in recs.complete_product_mapping %}
-                                    <li>
-                                        <strong>{{ item.name or item.product_name or "—" }}</strong>
-                                        {% if item.focus_area or item.focus %} — {{ item.focus_area or item.focus }}{% endif %}
-                                        {% if item.display_rationale or item.rationale %} — {{ item.display_rationale or item.rationale }}{% endif %}
-                                    </li>
-                                {% endfor %}
-                            </ul>
-                        </div>
-                    {% else %}
-                        <p class="subtle">No product mapping available.</p>
+                {# Supplementary catalogue discovery is available only for products not in the primary plan.
+                   VitalHealth complete_product_mapping is the primary mapping, not an extra catalogue. #}
+                {% if recs.recommendation_mode == 'consultant_arbonne' %}
+                  {% set category_rankings = recs.arbonne_category_rankings or {} %}
+                  {% set selected_names = [] %}
+                  {% if recs.protocol_plan and recs.protocol_plan.phases %}
+                    {% for phase in recs.protocol_plan.phases %}
+                      {% for selected in phase.products %}
+                        {% set _ = selected_names.append((selected.product_name_display or selected.name or selected.title or '')|lower|trim) %}
+                      {% endfor %}
+                    {% endfor %}
+                  {% endif %}
+                  {% set extra_categories = [] %}
+                  {% for key, label in [('nutrition_wellness', 'Nutrition & Wellness'), ('beauty_skincare', 'Beauty & Skincare'), ('body_personal_care', 'Body & Personal Care')] %}
+                    {% set visible_items = [] %}
+                    {% for item in category_rankings.get(key, []) %}
+                      {% if (item.product_name_display or item.name or '')|lower|trim not in selected_names %}
+                        {% set _ = visible_items.append(item) %}
+                      {% endif %}
+                    {% endfor %}
+                    {% if visible_items %}
+                      {% set _ = extra_categories.append({'label': label, 'items': visible_items}) %}
                     {% endif %}
+                  {% endfor %}
+                  {% if extra_categories %}
+                    <div id="products-tab" style="margin-top:20px;">
+                      <details class="mini-card" style="margin-top:14px;">
+                        <summary style="cursor:pointer;font-weight:700;">Explore More Products</summary>
+                        <div style="margin-top:12px;">
+                          {% for category in extra_categories %}
+                            <div class="mini-card" style="margin-top:16px;">
+                              <div class="mini-card-title">{{ category.label }} <span class="subtle">· {{ category['items']|length }} additional</span></div>
+                              <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:12px;margin-top:12px;">
+                                {% for item in category['items'] %}
+                                  <div class="mini-card" style="min-width:0;">
+                                    <div style="display:flex;justify-content:space-between;gap:8px;align-items:start;">
+                                      <strong>{{ loop.index }}. {{ item.product_name_display or item.name }}</strong>
+                                      <span style="background:#e6f4e5;color:#246c35;border-radius:18px;padding:3px 8px;font-size:11px;white-space:nowrap;">{{ item.source_label or 'Arbonne' }}</span>
+                                    </div>
+                                    {% if item.image_url and item.image_match_status not in ['ambiguous', 'unmatched'] %}<img src="{{ item.image_url | e }}" alt="{{ item.product_name_display or item.name | e }}" loading="lazy" style="max-width:120px;max-height:115px;object-fit:contain;display:block;margin:10px auto;" onerror="this.style.display='none'">{% endif %}
+                                    {% if item.supporting_sections %}<p class="subtle">Assessment context: {{ item.supporting_sections | join(', ') }}</p>{% endif %}
+                                    {% if item.url %}<a href="{{ item.url | e }}" target="_blank" rel="noopener noreferrer">{{ 'View Arbonne product' if item.link_type == 'consultant_product_url_candidate' else 'Visit consultant storefront' }}</a>{% endif %}
+                                  </div>
+                                {% endfor %}
+                              </div>
+                            </div>
+                          {% endfor %}
+                        </div>
+                      </details>
+                    </div>
+                  {% endif %}
+                {% endif %}
                 </div>
             </section>
 
             {% if body %}
             <section id="body-composition" class="panel card">
+                <h2>Body composition &amp; metabolic profile</h2>
                 <div class="marker-group" id="body-composition-panel" style="margin-top:0;">
                     <div class="marker-group-header" onclick="toggleMarkerGroup('body-comp-group')">
                         <h3>Body composition &amp; metabolic profile</h3>
@@ -606,3 +689,68 @@
         </aside>
     </div>
 </div>
+
+<!-- GO360_ARB_B34A_START -->
+<style>
+.go360-accordion-head{display:flex;align-items:center;justify-content:space-between;gap:12px;cursor:pointer;width:100%;background:transparent;border:0;padding:0;text-align:left;color:inherit;font:inherit}
+.go360-accordion-head h2{margin:0}.go360-accordion-head .go360-chevron{font-size:15px;color:#42526b}
+.go360-accordion-actions{display:flex;gap:8px;flex-wrap:wrap;margin:0 0 14px}
+.go360-accordion-actions button{border:1px solid #d7dfdc;background:white;border-radius:16px;padding:5px 12px;cursor:pointer}
+.go360-accordion-body[hidden]{display:none!important}
+</style>
+<script>
+(function(){
+  const ids=['overview','systems-overview','recommendations','body-composition','markers'];
+  const sections=ids.map(id=>document.getElementById(id)).filter(Boolean);
+  if(!sections.length || document.querySelector('.go360-accordion-actions'))return;
+  const controls=document.createElement('div');controls.className='go360-accordion-actions';
+  controls.innerHTML='<button type="button" data-all="open">Expand All</button><button type="button" data-all="close">Collapse All</button>';
+  sections[0].parentNode.insertBefore(controls,sections[0]);
+  const state=new Map();
+  sections.forEach((section,i)=>{
+    const title=section.querySelector(':scope > h2');if(!title)return;
+    const head=document.createElement('button');head.type='button';head.className='go360-accordion-head';
+    head.setAttribute('aria-controls',section.id+'-body');
+    const icon=document.createElement('span');icon.className='go360-chevron';icon.setAttribute('aria-hidden','true');
+    title.parentNode.insertBefore(head,title);head.appendChild(title);head.appendChild(icon);
+    const body=document.createElement('div');body.className='go360-accordion-body';body.id=section.id+'-body';
+    while(head.nextSibling)body.appendChild(head.nextSibling);
+    section.appendChild(body);state.set(section.id,{head,body,icon});
+    head.addEventListener('click',()=>setOpen(section.id,body.hidden));
+  });
+  function setOpen(id,open){const s=state.get(id);if(!s)return;s.body.hidden=!open;s.head.setAttribute('aria-expanded',String(open));s.icon.textContent=open?'▾':'▸';}
+  function focusSection(id){state.forEach((_,key)=>setOpen(key,key===id));const el=document.getElementById(id);if(el)el.scrollIntoView({behavior:'smooth',block:'start'});}
+  state.forEach((_,id)=>setOpen(id,id==='overview'));
+  controls.addEventListener('click',e=>{const mode=e.target.getAttribute('data-all');if(!mode)return;state.forEach((_,id)=>setOpen(id,mode==='open'));});
+  document.addEventListener('click',e=>{
+    const link=e.target.closest('a[href^="#"]');
+    const marker=e.target.closest('[data-marker-target]');
+    const hash=link?link.getAttribute('href').slice(1):(marker?marker.getAttribute('data-marker-target'):'');
+    if(!hash)return;
+    const parent=hash.startsWith('marker-section-')?'markers':hash;
+    if(!state.has(parent))return;
+    if(parent==='markers'&&hash!==parent){state.forEach((_,key)=>setOpen(key,key===parent));return;}
+    if(link && ids.includes(hash)){e.preventDefault();history.replaceState(null,'','#'+hash);focusSection(hash);}
+    else if(marker)state.forEach((_,key)=>setOpen(key,key===parent));
+  });
+  if(location.hash){const target=location.hash.slice(1);const parent=target.startsWith('marker-section-')?'markers':target;if(state.has(parent)){state.forEach((_,key)=>setOpen(key,key===parent));}}
+})();
+</script>
+<!-- GO360_ARB_B34A_END -->
+
+<!-- GO360_ARB_B341A_START -->
+<style>
+/* Stage B.3.4A.1A: consistent report accordion typography */
+#overview > .go360-accordion-head h2,
+#systems-overview > .go360-accordion-head h2,
+#recommendations > .go360-accordion-head h2,
+#body-composition > .go360-accordion-head h2,
+#markers > .go360-accordion-head h2 {
+  font-family:inherit!important;font-size:24px!important;font-weight:700!important;
+  line-height:1.25!important;letter-spacing:normal!important;margin:0!important;
+}
+#body-composition > .go360-accordion-head h3 {font:inherit!important;font-size:24px!important;font-weight:700!important;margin:0!important;}
+.go360-product-why {font-size:13px;line-height:1.5;color:#40536a;margin:9px 0 4px;}
+.go360-product-why strong {color:#233a50;}
+</style>
+<!-- GO360_ARB_B341A_END -->

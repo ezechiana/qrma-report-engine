@@ -933,6 +933,67 @@ def resolve_all_products(
     if not products_enabled(final_mode):
         return []
 
+    # Arbonne uses existing mechanism primitives through an isolated adapter.
+    # Do not run mixed-mode or custom-product merging for consultant_arbonne.
+    if final_mode == "consultant_arbonne":
+        from app.services.arbonne_resolver import resolve_arbonne_products
+        arbonne_products = resolve_arbonne_products(report)
+        # GO360_ARB_WEIGHTED_RUNTIME_OPT_IN — opt-in, Arbonne mode only.
+        import os as _arb_os
+        if _arb_os.environ.get('GO360_ARB_WEIGHTED_RUNTIME_OPT_IN') == '1':
+            from app.services.arbonne_weighted_runtime import resolve as _arb_weighted_resolve
+            _cfg = clinical_context or {}
+            _market = str(_cfg.get('arbonne_marketplace') or 'gb').lower()
+            _language = str(_cfg.get('arbonne_language') or 'en').lower()
+            _consultant = _cfg.get('arbonne_consultant_identifier')
+            _limit = int(_cfg.get('arbonne_recommendation_limit') or 10)
+            arbonne_products = _arb_weighted_resolve(report,market=_market,language=_language,consultant=_consultant,limit=_limit)
+            return arbonne_products
+        # Configuration may be passed via clinical_context; it is not yet persisted.
+        raw_config = clinical_context or {}
+        storefront = raw_config.get("arbonne_storefront_url")
+        market = raw_config.get("arbonne_marketplace", "gb")
+        language = raw_config.get("arbonne_language", "en")
+        consultant = raw_config.get("arbonne_consultant_identifier")
+        if storefront or consultant:
+            from app.services.arbonne_marketplace import ArbonneSettings, from_storefront_url
+            try:
+                settings = (from_storefront_url(storefront, marketplace=market, language=language)
+                            if storefront else ArbonneSettings(marketplace=market, language=language,
+                                                               consultant_identifier=consultant))
+                # Locale-specific official product detail links only; SKU alone is not a route.
+                from pathlib import Path
+                import json
+                registry_file = Path(__file__).resolve().parents[1] / "data" / "arbonne_verified_product_links.json"
+                link_registry = json.loads(registry_file.read_text(encoding="utf-8")) if registry_file.is_file() else {}
+                for product in arbonne_products:
+                    official = (link_registry.get(product.get("parent_id"), {})
+                                .get(settings.marketplace, {}).get(settings.language))
+                    if official:
+                        product["verified_neutral_product_url"] = official
+                        product["url"] = settings.product_link(official)
+                        product["link_type"] = "product"
+                    else:
+                        from app.services.global_catalogue import market_product_link
+                        from app.services.arbonne_links import Storefront
+                        storefront_obj = Storefront(settings.marketplace, settings.language, settings.consultant_identifier)
+                        product["url"], product["link_type"] = market_product_link(
+                            product.get("name", ""), settings.marketplace, settings.language, storefront_obj)
+                        product["verified_neutral_product_url"] = None
+            except (ValueError, TypeError, AttributeError):
+                # Never show another consultant's or a guessed product link.
+                for product in arbonne_products:
+                    product["url"] = None
+        from app.services.arbonne_variants import attach_variant_links
+        attach_variant_links(arbonne_products, marketplace=market, language=language, consultant=consultant)
+        # GO360_ARB_2F2D11_1_OPTIONAL_INTELLIGENCE_HOOK
+        import os as _go360_os
+        if (_go360_os.environ.get('GO360_ENV', '').lower() in ('local', 'development', 'test')
+                and _go360_os.environ.get('GO360_ARB_INTELLIGENCE_LOCAL_OPT_IN') == '1'):
+            from app.services.go360_arbonne_intelligence import attach_verified_intelligence_metadata
+            attach_verified_intelligence_metadata(arbonne_products, market=market)
+        return arbonne_products
+
     # Hard source gating by mode to avoid cross-brand leakage.
     if final_mode == "natural_approaches_clinical":
         vitalhealth_products: List[Dict[str, Any]] = []

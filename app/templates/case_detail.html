@@ -12,14 +12,20 @@
 <div class="card">
     <h3>Actions</h3>
     <div class="btn-row">
-        <button class="btn" id="generate-report-btn" type="button">Generate report</button>
-        <button class="btn secondary" id="refresh-case-btn" type="button">Refresh case</button>
+        <button class="btn" id="generate-report-btn" type="button">Generate new version</button>
+        <span id="generate-status" role="status" aria-live="polite" style="display:none;align-items:center;gap:8px;font-size:13px;"> <span class="go360-spin" aria-hidden="true"></span><span id="generate-status-text">Generating report…</span></span>
+        <button class="btn secondary" id="refresh-case-btn" type="button">Refresh case details</button>
     </div>
 </div>
 
 <div class="card">
     <h3>Latest report</h3>
     <div id="latest-report-block" class="muted">No report generated yet.</div>
+</div>
+
+<div class="card">
+    <h3>Report version history</h3>
+    <div id="report-version-history" class="muted">Loading versions…</div>
 </div>
 
 <div class="card">
@@ -34,9 +40,15 @@
     <div id="share-result" class="muted" style="margin-top:12px;"></div>
 </div>
 
+<style>
+.go360-spin{display:inline-block;width:15px;height:15px;border:2px solid #cbd5e1;border-top-color:#315bdc;border-radius:50%;animation:go360rotate .8s linear infinite}
+@keyframes go360rotate{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.go360-spin{animation:none;border-top-color:#315bdc}}
+</style>
 <script>
     const caseId = "{{ case_id }}";
     let latestReportId = null;
+    let generatingReport = false;
 
     function setError(msg) {
         const box = document.getElementById("error-box");
@@ -96,16 +108,51 @@
                 latestReportId = null;
                 renderLatestReport(null);
             }
+            await loadReportVersions();
         } catch (err) {
             console.error(err);
             setError("Unexpected error while loading case.");
         }
     }
 
+    async function loadReportVersions() {
+        const block = document.getElementById("report-version-history");
+        const response = await apiFetch(`/api/cases/${caseId}/report-versions`);
+        if (!response.ok) {
+            block.textContent = "Could not load report history.";
+            return;
+        }
+        const versions = await response.json();
+        if (!versions.length) {
+            block.textContent = "No report versions yet.";
+            return;
+        }
+        const rows = versions.map(v => {
+            const ready = ["ready", "final"].includes(v.status);
+            const settings = v.generation_settings || {};
+            const links = ready
+                ? `<a href="/app/reports/${encodeURIComponent(v.id)}">Workspace</a> · <a href="/app/reports/${encodeURIComponent(v.id)}/view">View</a>${v.has_pdf ? ` · <a href="/api/reports/${encodeURIComponent(v.id)}/pdf" target="_blank">PDF</a>` : ""}`
+                : "Not available";
+            return `<tr><td>v${safeText(v.version_number)}</td><td>${safeText(v.status)}</td><td>${formatDate(v.generated_at)}</td><td>${safeText(v.recommendation_mode || "—")}</td><td>${safeText(settings.arbonne_consultant_identifier || "—")}</td><td>${links}</td></tr>`;
+        }).join("");
+        block.innerHTML = `<div style="overflow-x:auto"><table style="width:100%;text-align:left;border-collapse:collapse"><thead><tr><th>Version</th><th>Status</th><th>Generated</th><th>Recommendation mode</th><th>Consultant ID</th><th>Actions</th></tr></thead><tbody>${rows}</tbody></table></div>`;
+    }
+
     async function generateReport() {
+        if (generatingReport) return;
+        generatingReport = true;
         clearError();
         clearSuccess();
-
+        const btn = document.getElementById("generate-report-btn");
+        const status = document.getElementById("generate-status");
+        const statusText = document.getElementById("generate-status-text");
+        btn.disabled = true;
+        btn.textContent = "Generating report…";
+        status.style.display = "inline-flex";
+        const started = Date.now();
+        const ticker = setInterval(() => {
+            statusText.textContent = `Generating report… ${Math.floor((Date.now() - started) / 1000)}s elapsed`;
+        }, 1000);
         try {
             const response = await apiFetch(`/api/cases/${caseId}/generate-report`, {
                 method: "POST"
@@ -123,6 +170,13 @@
         } catch (err) {
             console.error(err);
             setError("Unexpected error while generating report.");
+        } finally {
+            clearInterval(ticker);
+            generatingReport = false;
+            btn.disabled = false;
+            btn.textContent = "Generate new version";
+            status.style.display = "none";
+            statusText.textContent = "Generating report…";
         }
     }
 

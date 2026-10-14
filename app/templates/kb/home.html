@@ -1,0 +1,61 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Go360 Knowledge Base</title><style>
+:root{--navy:#0d2745;--navy2:#153f69;--ink:#192634;--muted:#657587;--line:#dbe4ec;--soft:#f2f7fa;--paper:#fff;--gold:#d0ad63;--blue:#2563a6;--max:1120px}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#eef3f7;line-height:1.5}
+a{color:inherit}.top{background:var(--navy);color:#fff;border-bottom:3px solid var(--gold)}.topin,.wrap{width:min(calc(100% - 32px),var(--max));margin:auto}.topin{min-height:70px;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:800;text-decoration:none}.brand span{font-weight:500;opacity:.7}.nav a{font-size:.86rem;text-decoration:none;opacity:.82}
+.page{padding:34px 0 70px}.card{background:#fff;border:1px solid var(--line);border-radius:16px;box-shadow:0 5px 18px rgba(15,39,66,.05)}
+.hero{text-align:center;padding:66px 0 42px}.hero h1{font-size:clamp(2.5rem,6vw,4.8rem);line-height:1;margin:0 0 16px;color:var(--navy);letter-spacing:-.045em}.hero p{font-size:1.05rem;color:var(--muted);margin:0 auto 25px;max-width:700px}
+.search{max-width:820px;margin:auto;display:flex;gap:10px;background:#fff;border:1px solid #cddae5;border-radius:18px;padding:8px;box-shadow:0 12px 35px rgba(15,39,66,.12)}.search input{flex:1;border:0;outline:none;padding:13px 15px;font-size:1.08rem}.search button{border:0;background:var(--navy);color:#fff;padding:0 23px;border-radius:12px;font-weight:750;cursor:pointer}
+.section{margin-top:34px}.section h2{text-align:center;color:var(--navy);font-size:1.45rem;margin:0 0 8px}.section>p{text-align:center;color:var(--muted);margin:0 0 22px}
+.triad{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}.gateway{display:block;padding:24px;text-decoration:none;cursor:pointer;transition:transform .12s ease,border-color .12s ease,box-shadow .12s ease}.gateway h3{margin:0 0 7px;color:var(--navy);font-size:1.1rem}.gateway p{margin:0;color:var(--muted);font-size:.92rem}.gateway:hover{border-color:#91afca;box-shadow:0 9px 24px rgba(15,39,66,.10);transform:translateY(-1px)}.gateway:focus-visible{outline:3px solid #7aa7d0;outline-offset:3px}
+.links{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:10px}.smallcard{padding:14px 15px;text-decoration:none}.smallcard strong{display:block;color:var(--navy)}.count{font-size:.8rem;color:var(--muted)}
+details.card{padding:0;overflow:hidden}summary{cursor:pointer;padding:18px 20px;font-weight:800;color:var(--navy)}.details-inner{padding:0 20px 20px}
+@media(max-width:760px){.triad{grid-template-columns:1fr}.search{flex-direction:column}.search button{padding:13px}.hero{padding-top:42px}}
+</style></head><body>
+<header class="top"><div class="topin"><a class="brand" href="/kb/">Go360 <span>Knowledge Base</span></a><nav class="nav"><a href="/kb/a-z">A–Z</a></nav></div></header>
+<main class="wrap page">
+<section class="hero">
+<h1>What would you like to understand?</h1>
+<p>Search a marker, QRMA term, Go360 ID, clinical system or functional pattern.</p>
+<form class="search" action="/kb/search" method="get">
+<input name="q" type="search" placeholder="Try “Blood Viscosity”, “CV-001”, “thyroid” or “circulation”" autofocus>
+<button type="submit">Search</button>
+</form>
+</section>
+
+<section class="section">
+<h2>Explore the Knowledge Base</h2>
+<p>Choose the route that matches how you are working.</p>
+<div class="triad">
+<a class="card gateway" href="#systems" aria-label="Browse Go360 Clinical Systems"><h3>Clinical systems</h3><p>Browse markers by their canonical Go360 system.</p></a>
+<a class="card gateway" href="#software" aria-label="Browse QRMA Software hierarchy"><h3>QRMA software</h3><p>Follow Adult Male, Adult Female or Child software hierarchy.</p></a>
+<a class="card gateway" href="#patterns" aria-label="Browse Functional Patterns"><h3>Functional patterns</h3><p>Explore cross-system relationships and clinical pattern clusters.</p></a>
+</div>
+</section>
+
+<section class="section" id="software">
+<h2>Explore as it appears in QRMA Software</h2><p>Select a report type, then drill into its software categories and marker order.</p>
+<div class="links">
+{% for r in report_types %}
+<a class="card smallcard" href="/kb/software/{{ r.code }}"><strong>{{ r.name }}</strong><span class="count">{{ r.marker_occurrences }} markers</span></a>
+{% endfor %}
+</div>
+</section>
+
+<section class="section" id="systems">
+<details class="card"><summary>Browse Go360 Clinical Systems</summary><div class="details-inner"><div class="links">
+{% for s in systems %}
+<a class="card smallcard" href="/kb/system/{{ s.slug }}"><strong>{{ s.name }}</strong><span class="count">{{ s.marker_count }} markers</span></a>
+{% endfor %}
+</div></div></details>
+</section>
+
+<section class="section" id="patterns">
+<details class="card"><summary>Browse Functional Patterns</summary><div class="details-inner"><div class="links">
+{% for p in patterns %}
+<a class="card smallcard" href="/kb/pattern/{{ p.slug }}"><strong>{{ p.name }}</strong><span class="count">{{ p.marker_count }} related markers</span></a>
+{% endfor %}
+</div></div></details>
+</section>
+<section class="section"><div style="text-align:center"><a href="/kb/a-z">Browse all markers A–Z →</a></div></section>
+</main></body></html>

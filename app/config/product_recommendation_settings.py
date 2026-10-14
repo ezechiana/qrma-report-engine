@@ -5,6 +5,7 @@ from __future__ import annotations
 VALID_RECOMMENDATION_MODES = {
     "recommendations_off",
     "affiliate_vitalhealth",
+    "consultant_arbonne",
     "vitalhealth_clinical_optimised",
     "natural_approaches_clinical",
     "mixed_clinical",

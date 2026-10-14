@@ -1,0 +1,458 @@
+[
+  {
+    "parent_id": "ARB-P001",
+    "mechanisms": [
+      {
+        "name": "protein_nutrition",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "foundation_nutrition",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P002",
+    "mechanisms": [
+      {
+        "name": "protein_nutrition",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "foundation_nutrition",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P003",
+    "mechanisms": [
+      {
+        "name": "protein_nutrition",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "foundation_nutrition",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "candidate: product type/category; formulation and official claims unverified",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P004",
+    "mechanisms": [
+      {
+        "name": "energy_stimulation",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "energy_performance",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P005",
+    "mechanisms": [
+      {
+        "name": "energy_stimulation",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "energy_performance",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P006",
+    "mechanisms": [
+      {
+        "name": "antioxidant",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "foundation_nutrition",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "candidate: product type/category; formulation and official claims unverified",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P007",
+    "mechanisms": [
+      {
+        "name": "digestive_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "gut_microbiome",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P008",
+    "mechanisms": [
+      {
+        "name": "digestive_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "gut_microbiome",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P009",
+    "mechanisms": [
+      {
+        "name": "hormonal_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "hormonal_male_female",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P010",
+    "mechanisms": [
+      {
+        "name": "microbiome_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "gut_microbiome",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P011",
+    "mechanisms": [
+      {
+        "name": "hormonal_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "hormonal_male_female",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P012",
+    "mechanisms": [
+      {
+        "name": "skin_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "skin_barrier",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P013",
+    "mechanisms": [
+      {
+        "name": "cognitive_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "neuro_cognitive",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P014",
+    "mechanisms": [
+      {
+        "name": "cognitive_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "neuro_cognitive",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P015",
+    "mechanisms": [
+      {
+        "name": "vitamin_mineral_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "foundation_nutrition",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "candidate: multivitamin product type; micronutrient repletion NOT inferred from QRMA",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P016",
+    "mechanisms": [
+      {
+        "name": "immune_modulation",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "immune_defense",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "candidate: product type/category; formulation and official claims unverified",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P017",
+    "mechanisms": [
+      {
+        "name": "appetite_regulation_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "cardiovascular_metabolic",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P018",
+    "mechanisms": [
+      {
+        "name": "fluid_balance_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "energy_performance",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P019",
+    "mechanisms": [
+      {
+        "name": "antioxidant",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "foundation_nutrition",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "candidate: product type/category; formulation and official claims unverified",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P020",
+    "mechanisms": [
+      {
+        "name": "collagen_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "skin_barrier",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P021",
+    "mechanisms": [
+      {
+        "name": "microbiome_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "gut_microbiome",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P022",
+    "mechanisms": [
+      {
+        "name": "digestive_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "gut_microbiome",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P023",
+    "mechanisms": [
+      {
+        "name": "digestive_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "gut_microbiome",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  },
+  {
+    "parent_id": "ARB-P024",
+    "mechanisms": [
+      {
+        "name": "mitochondrial_support",
+        "priority": 1
+      }
+    ],
+    "categories": [
+      {
+        "name": "energy_performance",
+        "priority": 1
+      }
+    ],
+    "review_status": "candidate",
+    "enabled": true,
+    "mapping_basis": "source product name/category; preliminary test hypothesis",
+    "test_only": true
+  }
+]
