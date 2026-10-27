@@ -51,6 +51,9 @@
         </div>
 
         <div class="cases-toolbar-right">
+            {% if connector_enabled %}
+            <a href="/app/cases/incoming" class="btn">Incoming Assessments</a>
+            {% endif %}
             <a href="/app/cases/new" class="btn">New Case</a>
         </div>
     </div>

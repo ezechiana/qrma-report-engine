@@ -135,7 +135,10 @@ def patient_detail_page(patient_id: str, request: Request):
 
 @router.get("/app/cases")
 def cases_page(request: Request):
-    return templates.TemplateResponse(request=request, name="cases.html", context={"request": request, "title": "Cases"})
+    from app.services.connector_policy import enabled as connector_enabled
+    return templates.TemplateResponse(request=request, name="cases.html", context={
+        "request": request, "title": "Cases", "connector_enabled": connector_enabled(),
+    })
 
 
 @router.get("/app/reports/{report_id}/view")
