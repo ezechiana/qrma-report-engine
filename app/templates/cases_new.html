@@ -403,6 +403,7 @@
         return true;
     }
 
+    const incomingAssessmentId = getQueryParam("incoming_assessment_id");
     let preselectedPatientId = getQueryParam("patient_id");
     let temporaryUploadId = null;
     let parsedScanMetadata = null;
@@ -443,11 +444,12 @@
         panel.style.display = "block";
 
         if (openBtn) {
-            openBtn.style.display = activeDuplicateDetail.existing_case_id || activeDuplicateDetail.existing_report_id ? "inline-flex" : "none";
+            openBtn.style.display = activeDuplicateDetail.existing_case_id || activeDuplicateDetail.existing_report_id || activeDuplicateDetail.existing_assessment_id ? "inline-flex" : "none";
             openBtn.onclick = () => {
                 const url = activeDuplicateDetail.existing_report_id
                     ? `/app/reports/${activeDuplicateDetail.existing_report_id}/view`
-                    : `/app/cases/${activeDuplicateDetail.existing_case_id}`;
+                    : activeDuplicateDetail.existing_case_id ? `/app/cases/${activeDuplicateDetail.existing_case_id}`
+                    : `/app/cases/new?incoming_assessment_id=${encodeURIComponent(activeDuplicateDetail.existing_assessment_id)}`;
 
                 window.open(url, "_blank", "noopener,noreferrer");
             };
@@ -916,7 +918,11 @@
                 allow_duplicate: forceDuplicate
             };
 
-            const response = await apiFetch("/api/cases/create-from-import", {
+            if (incomingAssessmentId) payload.generate_report = generateAfter;
+            const confirmUrl = incomingAssessmentId
+                ? `/api/incoming-assessments/${encodeURIComponent(incomingAssessmentId)}/confirm`
+                : "/api/cases/create-from-import";
+            const response = await apiFetch(confirmUrl, {
                 method: "POST",
                 body: JSON.stringify(payload),
             });
@@ -1003,5 +1009,28 @@
             }
         });
     });
+    async function resumeIncomingAssessment() {
+        if (!incomingAssessmentId) return;
+        try {
+            if (!await requireAuthOrRedirect()) return;
+            const response = await apiFetch(`/api/incoming-assessments/${encodeURIComponent(incomingAssessmentId)}`);
+            const data = await response.json();
+            if (!response.ok) { showError(data); return; }
+            if (data.case_id) { window.location.href = `/app/cases/${data.case_id}`; return; }
+            temporaryUploadId = `incoming:${incomingAssessmentId}`;
+            parsedPatientData = data.source_patient_data || {};
+            parsedScanMetadata = data.scan_metadata || {};
+            const p = parsedPatientData;
+            for (const key of ["first_name", "last_name", "date_of_birth", "age", "sex", "height_cm", "weight_kg"]) {
+                document.getElementById(key).value = p[key] ?? "";
+            }
+            document.getElementById("case_title").value = p.full_name ? `${p.full_name} QRMA scan` : "QRMA scan case";
+            document.getElementById("upload-form").style.display = "none";
+            document.getElementById("confirm-card").style.display = "block";
+            await loadPatientsForMatching();
+            if (data.duplicate) showDuplicatePanel(data.duplicate);
+        } catch { showError("Could not load the incoming assessment. Please try again."); }
+    }
+    resumeIncomingAssessment();
 </script>
 {% endblock %}

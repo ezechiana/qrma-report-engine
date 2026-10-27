@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>Incoming Assessments</h1>
+<p>Review the patient details before creating a case or report.</p>
+<p><a href="/app/cases">Back to Cases</a></p>
+<details><summary>Connected desktops</summary><div id="incoming-devices"></div></details>
+<p id="incoming-error" role="alert"></p>
+<table class="table"><thead><tr><th>Patient</th><th>Assessment date</th><th>Received</th><th>Source</th><th>Status</th><th></th></tr></thead><tbody id="incoming-body"></tbody></table>
+<button id="incoming-next" type="button">Load more</button>
+<script>
+let incomingOffset = 0;
+async function loadIncoming() {
+    const button = document.getElementById('incoming-next');
+    button.disabled = true;
+    try {
+        if (!await requireAuthOrRedirect()) return;
+        const response = await apiFetch(`/api/incoming-assessments?offset=${incomingOffset}`);
+        if (!response.ok) throw new Error();
+        const rows = await response.json();
+        for (const row of rows) {
+            const tr = document.createElement('tr');
+            const p = row.source_patient_data || {}, m = row.scan_metadata || {};
+            for (const text of [p.full_name || 'Name unavailable', m.scan_date || 'Date unavailable',
+                new Date(row.received_at).toLocaleString(), row.source_profile,
+                row.duplicate ? `${row.status} — Duplicate: review required` : row.status]) {
+                const cell = document.createElement('td'); cell.textContent = text; tr.appendChild(cell);
+            }
+            const cell = document.createElement('td'), link = document.createElement('a');
+            link.textContent = row.case_id ? 'Open case' : 'Review';
+            link.href = row.case_id ? `/app/cases/${encodeURIComponent(row.case_id)}` : row.review_path;
+            cell.appendChild(link); tr.appendChild(cell); document.getElementById('incoming-body').appendChild(tr);
+        }
+        incomingOffset += rows.length;
+        button.hidden = rows.length < 100;
+        if (!incomingOffset) document.getElementById('incoming-error').textContent = 'No incoming assessments yet.';
+    } catch { document.getElementById('incoming-error').textContent = 'Could not load incoming assessments. Please try again.'; }
+    finally { button.disabled = false; }
+}
+document.getElementById('incoming-next').addEventListener('click', loadIncoming);
+loadIncoming();
+async function loadDevices() {
+    const response = await apiFetch('/api/connector-devices');
+    if (!response.ok) return;
+    const box = document.getElementById('incoming-devices');
+    box.replaceChildren();
+    for (const device of await response.json()) {
+        const line = document.createElement('p');
+        line.textContent = `Desktop ${device.connector_id} · ${device.revoked ? 'Revoked' : 'Connected'} `;
+        if (!device.revoked) {
+            const revoke = document.createElement('button'); revoke.textContent = 'Revoke';
+            revoke.onclick = async () => {
+                const result = await apiFetch(`/api/connector-devices/${encodeURIComponent(device.connector_id)}`, {method:'DELETE'});
+                if (result.ok) loadDevices();
+            };
+            line.appendChild(revoke);
+        }
+        box.appendChild(line);
+    }
+}
+loadDevices();
+</script>
+{% endblock %}

@@ -20,6 +20,7 @@ from sqlalchemy import (
     UniqueConstraint,
     func,
     Index,
+    text,
 )
 from sqlalchemy.dialects.postgresql import JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column, relationship
@@ -176,6 +177,11 @@ class Case(Base):
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
     patient_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("patients.id", ondelete="CASCADE"), index=True)
     raw_scan_hash: Mapped[Optional[str]] = mapped_column(String(64), nullable=True, index=True)
+    assessment_fingerprint: Mapped[Optional[str]] = mapped_column(String(80), nullable=True)
+    __table_args__ = (
+        Index("ix_cases_user_assessment_fingerprint", "user_id", "assessment_fingerprint",
+              postgresql_where=text("assessment_fingerprint IS NOT NULL")),
+    )
     title: Mapped[str] = mapped_column(String(255))
     status: Mapped[CaseStatus] = mapped_column(Enum(CaseStatus), default=CaseStatus.draft, index=True)
     recommendation_mode: Mapped[RecommendationMode] = mapped_column(
@@ -371,6 +377,15 @@ class AuditLog(Base):
         index=True,
     )
 
+    # Snapshot identifiers intentionally survive device re-pairing/deletion.
+    connector_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    job_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    assessment_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    actor_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    outcome: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    request_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    event_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, unique=True)
     action: Mapped[str] = mapped_column(String(120), index=True)
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

@@ -33,10 +33,9 @@ try:
     print(f"Database: {parsed.database}")
     print("==========================\n")
 
-except Exception as e:
+except Exception:
     print("\n❌ DATABASE URL PARSE ERROR")
-    print(f"Raw value: {DATABASE_URL}")
-    print(f"Error: {e}\n")
+    raise RuntimeError("DATABASE_URL is invalid; check database configuration.") from None
 
 
 # --- Create engine ---

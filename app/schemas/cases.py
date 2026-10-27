@@ -78,6 +78,7 @@ class ImportFromHtmlResponse(BaseModel):
 
 
 class CreateFromImportRequest(BaseModel):
+    generate_report: bool = True
     temporary_upload_id: str
     patient: ParsedSourcePatientData
     scan_metadata: Optional[ParsedScanMetadata] = None

@@ -4,9 +4,29 @@ import os
 import re
 import uuid
 import hashlib
+import logging
 from pathlib import Path
 
 from app.services.storage_service import upload_bytes, download_bytes
+
+
+class DuplicateScanError(ValueError):
+    def __init__(self, existing_case, match_type):
+        self.existing_case_id = existing_case.id
+        self.match_type = match_type
+        message = ("This file has already been imported." if match_type == "exact_file"
+                   else "An equivalent assessment has already been imported in another file format.")
+        super().__init__(message)
+
+
+def compute_assessment_fingerprint(file_bytes):
+    from app.services.assessment_fingerprint import fingerprint_html
+    try:
+        return fingerprint_html(file_bytes)
+    except Exception:
+        # Unsupported/malformed inputs keep the existing exact-file warning.
+        logging.getLogger(__name__).warning("Assessment fingerprint unavailable; SHA detection retained")
+        return None
 
 
 TEMP_UPLOAD_DIR = Path(os.getenv("TEMP_UPLOAD_DIR", "/tmp/qrma_imports"))
@@ -41,7 +61,7 @@ def save_case_html(
 ) -> str:
     """
     Persist the uploaded QRMA HTML against the case using S3 storage.
-    Also prevents duplicate uploads using SHA256 hash unless allow_duplicate=True.
+    Warns for matching file/assessment unless allow_duplicate=True.
     Returns the FINAL stored S3 key.
     """
     html_hash = compute_html_hash(file_bytes)
@@ -54,12 +74,23 @@ def save_case_html(
             .filter(
                 Case.user_id == user_id,
                 Case.raw_scan_hash == html_hash,
+                Case.id != case_id,
             )
             .first()
         )
 
         if existing:
-            raise ValueError("This scan has already been imported.")
+            raise DuplicateScanError(existing, "exact_file")
+
+    fingerprint = compute_assessment_fingerprint(file_bytes)
+    if db is not None and not allow_duplicate and fingerprint:
+        existing = (db.query(Case).filter(
+            Case.user_id == user_id,
+            Case.assessment_fingerprint == fingerprint,
+            Case.id != case_id,
+        ).order_by(Case.created_at.asc(), Case.id.asc()).first())
+        if existing:
+            raise DuplicateScanError(existing, "assessment")
 
     key = f"cases/{user_id}/{case_id}/raw_scan.html"
 
@@ -69,9 +100,10 @@ def save_case_html(
     if db is not None:
         from app.db.models import Case
 
-        case = db.query(Case).filter(Case.id == case_id).first()
+        case = db.query(Case).filter(Case.id == case_id, Case.user_id == user_id).first()
         if case:
             case.raw_scan_hash = html_hash
+            case.assessment_fingerprint = fingerprint
             db.commit()
 
     return stored_key

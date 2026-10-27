@@ -22,4 +22,21 @@ sample_data
 .DS_Store
 Thumbs.db
 
+# Credentials, database exports, local environments and development backups.
+*.env
+*.env.*
+*.bak
+*.backup
+**/*_old*.py
+**/*BACKUP*
+**/*backup*
+.venv*
+DB_BACKUPS/
+_go360_backups/
+ParsedReport/
+desktop/
+dev/
+run/
+.pytest_cache/
+
 

@@ -28,6 +28,7 @@ from app.services.scan_import_service import (
     save_temp_html,
     load_temp_html,
     save_case_html,
+    DuplicateScanError,
 )
 
 router = APIRouter(prefix="/api/cases", tags=["cases"])
@@ -431,15 +432,14 @@ async def create_from_import(
             db=db,
             allow_duplicate=allow_duplicate,
         )
-    except ValueError as exc:
+    except DuplicateScanError as exc:
         db.delete(case)
         db.commit()
 
-        # Attempt to find existing case/report using same HTML path or hash
+        # Resolve the actual owned match, never the newest unrelated case.
         existing_case = (
             db.query(Case)
-            .filter(Case.user_id == current_user.id)
-            .order_by(Case.created_at.desc())
+            .filter(Case.user_id == current_user.id, Case.id == exc.existing_case_id)
             .first()
         )
 
@@ -456,6 +456,7 @@ async def create_from_import(
             status_code=409,
             detail={
                 "code": "duplicate_scan",
+                "match_type": exc.match_type,
                 "message": str(exc),
                 "allow_duplicate_supported": True,
                 "existing_case_id": str(existing_case.id) if existing_case else None,
@@ -513,6 +514,13 @@ async def create_from_import(
             "status_after_import": case.status.value if hasattr(case.status, "value") else str(case.status),
         },
     )
+
+    if not payload.generate_report:
+        case.status = CaseStatus.draft
+        db.commit()
+        return {"patient_id": str(patient.id), "case_id": str(case.id),
+                "status": "draft", "report_version_id": None,
+                "auto_generated": False, "warning": None}
 
     # AUTO-GENERATE REPORT IMMEDIATELY
     #
@@ -676,15 +684,14 @@ def create_from_existing_patient_import(
             db=db,
             allow_duplicate=allow_duplicate,
         )
-    except ValueError as exc:
+    except DuplicateScanError as exc:
         db.delete(case)
         db.commit()
 
-        # Attempt to find existing case/report using same HTML path or hash
+        # Resolve the actual owned match, never the newest unrelated case.
         existing_case = (
             db.query(Case)
-            .filter(Case.user_id == current_user.id)
-            .order_by(Case.created_at.desc())
+            .filter(Case.user_id == current_user.id, Case.id == exc.existing_case_id)
             .first()
         )
 
@@ -701,6 +708,7 @@ def create_from_existing_patient_import(
             status_code=409,
             detail={
                 "code": "duplicate_scan",
+                "match_type": exc.match_type,
                 "message": str(exc),
                 "allow_duplicate_supported": True,
                 "existing_case_id": str(existing_case.id) if existing_case else None,

@@ -214,7 +214,9 @@ def _extract_patient(text: str) -> Patient:
 
 
 def _extract_result_image_code(cell) -> str | None:
-    img = cell.find("img")
+    # OEM ResultOne.htm uses <image>; exported reports normally use <img>.
+    # Read the local filename only: companion images are not required or fetched.
+    img = cell.find(["img", "image"])
     if not img:
         return None
     src = img.get("src", "")
@@ -235,6 +237,11 @@ def _looks_like_header_row(header_text: str) -> bool:
 def _extract_section_title(page_text: str):
     clean = _normalise_whitespace(page_text)
 
+    # ResultOne starts with a dashboard containing words such as "Skin System".
+    # It is not a measurement section; do not feed it to the loose-table parser.
+    if re.search(r"==\s*Statistical\s+Report\s*==", clean, flags=re.IGNORECASE):
+        return None
+
     match = re.search(
         r"\(\s*([^)]*?)\s*\)\s*Analysis\s*Report\s*Card",
         clean,
@@ -245,11 +252,11 @@ def _extract_section_title(page_text: str):
 
     match = re.search(r"\b(Expert analysis)\s+Report\b", clean, flags=re.IGNORECASE)
     if match:
-        return match.group(1).strip()
+        return "Expert analysis"
 
     match = re.search(r"\b(Hand analysis)\s+Report\b", clean, flags=re.IGNORECASE)
     if match:
-        return match.group(1).strip()
+        return "Hand analysis"
 
     lower_clean = clean.lower()
     for title in SECTION_TITLE_FALLBACKS:

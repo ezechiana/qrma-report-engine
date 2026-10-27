@@ -32,9 +32,9 @@ from app.api.routes_platform_users import router as platform_users_router
 from app.api.routes_kb import router as kb_router
 
 
+from app.db import connector_models
 from app.db.base import Base
 from app.db.session import engine
-from app.db.migrate import run_migrations
 from app.middleware.domain_routing import DomainRoutingMiddleware
 from app.api.routes_webhooks import router as webhooks_router
 
@@ -56,7 +56,8 @@ async def lifespan(app: FastAPI):
     - Allows startup even if DB is temporarily unavailable during first boot.
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
-    if AUTO_CREATE_TABLES:
+    # Release schemas are managed explicitly before application deployment.
+    if AUTO_CREATE_TABLES and APP_ENV in {"dev", "development", "local", "test"}:
         try:
             Base.metadata.create_all(bind=engine)
             print("✅ Database connected and tables ensured.")
@@ -137,6 +138,14 @@ def create_app() -> FastAPI:
 
         return response
 
+    # Registration, requests and auditing share one fail-closed release policy.
+    from app.services.connector_policy import enabled as connector_enabled
+    if connector_enabled():
+        from app.api.routes_connector import router as connector_router
+        app.include_router(connector_router)
+        from app.api.routes_platform_connectors import router as platform_connectors_router
+        app.include_router(platform_connectors_router)
+
     # Auth
     app.include_router(auth_pages_router)
     app.include_router(auth_router)
@@ -182,16 +191,21 @@ def create_app() -> FastAPI:
             context={"request": request},
         )
 
+    @app.get("/ready")
+    def readiness():
+        from fastapi.responses import JSONResponse
+        from app.services.connector_readiness import ready
+        healthy = ready(engine)
+        return JSONResponse({"status": "ready" if healthy else "unavailable"},
+                            status_code=200 if healthy else 503,
+                            headers={"Cache-Control": "no-store"})
+
     @app.get("/health")
     def health():
         return {
             "status": "healthy",
             "environment": APP_ENV,
         }
-
-    @app.on_event("startup")
-    def startup():
-        run_migrations(engine)
 
     return app
 
