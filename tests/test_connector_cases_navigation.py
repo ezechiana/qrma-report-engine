@@ -52,3 +52,18 @@ def test_authenticated_incoming_renders_template(application):
     assert '<h1>Incoming Assessments</h1>' in response.text
     assert '/api/incoming-assessments?offset=' in response.text
     assert '/api/connector-devices' in response.text
+
+
+@pytest.mark.parametrize('peer,expected', [('100.64.0.12', 401), ('10.128.0.2', 400)])
+def test_forwarded_https_requires_trusted_proxy(application, peer, expected):
+    from uvicorn.middleware.proxy_headers import ProxyHeadersMiddleware
+
+    proxy = ProxyHeadersMiddleware(application, trusted_hosts=['100.64.0.12'])
+
+    async def from_peer(scope, receive, send):
+        scope = dict(scope, client=(peer, 1234))
+        await proxy(scope, receive, send)
+
+    client = TestClient(from_peer, base_url='http://localhost')
+    response = client.get('/api/incoming-assessments', headers={'X-Forwarded-Proto': 'https'})
+    assert response.status_code == expected
