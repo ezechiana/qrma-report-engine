@@ -18,6 +18,13 @@ class DomainRoutingMiddleware(BaseHTTPMiddleware):
         if host in {"127.0.0.1", "localhost"}:
             return await call_next(request)
 
+        # Keep the Clinical Reference publication URLs permanent.
+        if host in {"go360.io", MARKETING_DOMAIN} and (path == "/kb" or path.startswith("/kb/")):
+            target = f"https://{APP_DOMAIN}{path}"
+            if request.url.query:
+                target += f"?{request.url.query}"
+            return RedirectResponse(url=target, status_code=308)
+
         # Root domain -> www
         if host == "go360.io":
             return RedirectResponse(
