@@ -7,6 +7,8 @@ from sqlalchemy.orm import Session
 
 MARKER_SQL = text("""
 SELECT
+    mc.id AS content_id,
+    mc.functional_model,
     m.id AS marker_id,
     m.source_control_id,
     m.canonical_control_id,
@@ -405,6 +407,13 @@ LIMIT 100
 """)
 
 
+PRIORITIES_SQL = text("""
+SELECT position, title, rationale
+FROM knowledge.marker_practitioner_priorities
+WHERE marker_content_id = :content_id
+ORDER BY position
+""")
+
 def rows(result) -> list[dict[str, Any]]:
     return [dict(r._mapping) for r in result.all()]
 
@@ -421,6 +430,18 @@ def get_marker_page(db: Session, go360_id: str, *, language_code: str = "en") ->
     marker["influences"] = rows(db.execute(INFLUENCES_SQL, {"marker_id": marker_id}))
     marker["diagnostics"] = rows(db.execute(DIAGNOSTICS_SQL, {"marker_id": marker_id}))
     marker["media_assets"] = rows(db.execute(MEDIA_SQL, {"marker_id": marker_id}))
+    marker["practitioner_priorities"] = rows(db.execute(PRIORITIES_SQL, {"content_id": marker["content_id"]}))
+    # The source group order is encoded in diagnostic positions for enriched revisions.
+    marker["diagnostic_groups"] = []
+    if marker["practitioner_priorities"]:
+        grouped = {}
+        for diagnostic in marker["diagnostics"]:
+            role = diagnostic["role"] or "Clinical context"
+            if role not in grouped:
+                grouped[role] = {"grouper": role, "list": []}
+                marker["diagnostic_groups"].append(grouped[role])
+            grouped[role]["list"].append(diagnostic)
+
     marker["populations"] = list(dict.fromkeys(x["report_type"] for x in marker["report_memberships"]))
     marker["language_code"] = language_code
     return marker

@@ -40,3 +40,9 @@ run/
 .pytest_cache/
 
 
+
+# Shared KB media and local working files.
+/app/static/kb/
+/_go360_backups/
+/run/
+/app.zip
