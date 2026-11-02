@@ -297,6 +297,27 @@
             .nav .go360-wordmark { width: 104px; }
             .nav-actions > .btn.primary { font-size: 12px; padding: 10px; }
         }
+
+        @media (max-width: 1100px) { .nav-links { display: none; } .mobile-menu { display: block; } }
+        #books { scroll-margin-top: 96px; }
+        .book-intro { padding-top: 12px; font-weight: 700; }
+        .book-intro a, .book-author-link { color: #1d4ed8; text-decoration: underline; text-underline-offset: 3px; }
+        .book-store-picker { background: #fff; border: 1px solid var(--line); border-radius: 16px; padding: 20px; margin-bottom: 28px; }
+        .book-store-picker label { display: block; font-weight: 700; margin-bottom: 10px; }
+        .book-store-picker select { max-width: 100%; width: 360px; min-height: 44px; font: inherit; padding: 10px; border: 1px solid #94a3b8; border-radius: 8px; background: #fff; color: var(--text); }
+        .book-store-picker p, .book-set-note, .book-library-note { color: var(--muted); line-height: 1.65; }
+        .book-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 20px; margin: 20px 0 36px; }
+        .book-card { display: flex; flex-direction: column; min-width: 0; overflow-wrap: anywhere; }
+        .book-card h4 { font-size: 21px; line-height: 1.3; margin: 10px 0; }
+        .book-card p { line-height: 1.65; }
+        .book-card .book-language { font-weight: 700; color: #1e40af; margin: 0; }
+        .book-formats { font-size: 14px; }
+        .book-edition { display: inline-flex; align-self: flex-start; align-items: center; gap: 8px; margin-bottom: 14px; color: #334155; font-size: 13px; font-weight: 700; }
+        .edition-dot { width: 24px; height: 6px; border-radius: 999px; background: #64748b; }
+        .edition-spectrum { width: 40px; height: 6px; border-radius: 999px; background: linear-gradient(90deg,#6d28d9 0%,#2563eb 20%,#0891b2 40%,#16a34a 55%,#eab308 72%,#ea580c 86%,#dc2626 100%); }
+        .book-buy { margin-top: auto; white-space: normal; text-align: center; min-height: 44px; }
+        @media (max-width: 980px) { .book-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+        @media (max-width: 600px) { .book-grid { grid-template-columns: minmax(0,1fr); } }
     </style>
     
     
@@ -315,7 +336,7 @@
                 <a href="#features">Features</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#faq">FAQ</a>
-                <a href="/kb/">QRMA Knowledgebase</a>
+                <a href="/kb/">QRMA Knowledgebase</a><a href="#books">Books</a>
             </nav>
             <div class="nav-actions">
                 <a class="btn text" href="/login">Sign in</a>
@@ -330,7 +351,7 @@
                         <a href="#features">Features</a>
                         <a href="#pricing">Pricing</a>
                         <a href="#faq">FAQ</a>
-                        <a href="/kb/">QRMA Knowledgebase</a>
+                        <a href="/kb/">QRMA Knowledgebase</a><a href="#books">Books</a>
                         <a class="menu-sign-in" href="/login">Sign in</a>
                     </nav>
                 </details>
@@ -402,6 +423,8 @@
             </div>
         </section>
 
+        <div class="container book-intro"><a href="#books">Looking for the published references? Explore the books ↓</a></div>
+
         <section class="section" id="how-it-works">
             <div class="container">
                 <div class="section-head">
@@ -466,6 +489,111 @@
             </div>
         </section>
 
+        <section class="section" id="books" aria-labelledby="books-heading">
+            <div class="container">
+                <div class="section-head">
+                    <div class="section-kicker">Published practitioner references</div>
+                    <h2 id="books-heading">Explore the Go360 reference library.</h2>
+                    <p>Choose a desk reference for rapid consultation or a clinical reference for deeper study of QRMA markers and their wider context. Book language is separate from the planned report languages in the platform.</p>
+                </div>
+                <div class="book-store-picker">
+                    <label for="book-marketplace">Shop on your preferred Amazon marketplace</label>
+                    <select id="book-marketplace">
+                        <option value="com">United States — Amazon.com</option>
+                        <option value="co.uk">United Kingdom — Amazon.co.uk</option>
+                        <option value="ca">Canada — Amazon.ca</option>
+                        <option value="com.au">Australia — Amazon.com.au</option>
+                        <option value="de">Germany — Amazon.de</option>
+                        <option value="fr">France — Amazon.fr</option>
+                        <option value="es">Spain — Amazon.es</option>
+                        <option value="it">Italy — Amazon.it</option>
+                    </select>
+                    <p id="book-store-note">Links open Amazon.com until you select another marketplace. Check the edition, format, price and delivery availability on Amazon before buying.</p>
+                </div>
+                <h3 class="book-group-heading">Desk references</h3>
+                <div class="book-grid">
+                    <article class="card book-card">
+                        
+                        <p class="book-language">English</p>
+                        <h4>Desk Reference</h4>
+                        <p>The second English edition, with a larger 7 × 10-inch print format. A quick-consultation guide linking marker meaning, functional significance, interpretation patterns and conventional correlations.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover · Kindle</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HLYQQG5S" href="https://www.amazon.com/dp/B0HLYQQG5S" target="_blank" rel="noopener noreferrer" aria-label="View Desk Reference on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card">
+                        
+                        <p class="book-language">Deutsch</p>
+                        <h4>Praxis-Referenz</h4>
+                        <p>A German-language practitioner reference bringing together marker meaning, functional relevance, interpretation patterns and conventional correlations.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover · Kindle</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HLZ6GGM8" href="https://www.amazon.com/dp/B0HLZ6GGM8" target="_blank" rel="noopener noreferrer" aria-label="View Praxis-Referenz on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card">
+                        
+                        <p class="book-language">Español</p>
+                        <h4>Guía de Referencia</h4>
+                        <p>A Spanish-language quick reference for reading functional markers systematically and placing them in a broader wellness-assessment context.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover · Kindle</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HNF3KZW3" href="https://www.amazon.com/dp/B0HNF3KZW3" target="_blank" rel="noopener noreferrer" aria-label="View Guía de Referencia on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card">
+                        
+                        <p class="book-language">Português</p>
+                        <h4>Guia de Referência</h4>
+                        <p>A Portuguese-language practitioner guide connecting marker meaning, functional significance, interpretation patterns and clinical context.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover · Kindle</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HN21DKKW" href="https://www.amazon.com/dp/B0HN21DKKW" target="_blank" rel="noopener noreferrer" aria-label="View Guia de Referência on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card">
+                        
+                        <p class="book-language">Italiano</p>
+                        <h4>Guida di riferimento</h4>
+                        <p>An Italian-language quick reference for interpreting functional markers alongside physiological relationships and conventional correlations.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover · Kindle</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HN1S8X8F" href="https://www.amazon.com/dp/B0HN1S8X8F" target="_blank" rel="noopener noreferrer" aria-label="View Guida di riferimento on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card">
+                        
+                        <p class="book-language">Français</p>
+                        <h4>Guide de référence</h4>
+                        <p>A French-language quick reference bringing together functional marker meaning, interpretation patterns, clinical context and conventional correlations for a broader wellness assessment.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover · Kindle</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HNF9KKDV" href="https://www.amazon.com/dp/B0HNF9KKDV" target="_blank" rel="noopener noreferrer" aria-label="View Guide de référence on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                </div>
+                <h3 class="book-group-heading">Clinical references</h3>
+                <p class="book-set-note">Choose your print edition: the complete reference in one black-and-white volume, or the Premium Full-Colour Edition across two volumes. Both Volume 1 and Volume 2 are required for the complete colour reference and are purchased separately.</p>
+                <div class="book-grid">
+                    <article class="card book-card book-mono">
+                        <div class="book-edition mono"><span class="edition-dot" aria-hidden="true"></span>Black &amp; white</div>
+                        <p class="book-language">English</p>
+                        <h4>The Complete QRMA Clinical Reference</h4>
+                        <p>A complete single-volume black-and-white reference covering more than 300 interconnected markers, with visual models, influencing factors, diagnostic correlations and client-friendly explanations.</p>
+                        <p class="book-formats">Published formats: Paperback</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HJS56MX6" href="https://www.amazon.com/dp/B0HJS56MX6" target="_blank" rel="noopener noreferrer" aria-label="View The Complete QRMA Clinical Reference on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card book-colour">
+                        <div class="book-edition colour"><span class="edition-spectrum" aria-hidden="true"></span>Full colour</div>
+                        <p class="book-language">English</p>
+                        <h4>The Complete QRMA Clinical Reference — Volume 1</h4>
+                        <p>Covers Parts I–VI of the Premium Full-Colour Edition, with visual models, functional relationships and structured practitioner interpretation.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HMKZ11XP" href="https://www.amazon.com/dp/B0HMKZ11XP" target="_blank" rel="noopener noreferrer" aria-label="View The Complete QRMA Clinical Reference — Volume 1 on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                    <article class="card book-card book-colour">
+                        <div class="book-edition colour"><span class="edition-spectrum" aria-hidden="true"></span>Full colour</div>
+                        <p class="book-language">English</p>
+                        <h4>The Complete QRMA Clinical Reference — Volume 2</h4>
+                        <p>Covers Parts VII–XII of the Premium Full-Colour Edition, completing the reference with further visual models and structured practitioner interpretation.</p>
+                        <p class="book-formats">Published formats: Paperback · Hardcover</p>
+                        <a class="btn secondary book-buy" data-book-asin="B0HMG9RPXC" href="https://www.amazon.com/dp/B0HMG9RPXC" target="_blank" rel="noopener noreferrer" aria-label="View The Complete QRMA Clinical Reference — Volume 2 on Amazon (opens a new tab)">View on Amazon.com</a>
+                    </article>
+                </div>
+                <p class="book-library-note">These books support practitioner education and contextual interpretation. They do not replace professional judgement, diagnosis, treatment, appropriate investigation or referral.</p>
+                <p><a class="book-author-link" href="https://www.amazon.com/stores/author/B0HM8CMSPL/allbooks" target="_blank" rel="noopener noreferrer">View the full author catalogue on Amazon.com ↗</a></p>
+            </div>
+        </section>
+
         <section class="section" id="faq">
             <div class="container">
                 <div class="section-head">
@@ -477,7 +605,7 @@
                     <details><summary>Does go360 diagnose disease?</summary><p>No. go360 is designed for wellness reporting, education, practitioner review, and client communication. It should not be used as a substitute for medical diagnosis or treatment.</p></details>
                     <details><summary>Can I share reports with clients?</summary><p>Yes. You can create secure share links and report bundles, with options such as expiry, password protection, and paid access workflows.</p></details>
                     <details><summary>What happens after the free trial?</summary><p>You can continue viewing existing reports and shares. Creating new reports, share links, and bundles requires an active Practitioner Pro subscription.</p></details>
-                    <details><summary>Is Spanish available?</summary><p>The first production version is being completed in English. Spanish client-facing reports are planned after the English workflow is stable with pilot users.</p></details>
+                    <details><summary>Which languages are available?</summary><p>English is available now. Additional client-facing report languages are planned, including Spanish, Portuguese, Italian, German and French. Availability will be announced as each language is released.</p></details>
                     <details><summary>Do I need a credit card to start?</summary><p>The launch trial is designed to let practitioners evaluate the workflow before upgrading to the monthly plan.</p></details>
                 </div>
             </div>
@@ -495,7 +623,7 @@
     <footer class="footer">
         <div class="container footer-inner">
             <div>© go360. Practitioner wellness reporting platform.</div>
-            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;"><a href="/kb/">QRMA Knowledgebase</a><span>·</span><a href="/login">Sign in</a><span>·</span><a href="/register">Create account</a><span>·</span><a href="/terms">Terms of Service</a><span>·</span><a href="/privacy">Privacy Policy</a><span>·</span><a href="/cookies">Cookie Policy</a></div>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;"><a href="/kb/">QRMA Knowledgebase</a><span>·</span><a href="#books">Books</a><span>·</span><a href="/login">Sign in</a><span>·</span><a href="/register">Create account</a><span>·</span><a href="/terms">Terms of Service</a><span>·</span><a href="/privacy">Privacy Policy</a><span>·</span><a href="/cookies">Cookie Policy</a></div>
         </div>
     </footer>
 </div>
@@ -509,12 +637,30 @@
         document.addEventListener('keydown', event => {
             if (event.key === 'Escape' && menu.open) { menu.open = false; summary.focus(); event.preventDefault(); }
         });
-        const viewport = window.matchMedia('(max-width: 980px)');
+        const viewport = window.matchMedia('(max-width: 1100px)');
         const reset = () => { if (!viewport.matches) menu.open = false; };
         if (viewport.addEventListener) viewport.addEventListener('change', reset);
         else viewport.addListener(reset);
     })();
     </script>
     <script src="/static/js/cookie-consent.js" defer></script>
+    <script>
+    (() => {
+        const picker = document.getElementById('book-marketplace');
+        const domains = new Set(['com', 'co.uk', 'ca', 'com.au', 'de', 'fr', 'es', 'it']);
+        if (!picker) return;
+        picker.addEventListener('change', () => {
+            const domain = picker.value;
+            if (!domains.has(domain)) return;
+            document.querySelectorAll('[data-book-asin]').forEach(link => {
+                const asin = link.dataset.bookAsin;
+                if (!/^[A-Z0-9]{10}$/.test(asin)) return;
+                link.href = 'https://www.amazon.' + domain + '/dp/' + asin;
+                link.textContent = 'View on Amazon.' + domain;
+            });
+            document.getElementById('book-store-note').textContent = 'Book links now open Amazon.' + domain + '. Check the edition, format, price and delivery availability on Amazon before buying.';
+        });
+    })();
+    </script>
 </body>
 </html>
