@@ -1,13 +1,13 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
-    <link rel="icon" type="image/png" sizes="16x16" href="/static/favicons/favicon-16x16.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
-    <link rel="manifest" href="/static/favicons/site.webmanifest">
-    <meta name="theme-color" content="#15b400">
-    <title>{{ title or "Health Portal" }}</title>
+<head>{% include "shared/brand_head.html" %}
+    
+    
+    
+    
+    
+    
+    <title>{{ title or "Go360" }}</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         :root {
@@ -1337,7 +1337,7 @@
     <aside class="sidebar" id="app-sidebar">
         <div style="display:flex; align-items:center; justify-content:space-between; gap:10px;">
             <div>
-                <h2>Health Portal</h2>
+                <h2><a href="/" aria-label="Go360 home"><img class="go360-wordmark" src="/static/brand/go360-v1/go360-wordmark-light.svg" alt="Go360"></a></h2>
                 <div class="subtle">Practitioner workspace</div>
             </div>
             <button class="mobile-close-btn" id="mobile-close-btn" aria-label="Close menu" style="display:none;">×</button>

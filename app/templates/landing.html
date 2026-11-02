@@ -1,6 +1,8 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
+<head>{% include "shared/brand_head.html" %}
+    <meta charset="utf-8">
+    {% include "shared/search_meta.html" %}
     <title>go360 · QRMA report platform for practitioners</title>
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <meta name="description" content="go360 helps QRMA practitioners turn scan exports into professional reports, secure client shares, trends, and revenue-ready workflows." />
@@ -271,26 +273,24 @@
         .brand-panel .brand-logo-img { width:min(360px, 82vw); filter: drop-shadow(0 14px 28px rgba(15,23,42,.14)); }
 
     </style>
-    <link rel="icon" href="/static/favicons/favicon.ico" sizes="any">
-    <link rel="icon" type="image/png" sizes="32x32" href="/static/favicons/favicon-32x32.png">
-    <link rel="apple-touch-icon" sizes="180x180" href="/static/favicons/apple-touch-icon.png">
-    <link rel="manifest" href="/static/favicons/site.webmanifest">
-    <meta name="theme-color" content="#1d4ed8">
+    
+    
+    
+    
+    
     <link rel="stylesheet" href="/static/css/cookie-consent.css">
 </head>
 <body>
 <div class="page">
     <header class="nav">
         <div class="container nav-inner">
-            <a href="/" class="logo-wordmark" aria-label="go360 home">
-                <span class="logo-go">g</span><span class="logo-o-wrap"><span class="logo-o-inner"></span></span><span>360</span>
-            </a>
+            <a href="/" class="logo-wordmark" aria-label="go360 home"><img class="go360-wordmark" src="/static/brand/go360-v1/go360-wordmark-dark.svg" alt="Go360"></a>
             <nav class="nav-links" aria-label="Main navigation">
                 <a href="#how-it-works">How it works</a>
                 <a href="#features">Features</a>
                 <a href="#pricing">Pricing</a>
                 <a href="#faq">FAQ</a>
-                <a href="/cookies">Cookies</a>
+                <a href="/kb/">QRMA Knowledgebase</a>
             </nav>
             <div class="nav-actions">
                 <a class="btn text" href="/login">Sign in</a>
@@ -311,6 +311,7 @@
                     <div class="hero-cta">
                         <a class="btn primary" href="/register">Start 30-day free trial</a>
                         <a class="btn secondary" href="#how-it-works">See how it works</a>
+                        <a class="btn secondary" href="/kb/">Explore the QRMA Knowledgebase</a>
                     </div>
                     <div class="trust-row">
                         <span>✓ No credit card required for trial</span>
@@ -455,7 +456,7 @@
     <footer class="footer">
         <div class="container footer-inner">
             <div>© go360. Practitioner wellness reporting platform.</div>
-            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;"><a href="/login">Sign in</a><span>·</span><a href="/register">Create account</a><span>·</span><a href="/terms">Terms of Service</a><span>·</span><a href="/privacy">Privacy Policy</a><span>·</span><a href="/cookies">Cookie Policy</a></div>
+            <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;"><a href="/kb/">QRMA Knowledgebase</a><span>·</span><a href="/login">Sign in</a><span>·</span><a href="/register">Create account</a><span>·</span><a href="/terms">Terms of Service</a><span>·</span><a href="/privacy">Privacy Policy</a><span>·</span><a href="/cookies">Cookie Policy</a></div>
         </div>
     </footer>
 </div>

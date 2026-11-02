@@ -1,9 +1,12 @@
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, PlainTextResponse, Response
 from fastapi.templating import Jinja2Templates
 from sqlalchemy.orm import Session
+from urllib.parse import quote
+import xml.etree.ElementTree as ET
+from app.services.search_visibility import APP_ORIGIN, MARKETING_ORIGIN, production_request, request_host, robots_body
 
 from app.api.deps import get_db
 from app.services.kb_service import (
@@ -19,6 +22,30 @@ from app.services.kb_service import (
 
 router = APIRouter(tags=["knowledge-base"])
 templates = Jinja2Templates(directory="app/templates")
+
+
+
+@router.api_route("/robots.txt", methods=["GET", "HEAD"], include_in_schema=False)
+def search_robots(request: Request):
+    return PlainTextResponse(robots_body(request), headers={"Cache-Control": "no-store"})
+
+
+@router.api_route("/sitemap.xml", methods=["GET", "HEAD"], include_in_schema=False)
+def search_sitemap(request: Request, db: Session = Depends(get_db)):
+    if not production_request(request):
+        raise HTTPException(status_code=404, detail="Not found")
+    if request_host(request) == "app.go360.io":
+        urls = [APP_ORIGIN + "/kb/", APP_ORIGIN + "/kb/a-z"]
+        urls.extend(APP_ORIGIN + "/kb/" + quote(row["go360_id"], safe="-") for row in get_az_index(db))
+    else:
+        urls = [MARKETING_ORIGIN + path for path in ("/", "/terms", "/privacy")]
+    namespace = "http://www.sitemaps.org/schemas/sitemap/0.9"
+    ET.register_namespace("", namespace)
+    root = ET.Element("{" + namespace + "}urlset")
+    for url in sorted(set(urls)):
+        node = ET.SubElement(root, "{" + namespace + "}url")
+        ET.SubElement(node, "{" + namespace + "}loc").text = url
+    return Response(ET.tostring(root, encoding="utf-8", xml_declaration=True), media_type="application/xml", headers={"Cache-Control": "no-store"})
 
 
 @router.get("/kb", response_class=HTMLResponse)
@@ -122,4 +149,6 @@ def marker_knowledge_page(request: Request, go360_id: str, db: Session = Depends
     marker = get_marker_page(db, go360_id, language_code="en")
     if not marker:
         raise HTTPException(status_code=404, detail="Go360 marker not found")
+    if not getattr(request.state, "search_noindex", True):
+        request.state.search_canonical_url = APP_ORIGIN + "/kb/" + marker["go360_id"]
     return templates.TemplateResponse("kb/marker.html", {"request": request, "marker": marker})

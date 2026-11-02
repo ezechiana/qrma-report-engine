@@ -1,5 +1,7 @@
-<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Go360 Knowledge Base</title><style>
+<!doctype html><html lang="en"><head>{% include "shared/brand_head.html" %}{% include "shared/search_meta.html" %}
+<meta name="description" content="{{ ((marker.clinical_meaning if marker is defined else description|default('Explore QRMA marker explanations, teaching diagrams and clinical context in the Go360 QRMA Knowledgebase.')) or 'Explore the Go360 QRMA Knowledgebase.')|striptags|truncate(160, true) }}">
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Go360 QRMA Knowledgebase</title><style>
 :root{--navy:#0d2745;--navy2:#153f69;--ink:#192634;--muted:#657587;--line:#dbe4ec;--soft:#f2f7fa;--paper:#fff;--gold:#d0ad63;--blue:#2563a6;--max:1120px}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#eef3f7;line-height:1.5}
 a{color:inherit}.top{background:var(--navy);color:#fff;border-bottom:3px solid var(--gold)}.topin,.wrap{width:min(calc(100% - 32px),var(--max));margin:auto}.topin{min-height:70px;display:flex;align-items:center;justify-content:space-between}.brand{font-weight:800;text-decoration:none}.brand span{font-weight:500;opacity:.7}.nav a{font-size:.86rem;text-decoration:none;opacity:.82}
@@ -12,7 +14,7 @@ a{color:inherit}.top{background:var(--navy);color:#fff;border-bottom:3px solid v
 details.card{padding:0;overflow:hidden}summary{cursor:pointer;padding:18px 20px;font-weight:800;color:var(--navy)}.details-inner{padding:0 20px 20px}
 @media(max-width:760px){.triad{grid-template-columns:1fr}.search{flex-direction:column}.search button{padding:13px}.hero{padding-top:42px}}
 </style></head><body>
-<header class="top"><div class="topin"><a class="brand" href="/kb/">Go360 <span>Knowledge Base</span></a><nav class="nav"><a href="/kb/a-z">A–Z</a></nav></div></header>
+<header class="top"><div class="topin"><a class="brand" href="/kb/"><img class="go360-wordmark go360-wordmark-kb" src="/static/brand/go360-v1/go360-wordmark-light.svg" alt="Go360"> <span>QRMA Knowledgebase</span></a><nav class="nav"><a href="/kb/a-z">A–Z</a></nav></div></header>
 <main class="wrap page">
 <section class="hero">
 <h1>What would you like to understand?</h1>
@@ -24,7 +26,7 @@ details.card{padding:0;overflow:hidden}summary{cursor:pointer;padding:18px 20px;
 </section>
 
 <section class="section">
-<h2>Explore the Knowledge Base</h2>
+<h2>Explore the QRMA Knowledgebase</h2>
 <p>Choose the route that matches how you are working.</p>
 <div class="triad">
 <a class="card gateway" href="#systems" aria-label="Browse Go360 Clinical Systems"><h3>Clinical systems</h3><p>Browse markers by their canonical Go360 system.</p></a>

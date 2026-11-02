@@ -1,9 +1,11 @@
 <!doctype html>
 <html lang="en">
-<head>
+<head>{% include "shared/brand_head.html" %}{% include "shared/search_meta.html" %}
+<meta name="description" content="{{ ((marker.clinical_meaning if marker is defined else description|default('Explore QRMA marker explanations, teaching diagrams and clinical context in the Go360 QRMA Knowledgebase.')) or 'Explore the Go360 QRMA Knowledgebase.')|striptags|truncate(160, true) }}">
+
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>Search | Go360 Knowledge Base</title>
+<title>Search | Go360 QRMA Knowledgebase</title>
 <style>
 :root{--navy:#0d2745;--ink:#192634;--muted:#657587;--line:#dbe4ec;--gold:#d0ad63;--blue:#2563a6;--max:1120px}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:#eef3f7;line-height:1.5}
@@ -16,7 +18,7 @@ h1{color:var(--navy);margin:22px 0 18px}.group{margin-top:26px}.group h2{font-si
 </style>
 </head>
 <body>
-<header class="top"><div class="topin"><a class="brand" href="/kb/">Go360 <span>Knowledge Base</span></a><nav class="nav"><a href="/kb/a-z">A–Z</a></nav></div></header>
+<header class="top"><div class="topin"><a class="brand" href="/kb/"><img class="go360-wordmark go360-wordmark-kb" src="/static/brand/go360-v1/go360-wordmark-light.svg" alt="Go360"> <span>QRMA Knowledgebase</span></a><nav class="nav"><a href="/kb/a-z">A–Z</a></nav></div></header>
 <main class="wrap page">
 <form class="search" action="/kb/search" method="get">
 <input name="q" value="{{ query }}" type="search" placeholder="Search markers, IDs, systems or patterns"><button>Search</button>
