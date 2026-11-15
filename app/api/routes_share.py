@@ -279,6 +279,8 @@ def create_patient_trend_share_link(
     link = create_share_link(
         db,
         report_version=latest_report,
+        patient_id=patient.id,
+        share_type="trend",
         password=payload.password,
         expires_at=payload.expires_at,
     )
