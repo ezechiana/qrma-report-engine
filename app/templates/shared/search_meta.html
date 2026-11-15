@@ -1,0 +1,4 @@
+{% if request is defined %}
+{% if request.state.search_noindex|default(true) %}<meta name="robots" content="noindex, nofollow, noarchive">{% endif %}
+{% if request.state.search_canonical_url|default('') %}<link rel="canonical" href="{{ request.state.search_canonical_url }}">{% endif %}
+{% endif %}

@@ -35,6 +35,7 @@ from app.api.routes_platform_settings import router as platform_settings_router
 from app.api.routes_referrals import router as referrals_router
 from app.api.routes_platform_monitoring import router as platform_monitoring_router
 from app.api.routes_platform_users import router as platform_users_router
+from app.api.routes_kb import router as kb_router
 
 
 from app.db.base import Base
@@ -171,6 +172,7 @@ def create_app() -> FastAPI:
     app.include_router(referrals_router)
     app.include_router(platform_monitoring_router)
     app.include_router(platform_users_router)
+    app.include_router(kb_router)
 
     # Legacy engine/debug routes
     app.include_router(engine_router)
