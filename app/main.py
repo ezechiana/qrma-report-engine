@@ -26,6 +26,7 @@ from app.api.routes_share_dashboard import router as share_dashboard_router
 from app.api.routes_revenue import router as revenue_router
 from app.api.routes_share_pages import router as share_pages_router
 from app.api.routes_stripe_connect import router as stripe_connect_router
+from app.api.routes_share_links import router as share_links_router
 from app.api.routes_platform_settings import router as platform_settings_router
 from app.api.routes_referrals import router as referrals_router
 from app.api.routes_platform_monitoring import router as platform_monitoring_router
@@ -151,6 +152,7 @@ def create_app() -> FastAPI:
     app.include_router(webhooks_router)
     app.include_router(ui_router)
     app.include_router(routes_share.router)
+    app.include_router(share_links_router)
     app.include_router(stripe_connect_router)
     app.include_router(trend_reports_router)
     app.include_router(share_bundle_router)

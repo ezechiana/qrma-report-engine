@@ -8,7 +8,7 @@ from types import SimpleNamespace
 
 from fastapi import HTTPException
 
-from app.api import routes_share, routes_stripe_connect, share_helpers
+from app.api import routes_share, routes_share_links, routes_stripe_connect, share_helpers
 
 
 STRIPE_CONNECT_ROUTES = {
@@ -17,18 +17,21 @@ STRIPE_CONNECT_ROUTES = {
     ("/api/billing/stripe-connect/status", "GET"),
 }
 
-EXPECTED_ROUTES = {
-    ("/api/patients/{patient_id}/trend-share-links", "POST"),
+SHARE_LINK_ROUTES = {
     ("/api/reports/{report_version_id}/share-links", "POST"),
     ("/api/share-links", "GET"),
     ("/api/share-links/{share_id}/extend-expiry", "POST"),
     ("/api/share-links/{share_id}/revoke", "POST"),
-    ("/api/share-links/{token}/payment-settings", "POST"),
-    ("/api/share/bundles", "POST"),
     ("/api/share/create", "POST"),
     ("/api/share/list", "GET"),
     ("/api/share/revoke/{share_id}", "POST"),
     ("/debug/share-links", "GET"),
+}
+
+EXPECTED_ROUTES = {
+    ("/api/patients/{patient_id}/trend-share-links", "POST"),
+    ("/api/share-links/{token}/payment-settings", "POST"),
+    ("/api/share/bundles", "POST"),
     ("/share/{token}", "GET"),
     ("/share/{token}/bundle", "GET"),
     ("/share/{token}/bundle-data", "GET"),
@@ -49,7 +52,6 @@ HELPERS_USED_BY_ROUTES = (
     "_connect_destination_for_report",
     "_enforce_password_gate",
     "_enforce_share_payment_or_402",
-    "_ensure_share_link_events_table",
     "_get_report_for_share_or_404",
     "_has_valid_share_cookie",
     "_latest_ready_report_for_patient",
@@ -76,6 +78,30 @@ def _route_set(router):
 
 def test_share_routes_unchanged():
     assert _route_set(routes_share.router) == EXPECTED_ROUTES
+
+
+def test_share_link_management_routes_moved_with_same_paths():
+    assert _route_set(routes_share_links.router) == SHARE_LINK_ROUTES
+    assert _route_set(routes_share.router).isdisjoint(SHARE_LINK_ROUTES)
+    assert routes_share_links._ensure_share_link_events_table is share_helpers._ensure_share_link_events_table
+
+
+def test_revoke_share_still_deactivates_the_link():
+    calls = {}
+
+    class DB:
+        def execute(self, statement, params):
+            calls["sql"] = str(statement)
+            calls["params"] = params
+
+        def commit(self):
+            calls["committed"] = True
+
+    result = routes_share_links.revoke_share("share-1", db=DB(), user=SimpleNamespace(id="user-1"))
+    assert result == {"success": True}
+    assert "is_active = false" in calls["sql"]
+    assert calls["params"] == {"id": "share-1"}
+    assert calls["committed"] is True
 
 
 def test_stripe_connect_routes_moved_with_same_paths():
