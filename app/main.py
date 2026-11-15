@@ -15,6 +15,7 @@ from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router, pages_router as auth_pages_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_patients import router as patients_router
+from app.api.routes_patient_records import router as patient_records_router
 from app.api.routes_reports import router as reports_router
 from app.api.routes_share import router as share_router
 from app.api.routes_ui import router as ui_router
@@ -143,6 +144,7 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
 
     # SaaS application routes
+    app.include_router(patient_records_router)
     app.include_router(patients_router)
     app.include_router(cases_router)
     app.include_router(reports_router)
