@@ -24,3 +24,27 @@ class ClaimInviteCreated(ClaimInviteRead):
 
     claim_url: str
     email_sent: bool
+
+
+class ClaimInvitePreview(BaseModel):
+    clinic_name: str
+    client_name: str
+    email: EmailStr
+    expires_at: datetime
+    consent_text: str
+    consent_version: str
+
+
+class ClaimAccountCreate(BaseModel):
+    email: EmailStr
+    password: str = Field(min_length=10, max_length=128)
+    confirm_password: str = Field(min_length=10, max_length=128)
+    consent: bool
+
+
+class ClaimAccountStarted(BaseModel):
+    ok: bool
+    email: EmailStr
+    requires_email_verification: bool
+    message: str
+    dev_verification_url: str | None = None

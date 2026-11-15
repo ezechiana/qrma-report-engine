@@ -131,7 +131,7 @@ def test_practitioner_can_send_list_and_cancel_a_claim_invite(monkeypatch):
         assert body["email_sent"] is True
         token = body["claim_url"].rsplit("/", 1)[-1]
         assert token not in body["email"]
-        stored = db.query(PatientClaimInvite).filter(PatientClaimInvite.id == body["id"]).one()
+        stored = db.query(PatientClaimInvite).filter(PatientClaimInvite.id == uuid.UUID(body["id"])).one()
         assert stored.token_hash == hash_claim_token(token)
         assert stored.token_hash != token
         assert token in sent["text"]
@@ -162,7 +162,9 @@ def test_practitioner_can_send_list_and_cancel_a_claim_invite(monkeypatch):
         }
 
         current_id = replaced.json()["id"]
-        stored_current = db.query(PatientClaimInvite).filter(PatientClaimInvite.id == current_id).one()
+        stored_current = db.query(PatientClaimInvite).filter(
+            PatientClaimInvite.id == uuid.UUID(current_id)
+        ).one()
         stored_current.expires_at = datetime.now(timezone.utc) - timedelta(minutes=1)
         db.commit()
         expired = client.get(f"/api/patients/{patient.id}/claim-invites").json()

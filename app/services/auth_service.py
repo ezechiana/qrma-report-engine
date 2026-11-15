@@ -166,6 +166,8 @@ def verify_email_token(db: Session, token: str) -> User:
         user.updated_at = utcnow()
 
     db.execute(text("UPDATE email_verification_tokens SET used_at = NOW() WHERE token = :token"), {"token": token})
+    from app.services.patient_claim_service import complete_reserved_claim
+    complete_reserved_claim(db, user)
     db.commit()
     db.refresh(user)
     log_auth_event(db, event_type="email_verify", status="success", user=user, email=user.email)

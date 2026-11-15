@@ -1,8 +1,9 @@
 """Practitioner-owned claim invites for a single patient record.
 
 The raw token is emailed and returned once. Only its hash is stored.
-Accepting the invite is a later story; this module will not revive an
-invite that has already been accepted.
+A client account can claim the record only after email verification.
+An accepted invite cannot be used again, and the practitioner remains
+the owner of the patient record.
 """
 
 from __future__ import annotations
@@ -16,10 +17,17 @@ from html import escape
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import PatientClaimInvite, User
-from app.services.email_service import send_email
+from app.db.models import Patient, PatientClaimInvite, RecommendationMode, User
+from app.services.email_service import send_email, send_verification_email
+from app.utils.security import hash_password
 
 CLAIM_INVITE_DAYS = 7
+CLAIM_CONSENT_VERSION = "client-claim-v1"
+CLAIM_CONSENT_TEXT = (
+    "I agree to create a client account so I can view the record prepared for me "
+    "by this clinic. This does not give me access to anyone else's record."
+)
+INVITE_UNUSABLE = "This invite can no longer be used."
 
 
 def hash_claim_token(raw_token: str) -> str:
@@ -155,4 +163,143 @@ def cancel_claim_invite(db: Session, practitioner_id, patient_id, invite_id) -> 
     invite.cancelled_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(invite)
+    return invite
+
+
+def _invite_for_token(db: Session, raw_token: str) -> PatientClaimInvite:
+    invite = (
+        db.query(PatientClaimInvite)
+        .filter(PatientClaimInvite.token_hash == hash_claim_token(raw_token))
+        .first()
+    )
+    if invite is None:
+        raise HTTPException(status_code=404, detail="This invite is no longer available.")
+    return invite
+
+
+def _ensure_usable(invite: PatientClaimInvite) -> None:
+    if invite.status in {"cancelled", "accepted"} or display_status(invite) != "pending":
+        raise HTTPException(status_code=409, detail=INVITE_UNUSABLE)
+
+
+def preview_claim_invite(db: Session, raw_token: str) -> dict:
+    """Show the clinic and the client's own name before an account is created."""
+    invite = _invite_for_token(db, raw_token)
+    _ensure_usable(invite)
+    patient = db.query(Patient).filter(Patient.id == invite.patient_id).first()
+    practitioner = db.query(User).filter(User.id == invite.practitioner_user_id).first()
+    if patient is None or practitioner is None:
+        raise HTTPException(status_code=404, detail="This invite is no longer available.")
+    clinic = (practitioner.clinic_name or practitioner.full_name or "Your clinic").strip()
+    return {
+        "clinic_name": clinic,
+        "client_name": patient.full_name,
+        "email": invite.email,
+        "expires_at": invite.expires_at,
+        "consent_text": CLAIM_CONSENT_TEXT,
+        "consent_version": CLAIM_CONSENT_VERSION,
+    }
+
+
+def begin_client_claim(
+    db: Session,
+    raw_token: str,
+    email: str,
+    password: str,
+    confirm_password: str,
+    consent: bool,
+) -> tuple[User, str]:
+    """Create a client account and reserve this invite until the email is verified."""
+    if password != confirm_password:
+        raise HTTPException(status_code=400, detail="Passwords do not match.")
+    if consent is not True:
+        raise HTTPException(
+            status_code=400,
+            detail="Consent is required to create an account and claim this record.",
+        )
+    from app.services.auth_service import (
+        _validate_password_strength,
+        create_email_verification_token,
+        get_user_by_email,
+    )
+
+    _validate_password_strength(password)
+    invite = _invite_for_token(db, raw_token)
+    _ensure_usable(invite)
+    normalised = email.strip().lower()
+    if normalised != invite.email:
+        raise HTTPException(status_code=400, detail="Use the email address that received this invite.")
+
+    existing = get_user_by_email(db, normalised)
+    now = datetime.now(timezone.utc)
+    if existing is not None:
+        same_reservation = invite.reserved_by_user_id == existing.id and existing.role == "client"
+        if not same_reservation:
+            raise HTTPException(status_code=409, detail="An account with this email already exists.")
+        user = existing
+    else:
+        if invite.reserved_by_user_id is not None:
+            raise HTTPException(status_code=409, detail=INVITE_UNUSABLE)
+        patient = db.query(Patient).filter(Patient.id == invite.patient_id).first()
+        if patient is None:
+            raise HTTPException(status_code=404, detail="This invite is no longer available.")
+        user = User(
+            email=normalised,
+            password_hash=hash_password(password),
+            full_name=patient.full_name,
+            clinic_name=None,
+            role="client",
+            is_active=True,
+            email_verified_at=None,
+            recommendation_mode_default=RecommendationMode.natural_approaches_clinical,
+        )
+        db.add(user)
+        db.flush()
+
+    invite.reserved_by_user_id = user.id
+    invite.reserved_at = invite.reserved_at or now
+    invite.consent_at = now
+    invite.consent_version = CLAIM_CONSENT_VERSION
+    db.commit()
+    db.refresh(user)
+    verification_token = create_email_verification_token(db, user)
+    try:
+        send_verification_email(to_email=user.email, full_name=user.full_name, token=verification_token)
+    except Exception as exc:
+        raise HTTPException(
+            status_code=502,
+            detail="The account was created, but the verification email could not be sent.",
+        ) from exc
+    return user, verification_token
+
+
+def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | None:
+    """Link a verified client to the one record reserved by their invite.
+
+    Does not commit. The practitioner user_id on the patient stays unchanged.
+    """
+    if str(getattr(user, "role", "") or "").lower() != "client" or not user.email_verified_at:
+        return None
+    invite = (
+        db.query(PatientClaimInvite)
+        .filter(
+            PatientClaimInvite.reserved_by_user_id == user.id,
+            PatientClaimInvite.status == "pending",
+        )
+        .order_by(PatientClaimInvite.created_at.desc())
+        .first()
+    )
+    if invite is None or display_status(invite) != "pending":
+        return None
+    patient = db.query(Patient).filter(Patient.id == invite.patient_id).first()
+    if patient is None or patient.user_id == user.id:
+        return None
+    if patient.claimed_by_user_id and patient.claimed_by_user_id != user.id:
+        return None
+    now = datetime.now(timezone.utc)
+    invite.status = "accepted"
+    invite.accepted_at = now
+    invite.claimed_by_user_id = user.id
+    patient.claimed_by_user_id = user.id
+    patient.claimed_at = now
     return invite

@@ -111,7 +111,11 @@ class User(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    patients: Mapped[list["Patient"]] = relationship(back_populates="user", cascade="all, delete-orphan")
+    patients: Mapped[list["Patient"]] = relationship(
+        back_populates="user",
+        cascade="all, delete-orphan",
+        foreign_keys="Patient.user_id",
+    )
     cases: Mapped[list["Case"]] = relationship(back_populates="user", cascade="all, delete-orphan")
     settings: Mapped[Optional["PractitionerSettings"]] = relationship(
         back_populates="user",
@@ -155,11 +159,18 @@ class Patient(Base):
     email: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
     phone: Mapped[Optional[str]] = mapped_column(String(50), nullable=True)
     notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    claimed_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    claimed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
 
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
 
-    user: Mapped["User"] = relationship(back_populates="patients")
+    user: Mapped["User"] = relationship(back_populates="patients", foreign_keys=[user_id])
     cases: Mapped[list["Case"]] = relationship(back_populates="patient", cascade="all, delete-orphan")
 
 
@@ -474,3 +485,18 @@ class PatientClaimInvite(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
     cancelled_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     accepted_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    reserved_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
+    reserved_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    consent_version: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    claimed_by_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="SET NULL"),
+        nullable=True,
+        index=True,
+    )
