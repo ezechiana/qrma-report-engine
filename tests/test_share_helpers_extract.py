@@ -4,13 +4,20 @@ import os
 
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost/qrma_import_check")
 
-from app.api import routes_share, share_helpers
+from types import SimpleNamespace
+
+from fastapi import HTTPException
+
+from app.api import routes_share, routes_stripe_connect, share_helpers
 
 
-EXPECTED_ROUTES = {
+STRIPE_CONNECT_ROUTES = {
     ("/api/billing/stripe-connect/account-link", "POST"),
     ("/api/billing/stripe-connect/refresh", "POST"),
     ("/api/billing/stripe-connect/status", "GET"),
+}
+
+EXPECTED_ROUTES = {
     ("/api/patients/{patient_id}/trend-share-links", "POST"),
     ("/api/reports/{report_version_id}/share-links", "POST"),
     ("/api/share-links", "GET"),
@@ -42,9 +49,7 @@ HELPERS_USED_BY_ROUTES = (
     "_connect_destination_for_report",
     "_enforce_password_gate",
     "_enforce_share_payment_or_402",
-    "_ensure_practitioner_settings",
     "_ensure_share_link_events_table",
-    "_get_practitioner_connect_state",
     "_get_report_for_share_or_404",
     "_has_valid_share_cookie",
     "_latest_ready_report_for_patient",
@@ -55,7 +60,6 @@ HELPERS_USED_BY_ROUTES = (
     "_set_share_payment_config",
     "_share_payment_state",
     "_stripe_api_request",
-    "_sync_connect_account_status",
     "_tenant_theme_from_report",
     "_track_share_event",
     "_trend_owner_from_report",
@@ -63,12 +67,81 @@ HELPERS_USED_BY_ROUTES = (
 )
 
 
-def test_share_routes_unchanged():
-    found = {
+def _route_set(router):
+    return {
         (route.path, ",".join(sorted(route.methods or [])))
-        for route in routes_share.router.routes
+        for route in router.routes
     }
-    assert found == EXPECTED_ROUTES
+
+
+def test_share_routes_unchanged():
+    assert _route_set(routes_share.router) == EXPECTED_ROUTES
+
+
+def test_stripe_connect_routes_moved_with_same_paths():
+    assert _route_set(routes_stripe_connect.router) == STRIPE_CONNECT_ROUTES
+    assert _route_set(routes_share.router).isdisjoint(STRIPE_CONNECT_ROUTES)
+    for name in (
+        "_ensure_practitioner_settings",
+        "_get_practitioner_connect_state",
+        "_stripe_api_request",
+        "_sync_connect_account_status",
+    ):
+        assert getattr(routes_stripe_connect, name) is getattr(share_helpers, name)
+
+
+def test_connect_status_keeps_local_state_when_stripe_is_down(monkeypatch):
+    monkeypatch.setattr(
+        routes_stripe_connect,
+        "_get_practitioner_connect_state",
+        lambda db, user_id: {"account_id": "acct_1", "connected": True},
+    )
+
+    def stripe_down(db, user_id, account_id):
+        raise HTTPException(status_code=502, detail="stripe down")
+
+    monkeypatch.setattr(routes_stripe_connect, "_sync_connect_account_status", stripe_down)
+    result = routes_stripe_connect.get_stripe_connect_status(
+        db=object(),
+        current_user=SimpleNamespace(id="user-1"),
+    )
+    assert result == {"account_id": "acct_1", "connected": True}
+
+
+def test_connect_refresh_returns_local_state_without_an_account(monkeypatch):
+    monkeypatch.setattr(
+        routes_stripe_connect,
+        "_get_practitioner_connect_state",
+        lambda db, user_id: {"account_id": None, "connected": False},
+    )
+    def sync_should_not_run(*args, **kwargs):
+        raise AssertionError("sync should not run")
+
+    monkeypatch.setattr(
+        routes_stripe_connect,
+        "_sync_connect_account_status",
+        sync_should_not_run,
+    )
+    result = routes_stripe_connect.refresh_stripe_connect_status(
+        db=object(),
+        current_user=SimpleNamespace(id="user-1"),
+    )
+    assert result == {"account_id": None, "connected": False}
+
+
+def test_account_link_refuses_when_connect_is_disabled(monkeypatch):
+    monkeypatch.setattr(routes_stripe_connect, "STRIPE_CONNECT_ENABLED", False)
+    try:
+        routes_stripe_connect.create_stripe_connect_account_link(
+            request=SimpleNamespace(base_url="https://app.go360.io/"),
+            db=object(),
+            current_user=SimpleNamespace(id="user-1"),
+        )
+    except HTTPException as exc:
+        assert exc.status_code == 409
+        assert exc.detail == "Stripe Connect is disabled."
+    else:
+        raise AssertionError("disabled Connect should reject the account link")
 
 
 def test_route_module_uses_extracted_helpers():
