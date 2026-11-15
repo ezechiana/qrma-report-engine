@@ -378,6 +378,15 @@ class AuditLog(Base):
         index=True,
     )
 
+    # Snapshot identifiers intentionally survive device re-pairing/deletion.
+    connector_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    job_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True, index=True)
+    assessment_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    actor_type: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    outcome: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    request_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
+    ip_address: Mapped[Optional[str]] = mapped_column(String(45), nullable=True)
+    event_key: Mapped[Optional[str]] = mapped_column(String(200), nullable=True, unique=True)
     action: Mapped[str] = mapped_column(String(120), index=True)
     metadata_json: Mapped[Optional[dict]] = mapped_column(JSONB, nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())

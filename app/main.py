@@ -38,6 +38,7 @@ from app.api.routes_platform_users import router as platform_users_router
 from app.api.routes_kb import router as kb_router
 
 
+from app.db import connector_models
 from app.db.base import Base
 from app.db.session import engine
 from app.db.migrate import run_migrations
@@ -142,6 +143,14 @@ def create_app() -> FastAPI:
             return RedirectResponse(url=login_url, status_code=303)
 
         return response
+
+    # Connector registration is fail-closed and explicitly DEV-only.
+    if (os.getenv("GO360_CONNECTOR_ENABLED") == "1"
+            and APP_ENV in {"dev", "development", "local", "test"}):
+        from app.api.routes_connector import router as connector_router
+        app.include_router(connector_router)
+        from app.api.routes_platform_connectors import router as platform_connectors_router
+        app.include_router(platform_connectors_router)
 
     # Auth
     app.include_router(auth_pages_router)
