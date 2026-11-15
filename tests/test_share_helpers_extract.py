@@ -25,7 +25,6 @@ SHARE_LINK_ROUTES = {
     ("/api/share/create", "POST"),
     ("/api/share/list", "GET"),
     ("/api/share/revoke/{share_id}", "POST"),
-    ("/debug/share-links", "GET"),
 }
 
 EXPECTED_ROUTES = {
@@ -83,6 +82,8 @@ def test_share_routes_unchanged():
 def test_share_link_management_routes_moved_with_same_paths():
     assert _route_set(routes_share_links.router) == SHARE_LINK_ROUTES
     assert _route_set(routes_share.router).isdisjoint(SHARE_LINK_ROUTES)
+    assert ("/debug/share-links", "GET") not in _route_set(routes_share_links.router)
+    assert ("/debug/share-links", "GET") not in _route_set(routes_share.router)
     assert routes_share_links._ensure_share_link_events_table is share_helpers._ensure_share_link_events_table
 
 

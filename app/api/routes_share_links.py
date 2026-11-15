@@ -63,20 +63,6 @@ def create_report_share_link(
     }
 
 
-@router.get("/debug/share-links")
-def list_links(db: Session = Depends(get_db)):
-    links = db.query(ShareLink).all()
-    return [
-        {
-            "token": l.token,
-            "active": l.is_active,
-            "expires_at": l.expires_at.isoformat() if l.expires_at else None,
-            "report_version_id": str(l.report_version_id),
-        }
-        for l in links
-    ]
-
-
 @router.post("/api/share/create")
 def create_share(payload: dict, db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_subscription_feature(db, user, "share_link")
