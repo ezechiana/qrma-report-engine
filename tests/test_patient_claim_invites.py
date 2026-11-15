@@ -39,10 +39,12 @@ def test_claim_invites_are_not_share_links():
         ("/api/patients/{patient_id}/claim-invites", "GET"),
         ("/api/patients/{patient_id}/claim-invites", "POST"),
         ("/api/patients/{patient_id}/claim-invites/{invite_id}/cancel", "POST"),
+        ("/api/patients/{patient_id}/claim-access", "GET"),
+        ("/api/patients/{patient_id}/claim-access/unlink", "POST"),
     }
     share_paths = [route.path for route in routes_share.router.routes]
     share_paths += [route.path for route in routes_share_links.router.routes]
-    assert all("claim-invite" not in path for path in share_paths)
+    assert all("claim-invite" not in path and "claim-access" not in path for path in share_paths)
     record_paths = [route.path for route in routes_patient_records.router.routes]
     assert "/api/patients/{patient_id}/claim-invites" not in record_paths
 

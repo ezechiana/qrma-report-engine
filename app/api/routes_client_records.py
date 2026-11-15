@@ -7,12 +7,14 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
+from app.schemas.patient_claims import ClaimAccessRead
 from app.services.client_record_service import (
     _clinic_name,
     claimed_patients,
     client_record_payload,
     require_claimed_patient,
 )
+from app.services.patient_claim_service import claim_access_state, end_claim_access
 
 router = APIRouter(prefix="/api/client", tags=["client-record"])
 
@@ -56,3 +58,19 @@ def get_client_record(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return client_record_payload(db, client, patient)
+
+
+@router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)
+def close_client_access(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """The client stops their own access to one claimed record.
+
+    The clinic keeps the patient, cases, and reports. Share links are not revoked.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    patient = end_claim_access(db, patient, "client")
+    return claim_access_state(patient)

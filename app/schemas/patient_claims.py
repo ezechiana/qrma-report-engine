@@ -42,6 +42,16 @@ class ClaimAccountCreate(BaseModel):
     consent: bool
 
 
+class ClaimAccessRead(BaseModel):
+    """Current account access for one practitioner-owned record."""
+
+    patient_id: UUID
+    claimed: bool
+    claimed_at: datetime | None = None
+    access_ended_at: datetime | None = None
+    access_ended_by: str | None = None
+
+
 class ClaimAccountStarted(BaseModel):
     ok: bool
     email: EmailStr

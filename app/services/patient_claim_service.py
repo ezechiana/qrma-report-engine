@@ -302,4 +302,46 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
     invite.claimed_by_user_id = user.id
     patient.claimed_by_user_id = user.id
     patient.claimed_at = now
+    patient.claim_access_ended_at = None
+    patient.claim_access_ended_by = None
     return invite
+
+
+def claim_access_state(patient: Patient) -> dict:
+    """Clinic-facing access state. Does not include the client account id."""
+    return {
+        "patient_id": patient.id,
+        "claimed": patient.claimed_by_user_id is not None,
+        "claimed_at": patient.claimed_at,
+        "access_ended_at": patient.claim_access_ended_at,
+        "access_ended_by": patient.claim_access_ended_by,
+    }
+
+
+def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
+    """Remove a client's account access without deleting the clinical record.
+
+    Pending invites for this patient stop working. Share links are left as they are.
+    """
+    if ended_by not in {"practitioner", "client"}:
+        raise HTTPException(status_code=400, detail="Access can only be ended by the clinic or the client.")
+    if patient.claimed_by_user_id is None:
+        raise HTTPException(status_code=409, detail="This record is not claimed.")
+    now = datetime.now(timezone.utc)
+    patient.claimed_by_user_id = None
+    patient.claim_access_ended_at = now
+    patient.claim_access_ended_by = ended_by
+    pending = (
+        db.query(PatientClaimInvite)
+        .filter(
+            PatientClaimInvite.patient_id == patient.id,
+            PatientClaimInvite.status == "pending",
+        )
+        .all()
+    )
+    for invite in pending:
+        invite.status = "cancelled"
+        invite.cancelled_at = now
+    db.commit()
+    db.refresh(patient)
+    return patient
