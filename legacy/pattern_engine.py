@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import List
 
 from app.models.schema import ParsedReport, DetectedPattern, ParameterResult
-from app.services.pattern_engine_v1 import detect_patterns as detect_patterns_v1
+from .pattern_engine_v1 import detect_patterns as detect_patterns_v1
 from app.services.scoring_engine import compute_scan_scores
 
 
