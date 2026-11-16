@@ -17,7 +17,7 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_patient_claims, routes_share, routes_share_links
 from app.api.deps import _client_blocked_from_practitioner_path, get_db
-from app.db.models import Patient, PatientClaimInvite, User
+from app.db.models import ClinicAssociation, Patient, PatientClaimInvite, User
 from app.services.auth_service import verify_email_token
 from app.services.patient_claim_service import (
     CLAIM_CONSENT_TEXT,
@@ -77,13 +77,13 @@ def test_client_previews_consents_verifies_and_claims(monkeypatch):
         poolclass=StaticPool,
     )
     originals = []
-    for model in (User, Patient, PatientClaimInvite):
+    for model in (User, Patient, PatientClaimInvite, ClinicAssociation):
         for column in model.__table__.columns:
             if isinstance(column.type, Uuid):
                 originals.append((column, column.type))
                 column.type = FlexibleUuid()
     try:
-        for model in (User, Patient, PatientClaimInvite):
+        for model in (User, Patient, PatientClaimInvite, ClinicAssociation):
             model.__table__.create(engine)
         db = Session(engine)
         practitioner = User(

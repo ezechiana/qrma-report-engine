@@ -539,6 +539,40 @@ class PatientClaimInvite(Base):
     )
 
 
+class ClinicAssociation(Base):
+    """A person's record linked to one clinic chart.
+
+    An accepted practitioner invite creates an active row. Legacy claimed charts
+    use the same patient id for both sides. Share links are not stored here.
+    """
+
+    __tablename__ = "clinic_associations"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    personal_patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+    )
+    clinic_patient_id: Mapped[Optional[uuid.UUID]] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        nullable=True,
+        index=True,
+    )
+    practitioner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    status: Mapped[str] = mapped_column(String(20), nullable=False)
+    initiated_by: Mapped[str] = mapped_column(String(20), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    activated_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    ended_by: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+
+
 class ContentRelease(Base):
     """Whether one piece of a record is released between a clinic and a claimed client.
 

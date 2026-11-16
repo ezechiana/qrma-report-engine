@@ -130,8 +130,16 @@ def ensure_laboratory_source(db: Session, patient: Patient) -> PatientSource:
 
 
 def _records_for_clinic(patient: Patient, records: list[SourceRecord]) -> list[SourceRecord]:
-    """Keep a personal record's notes and labs off the clinic source list."""
-    if patient.subject_user_id is not None and patient.claimed_by_user_id is None:
+    """Keep a personal record's notes and labs off the clinic source list.
+
+    A legacy claimed chart can carry the subject's id and still belong to the
+    clinic, so those notes stay visible to that clinic.
+    """
+    if (
+        patient.subject_user_id is not None
+        and patient.subject_user_id == patient.user_id
+        and patient.claimed_by_user_id is None
+    ):
         return []
     return records
 

@@ -284,7 +284,9 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
     """Link a verified client to the one record reserved by their invite.
 
     Does not commit. The practitioner user_id on the patient stays unchanged.
-    Earlier releases stay withdrawn, including wearable days.
+    The person's own record stays, and one association becomes active.
+    Earlier releases stay withdrawn, including wearable days. Share links are
+    left as they are.
     """
     if str(getattr(user, "role", "") or "").lower() != "client" or not user.email_verified_at:
         return None
@@ -312,6 +314,11 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
     patient.claimed_at = now
     patient.claim_access_ended_at = None
     patient.claim_access_ended_by = None
+    from app.services.clinic_association_service import activate_practitioner_association
+    from app.services.personal_record_service import ensure_personal_record
+
+    personal = ensure_personal_record(db, user, commit=False)
+    activate_practitioner_association(db, personal=personal, clinic=patient)
     return invite
 
 
