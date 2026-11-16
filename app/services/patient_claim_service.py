@@ -337,9 +337,9 @@ def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
     """Remove a client's account access without deleting the clinical record.
 
     Pending invites for this patient stop working. Progress, report, note, lab-panel,
-    client-entry, and wearable-day releases are withdrawn in this same save. The
-    notes, panels, marker values, client entries, and daily summaries stay. Share
-    links are left as they are.
+    marker-value, client-entry, and wearable-day releases are withdrawn in this
+    same save. The notes, panels, marker values, client entries, and daily
+    summaries stay. Share links are left as they are.
     """
     if ended_by not in {"practitioner", "client"}:
         raise HTTPException(status_code=400, detail="Access can only be ended by the clinic or the client.")

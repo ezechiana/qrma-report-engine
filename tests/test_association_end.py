@@ -4,6 +4,9 @@ import os
 import uuid
 from datetime import datetime, timedelta, timezone
 
+import pytest
+from fastapi import HTTPException
+
 os.environ.setdefault("DATABASE_URL", "postgresql://localhost/qrma_import_check")
 
 from fastapi import FastAPI
@@ -31,7 +34,11 @@ from app.db.models import (
     User,
 )
 from app.services.clinic_association_service import activate_practitioner_association
-from app.services.patient_source_service import list_patient_sources, released_client_sources
+from app.services.patient_source_service import (
+    client_released_note,
+    list_patient_sources,
+    released_client_sources,
+)
 from app.services.personal_source_service import list_personal_notes
 
 
@@ -174,6 +181,15 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
             status="active",
             created_at=datetime.now(timezone.utc),
         )
+        lab_source = PatientSource(
+            id=uuid.uuid4(),
+            patient_id=clinic.id,
+            practitioner_user_id=practitioner.id,
+            source_type="laboratory",
+            display_name="Lab results",
+            status="active",
+            created_at=datetime.now(timezone.utc),
+        )
         note = SourceRecord(
             id=uuid.uuid4(),
             patient_source_id=personal_source.id,
@@ -211,6 +227,19 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
             created_by_user_id=practitioner.id,
             created_at=datetime.now(timezone.utc),
         )
+        panel = SourceRecord(
+            id=uuid.uuid4(),
+            patient_source_id=lab_source.id,
+            patient_id=clinic.id,
+            recorded_at=datetime.now(timezone.utc),
+            title="June bloods",
+            status="ready",
+            payload_json={"kind": "laboratory", "specimen": "Blood", "laboratory_name": "North Lab"},
+            client_summary="Panel summary 88125",
+            is_archived=False,
+            created_by_user_id=practitioner.id,
+            created_at=datetime.now(timezone.utc),
+        )
         steps = SourceObservation(
             id=uuid.uuid4(),
             source_record_id=day.id,
@@ -222,10 +251,29 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
             unit="steps",
             created_at=datetime.now(timezone.utc),
         )
+        haemoglobin = SourceObservation(
+            id=uuid.uuid4(),
+            source_record_id=panel.id,
+            patient_id=clinic.id,
+            position=1,
+            name="Haemoglobin",
+            value_text="88124",
+            value_numeric=88124,
+            unit="g/L",
+            created_at=datetime.now(timezone.utc),
+        )
         note_release = _release(personal.id, practitioner.id, f"record:{note.id}", "client_to_clinic")
         day_release = _release(personal.id, practitioner.id, f"wearable:{day.id}", "client_to_clinic")
         clinic_release = _release(clinic.id, practitioner.id, f"record:{clinic_note.id}", "clinic_to_client")
+        panel_release = _release(clinic.id, practitioner.id, f"record:{panel.id}", "clinic_to_client")
+        marker_release = _release(clinic.id, practitioner.id, f"markers:{panel.id}", "clinic_to_client")
         other_release = _release(personal.id, other_practitioner_id, "record:other-clinic", "client_to_clinic")
+        other_marker_release = _release(
+            clinic.id,
+            other_practitioner_id,
+            "markers:other-practitioner",
+            "clinic_to_client",
+        )
         case = Case(
             id=uuid.uuid4(),
             user_id=practitioner.id,
@@ -259,14 +307,20 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
             personal_source,
             wearable_source,
             clinic_source,
+            lab_source,
             note,
             day,
             clinic_note,
+            panel,
             steps,
+            haemoglobin,
             note_release,
             day_release,
             clinic_release,
+            panel_release,
+            marker_release,
             other_release,
+            other_marker_release,
             report,
             link,
         ])
@@ -291,7 +345,17 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
         assert "Personal shelf note 88120" in str(list_patient_sources(db, clinic))
         assert "88121" in str(list_patient_sources(db, clinic))
         assert "Visit" in str(released_client_sources(db, clinic))
+        assert "June bloods" in str(released_client_sources(db, clinic))
         assert "Private clinic wording 88122" not in str(released_client_sources(db, clinic))
+        opened = client_released_note(db, clinic, panel.id)
+        assert opened["observations"] == [{
+            "name": "Haemoglobin",
+            "value": "88124",
+            "unit": "g/L",
+            "reference_range": "",
+        }]
+        assert "North Lab" not in str(opened)
+        assert "88125" not in str(opened["observations"])
 
         holder["user"] = person
         ended = http.post(f"/api/client/records/{personal.id}/association/end")
@@ -299,7 +363,9 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
         assert ended.json() == {"association_id": str(association.id), "status": "ended"}
         assert "Personal shelf note 88120" not in ended.text
         assert "88121" not in ended.text
+        assert "88124" not in ended.text
         assert "Summary the client could see 88123" not in ended.text
+        assert "Panel summary 88125" not in ended.text
 
         db.refresh(association)
         db.refresh(personal)
@@ -307,11 +373,16 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
         db.refresh(note)
         db.refresh(steps)
         db.refresh(clinic_note)
+        db.refresh(panel)
+        db.refresh(haemoglobin)
         db.refresh(link)
         db.refresh(note_release)
         db.refresh(day_release)
         db.refresh(clinic_release)
+        db.refresh(panel_release)
+        db.refresh(marker_release)
         db.refresh(other_release)
+        db.refresh(other_marker_release)
         assert association.status == "ended"
         assert association.ended_by == "person"
         assert personal.subject_user_id == person.id
@@ -319,19 +390,34 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
         assert note.payload_json["text"] == "Personal shelf note 88120"
         assert int(steps.value_numeric) == 88121
         assert clinic_note.payload_json["text"] == "Private clinic wording 88122"
+        assert panel.client_summary == "Panel summary 88125"
+        assert haemoglobin.value_text == "88124"
+        assert int(haemoglobin.value_numeric) == 88124
         assert note_release.released is False
         assert day_release.released is False
         assert clinic_release.released is False
+        assert panel_release.released is False
+        assert marker_release.released is False
+        assert panel_release.withdrawn_at is not None
+        assert marker_release.withdrawn_at is not None
         assert note_release.withdrawn_at is not None
         assert other_release.released is True
+        assert other_marker_release.released is True
         assert link.token == "kept-end-share"
         assert link.is_active is True
         clinic_view = str(list_patient_sources(db, clinic))
         assert "Personal shelf note 88120" not in clinic_view
         assert "88121" not in clinic_view
+        assert "88124" in clinic_view
         person_view = str(released_client_sources(db, clinic))
         assert "Visit" not in person_view
+        assert "June bloods" not in person_view
+        assert "88124" not in person_view
         assert "Private clinic wording 88122" not in person_view
+        with pytest.raises(HTTPException) as hidden_panel:
+            client_released_note(db, clinic, panel.id)
+        assert hidden_panel.value.status_code == 404
+        assert hidden_panel.value.detail == "Note not found"
         assert list_personal_notes(db, personal, person)["notes"][0]["text"] == "Personal shelf note 88120"
 
         activate_practitioner_association(db, personal=personal, clinic=clinic)
@@ -339,21 +425,39 @@ def test_either_side_can_end_and_a_later_connection_does_not_restore_releases():
         db.refresh(association)
         db.refresh(note_release)
         db.refresh(clinic_release)
+        db.refresh(panel_release)
+        db.refresh(marker_release)
+        db.refresh(other_marker_release)
         assert association.status == "active"
         assert note_release.released is False
         assert clinic_release.released is False
+        assert panel_release.released is False
+        assert marker_release.released is False
+        assert other_marker_release.released is True
         assert "Personal shelf note 88120" not in str(list_patient_sources(db, clinic))
-        assert "Summary the client could see 88123" not in str(released_client_sources(db, clinic))
+        restored = str(released_client_sources(db, clinic))
+        assert "Summary the client could see 88123" not in restored
+        assert "June bloods" not in restored
+        assert "88124" not in restored
+        with pytest.raises(HTTPException) as still_hidden:
+            client_released_note(db, clinic, panel.id)
+        assert still_hidden.value.status_code == 404
 
         holder["user"] = practitioner
         closed = http.post(f"/api/patients/{clinic.id}/association/end")
         assert closed.status_code == 200
         assert closed.json()["status"] == "ended"
         assert "88121" not in closed.text
+        assert "88124" not in closed.text
         db.refresh(association)
+        db.refresh(marker_release)
+        db.refresh(haemoglobin)
         assert association.ended_by == "practitioner"
+        assert marker_release.released is False
+        assert haemoglobin.value_text == "88124"
         assert db.query(Patient).count() == 2
-        assert db.query(SourceRecord).count() == 3
+        assert db.query(SourceRecord).count() == 4
+        assert db.query(SourceObservation).count() == 2
         db.refresh(link)
         assert link.token == "kept-end-share"
         db.close()

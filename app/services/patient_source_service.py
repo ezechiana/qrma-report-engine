@@ -7,6 +7,7 @@ from decimal import Decimal
 from uuid import UUID
 
 from fastapi import HTTPException
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.models import ContentRelease, Patient, PatientSource, SourceObservation, SourceRecord
@@ -860,10 +861,11 @@ def set_clinic_note_release(
 
 
 def clear_clinic_note_releases(db: Session, patient: Patient, now: datetime | None = None) -> None:
-    """Turn released notes and lab panels off without committing. Used when a claim ends.
+    """Turn released notes, lab panels, and marker values off without committing.
 
-    Any clinic-to-client row whose key starts with record: is withdrawn. The note,
-    panel, and marker rows stay. Share links are not changed.
+    Used when a claim ends. Any clinic-to-client row whose key starts with
+    record: or markers: is withdrawn. The note, panel, and marker rows stay.
+    Share links are not changed.
     """
     moment = now or datetime.now(timezone.utc)
     rows = (
@@ -872,7 +874,10 @@ def clear_clinic_note_releases(db: Session, patient: Patient, now: datetime | No
             ContentRelease.patient_id == patient.id,
             ContentRelease.practitioner_user_id == patient.user_id,
             ContentRelease.direction == CLINIC_TO_CLIENT,
-            ContentRelease.source_key.startswith(RECORD_PREFIX),
+            or_(
+                ContentRelease.source_key.startswith(RECORD_PREFIX),
+                ContentRelease.source_key.startswith(MARKERS_PREFIX),
+            ),
             ContentRelease.released.is_(True),
         )
         .all()

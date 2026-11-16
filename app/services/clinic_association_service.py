@@ -302,7 +302,10 @@ def cancel_person_request(db: Session, person: User, request_id) -> dict:
 
 
 def _withdraw_association_releases(db: Session, row: ClinicAssociation, now: datetime) -> None:
-    """Turn off releases for this connection. Shelves and share links stay."""
+    """Turn off releases for this connection, including marker values.
+
+    Shelves and share links stay. A later connection does not turn these back on.
+    """
     patient_ids = [row.personal_patient_id]
     if row.clinic_patient_id is not None and row.clinic_patient_id not in patient_ids:
         patient_ids.append(row.clinic_patient_id)

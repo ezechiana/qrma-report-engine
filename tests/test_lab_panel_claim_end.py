@@ -202,6 +202,11 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
                 json={"released": True},
             )
             assert released.status_code == 200
+            markers = http.post(
+                f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}/marker-release",
+                json={"released": True},
+            )
+            assert markers.status_code == 200
             return source_id, record_id
 
         source_id, record_id = add_released_panel(
@@ -230,9 +235,25 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
         set_report_release(db, claimed, report.id, True)
         set_progress_release(db, other, True)
         panel_key = f"record:{record_id}"
+        marker_key = f"markers:{record_id}"
         other_key = f"record:{other_record_id}"
+        other_marker_key = f"markers:{other_record_id}"
         panel_row = db.query(ContentRelease).filter(ContentRelease.source_key == panel_key).one()
+        marker_row = db.query(ContentRelease).filter(ContentRelease.source_key == marker_key).one()
         assert panel_row.released is True
+        assert marker_row.released is True
+        kept = ContentRelease(
+            id=uuid.uuid4(),
+            patient_id=claimed.id,
+            practitioner_user_id=uuid.uuid4(),
+            source_key="markers:other-practitioner",
+            direction="clinic_to_client",
+            released=True,
+            released_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
+        )
+        db.add(kept)
+        db.commit()
 
         unlinked = http.post(f"/api/patients/{claimed.id}/claim-access/unlink")
         assert unlinked.status_code == 200
@@ -241,10 +262,16 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
         assert "The blood count is ready to discuss." not in unlinked.text
 
         db.refresh(panel_row)
+        db.refresh(marker_row)
+        db.refresh(kept)
         db.refresh(link)
         assert panel_row.released is False
         assert panel_row.withdrawn_at is not None
+        assert marker_row.released is False
+        assert marker_row.withdrawn_at is not None
+        assert kept.released is True
         assert db.query(ContentRelease).filter(ContentRelease.source_key == other_key).one().released is True
+        assert db.query(ContentRelease).filter(ContentRelease.source_key == other_marker_key).one().released is True
         progress_row = (
             db.query(ContentRelease)
             .filter(
@@ -296,7 +323,9 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
         db.commit()
         assert completed is not None
         db.refresh(panel_row)
+        db.refresh(marker_row)
         assert panel_row.released is False
+        assert marker_row.released is False
 
         reopened = http.get(f"/api/client/records/{claimed.id}")
         assert reopened.status_code == 200
@@ -314,12 +343,18 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
             "ALT",
         ):
             assert hidden not in reopened.text
+        hidden_panel = http.get(f"/api/client/records/{claimed.id}/notes/{record_id}")
+        assert hidden_panel.status_code == 404
+        assert hidden_panel.json()["detail"] == "Note not found"
+        assert "Haemoglobin" not in hidden_panel.text
+        assert "observations" not in hidden_panel.text
 
         holder["user"] = practitioner
         clinic = http.get(f"/api/patients/{claimed.id}/sources").json()["sources"]
         assert clinic[0]["display_name"] == "Clinic notes"
         panels = {item["record_id"]: item for item in clinic[1]["records"]}
         assert panels[record_id]["released"] is False
+        assert panels[record_id]["markers_released"] is False
         assert panels[record_id]["client_summary"] == "The blood count is ready to discuss."
         assert panels[record_id]["observations"][0]["name"] == "Haemoglobin"
         assert panels[record_id]["observations"][0]["value_numeric"] == 140
@@ -332,8 +367,11 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
         assert "Ferritin" not in closed.text
         db.refresh(other_link)
         other_row = db.query(ContentRelease).filter(ContentRelease.source_key == other_key).one()
+        other_marker_row = db.query(ContentRelease).filter(ContentRelease.source_key == other_marker_key).one()
         assert other_row.released is False
         assert other_row.withdrawn_at is not None
+        assert other_marker_row.released is False
+        assert other_marker_row.withdrawn_at is not None
         other_marker = (
             db.query(SourceObservation)
             .filter(SourceObservation.source_record_id == uuid.UUID(other_record_id))
@@ -355,7 +393,13 @@ def test_ending_a_claim_withdraws_panel_releases_and_keeps_the_markers():
         )
         assert other_progress.released is False
         db.refresh(panel_row)
+        db.refresh(marker_row)
+        db.refresh(kept)
         assert panel_row.released is False
+        assert marker_row.released is False
+        assert kept.released is True
+        assert link.token == "kept-share-token"
+        assert link.is_active is True
         db.close()
     finally:
         for column, kind in originals:
