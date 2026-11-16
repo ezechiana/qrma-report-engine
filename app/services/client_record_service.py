@@ -16,6 +16,7 @@ from sqlalchemy.orm import Session
 from app.api.share_helpers import _patient_display_name
 from app.db.models import Patient, ReportVersion, User
 from app.services.content_release_service import progress_release_state, released_client_reports
+from app.services.patient_source_service import released_client_sources
 
 _EMPTY_CLIENT_VIEW = {
     "summary": "Your practitioner has not released a progress view yet.",
@@ -95,6 +96,7 @@ def client_record_payload(db: Session, client: User, patient: Patient) -> dict:
         },
         "trend": trend,
         "reports": released_client_reports(db, patient),
+        "sources": released_client_sources(db, patient),
     }
 
 

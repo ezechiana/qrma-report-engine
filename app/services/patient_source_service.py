@@ -258,3 +258,89 @@ def set_clinic_note_release(
         "released": bool(row.released),
         "available": True,
     }
+
+
+def _recorded_on(record: SourceRecord) -> str | None:
+    recorded = record.recorded_at
+    if isinstance(recorded, datetime):
+        return recorded.date().isoformat()
+    return None
+
+
+def released_client_sources(db: Session, patient: Patient) -> list[dict]:
+    """Released notes for the claimed client, grouped by source name.
+
+    A note is included only when it is released and its client summary has text.
+    The raw note text is not included.
+    """
+    rows = (
+        db.query(SourceRecord, PatientSource)
+        .join(PatientSource, PatientSource.id == SourceRecord.patient_source_id)
+        .filter(
+            SourceRecord.patient_id == patient.id,
+            PatientSource.patient_id == patient.id,
+            PatientSource.practitioner_user_id == patient.user_id,
+            PatientSource.status == "active",
+            SourceRecord.is_archived.is_(False),
+        )
+        .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
+        .all()
+    )
+    released = _released_record_keys(db, patient, [record for record, _source in rows])
+    groups: dict[str, dict] = {}
+    order: list[str] = []
+    for record, source in rows:
+        summary = (record.client_summary or "").strip()
+        if not summary or record_source_key(record.id) not in released:
+            continue
+        key = str(source.id)
+        if key not in groups:
+            groups[key] = {"display_name": source.display_name, "records": []}
+            order.append(key)
+        groups[key]["records"].append({
+            "record_id": str(record.id),
+            "title": record.title,
+            "recorded_on": _recorded_on(record),
+        })
+    return [groups[key] for key in order]
+
+
+def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict:
+    """The client summary of one released note. The raw note text is not included."""
+    record = (
+        db.query(SourceRecord)
+        .filter(
+            SourceRecord.id == record_id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.is_archived.is_(False),
+        )
+        .first()
+    )
+    source = None
+    if record is not None:
+        source = (
+            db.query(PatientSource)
+            .filter(
+                PatientSource.id == record.patient_source_id,
+                PatientSource.patient_id == patient.id,
+                PatientSource.practitioner_user_id == patient.user_id,
+                PatientSource.status == "active",
+            )
+            .first()
+        )
+    summary = (record.client_summary or "").strip() if record is not None else ""
+    released = (
+        record is not None
+        and source is not None
+        and bool(summary)
+        and record_source_key(record.id) in _released_record_keys(db, patient, [record])
+    )
+    if not released:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return {
+        "record_id": str(record.id),
+        "title": record.title,
+        "recorded_on": _recorded_on(record),
+        "client_summary": summary,
+        "source_name": source.display_name,
+    }

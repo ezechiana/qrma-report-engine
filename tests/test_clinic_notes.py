@@ -257,7 +257,7 @@ def test_practitioner_can_add_a_private_clinic_note(monkeypatch):
         assert "Morning observation" not in portal_text
         assert "A short summary for later" not in portal_text
         assert "Second raw note" not in portal_text
-        assert "sources" not in portal.json()
+        assert portal.json()["sources"] == []
 
         holder["user"] = practitioner
         progress = http.get(f"/api/patients/{patient.id}/progress-release")
@@ -690,7 +690,15 @@ def test_practitioner_can_release_and_withdraw_one_clinic_note(monkeypatch):
         assert "Rewritten clinic note" not in portal.text
         assert "Private raw observation" not in portal.text
         assert "Summary the client could see" not in portal.text
-        assert "sources" not in portal.json()
+        assert "Internal only" not in portal.text
+        assert portal.json()["sources"] == [{
+            "display_name": "Clinic notes",
+            "records": [{
+                "record_id": record_id,
+                "title": "Morning observation",
+                "recorded_on": "2026-11-01",
+            }],
+        }]
 
         holder["user"] = practitioner
         withdrawn = http.post(release_url, json={"released": False})

@@ -16,6 +16,7 @@ from app.services.client_record_service import (
     require_claimed_patient,
 )
 from app.services.patient_claim_service import claim_access_state, end_claim_access
+from app.services.patient_source_service import client_released_note
 
 router = APIRouter(prefix="/api/client", tags=["client-record"])
 
@@ -55,10 +56,11 @@ def get_client_record(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return the client-safe progress view for one claimed record.
+    """Return the client-safe record for one claimed patient.
 
-    Handles patient identity. The view is included only when this clinic has
-    released it. Share links are not consulted, and practitioner notes are omitted.
+    Handles patient identity. The progress view is included only when this clinic
+    has released it. Released note titles are grouped by source. The raw note
+    text is omitted. Share links are not consulted.
     """
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
@@ -80,6 +82,23 @@ def get_client_report(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return client_released_report(db, patient, report_id)
+
+
+@router.get("/records/{patient_id}/notes/{record_id}")
+def get_client_note(
+    patient_id: UUID,
+    record_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the client summary of one note this clinic has released.
+
+    Handles patient identity. The raw note text is not included. An unreleased
+    note, or a note with no client summary, is not found.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return client_released_note(db, patient, record_id)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

@@ -17,7 +17,17 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_client_records, routes_ui
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, ContentRelease, Patient, ReportStatus, ReportVersion, ShareLink, User
+from app.db.models import (
+    Case,
+    ContentRelease,
+    Patient,
+    PatientSource,
+    ReportStatus,
+    ReportVersion,
+    ShareLink,
+    SourceRecord,
+    User,
+)
 from app.services.content_release_service import set_progress_release
 
 
@@ -49,7 +59,7 @@ def test_client_portal_lists_and_opens_only_released_reports(monkeypatch):
         poolclass=StaticPool,
     )
     originals = []
-    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease)
+    models = (User, Patient, PatientSource, SourceRecord, Case, ReportVersion, ShareLink, ContentRelease)
     for model in models:
         for column in model.__table__.columns:
             if isinstance(column.type, Uuid):

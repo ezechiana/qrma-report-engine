@@ -22,10 +22,12 @@ from app.db.models import (
     Case,
     ContentRelease,
     Patient,
+    PatientSource,
     PractitionerSettings,
     ReportStatus,
     ReportVersion,
     ShareLink,
+    SourceRecord,
     User,
 )
 from app.services.content_release_service import progress_release_state
@@ -76,6 +78,8 @@ def test_portal_release_and_share_links_stay_independent(monkeypatch):
         User,
         PractitionerSettings,
         Patient,
+        PatientSource,
+        SourceRecord,
         Case,
         ReportVersion,
         ShareLink,

@@ -22,10 +22,12 @@ from app.db.models import (
     Case,
     ContentRelease,
     Patient,
+    PatientSource,
     PractitionerSettings,
     ReportStatus,
     ReportVersion,
     ShareLink,
+    SourceRecord,
     User,
 )
 from app.services.share_link_service import create_share_link
@@ -71,6 +73,8 @@ def test_report_releases_and_share_links_stay_independent(monkeypatch):
         User,
         PractitionerSettings,
         Patient,
+        PatientSource,
+        SourceRecord,
         Case,
         ReportVersion,
         ShareLink,

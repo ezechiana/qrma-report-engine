@@ -18,7 +18,18 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_client_records, routes_patient_claim_invites, routes_patient_records, routes_share_links
 from app.api.deps import _client_blocked_from_practitioner_path, get_current_user, get_db
-from app.db.models import Case, ContentRelease, Patient, PatientClaimInvite, ReportStatus, ReportVersion, ShareLink, User
+from app.db.models import (
+    Case,
+    ContentRelease,
+    Patient,
+    PatientClaimInvite,
+    PatientSource,
+    ReportStatus,
+    ReportVersion,
+    ShareLink,
+    SourceRecord,
+    User,
+)
 from app.services.patient_claim_service import (
     complete_reserved_claim,
     hash_claim_token,
@@ -45,7 +56,17 @@ def _build():
         connect_args={"check_same_thread": False},
         poolclass=StaticPool,
     )
-    models = (User, Patient, PatientClaimInvite, Case, ReportVersion, ShareLink, ContentRelease)
+    models = (
+        User,
+        Patient,
+        PatientSource,
+        SourceRecord,
+        PatientClaimInvite,
+        Case,
+        ReportVersion,
+        ShareLink,
+        ContentRelease,
+    )
     originals = []
     for model in models:
         for column in model.__table__.columns:

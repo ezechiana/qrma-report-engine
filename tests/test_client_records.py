@@ -17,7 +17,17 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_client_records, routes_share
 from app.api.deps import _client_blocked_from_practitioner_path, get_current_user, get_db
-from app.db.models import Case, ContentRelease, Patient, ReportStatus, ReportVersion, ShareLink, User
+from app.db.models import (
+    Case,
+    ContentRelease,
+    Patient,
+    PatientSource,
+    ReportStatus,
+    ReportVersion,
+    ShareLink,
+    SourceRecord,
+    User,
+)
 
 
 class FlexibleUuid(TypeDecorator):
@@ -78,7 +88,7 @@ def test_signed_in_client_sees_only_the_claimed_client_safe_record(monkeypatch):
         poolclass=StaticPool,
     )
     originals = []
-    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease)
+    models = (User, Patient, PatientSource, SourceRecord, Case, ReportVersion, ShareLink, ContentRelease)
     for model in models:
         for column in model.__table__.columns:
             if isinstance(column.type, Uuid):

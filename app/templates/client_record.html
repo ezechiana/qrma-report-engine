@@ -19,6 +19,7 @@
         #record-card article strong { display: block; margin: 2px 0; }
         #record-card .report-list { display: grid; gap: 8px; margin-top: 8px; }
         #record-card .report-list a { min-height: 44px; display: flex; align-items: center; }
+        #record-card .note-item { display: grid; gap: 2px; }
     </style>
 </head>
 <body>
@@ -97,6 +98,26 @@
         renderReportList("Trend reports", reports.trend_reports);
     }
 
+    function renderSources(data) {
+        const sources = Array.isArray(data.sources) ? data.sources : [];
+        sources.forEach((source) => {
+            const name = textOf(source && source.display_name);
+            const items = (Array.isArray(source && source.records) ? source.records : []).filter((item) => {
+                return textOf(item && item.title) && textOf(item && item.record_id);
+            });
+            if (!name || !items.length) return;
+            add(card, "h2", "", name);
+            const list = add(card, "div", "report-list");
+            items.forEach((item) => {
+                const entry = add(list, "div", "note-item");
+                const link = add(entry, "a", "text-link", textOf(item.title));
+                link.href = "/client/records/" + encodeURIComponent(recordId()) + "/notes/" + encodeURIComponent(textOf(item.record_id));
+                const when = textOf(item.recorded_on);
+                if (when) add(entry, "div", "muted", when);
+            });
+        });
+    }
+
     function renderRecord(data) {
         const patient = data.patient || {};
         const tenant = data.tenant || {};
@@ -111,6 +132,7 @@
             add(panel, "p", "", EMPTY_SUMMARY);
             add(panel, "p", "muted", "When your clinic shares a progress view, it will appear here.");
             renderReports(data);
+            renderSources(data);
             return;
         }
 
@@ -146,6 +168,7 @@
 
         if (textOf(view.review_note)) add(card, "p", "muted", textOf(view.review_note));
         renderReports(data);
+        renderSources(data);
     }
 
     async function loadRecord() {
