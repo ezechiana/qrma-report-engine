@@ -1,0 +1,17 @@
+<header class="portal-bar">
+    <a class="brand" href="/client" aria-label="go360 home">
+        <img src="/static/brand/go360-v1/go360-wordmark-dark.svg" alt="go360">
+    </a>
+    <nav class="portal-nav" aria-label="Client">
+        {% if portal_section == "records" %}
+        <span class="portal-current" aria-current="page">Your records</span>
+        {% else %}
+        <a class="text-link" href="/client">Your records</a>
+        {% endif %}
+        {% if portal_section == "account" %}
+        <span class="portal-current" aria-current="page">Account</span>
+        {% else %}
+        <a class="text-link" href="/client/account">Account</a>
+        {% endif %}
+    </nav>
+</header>

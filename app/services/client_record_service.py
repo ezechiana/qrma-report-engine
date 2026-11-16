@@ -14,8 +14,8 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.share_helpers import _patient_display_name
-from app.db.models import Patient, User
-from app.services.content_release_service import progress_release_state
+from app.db.models import Patient, ReportVersion, User
+from app.services.content_release_service import progress_release_state, released_client_reports
 
 _EMPTY_CLIENT_VIEW = {
     "summary": "Your practitioner has not released a progress view yet.",
@@ -94,6 +94,7 @@ def client_record_payload(db: Session, client: User, patient: Patient) -> dict:
             "tenant_name": _clinic_name(practitioner),
         },
         "trend": trend,
+        "reports": released_client_reports(db, patient),
     }
 
 
@@ -106,3 +107,65 @@ def require_claimed_patient(db: Session, client: User, patient_id: UUID) -> Pati
     if patient is None:
         raise HTTPException(status_code=404, detail="Record not found")
     return patient
+
+
+def _narrative(value) -> str:
+    if isinstance(value, str):
+        return value.strip()
+    return ""
+
+
+def _client_safe_report_text(report: ReportVersion) -> tuple[str, list[dict]]:
+    """Narrative text from the client viewer. Markers, notes, and products are left out."""
+    raw = report.report_json if isinstance(report.report_json, dict) else {}
+    viewer = raw.get("viewer") if isinstance(raw.get("viewer"), dict) else {}
+    overview = viewer.get("overview") if isinstance(viewer.get("overview"), dict) else {}
+    overall = overview.get("overall_summary")
+    summary = ""
+    if isinstance(overall, str):
+        summary = overall.strip()
+    elif isinstance(overall, dict):
+        summary = _narrative(overall.get("clinical_snapshot")) or _narrative(overall.get("summary"))
+    sections = []
+    why = _narrative(overview.get("why_this_matters"))
+    if why:
+        sections.append({"title": "Why this matters", "body": why})
+    pattern = overview.get("primary_pattern")
+    if isinstance(pattern, dict):
+        body = _narrative(pattern.get("clinical_summary")) or _narrative(pattern.get("summary"))
+        if body:
+            sections.append({"title": "Pattern", "body": body})
+    return summary, sections
+
+
+def client_released_report(db: Session, patient: Patient, report_id: UUID) -> dict:
+    """One released report for the client who claimed this record.
+
+    Handles patient identity. An unreleased report is not found. Share links
+    are not created.
+    """
+    visible = released_client_reports(db, patient)
+    report_key = str(report_id)
+    report_type = None
+    label = None
+    for item in visible["assessment_reports"]:
+        if item["report_id"] == report_key:
+            report_type = "assessment"
+            label = item["label"]
+    for item in visible["trend_reports"]:
+        if item["report_id"] == report_key:
+            report_type = "trend"
+            label = item["label"]
+    if report_type is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    report = db.query(ReportVersion).filter(ReportVersion.id == report_id).first()
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    summary, sections = _client_safe_report_text(report)
+    return {
+        "report_id": report_key,
+        "label": label,
+        "report_type": report_type,
+        "summary": summary,
+        "sections": sections,
+    }

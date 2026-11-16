@@ -12,6 +12,7 @@ from app.services.client_record_service import (
     _clinic_name,
     claimed_patients,
     client_record_payload,
+    client_released_report,
     require_claimed_patient,
 )
 from app.services.patient_claim_service import claim_access_state, end_claim_access
@@ -62,6 +63,23 @@ def get_client_record(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return client_record_payload(db, client, patient)
+
+
+@router.get("/records/{patient_id}/reports/{report_id}")
+def get_client_report(
+    patient_id: UUID,
+    report_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return the client-safe reading of one report this clinic has released.
+
+    Handles patient identity. Unreleased reports, practitioner notes, and share
+    links are not included.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return client_released_report(db, patient, report_id)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

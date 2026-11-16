@@ -165,6 +165,23 @@ def report_release_state(db: Session, patient: Patient) -> dict:
     }
 
 
+def released_client_reports(db: Session, patient: Patient) -> dict:
+    """Released report labels for the claimed client. Unreleased titles are omitted."""
+    state = report_release_state(db, patient)
+
+    def visible(items: list[dict]) -> list[dict]:
+        return [
+            {"report_id": item["report_id"], "label": item["label"]}
+            for item in items
+            if item.get("released")
+        ]
+
+    return {
+        "assessment_reports": visible(state["assessment_reports"]),
+        "trend_reports": visible(state["trend_reports"]),
+    }
+
+
 def clear_report_releases(db: Session, patient: Patient, now: datetime | None = None) -> None:
     """Turn released reports off without committing. Used when a claim ends."""
     moment = now or _now()

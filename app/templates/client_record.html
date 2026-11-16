@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "shared/brand_head.html" %}
+    <title>Your record · go360</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        {% include "shared/public_card_styles.html" %}
+        #record-card { width: min(100%, 640px); }
+        #record-card .quiet-panel {
+            margin-top: 16px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #f8fafc;
+            padding: 16px;
+        }
+        #record-card .quiet-panel p { margin: 0 0 8px; }
+        #record-card .quiet-panel p:last-child { margin-bottom: 0; }
+        #record-card article strong { display: block; margin: 2px 0; }
+        #record-card .report-list { display: grid; gap: 8px; margin-top: 8px; }
+        #record-card .report-list a { min-height: 44px; display: flex; align-items: center; }
+    </style>
+</head>
+<body>
+<main class="public-page">
+    {% set portal_section = "records" %}
+    {% include "shared/client_portal_header.html" %}
+    <section class="card" id="record-card">
+        <p class="muted">Loading your record…</p>
+    </section>
+</main>
+<script>
+    const card = document.getElementById("record-card");
+
+    function recordId() {
+        const parts = window.location.pathname.split("/").filter(Boolean);
+        if (parts[0] !== "client" || parts[1] !== "records" || !parts[2]) return "";
+        try {
+            return decodeURIComponent(parts[2]);
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function add(parent, tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        parent.appendChild(node);
+        return node;
+    }
+
+    function showMessage(text, isError) {
+        card.textContent = "";
+        add(card, "p", isError ? "error" : "muted", text);
+    }
+
+    const EMPTY_SUMMARY = "Your practitioner has not released a progress view yet.";
+
+    function textOf(value) {
+        if (typeof value !== "string") return "";
+        return value.trim();
+    }
+
+    function renderHeader(name, clinic) {
+        card.textContent = "";
+        add(card, "h1", "", name || "Your record");
+        if (clinic) add(card, "p", "muted", clinic);
+    }
+
+    function renderSection(title, rows) {
+        if (!rows.length) return;
+        add(card, "h2", "", title);
+        const stack = add(card, "div", "stack");
+        rows.forEach((row) => {
+            const article = add(stack, "article");
+            if (row.label) add(article, "div", "muted", row.label);
+            if (row.value) add(article, "strong", "", row.value);
+            if (row.detail) add(article, "p", "muted", row.detail);
+        });
+    }
+
+    function renderReportList(title, rows) {
+        const items = (Array.isArray(rows) ? rows : []).filter((item) => textOf(item && item.label) && textOf(item && item.report_id));
+        if (!items.length) return;
+        add(card, "h2", "", title);
+        const list = add(card, "div", "report-list");
+        items.forEach((item) => {
+            const link = add(list, "a", "text-link", textOf(item.label));
+            link.href = "/client/records/" + encodeURIComponent(recordId()) + "/reports/" + encodeURIComponent(textOf(item.report_id));
+        });
+    }
+
+    function renderReports(data) {
+        const reports = data.reports || {};
+        renderReportList("Assessment reports", reports.assessment_reports);
+        renderReportList("Trend reports", reports.trend_reports);
+    }
+
+    function renderRecord(data) {
+        const patient = data.patient || {};
+        const tenant = data.tenant || {};
+        const view = (data.trend && data.trend.client_view) || {};
+        const name = textOf(patient.display_name);
+        const clinic = textOf(tenant.tenant_name);
+        const summary = textOf(view.summary);
+
+        if (summary === EMPTY_SUMMARY) {
+            renderHeader(name, clinic);
+            const panel = add(card, "div", "quiet-panel");
+            add(panel, "p", "", EMPTY_SUMMARY);
+            add(panel, "p", "muted", "When your clinic shares a progress view, it will appear here.");
+            renderReports(data);
+            return;
+        }
+
+        renderHeader(name, clinic);
+        if (summary) add(card, "p", "", summary);
+
+        const progress = (Array.isArray(view.progress_cards) ? view.progress_cards : [])
+            .map((item) => ({
+                label: textOf(item && item.label),
+                value: textOf(item && item.value),
+                detail: textOf(item && item.detail),
+            }))
+            .filter((item) => item.label || item.value || item.detail);
+        renderSection("Progress", progress);
+
+        const priorities = (Array.isArray(view.top_priorities) ? view.top_priorities : [])
+            .slice(0, 3)
+            .map((item) => ({
+                value: textOf(item && (item.title || item.category)),
+                detail: textOf(item && item.summary) || textOf(item && item.reason),
+            }))
+            .filter((item) => item.value || item.detail);
+        renderSection("Priorities", priorities);
+
+        const recommendations = (Array.isArray(view.recommendations) ? view.recommendations : [])
+            .slice(0, 5)
+            .map((item) => ({
+                value: textOf(item && item.name),
+                detail: textOf(item && item.summary),
+            }))
+            .filter((item) => item.value || item.detail);
+        renderSection("Recommendations", recommendations);
+
+        if (textOf(view.review_note)) add(card, "p", "muted", textOf(view.review_note));
+        renderReports(data);
+    }
+
+    async function loadRecord() {
+        const patientId = recordId();
+        if (!patientId) {
+            showMessage("Record not found.", true);
+            return;
+        }
+        try {
+            const me = await fetch("/auth/me", { credentials: "same-origin" });
+            if (me.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (me.ok) {
+                const meData = await me.json().catch(() => ({}));
+                const user = meData.user || {};
+                const role = String(user.role || "").toLowerCase();
+                if (role && role !== "client") {
+                    window.location.href = "/app";
+                    return;
+                }
+                if (role === "client" && !user.email_verified_at) {
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+
+            const response = await fetch("/api/client/records/" + encodeURIComponent(patientId), {
+                credentials: "same-origin",
+            });
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (response.status === 403) {
+                const detail = String(data.detail || "");
+                window.location.href = detail.toLowerCase().includes("verify") ? "/login" : "/app";
+                return;
+            }
+            if (response.status === 404) {
+                showMessage("Record not found.", true);
+                return;
+            }
+            if (!response.ok) {
+                showMessage("Could not load your record.", true);
+                return;
+            }
+
+            renderRecord(data);
+        } catch (err) {
+            showMessage("Could not load your record.", true);
+        }
+    }
+
+    loadRecord();
+</script>
+</body>
+</html>

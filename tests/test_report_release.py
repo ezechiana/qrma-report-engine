@@ -51,8 +51,9 @@ def test_report_release_is_separate_from_share_links_and_the_portal():
     assert "ShareLink" not in source
     assert "share_link" not in source
     portal = inspect.getsource(client_record_service)
-    assert "report-releases" not in portal
+    assert "ShareLink" not in portal
     assert "set_report_release" not in portal
+    assert "released_client_reports" in portal
     client = User(role="client")
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/report-releases") is True
     page = open("app/templates/patient_detail.html", encoding="utf-8").read()
