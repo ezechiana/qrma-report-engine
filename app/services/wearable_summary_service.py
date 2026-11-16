@@ -324,6 +324,29 @@ def set_wearable_day_release(
     return {"record_id": str(record.id), "released": bool(row.released)}
 
 
+def clear_wearable_day_releases(db: Session, patient: Patient, now: datetime | None = None) -> None:
+    """Turn released wearable days off without committing. Used when a claim ends.
+
+    Any client-to-clinic row whose key starts with wearable: is withdrawn. The
+    daily summary stays. Share links are not changed.
+    """
+    moment = now or _now()
+    rows = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.direction == CLIENT_TO_CLINIC,
+            ContentRelease.source_key.startswith(DAY_PREFIX),
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    )
+    for row in rows:
+        row.released = False
+        row.withdrawn_at = moment
+
+
 def released_clinic_wearable_source(db: Session, patient: Patient) -> dict | None:
     """Released wearable days for the practitioner who owns this record.
 

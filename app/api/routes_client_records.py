@@ -336,10 +336,10 @@ def close_client_access(
 ):
     """The client stops their own access to one claimed record.
 
-    The clinic keeps the patient, cases, reports, clinic notes, lab panels, and
-    entries the client sent. Portal releases are withdrawn, including released
-    lab panels and those entries. Marker values and entry text stay in the clinic
-    record. Share links are not revoked.
+    The clinic keeps the patient, cases, reports, clinic notes, lab panels, entries
+    the client sent, and wearable days. Portal releases are withdrawn, including
+    released lab panels, those entries, and wearable days. Marker values, entry
+    text, and daily summaries stay in the clinic record. Share links are not revoked.
     """
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
