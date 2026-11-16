@@ -4,7 +4,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -25,6 +25,7 @@ from app.services.client_record_service import (
 from app.services.patient_claim_service import claim_access_state, end_claim_access
 from app.services.patient_source_service import client_released_note
 from app.services.wearable_connection_service import connect_wearable, wearable_connection
+from app.services.wearable_summary_service import list_wearable_days, sync_wearable_days
 
 router = APIRouter(prefix="/api/client", tags=["client-record"])
 
@@ -63,6 +64,31 @@ class WearableConnect(BaseModel):
         if not cleaned:
             raise ValueError("This field is required.")
         return cleaned
+
+
+class WearableDayInput(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    recorded_on: date
+    steps: float | None = None
+    resting_heart_rate: float | None = None
+    sleep_duration: float | None = None
+    hrv: float | None = None
+
+    @field_validator("steps", "resting_heart_rate", "sleep_duration", "hrv", mode="before")
+    @classmethod
+    def metric_value(cls, value):
+        if value is None:
+            return None
+        if isinstance(value, bool) or not isinstance(value, (int, float)):
+            raise ValueError("This field is invalid.")
+        if value < 0:
+            raise ValueError("This field is invalid.")
+        return value
+
+
+class WearableDaySync(BaseModel):
+    days: list[WearableDayInput] = Field(max_length=366)
 
 
 def _require_client(current_user: User) -> User:
@@ -236,6 +262,44 @@ def post_wearable_connection(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return connect_wearable(db, patient, client, body.external_account_ref)
+
+
+@router.get("/records/{patient_id}/wearable/days")
+def get_wearable_days(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List wearable days for this claimed client, including unshared days.
+
+    Handles patient identity. Each day includes the date and the four daily
+    values. The clinic source list is not used.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return list_wearable_days(db, patient, client)
+
+
+@router.post("/records/{patient_id}/wearable/days")
+def post_wearable_days(
+    patient_id: UUID,
+    body: WearableDaySync,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Store one wearable summary per calendar day for this claimed client.
+
+    Handles patient identity. A later sync of the same day updates that day.
+    Days are not released to the clinic, and no share link is created.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return sync_wearable_days(
+        db,
+        patient,
+        client,
+        [day.model_dump() for day in body.days],
+    )
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)
