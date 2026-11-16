@@ -3,13 +3,14 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func, or_
+from sqlalchemy import func
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import Patient, User, Case, ReportVersion
 from app.schemas.patients import PatientCreate, PatientRead, PatientUpdate
 from app.services.patient_service import create_patient, update_patient
+from app.services.personal_record_service import clinic_charts
 
 router = APIRouter(prefix="/api/patients", tags=["patients"])
 
@@ -72,16 +73,8 @@ def list_patients(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    patients = (
-        db.query(Patient)
-        .filter(
-            Patient.user_id == current_user.id,
-            or_(Patient.subject_user_id.is_(None), Patient.subject_user_id != current_user.id),
-        )
-        .order_by(Patient.created_at.desc())
-        .all()
-    )
-    return [_serialise_patient(db, patient) for patient in patients]
+    """Clinic charts for this account. The caller's personal record is left out."""
+    return [_serialise_patient(db, patient) for patient in clinic_charts(db, current_user)]
 
 
 @router.post("", response_model=PatientRead)

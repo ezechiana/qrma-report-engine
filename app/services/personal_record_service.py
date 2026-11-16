@@ -7,6 +7,7 @@ create a share link or a content release.
 
 from __future__ import annotations
 
+from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
 from app.db.models import Patient, User
@@ -24,6 +25,19 @@ def _name_parts(full_name: str | None, email: str) -> tuple[str, str, str]:
 
 def personal_record_for(db: Session, user: User) -> Patient | None:
     return db.query(Patient).filter(Patient.subject_user_id == user.id).one_or_none()
+
+
+def clinic_charts(db: Session, user: User) -> list[Patient]:
+    """Charts this account custodies for other people. The subject's own record is omitted."""
+    return (
+        db.query(Patient)
+        .filter(
+            Patient.user_id == user.id,
+            or_(Patient.subject_user_id.is_(None), Patient.subject_user_id != user.id),
+        )
+        .order_by(Patient.created_at.desc())
+        .all()
+    )
 
 
 def personal_record_payload(patient: Patient) -> dict:

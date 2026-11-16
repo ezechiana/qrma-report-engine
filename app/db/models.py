@@ -141,6 +141,24 @@ class User(Base):
     feedback_items: Mapped[list["FeedbackItem"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
+class UserCapability(Base):
+    """A capability on one login. Practitioner and admin do not get a second account."""
+
+    __tablename__ = "user_capabilities"
+    __table_args__ = (
+        UniqueConstraint("user_id", "capability", name="uq_user_capabilities_user_capability"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    capability: Mapped[str] = mapped_column(String(40), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Patient(Base):
     __tablename__ = "patients"
 

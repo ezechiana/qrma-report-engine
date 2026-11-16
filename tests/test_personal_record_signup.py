@@ -17,7 +17,7 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_auth, routes_patient_records
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, ContentRelease, Patient, ReportVersion, ShareLink, User
+from app.db.models import Case, ContentRelease, Patient, ReportVersion, ShareLink, User, UserCapability
 from app.schemas.auth import AuthRegisterRequest
 from app.services.auth_service import get_or_create_social_user, register_user
 from app.services.patient_service import create_patient
@@ -44,7 +44,7 @@ def _session():
         poolclass=StaticPool,
     )
     originals = []
-    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease)
+    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease, UserCapability)
     for model in models:
         for column in model.__table__.columns:
             if isinstance(column.type, Uuid):

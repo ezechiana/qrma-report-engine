@@ -308,8 +308,10 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
     db.commit()
     db.refresh(user)
     from app.services.personal_record_service import ensure_personal_record
+    from app.services.user_capability_service import PRACTITIONER, grant_capability
 
     ensure_personal_record(db, user)
+    grant_capability(db, user, PRACTITIONER)
     log_auth_event(db, event_type="register", status="success", user=user, email=user.email)
     return user
 
@@ -375,8 +377,10 @@ def get_or_create_social_user(
     db.commit()
     db.refresh(user)
     from app.services.personal_record_service import ensure_personal_record
+    from app.services.user_capability_service import PRACTITIONER, grant_capability
 
     ensure_personal_record(db, user)
+    grant_capability(db, user, PRACTITIONER)
 
     log_auth_event(
         db,
