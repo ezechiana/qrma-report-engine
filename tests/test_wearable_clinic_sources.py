@@ -47,11 +47,12 @@ def sqlite_json(type_, compiler, **kw):
 
 def test_sources_page_places_wearables_after_the_other_groups():
     page = Path("app/templates/patient_detail.html").read_text(encoding="utf-8")
-    sources = page.index('id="sources-section"')
+    notes = page.index('id="section-notes"')
+    labs = page.index('id="section-labs"')
     client = page.index('id="client-entries-section"')
     wearable = page.index('id="wearable-days-section"')
     timeline = page.index("Activity timeline")
-    assert sources < client < wearable < timeline
+    assert notes < labs < client < wearable < timeline
     assert "This clinic cannot change them here." in page
     assert "wearable-day-edit" not in page
     assert "wearable-day-release" not in page

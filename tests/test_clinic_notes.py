@@ -57,7 +57,9 @@ def test_clinic_note_routes_stay_off_the_client_portal():
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources/2/panels/3/release") is True
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources/2/records/3/release") is True
     page = open("app/templates/patient_detail.html", encoding="utf-8").read()
-    assert 'id="sources-section"' in page
+    notes = page.index('id="section-notes"')
+    labs = page.index('id="section-labs"')
+    assert notes < labs
     assert "Clinic notes" in page
     assert "Lab results" in page
     assert 'id="client-entries-section"' in page
