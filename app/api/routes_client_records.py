@@ -288,8 +288,9 @@ def get_client_note(
 ):
     """Return the client summary of one released note or lab panel.
 
-    Handles patient identity. Note text and marker values are not included.
-    An unreleased record, or one with no client summary, is not found.
+    Handles patient identity. Marker values are included only when this panel's
+    marker release is on. An unreleased record, or one with no client summary,
+    is not found.
     """
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)

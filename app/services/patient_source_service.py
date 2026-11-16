@@ -344,6 +344,32 @@ def _stored_number(value) -> Decimal | None:
     return Decimal(str(value))
 
 
+def _display_number(value: Decimal | None) -> str:
+    number = _public_number(value)
+    if number is None:
+        return ""
+    if isinstance(number, int):
+        return str(number)
+    text = format(number, "f").rstrip("0").rstrip(".")
+    return text or "0"
+
+
+def _client_observation(row: SourceObservation) -> dict:
+    """One marker the client may see. Codes and flags stay in the clinic record."""
+    text = (row.value_text or "").strip()
+    reference = (row.reference_text or "").strip()
+    if not reference:
+        low = _display_number(row.reference_low)
+        high = _display_number(row.reference_high)
+        reference = f"{low}–{high}" if low and high else ""
+    return {
+        "name": row.name,
+        "value": text or _display_number(row.value_numeric),
+        "unit": row.unit or "",
+        "reference_range": reference,
+    }
+
+
 def _observation_payload(row: SourceObservation) -> dict:
     return {
         "name": row.name,
@@ -867,8 +893,9 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
     """Released clinic notes and lab panels, grouped by source name.
 
     A record is included only when it is released and its client summary has text.
-    The list is title and date. Note text, marker values, entries the client
-    sent to the clinic, and the Wearables shelf are not included.
+    The list is title and date even when marker values are released.
+    Note text, marker values, entries the client sent to the clinic, and the
+    Wearables shelf are not included.
     """
     rows = (
         db.query(SourceRecord, PatientSource)
@@ -906,7 +933,10 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
 def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict:
     """The client summary of one released note or lab panel.
 
-    Note text, marker values, and entries the client sent to the clinic are not included.
+    Marker rows are included only for a laboratory panel whose marker release
+    is on. They are name, display value, unit, and reference range. The
+    observations key is omitted when that release is off. Note text, codes,
+    flags, specimen, and laboratory name are not included.
     """
     record = (
         db.query(SourceRecord)
@@ -939,10 +969,18 @@ def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict
     )
     if not released:
         raise HTTPException(status_code=404, detail="Note not found")
-    return {
+    payload = {
         "record_id": str(record.id),
         "title": record.title,
         "recorded_on": _recorded_on(record),
         "client_summary": summary,
         "source_name": source.display_name,
     }
+    markers_on = (
+        source.source_type == LABORATORY
+        and marker_source_key(record.id) in _released_marker_keys(db, patient, [record])
+    )
+    if markers_on:
+        rows = _observations_for(db, [record]).get(str(record.id), [])
+        payload["observations"] = [_client_observation(row) for row in rows]
+    return payload

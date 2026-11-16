@@ -999,9 +999,12 @@ def test_practitioner_can_release_and_withdraw_marker_values_for_one_panel():
         holder["user"] = client_user
         opened = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
         assert opened.status_code == 200
-        assert "observations" not in opened.json()
-        assert "Haemoglobin" not in opened.text
-        assert "140" not in opened.text
+        assert opened.json()["observations"] == [{
+            "name": "Haemoglobin",
+            "value": "140",
+            "unit": "g/L",
+            "reference_range": "115–150",
+        }]
 
         holder["user"] = practitioner
         turned_off = http.post(marker_url, json={"released": False})
@@ -1226,12 +1229,344 @@ def test_withdrawing_the_summary_also_withdraws_marker_values():
             assert hidden not in portal.text
         opened_other = http.get(f"/api/client/records/{patient.id}/notes/{other_id}")
         assert opened_other.status_code == 200
-        assert "observations" not in opened_other.json()
-        assert "Platelets" not in opened_other.text
+        assert opened_other.json()["observations"] == [{
+            "name": "Platelets",
+            "value": "250",
+            "unit": "",
+            "reference_range": "",
+        }]
         db.refresh(stored_link)
         assert stored_link.token == "summary-withdraw-token"
         assert stored_link.is_active is True
         assert db.query(ShareLink).count() == 1
+        db.close()
+    finally:
+        for column, kind in originals:
+            column.type = kind
+        engine.dispose()
+
+
+def test_client_sees_marker_values_only_when_that_release_is_on():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    originals = []
+    models = (
+        User,
+        Patient,
+        PatientSource,
+        SourceRecord,
+        SourceObservation,
+        Case,
+        ReportVersion,
+        ShareLink,
+        ContentRelease,
+    )
+    for model in models:
+        for column in model.__table__.columns:
+            if isinstance(column.type, Uuid):
+                originals.append((column, column.type))
+                column.type = FlexibleUuid()
+    try:
+        for model in models:
+            model.__table__.create(engine)
+        db = Session(engine)
+        practitioner = User(
+            id=uuid.uuid4(),
+            email="clinic@example.com",
+            full_name="Clinic Practitioner",
+            clinic_name="North Clinic",
+            password_hash="unused",
+            is_active=True,
+            role="practitioner",
+        )
+        client_user = User(
+            id=uuid.uuid4(),
+            email="ada@example.com",
+            full_name="Ada Lovelace",
+            password_hash="unused",
+            is_active=True,
+            role="client",
+            email_verified_at=datetime.now(timezone.utc),
+        )
+        stranger = User(
+            id=uuid.uuid4(),
+            email="other@example.com",
+            full_name="Other Client",
+            password_hash="unused",
+            is_active=True,
+            role="client",
+            email_verified_at=datetime.now(timezone.utc),
+        )
+        db.add_all([practitioner, client_user, stranger])
+        db.commit()
+        patient = Patient(
+            id=uuid.uuid4(),
+            user_id=practitioner.id,
+            first_name="Ada",
+            last_name="Lovelace",
+            full_name="Ada Lovelace",
+            claimed_by_user_id=client_user.id,
+            claimed_at=datetime.now(timezone.utc),
+        )
+        db.add(patient)
+        db.commit()
+        case = Case(
+            id=uuid.uuid4(),
+            user_id=practitioner.id,
+            patient_id=patient.id,
+            title="Morning scan",
+            status="draft",
+        )
+        db.add(case)
+        db.commit()
+        report = ReportVersion(
+            id=uuid.uuid4(),
+            case_id=case.id,
+            created_by_user_id=practitioner.id,
+            version_number=1,
+            status=ReportStatus.ready,
+            recommendation_mode="natural_approaches_clinical",
+            report_type="assessment",
+            is_archived=False,
+        )
+        db.add(report)
+        db.commit()
+        link = ShareLink(
+            id=uuid.uuid4(),
+            report_version_id=report.id,
+            token="marker-display-token",
+            is_active=True,
+            share_type="report",
+            patient_id=patient.id,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        )
+        db.add(link)
+        db.commit()
+
+        app = FastAPI()
+        app.include_router(routes_patient_sources.router)
+        app.include_router(routes_client_records.router)
+        holder = {"user": practitioner}
+
+        def override_db():
+            yield db
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = lambda: holder["user"]
+        http = TestClient(app)
+
+        sources = http.get(f"/api/patients/{patient.id}/sources").json()["sources"]
+        note_source = sources[0]["source_id"]
+        source_id = sources[1]["source_id"]
+        created = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "June bloods",
+                "recorded_on": "2026-06-12",
+                "specimen": "SpecimenSecret",
+                "laboratory_name": "LaboratorySecret",
+                "client_summary": "The blood count is ready to discuss.",
+                "observations": [
+                    {
+                        "name": "Ferritin",
+                        "value_text": "Low",
+                        "value_numeric": 9,
+                        "unit": "ug/L",
+                        "reference_text": "30 to 400",
+                        "code": "SHOULD-NOT-LEAK",
+                        "interpretation": "abnormal",
+                    },
+                    {
+                        "name": "Haemoglobin",
+                        "value_numeric": 140.5,
+                        "unit": "g/L",
+                        "reference_low": 115,
+                        "reference_high": 150,
+                    },
+                ],
+            },
+        )
+        assert created.status_code == 200
+        record_id = created.json()["record_id"]
+        quiet = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "Quiet bloods",
+                "recorded_on": "2026-06-13",
+                "client_summary": "Summary only for this panel.",
+                "observations": [{
+                    "name": "HiddenMarkerZZ",
+                    "value_text": "secret-99",
+                    "code": "QUIET-CODE",
+                    "interpretation": "abnormal",
+                }],
+            },
+        )
+        assert quiet.status_code == 200
+        quiet_id = quiet.json()["record_id"]
+        blank = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "Empty bloods",
+                "recorded_on": "2026-06-14",
+                "client_summary": "No markers were stored.",
+                "observations": [{"name": "Placeholder", "value_text": "temp"}],
+            },
+        )
+        assert blank.status_code == 200
+        blank_id = blank.json()["record_id"]
+        note = http.post(
+            f"/api/patients/{patient.id}/sources/{note_source}/records",
+            json={
+                "title": "Visit note",
+                "recorded_on": "2026-11-01",
+                "text": "Private clinic wording",
+                "client_summary": "A short note for the client",
+            },
+        )
+        assert note.status_code == 200
+        note_id = note.json()["record_id"]
+        for panel_id in (record_id, quiet_id, blank_id):
+            assert http.post(
+                f"/api/patients/{patient.id}/sources/{source_id}/panels/{panel_id}/release",
+                json={"released": True},
+            ).status_code == 200
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{note_source}/records/{note_id}/release",
+            json={"released": True},
+        ).status_code == 200
+
+        hidden = (
+            "HiddenMarkerZZ",
+            "secret-99",
+            "QUIET-CODE",
+            "SHOULD-NOT-LEAK",
+            "abnormal",
+            "SpecimenSecret",
+            "LaboratorySecret",
+            "value_numeric",
+            "reference_low",
+            "reference_text",
+            "payload_json",
+            "Private clinic wording",
+        )
+
+        def assert_no_marker_leak(response, note=False):
+            items = hidden + (("interpretation",) if note else ())
+            for item in items:
+                assert item not in response.text
+
+        holder["user"] = client_user
+        closed = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
+        assert closed.status_code == 200
+        assert set(closed.json()) == {"record_id", "title", "recorded_on", "client_summary", "source_name"}
+        assert "observations" not in closed.json()
+        assert "Ferritin" not in closed.text
+        assert "140.5" not in closed.text
+        assert_no_marker_leak(closed, note=True)
+        quiet_closed = http.get(f"/api/client/records/{patient.id}/notes/{quiet_id}")
+        assert quiet_closed.status_code == 200
+        assert "observations" not in quiet_closed.json()
+        assert_no_marker_leak(quiet_closed, note=True)
+        note_opened = http.get(f"/api/client/records/{patient.id}/notes/{note_id}")
+        assert note_opened.status_code == 200
+        assert "observations" not in note_opened.json()
+        assert "Private clinic wording" not in note_opened.text
+
+        portal = http.get(f"/api/client/records/{patient.id}")
+        listed = [item for group in portal.json()["sources"] for item in group["records"]]
+        assert {item["title"] for item in listed} == {"June bloods", "Quiet bloods", "Empty bloods", "Visit note"}
+        assert all(set(item) == {"record_id", "title", "recorded_on"} for item in listed)
+        assert_no_marker_leak(portal)
+        assert "Ferritin" not in portal.text
+        assert "140.5" not in portal.text
+        today = http.get("/api/client/today")
+        assert today.status_code == 200
+        assert {item["title"] for item in today.json()["from_clinic"]} >= {"June bloods", "Quiet bloods"}
+        assert all(set(item) == {"title", "recorded_on", "patient_id"} for item in today.json()["from_clinic"])
+        assert_no_marker_leak(today)
+        assert "Ferritin" not in today.text
+        assert "observations" not in today.text
+
+        holder["user"] = practitioner
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}/marker-release",
+            json={"released": True},
+        ).status_code == 200
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels/{blank_id}/marker-release",
+            json={"released": True},
+        ).status_code == 200
+        db.query(SourceObservation).filter(
+            SourceObservation.source_record_id == uuid.UUID(blank_id)
+        ).delete()
+        db.commit()
+
+        holder["user"] = client_user
+        opened = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
+        assert opened.status_code == 200
+        assert set(opened.json()) == {
+            "record_id",
+            "title",
+            "recorded_on",
+            "client_summary",
+            "source_name",
+            "observations",
+        }
+        assert opened.json()["observations"] == [
+            {"name": "Ferritin", "value": "Low", "unit": "ug/L", "reference_range": "30 to 400"},
+            {"name": "Haemoglobin", "value": "140.5", "unit": "g/L", "reference_range": "115–150"},
+        ]
+        assert all(set(row) == {"name", "value", "unit", "reference_range"} for row in opened.json()["observations"])
+        assert_no_marker_leak(opened, note=True)
+        empty = http.get(f"/api/client/records/{patient.id}/notes/{blank_id}")
+        assert empty.status_code == 200
+        assert empty.json()["observations"] == []
+        assert_no_marker_leak(empty, note=True)
+        still_quiet = http.get(f"/api/client/records/{patient.id}/notes/{quiet_id}")
+        assert "observations" not in still_quiet.json()
+        assert_no_marker_leak(still_quiet, note=True)
+        still_note = http.get(f"/api/client/records/{patient.id}/notes/{note_id}")
+        assert "observations" not in still_note.json()
+        portal = http.get(f"/api/client/records/{patient.id}")
+        listed = [item for group in portal.json()["sources"] for item in group["records"]]
+        assert all(set(item) == {"record_id", "title", "recorded_on"} for item in listed)
+        assert_no_marker_leak(portal)
+        assert "Ferritin" not in portal.text
+        assert "140.5" not in portal.text
+        today = http.get("/api/client/today")
+        assert all(set(item) == {"title", "recorded_on", "patient_id"} for item in today.json()["from_clinic"])
+        assert_no_marker_leak(today)
+        assert "Ferritin" not in today.text
+        assert "140.5" not in today.text
+
+        holder["user"] = stranger
+        missing = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
+        assert missing.status_code == 404
+        assert_no_marker_leak(missing, note=True)
+        assert "Ferritin" not in missing.text
+
+        holder["user"] = practitioner
+        withdrawn = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}/marker-release",
+            json={"released": False},
+        )
+        assert withdrawn.status_code == 200
+        holder["user"] = client_user
+        after = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
+        assert after.status_code == 200
+        assert "observations" not in after.json()
+        assert after.json()["client_summary"] == "The blood count is ready to discuss."
+        assert "Ferritin" not in after.text
+        assert "Haemoglobin" not in after.text
+        assert "140.5" not in after.text
+        assert_no_marker_leak(after, note=True)
+        stored_link = db.query(ShareLink).one()
+        assert stored_link.token == "marker-display-token"
+        assert stored_link.is_active is True
         db.close()
     finally:
         for column, kind in originals:

@@ -285,6 +285,8 @@ def _released_title(db: Session, row: ContentRelease) -> tuple[str, str | None] 
     key = row.source_key or ""
     if key == PROGRESS_VIEW:
         return "Progress", released_on
+    if key.startswith("markers:"):
+        return None
     if key.startswith("record:"):
         return _record_title(db, key, released_on)
     try:
