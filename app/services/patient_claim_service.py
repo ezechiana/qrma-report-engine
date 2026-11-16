@@ -259,6 +259,9 @@ def begin_client_claim(
         )
         db.add(user)
         db.flush()
+        from app.services.personal_record_service import ensure_personal_record
+
+        ensure_personal_record(db, user, commit=False)
 
     invite.reserved_by_user_id = user.id
     invite.reserved_at = invite.reserved_at or now

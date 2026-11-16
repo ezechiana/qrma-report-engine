@@ -141,6 +141,10 @@ def reset_password_page(request: Request, token: str | None = None):
 def register(payload: AuthRegisterRequest, db: CurrentDB, request: Request):
     """Create an unverified user and send a verification email."""
     user = register_user(db, payload)
+    from app.services.personal_record_service import personal_record_for, personal_record_payload
+
+    personal_record = personal_record_for(db, user)
+    personal_payload = personal_record_payload(personal_record) if personal_record is not None else None
 
     referral_code = request.query_params.get("ref") or request.query_params.get("referral_code") or payload.referral_code
     if referral_code:
@@ -161,6 +165,9 @@ def register(payload: AuthRegisterRequest, db: CurrentDB, request: Request):
 
     if os.getenv("APP_ENV", "development").lower() != "production":
         response["dev_verification_url"] = verification_url(email_payload["token"])
+
+    if personal_payload is not None:
+        response["personal_record"] = personal_payload
 
     return response
 
@@ -354,6 +361,20 @@ def refresh_tokens(
 @router.get("/me", response_model=AuthMeResponse)
 def get_me(current_user: CurrentActiveUser):
     return AuthMeResponse(user=current_user)
+
+
+@router.get("/record")
+def get_personal_record(db: CurrentDB, current_user: CurrentActiveUser):
+    """Return this account's personal record. Clinic charts are not included.
+
+    Handles the subject's own patient row. No other person's data is returned.
+    """
+    from app.services.personal_record_service import personal_record_for, personal_record_payload
+
+    record = personal_record_for(db, current_user)
+    if record is None:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Personal record not found.")
+    return personal_record_payload(record)
 
 
 @router.get("/impersonation-status")

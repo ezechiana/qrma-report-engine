@@ -307,6 +307,9 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    from app.services.personal_record_service import ensure_personal_record
+
+    ensure_personal_record(db, user)
     log_auth_event(db, event_type="register", status="success", user=user, email=user.email)
     return user
 
@@ -371,6 +374,9 @@ def get_or_create_social_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    from app.services.personal_record_service import ensure_personal_record
+
+    ensure_personal_record(db, user)
 
     log_auth_event(
         db,

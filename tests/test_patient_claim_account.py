@@ -188,6 +188,11 @@ def test_client_previews_consents_verifies_and_claims(monkeypatch):
         assert account.role == "client"
         assert account.clinic_name is None
         assert account.email_verified_at is None
+        personal = db.query(Patient).filter(Patient.subject_user_id == account.id).one()
+        assert personal.id != patient.id
+        assert personal.user_id == account.id
+        assert personal.claimed_by_user_id is None
+        assert patient.subject_user_id is None
 
         account.email_verified_at = datetime.now(timezone.utc)
         claimed = complete_reserved_claim(db, account)
@@ -199,6 +204,9 @@ def test_client_previews_consents_verifies_and_claims(monkeypatch):
         assert patient.user_id == owner_id
         assert patient.claimed_by_user_id == account.id
         assert patient.claimed_at is not None
+        db.refresh(personal)
+        assert personal.claimed_by_user_id is None
+        assert personal.subject_user_id == account.id
         assert invite.status == "accepted"
         assert invite.claimed_by_user_id == account.id
         assert invite.accepted_at is not None

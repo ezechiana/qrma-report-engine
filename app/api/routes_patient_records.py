@@ -3,7 +3,7 @@
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import func
+from sqlalchemy import func, or_
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -74,7 +74,10 @@ def list_patients(
 ):
     patients = (
         db.query(Patient)
-        .filter(Patient.user_id == current_user.id)
+        .filter(
+            Patient.user_id == current_user.id,
+            or_(Patient.subject_user_id.is_(None), Patient.subject_user_id != current_user.id),
+        )
         .order_by(Patient.created_at.desc())
         .all()
     )
