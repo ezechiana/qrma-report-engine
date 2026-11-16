@@ -1,17 +1,274 @@
-<header class="portal-bar">
-    <a class="brand" href="/client" aria-label="go360 home">
-        <img src="/static/brand/go360-v1/go360-wordmark-dark.svg" alt="go360">
-    </a>
-    <nav class="portal-nav" aria-label="Client">
-        {% if portal_section == "records" %}
-        <span class="portal-current" aria-current="page">Your records</span>
+<style>
+    .public-page {
+        display: grid;
+        grid-template-columns: 240px minmax(0, 1fr);
+        align-items: start;
+        min-height: 100vh;
+        padding: 0;
+        background: #f3f4f6;
+    }
+    body { background: #f3f4f6; }
+    .sidebar {
+        grid-column: 1;
+        grid-row: 1 / span 20;
+        background: #111827;
+        color: white;
+        padding: 20px;
+        position: sticky;
+        top: 0;
+        height: 100vh;
+        overflow-y: auto;
+        display: flex;
+        flex-direction: column;
+    }
+    .sidebar-brand {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        gap: 10px;
+    }
+    .sidebar h2 { margin: 0 0 6px; font-size: 20px; }
+    .sidebar h2 a { color: white; text-decoration: none; }
+    .sidebar .subtle {
+        color: #9ca3af;
+        font-size: 13px;
+        line-height: 1.45;
+        margin: 0 0 4px;
+    }
+    .sidebar nav { margin-top: 18px; }
+    .sidebar nav a {
+        display: block;
+        color: #9ca3af;
+        text-decoration: none;
+        padding: 10px 12px;
+        border-radius: 10px;
+        margin-bottom: 6px;
+    }
+    .sidebar nav a:hover,
+    .sidebar nav a.active {
+        background: rgba(255,255,255,0.08);
+        color: white;
+    }
+    .sidebar-switch {
+        display: flex;
+        gap: 6px;
+        margin-top: 12px;
+    }
+    .sidebar-switch[hidden] { display: none; }
+    .sidebar-switch a {
+        flex: 1;
+        text-align: center;
+        color: #9ca3af;
+        text-decoration: none;
+        padding: 8px 10px;
+        border-radius: 10px;
+        font-size: 13px;
+    }
+    .sidebar-switch a:hover,
+    .sidebar-switch a.active {
+        background: rgba(255,255,255,0.08);
+        color: white;
+    }
+    .sidebar-footer {
+        margin-top: auto;
+        padding-top: 16px;
+        border-top: 1px solid rgba(255,255,255,0.12);
+        color: #9ca3af;
+        font-size: 13px;
+        line-height: 1.5;
+    }
+    .sidebar-footer button {
+        display: inline-block;
+        margin-top: 10px;
+        padding: 0;
+        border: 0;
+        background: none;
+        color: white;
+        font: inherit;
+        font-size: 13px;
+        cursor: pointer;
+    }
+    .sidebar-close,
+    .client-mobile-topbar { display: none; }
+    .sidebar-backdrop { display: none; }
+    .public-page > :not(.sidebar):not(.sidebar-backdrop):not(.client-mobile-topbar) {
+        grid-column: 2;
+        width: min(100%, 960px);
+        margin: 24px auto;
+        justify-self: center;
+    }
+    @media (max-width: 960px) {
+        .public-page { display: block; padding: 0 0 24px; }
+        .sidebar {
+            position: fixed;
+            inset: 0 auto 0 0;
+            width: min(84vw, 320px);
+            height: 100vh;
+            transform: translateX(-105%);
+            transition: transform .2s ease;
+            z-index: 90;
+        }
+        body.mobile-nav-open .sidebar { transform: translateX(0); }
+        .sidebar-close {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 42px;
+            height: 42px;
+            border: 1px solid rgba(255,255,255,0.2);
+            border-radius: 10px;
+            background: transparent;
+            color: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        .sidebar-backdrop {
+            position: fixed;
+            inset: 0;
+            background: rgba(17, 24, 39, 0.45);
+            z-index: 80;
+        }
+        body.mobile-nav-open .sidebar-backdrop { display: block; }
+        .client-mobile-topbar {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 14px 16px;
+            background: #ffffff;
+            border-bottom: 1px solid #e5e7eb;
+            position: sticky;
+            top: 0;
+            z-index: 45;
+        }
+        .client-menu-btn {
+            width: 42px;
+            height: 42px;
+            border: 1px solid #e5e7eb;
+            border-radius: 10px;
+            background: white;
+            font-size: 22px;
+            cursor: pointer;
+        }
+        .client-mobile-title {
+            font-size: 18px;
+            font-weight: 700;
+            min-width: 0;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .public-page > :not(.sidebar):not(.sidebar-backdrop):not(.client-mobile-topbar) {
+            width: min(100% - 32px, 960px);
+            margin: 16px auto;
+        }
+    }
+</style>
+<aside class="sidebar" id="client-sidebar">
+    <div class="sidebar-brand">
+        <h2><a href="/client" aria-label="go360 home"><img class="go360-wordmark" src="/static/brand/go360-v1/go360-wordmark-light.svg" alt="go360"></a></h2>
+        <button class="sidebar-close" id="client-sidebar-close" type="button" aria-label="Close menu">×</button>
+    </div>
+    <p class="subtle" id="client-sidebar-name"></p>
+    <p class="subtle" id="client-connection"></p>
+    <nav aria-label="My health">
+        {% if portal_section == "today" %}
+        <a href="/client" class="active" aria-current="page">Today</a>
         {% else %}
-        <a class="text-link" href="/client">Your records</a>
+        <a href="/client">Today</a>
+        {% endif %}
+        {% if portal_section == "records" %}
+        <a href="/client" class="active" aria-current="page">Records</a>
+        {% else %}
+        <a href="/client">Records</a>
         {% endif %}
         {% if portal_section == "account" %}
-        <span class="portal-current" aria-current="page">Account</span>
+        <a href="/client/account" class="active" aria-current="page">Account</a>
         {% else %}
-        <a class="text-link" href="/client/account">Account</a>
+        <a href="/client/account">Account</a>
         {% endif %}
     </nav>
-</header>
+    <div class="sidebar-switch" id="client-role-switch" hidden>
+        <a href="/app">Clinic</a>
+        <a href="/client" class="active" aria-current="page">My health</a>
+    </div>
+    <div class="sidebar-footer">
+        <div id="client-sidebar-email">Signed in</div>
+        <button type="button" id="client-sign-out">Sign out</button>
+    </div>
+</aside>
+<div class="sidebar-backdrop" id="client-sidebar-backdrop"></div>
+<div class="client-mobile-topbar">
+    <button class="client-menu-btn" id="client-menu-btn" type="button" aria-label="Open menu">☰</button>
+    <div class="client-mobile-title">{{ title if title else "go360" }}</div>
+</div>
+<script>
+    (function () {
+        const sidebar = document.getElementById("client-sidebar");
+        const backdrop = document.getElementById("client-sidebar-backdrop");
+        const openBtn = document.getElementById("client-menu-btn");
+        const closeBtn = document.getElementById("client-sidebar-close");
+
+        function setOpen(open) {
+            document.body.classList.toggle("mobile-nav-open", open);
+        }
+
+        if (openBtn) openBtn.addEventListener("click", function () { setOpen(true); });
+        if (closeBtn) closeBtn.addEventListener("click", function () { setOpen(false); });
+        if (backdrop) backdrop.addEventListener("click", function () { setOpen(false); });
+        if (sidebar) {
+            sidebar.querySelectorAll("a").forEach(function (link) {
+                link.addEventListener("click", function () { setOpen(false); });
+            });
+        }
+
+        const signOut = document.getElementById("client-sign-out");
+        if (signOut) {
+            signOut.addEventListener("click", async function () {
+                try {
+                    await fetch("/auth/logout", { method: "POST", credentials: "same-origin" });
+                } catch (err) {}
+                try {
+                    localStorage.removeItem("current_user");
+                    localStorage.removeItem("access_token");
+                    localStorage.removeItem("refresh_token");
+                } catch (err) {}
+                window.location.href = "/login";
+            });
+        }
+
+        const emailEl = document.getElementById("client-sidebar-email");
+        const nameEl = document.getElementById("client-sidebar-name");
+        const statusEl = document.getElementById("client-connection");
+        const switchEl = document.getElementById("client-role-switch");
+        const labels = { connected: "Connected", pending: "Pending", none: "No clinic" };
+
+        fetch("/auth/me", { credentials: "same-origin" }).then(async function (response) {
+            if (!response.ok) return;
+            const data = await response.json().catch(function () { return {}; });
+            const user = data.user || {};
+            const email = typeof user.email === "string" ? user.email.trim() : "";
+            const name = typeof user.full_name === "string" ? user.full_name.trim() : "";
+            if (emailEl && email) emailEl.textContent = email;
+            if (nameEl && name) nameEl.textContent = name;
+            const role = String(user.role || "").toLowerCase();
+            const caps = Array.isArray(data.capabilities)
+                ? data.capabilities.map(function (item) { return String(item).toLowerCase(); })
+                : [];
+            if (switchEl && (role === "practitioner" || role === "admin" || caps.indexOf("practitioner") !== -1)) {
+                switchEl.hidden = false;
+            }
+        }).catch(function () {});
+
+        fetch("/api/client/connection", { credentials: "same-origin" }).then(async function (response) {
+            if (!statusEl) return;
+            if (!response.ok) {
+                statusEl.textContent = "";
+                return;
+            }
+            const data = await response.json().catch(function () { return {}; });
+            statusEl.textContent = labels[data.status] || "";
+        }).catch(function () {
+            if (statusEl) statusEl.textContent = "";
+        });
+    })();
+</script>

@@ -359,8 +359,21 @@ def refresh_tokens(
 
 
 @router.get("/me", response_model=AuthMeResponse)
-def get_me(current_user: CurrentActiveUser):
-    return AuthMeResponse(user=current_user)
+def get_me(db: CurrentDB, current_user: CurrentActiveUser):
+    from app.db.models import UserCapability
+
+    capabilities = [
+        row[0]
+        for row in db.query(UserCapability.capability)
+        .filter(UserCapability.user_id == current_user.id)
+        .all()
+    ]
+    role = str(getattr(current_user, "role", "") or "").lower()
+    if role == "practitioner" and "practitioner" not in capabilities:
+        capabilities.append("practitioner")
+    if role == "admin" and "admin" not in capabilities:
+        capabilities.append("admin")
+    return AuthMeResponse(user=current_user, capabilities=capabilities)
 
 
 @router.get("/record")

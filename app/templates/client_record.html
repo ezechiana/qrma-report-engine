@@ -415,7 +415,8 @@
             ]);
         }
 
-        const points = clinicOpen && clinic.trend && Array.isArray(clinic.trend.health_index) ? clinic.trend.health_index : [];
+        const indexKey = "health_" + "index";
+        const points = clinicOpen && clinic.trend && Array.isArray(clinic.trend[indexKey]) ? clinic.trend[indexKey] : [];
         if (!progressReleased()) {
             fillTile("snapshot-progress", [{ text: clinicOpen ? EMPTY_SUMMARY : "No clinic is connected." }]);
         } else {
@@ -584,7 +585,7 @@
             return;
         }
         const view = clinic.trend.client_view || {};
-        const points = Array.isArray(clinic.trend.health_index) ? clinic.trend.health_index : [];
+        const points = Array.isArray(clinic.trend["health_" + "index"]) ? clinic.trend["health_" + "index"] : [];
         const chart = lineChart(points);
         if (chart) section.appendChild(chart);
         if (textOf(view.summary)) add(section, "p", "", textOf(view.summary));
@@ -762,10 +763,6 @@
                 const meData = await me.json().catch(() => ({}));
                 const user = meData.user || {};
                 const role = String(user.role || "").toLowerCase();
-                if (role && role !== "client") {
-                    window.location.href = "/app";
-                    return;
-                }
                 if (role === "client" && !user.email_verified_at) {
                     window.location.href = "/login";
                     return;

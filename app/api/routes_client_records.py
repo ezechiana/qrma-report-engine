@@ -18,6 +18,7 @@ from app.services.client_entry_service import (
 from app.services.client_record_service import (
     _clinic_name,
     claimed_patients,
+    client_connection_status,
     client_record_payload,
     client_released_report,
     require_claimed_patient,
@@ -173,11 +174,27 @@ class PersonalReleaseUpdate(BaseModel):
 
 
 def _require_client(current_user: User) -> User:
-    if str(getattr(current_user, "role", "") or "").lower() != "client":
-        raise HTTPException(status_code=403, detail="Client account required.")
+    """A verified person opening their own health portal.
+
+    Practitioner accounts have a personal record too. Each route still checks
+    that the row belongs to this login.
+    """
     if not current_user.email_verified_at:
         raise HTTPException(status_code=403, detail="Verify your email before opening your record.")
     return current_user
+
+
+@router.get("/connection")
+def get_client_connection(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Connection word for the sidebar: connected, pending, or none.
+
+    No clinic name, no other person's name, and no health values.
+    """
+    client = _require_client(current_user)
+    return {"status": client_connection_status(db, client)}
 
 
 @router.get("/records")

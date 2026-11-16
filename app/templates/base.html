@@ -103,6 +103,29 @@
             margin-top: 10px;
         }
 
+        .sidebar-switch {
+            display: flex;
+            gap: 6px;
+            margin-top: 12px;
+        }
+
+        .sidebar-switch[hidden] { display: none; }
+
+        .sidebar-switch a {
+            flex: 1;
+            text-align: center;
+            color: var(--sidebar-muted);
+            padding: 8px 10px;
+            border-radius: 10px;
+            font-size: 13px;
+        }
+
+        .sidebar-switch a:hover,
+        .sidebar-switch a.active {
+            background: rgba(255,255,255,0.08);
+            color: white;
+        }
+
         .main {
             display: flex;
             flex-direction: column;
@@ -945,6 +968,8 @@
                 const data = await response.json();
                 if (data && data.user) {
                     localStorage.setItem("current_user", JSON.stringify(data.user));
+                    const caps = Array.isArray(data.capabilities) ? data.capabilities : [];
+                    localStorage.setItem("current_capabilities", JSON.stringify(caps));
                 }
                 return true;
             } catch (e) {
@@ -1354,6 +1379,11 @@
             <a href="/app/platform-monitoring" id="nav-platform-monitoring" style="display:none;">Platform Monitoring</a>
         </nav>
 
+        <div class="sidebar-switch" id="clinic-role-switch" hidden>
+            <a href="/app" class="active" aria-current="page">Clinic</a>
+            <a href="/client">My health</a>
+        </div>
+
         <div class="sidebar-footer">
             <div id="sidebar-user-email">Signed in</div>
         </div>
@@ -1430,6 +1460,20 @@
             if (emailEl) emailEl.textContent = email;
             if (menuNameEl) menuNameEl.textContent = displayName;
             if (menuEmailEl) menuEmailEl.textContent = email;
+
+            const role = String(user.role || "").toLowerCase();
+            let caps = [];
+            try {
+                caps = JSON.parse(localStorage.getItem("current_capabilities") || "[]");
+            } catch (err) {
+                caps = [];
+            }
+            const hasClinic = role === "practitioner" || role === "admin" || caps.map(function (item) {
+                return String(item).toLowerCase();
+            }).indexOf("practitioner") !== -1;
+            if (hasClinic) {
+                document.getElementById("clinic-role-switch")?.removeAttribute("hidden");
+            }
         }
 
         try {

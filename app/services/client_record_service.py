@@ -74,6 +74,34 @@ def claimed_patients(db: Session, client: User) -> list[Patient]:
     return combined
 
 
+def client_connection_status(db: Session, user: User) -> str:
+    """connected, pending, or none.
+
+    The sidebar only needs this word. Clinic names, other people, and health
+    values stay out of the response.
+    """
+    if claimed_patients(db, user):
+        return "connected"
+    from app.db.models import ClinicAssociation
+    from app.services.clinic_association_service import _association_table
+    from app.services.personal_record_service import personal_record_for
+
+    if not _association_table(db):
+        return "none"
+    personal = personal_record_for(db, user)
+    if personal is None:
+        return "none"
+    pending = (
+        db.query(ClinicAssociation.id)
+        .filter(
+            ClinicAssociation.personal_patient_id == personal.id,
+            ClinicAssociation.status == "pending",
+        )
+        .first()
+    )
+    return "pending" if pending is not None else "none"
+
+
 def _project_client_trend(payload: dict) -> dict:
     """Keep the fields the shared trend page reads, and leave practitioner controls out."""
     intelligence = payload.get("trend_intelligence") if isinstance(payload.get("trend_intelligence"), dict) else {}
