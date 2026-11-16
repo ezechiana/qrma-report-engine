@@ -1020,3 +1020,220 @@ def test_practitioner_can_release_and_withdraw_marker_values_for_one_panel():
         for column, kind in originals:
             column.type = kind
         engine.dispose()
+
+
+def test_withdrawing_the_summary_also_withdraws_marker_values():
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    originals = []
+    models = (
+        User,
+        Patient,
+        PatientSource,
+        SourceRecord,
+        SourceObservation,
+        Case,
+        ReportVersion,
+        ShareLink,
+        ContentRelease,
+    )
+    for model in models:
+        for column in model.__table__.columns:
+            if isinstance(column.type, Uuid):
+                originals.append((column, column.type))
+                column.type = FlexibleUuid()
+    try:
+        for model in models:
+            model.__table__.create(engine)
+        db = Session(engine)
+        practitioner = User(
+            id=uuid.uuid4(),
+            email="clinic@example.com",
+            full_name="Clinic Practitioner",
+            clinic_name="North Clinic",
+            password_hash="unused",
+            is_active=True,
+            role="practitioner",
+        )
+        client_user = User(
+            id=uuid.uuid4(),
+            email="ada@example.com",
+            full_name="Ada Lovelace",
+            password_hash="unused",
+            is_active=True,
+            role="client",
+            email_verified_at=datetime.now(timezone.utc),
+        )
+        db.add_all([practitioner, client_user])
+        db.commit()
+        patient = Patient(
+            id=uuid.uuid4(),
+            user_id=practitioner.id,
+            first_name="Ada",
+            last_name="Lovelace",
+            full_name="Ada Lovelace",
+            claimed_by_user_id=client_user.id,
+            claimed_at=datetime.now(timezone.utc),
+        )
+        db.add(patient)
+        db.commit()
+        case = Case(
+            id=uuid.uuid4(),
+            user_id=practitioner.id,
+            patient_id=patient.id,
+            title="Morning scan",
+            status="draft",
+        )
+        db.add(case)
+        db.commit()
+        report = ReportVersion(
+            id=uuid.uuid4(),
+            case_id=case.id,
+            created_by_user_id=practitioner.id,
+            version_number=1,
+            status=ReportStatus.ready,
+            recommendation_mode="natural_approaches_clinical",
+            report_type="assessment",
+            is_archived=False,
+        )
+        db.add(report)
+        db.commit()
+        link = ShareLink(
+            id=uuid.uuid4(),
+            report_version_id=report.id,
+            token="summary-withdraw-token",
+            is_active=True,
+            share_type="report",
+            patient_id=patient.id,
+            expires_at=datetime.now(timezone.utc) + timedelta(days=7),
+        )
+        db.add(link)
+        db.commit()
+
+        app = FastAPI()
+        app.include_router(routes_patient_sources.router)
+        app.include_router(routes_client_records.router)
+        holder = {"user": practitioner}
+
+        def override_db():
+            yield db
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = lambda: holder["user"]
+        http = TestClient(app)
+
+        sources = http.get(f"/api/patients/{patient.id}/sources").json()["sources"]
+        source_id = sources[1]["source_id"]
+        created = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "June bloods",
+                "recorded_on": "2026-06-12",
+                "client_summary": "The blood count is ready to discuss.",
+                "observations": [{
+                    "name": "Haemoglobin",
+                    "value_numeric": 140,
+                    "value_text": "140",
+                    "unit": "g/L",
+                }],
+            },
+        )
+        assert created.status_code == 200
+        record_id = created.json()["record_id"]
+        other = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "Other bloods",
+                "recorded_on": "2026-06-13",
+                "client_summary": "The other panel stays available.",
+                "observations": [{"name": "Platelets", "value_text": "250"}],
+            },
+        )
+        assert other.status_code == 200
+        other_id = other.json()["record_id"]
+        summary_url = f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}/release"
+        marker_url = f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}/marker-release"
+        other_summary = f"/api/patients/{patient.id}/sources/{source_id}/panels/{other_id}/release"
+        other_marker = f"/api/patients/{patient.id}/sources/{source_id}/panels/{other_id}/marker-release"
+
+        assert http.post(summary_url, json={"released": True}).status_code == 200
+        assert http.post(other_summary, json={"released": True}).status_code == 200
+        assert http.post(marker_url, json={"released": True}).status_code == 200
+        assert http.post(other_marker, json={"released": True}).status_code == 200
+
+        withdrawn = http.post(summary_url, json={"released": False})
+        assert withdrawn.status_code == 200
+        assert set(withdrawn.json()) == {"patient_id", "record_id", "released", "available"}
+        assert withdrawn.json()["released"] is False
+        for hidden in ("Haemoglobin", "140", "Platelets", "250", "observations", "client_summary"):
+            assert hidden not in withdrawn.text
+        summary_row = db.query(ContentRelease).filter(ContentRelease.source_key == f"record:{record_id}").one()
+        marker_row = db.query(ContentRelease).filter(ContentRelease.source_key == f"markers:{record_id}").one()
+        other_summary_row = db.query(ContentRelease).filter(ContentRelease.source_key == f"record:{other_id}").one()
+        other_marker_row = db.query(ContentRelease).filter(ContentRelease.source_key == f"markers:{other_id}").one()
+        assert summary_row.released is False
+        assert summary_row.withdrawn_at is not None
+        assert marker_row.released is False
+        assert marker_row.withdrawn_at is not None
+        assert other_summary_row.released is True
+        assert other_marker_row.released is True
+        stored_link = db.query(ShareLink).one()
+        assert stored_link.token == "summary-withdraw-token"
+        assert stored_link.is_active is True
+
+        restored = http.post(summary_url, json={"released": True})
+        assert restored.status_code == 200
+        assert restored.json()["released"] is True
+        db.refresh(summary_row)
+        db.refresh(marker_row)
+        db.refresh(other_marker_row)
+        assert summary_row.released is True
+        assert marker_row.released is False
+        assert other_marker_row.released is True
+        listed = http.get(f"/api/patients/{patient.id}/sources").json()["sources"][1]["records"]
+        by_id = {item["record_id"]: item for item in listed}
+        assert by_id[record_id]["released"] is True
+        assert by_id[record_id]["markers_released"] is False
+        assert by_id[other_id]["markers_released"] is True
+
+        assert http.post(marker_url, json={"released": True}).status_code == 200
+        cleared = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}",
+            json={"client_summary": "   "},
+        )
+        assert cleared.status_code == 200
+        db.refresh(summary_row)
+        db.refresh(marker_row)
+        assert summary_row.released is True
+        assert marker_row.released is True
+        stored = db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).one()
+        assert stored.name == "Haemoglobin"
+        assert float(stored.value_numeric) == 140
+
+        holder["user"] = client_user
+        portal = http.get(f"/api/client/records/{patient.id}")
+        assert portal.status_code == 200
+        titles = [item["title"] for group in portal.json()["sources"] for item in group["records"]]
+        assert titles == ["Other bloods"]
+        hidden_panel = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
+        assert hidden_panel.status_code == 404
+        assert hidden_panel.json()["detail"] == "Note not found"
+        for hidden in ("Haemoglobin", "140", "Platelets", "250", "observations", "June bloods"):
+            assert hidden not in hidden_panel.text
+            assert hidden not in portal.text
+        opened_other = http.get(f"/api/client/records/{patient.id}/notes/{other_id}")
+        assert opened_other.status_code == 200
+        assert "observations" not in opened_other.json()
+        assert "Platelets" not in opened_other.text
+        db.refresh(stored_link)
+        assert stored_link.token == "summary-withdraw-token"
+        assert stored_link.is_active is True
+        assert db.query(ShareLink).count() == 1
+        db.close()
+    finally:
+        for column, kind in originals:
+            column.type = kind
+        engine.dispose()

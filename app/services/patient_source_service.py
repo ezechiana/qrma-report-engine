@@ -567,6 +567,25 @@ def update_lab_panel(
     return _panel_payload(record, rows, released=released, markers_released=markers_released)
 
 
+def _withdraw_marker_release(db: Session, patient: Patient, record_id: UUID, now: datetime) -> None:
+    """Turn one marker release off without committing. No row is created."""
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.source_key == marker_source_key(record_id),
+            ContentRelease.direction == CLINIC_TO_CLIENT,
+            ContentRelease.released.is_(True),
+        )
+        .first()
+    )
+    if row is None:
+        return
+    row.released = False
+    row.withdrawn_at = now
+
+
 def set_lab_panel_release(
     db: Session,
     patient: Patient,
@@ -574,8 +593,10 @@ def set_lab_panel_release(
     record_id: UUID,
     released: bool,
 ) -> dict:
-    """Release or withdraw one lab panel. Markers stay in the clinic record.
+    """Release or withdraw one lab panel.
 
+    Turning the summary off also turns that panel's marker release off in the
+    same transaction. Turning the summary back on does not restore it.
     Does not create a share link or change a report release.
     """
     from app.services.clinic_association_service import sharing_practitioner_id
@@ -621,6 +642,7 @@ def set_lab_panel_release(
     else:
         row.released = False
         row.withdrawn_at = now
+        _withdraw_marker_release(db, patient, record.id, now)
     db.commit()
     return {
         "patient_id": str(patient.id),

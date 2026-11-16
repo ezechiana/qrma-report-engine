@@ -282,7 +282,8 @@ def post_lab_panel_release(
     """Release or withdraw one lab panel for the client who claimed this record.
 
     Handles patient identity. Marker values and the client summary are not returned.
-    A share link is not created, and individual markers are not released.
+    Withdrawing the summary also withdraws marker values for this panel.
+    Turning the summary back on does not restore them. A share link is not created.
     """
     patient = _owned_patient(db, patient_id, current_user)
     return set_lab_panel_release(db, patient, source_id, record_id, payload.released)
