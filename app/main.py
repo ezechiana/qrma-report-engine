@@ -63,14 +63,16 @@ async def lifespan(app: FastAPI):
     - Allows startup even if DB is temporarily unavailable during first boot.
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
-    if AUTO_CREATE_TABLES:
-        try:
+    try:
+        # on_event("startup") is ignored while this lifespan is installed.
+        run_migrations(engine)
+        if AUTO_CREATE_TABLES:
             Base.metadata.create_all(bind=engine)
             print("✅ Database connected and tables ensured.")
-        except Exception as exc:
-            print(f"⚠️ Database startup check failed: {exc}")
-            if APP_ENV != "production":
-                raise
+    except Exception as exc:
+        print(f"⚠️ Database startup check failed: {exc}")
+        if APP_ENV != "production":
+            raise
 
     yield
 
@@ -209,10 +211,6 @@ def create_app() -> FastAPI:
             "status": "healthy",
             "environment": APP_ENV,
         }
-
-    @app.on_event("startup")
-    def startup():
-        run_migrations(engine)
 
     return app
 
