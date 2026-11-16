@@ -1,4 +1,4 @@
-"""Manual clinic notes on a patient. QRMA reports and share links are not used."""
+"""Clinic notes and lab panels on a patient. QRMA reports and share links are not used."""
 
 from __future__ import annotations
 
@@ -591,9 +591,10 @@ def set_clinic_note_release(
 
 
 def clear_clinic_note_releases(db: Session, patient: Patient, now: datetime | None = None) -> None:
-    """Turn released clinic notes off without committing. Used when a claim ends.
+    """Turn released notes and lab panels off without committing. Used when a claim ends.
 
-    The note rows stay. Share links are not changed.
+    Any clinic-to-client row whose key starts with record: is withdrawn. The note,
+    panel, and marker rows stay. Share links are not changed.
     """
     moment = now or datetime.now(timezone.utc)
     rows = (
