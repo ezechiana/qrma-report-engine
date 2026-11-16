@@ -84,18 +84,7 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
     return {"patient_id": str(patient.id), "sources": [_source_payload(source, records)]}
 
 
-def create_clinic_note(
-    db: Session,
-    patient: Patient,
-    source_id: UUID,
-    *,
-    title: str,
-    recorded_on: date,
-    text: str,
-    client_summary: str,
-    created_by_user_id: UUID,
-) -> dict:
-    """Save a private note. Does not release it or create a share link."""
+def _manual_source(db: Session, patient: Patient, source_id: UUID) -> PatientSource:
     source = (
         db.query(PatientSource)
         .filter(
@@ -108,6 +97,38 @@ def create_clinic_note(
     )
     if source is None:
         raise HTTPException(status_code=404, detail="Source not found")
+    return source
+
+
+def _clinic_note(db: Session, patient: Patient, source: PatientSource, record_id: UUID) -> SourceRecord:
+    record = (
+        db.query(SourceRecord)
+        .filter(
+            SourceRecord.id == record_id,
+            SourceRecord.patient_source_id == source.id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.is_archived.is_(False),
+        )
+        .first()
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Note not found")
+    return record
+
+
+def create_clinic_note(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    *,
+    title: str,
+    recorded_on: date,
+    text: str,
+    client_summary: str,
+    created_by_user_id: UUID,
+) -> dict:
+    """Save a private note. Does not release it or create a share link."""
+    source = _manual_source(db, patient, source_id)
     record = SourceRecord(
         patient_source_id=source.id,
         patient_id=patient.id,
@@ -121,6 +142,30 @@ def create_clinic_note(
         created_at=datetime.now(timezone.utc),
     )
     db.add(record)
+    db.commit()
+    db.refresh(record)
+    return _record_payload(record)
+
+
+def update_clinic_note(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    record_id: UUID,
+    changes: dict,
+) -> dict:
+    """Change only the fields that were sent. Note text and client summary stay independent."""
+    source = _manual_source(db, patient, source_id)
+    record = _clinic_note(db, patient, source, record_id)
+    if "title" in changes:
+        record.title = changes["title"]
+    if "recorded_on" in changes:
+        record.recorded_at = datetime.combine(changes["recorded_on"], time.min, tzinfo=timezone.utc)
+    if "text" in changes:
+        record.payload_json = {"kind": "note", "text": changes["text"]}
+    if "client_summary" in changes:
+        record.client_summary = changes["client_summary"]
+    record.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(record)
     return _record_payload(record)

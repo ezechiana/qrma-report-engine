@@ -57,6 +57,8 @@ def test_clinic_note_routes_stay_off_the_client_portal():
     assert "Clinic notes" in page
     assert "Client summary" in page
     assert "Save note" in page
+    assert "Save changes" in page
+    assert "clinic-note-edit" in page
     assert "Release progress view" in page
     assert "/sources/" in page
     assert "record-releases" not in page
@@ -264,6 +266,220 @@ def test_practitioner_can_add_a_private_clinic_note(monkeypatch):
         assert link.is_active is True
         assert db.query(ShareLink).count() == 1
         assert db.query(ContentRelease).count() == released_reports
+        db.close()
+    finally:
+        for column, kind in originals:
+            column.type = kind
+        engine.dispose()
+
+
+def test_practitioner_can_edit_note_text_and_client_summary_separately(monkeypatch):
+    monkeypatch.setattr(
+        "app.api.routes_patients.get_patient_trends",
+        lambda **kwargs: {
+            "client_view": {"summary": "Progress is ready to review."},
+            "health_index": [],
+            "trend_summary": [],
+            "trend_intelligence": {},
+        },
+    )
+    engine = create_engine(
+        "sqlite://",
+        connect_args={"check_same_thread": False},
+        poolclass=StaticPool,
+    )
+    originals = []
+    models = (
+        User,
+        Patient,
+        PatientSource,
+        SourceRecord,
+        Case,
+        ReportVersion,
+        ShareLink,
+        ContentRelease,
+    )
+    for model in models:
+        for column in model.__table__.columns:
+            if isinstance(column.type, Uuid):
+                originals.append((column, column.type))
+                column.type = FlexibleUuid()
+    try:
+        for model in models:
+            model.__table__.create(engine)
+        db = Session(engine)
+        practitioner = User(
+            id=uuid.uuid4(),
+            email="clinic@example.com",
+            full_name="Clinic Practitioner",
+            clinic_name="North Clinic",
+            password_hash="unused",
+            is_active=True,
+            role="practitioner",
+        )
+        client_user = User(
+            id=uuid.uuid4(),
+            email="ada@example.com",
+            full_name="Ada Lovelace",
+            password_hash="unused",
+            is_active=True,
+            role="client",
+            email_verified_at=datetime.now(timezone.utc),
+        )
+        other = User(
+            id=uuid.uuid4(),
+            email="other@example.com",
+            full_name="Other Practitioner",
+            password_hash="unused",
+            is_active=True,
+            role="practitioner",
+        )
+        db.add_all([practitioner, client_user, other])
+        db.commit()
+        patient = Patient(
+            id=uuid.uuid4(),
+            user_id=practitioner.id,
+            first_name="Ada",
+            last_name="Lovelace",
+            full_name="Ada Lovelace",
+            claimed_by_user_id=client_user.id,
+            claimed_at=datetime.now(timezone.utc),
+        )
+        db.add(patient)
+        db.commit()
+        case = Case(
+            id=uuid.uuid4(),
+            user_id=practitioner.id,
+            patient_id=patient.id,
+            title="Morning scan",
+            status="draft",
+        )
+        db.add(case)
+        db.commit()
+        report = ReportVersion(
+            id=uuid.uuid4(),
+            case_id=case.id,
+            created_by_user_id=practitioner.id,
+            version_number=1,
+            status=ReportStatus.ready,
+            recommendation_mode="natural_approaches_clinical",
+            report_type="assessment",
+            is_archived=False,
+        )
+        db.add(report)
+        db.commit()
+        link = ShareLink(
+            id=uuid.uuid4(),
+            report_version_id=report.id,
+            token="edit-share-token",
+            is_active=True,
+            share_type="report",
+            patient_id=patient.id,
+            expires_at=datetime.utcnow() + timedelta(days=7),
+        )
+        db.add(link)
+        db.commit()
+        set_progress_release(db, patient, True)
+        release_count = db.query(ContentRelease).count()
+
+        app = FastAPI()
+        app.include_router(routes_patient_sources.router)
+        app.include_router(routes_client_records.router)
+        app.include_router(routes_content_releases.router)
+        holder = {"user": practitioner}
+
+        def override_db():
+            yield db
+
+        app.dependency_overrides[get_db] = override_db
+        app.dependency_overrides[get_current_user] = lambda: holder["user"]
+        http = TestClient(app)
+
+        source_id = http.get(f"/api/patients/{patient.id}/sources").json()["sources"][0]["source_id"]
+        created = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/records",
+            json={
+                "title": "Morning observation",
+                "recorded_on": "2026-11-01",
+                "text": "Private raw observation",
+                "client_summary": "Summary the client could see",
+            },
+        )
+        assert created.status_code == 200
+        record_id = created.json()["record_id"]
+
+        changed_text = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"text": "Rewritten clinic note"},
+        )
+        assert changed_text.status_code == 200
+        assert changed_text.json()["text"] == "Rewritten clinic note"
+        assert changed_text.json()["client_summary"] == "Summary the client could see"
+        assert changed_text.json()["title"] == "Morning observation"
+
+        changed_summary = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"client_summary": "Updated wording for the client"},
+        )
+        assert changed_summary.status_code == 200
+        assert changed_summary.json()["client_summary"] == "Updated wording for the client"
+        assert changed_summary.json()["text"] == "Rewritten clinic note"
+
+        cleared = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"client_summary": ""},
+        )
+        assert cleared.status_code == 200
+        assert cleared.json()["client_summary"] == ""
+        assert cleared.json()["text"] == "Rewritten clinic note"
+
+        retitled = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"title": "Evening observation", "recorded_on": "2026-11-03"},
+        )
+        assert retitled.status_code == 200
+        assert retitled.json()["title"] == "Evening observation"
+        assert retitled.json()["recorded_on"] == "2026-11-03"
+        assert retitled.json()["text"] == "Rewritten clinic note"
+        assert retitled.json()["client_summary"] == ""
+
+        blank = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"title": " "},
+        )
+        assert blank.status_code == 422
+        missing = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{uuid.uuid4()}",
+            json={"text": "Missing"},
+        )
+        assert missing.status_code == 404
+
+        holder["user"] = other
+        denied = http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"text": "Hidden rewrite"},
+        )
+        assert denied.status_code == 404
+
+        holder["user"] = client_user
+        portal = http.get(f"/api/client/records/{patient.id}")
+        assert portal.status_code == 200
+        assert "Rewritten clinic note" not in portal.text
+        assert "Private raw observation" not in portal.text
+        assert "Updated wording for the client" not in portal.text
+
+        holder["user"] = practitioner
+        assert http.get(f"/api/patients/{patient.id}/progress-release").json()["released"] is True
+        reports = http.get(f"/api/patients/{patient.id}/report-releases")
+        assert reports.json()["assessment_reports"][0]["released"] is False
+        db.refresh(link)
+        assert link.token == "edit-share-token"
+        assert link.is_active is True
+        assert db.query(ShareLink).count() == 1
+        assert db.query(ContentRelease).count() == release_count
+        stored = db.query(SourceRecord).one()
+        assert stored.payload_json["text"] == "Rewritten clinic note"
+        assert stored.client_summary == ""
         db.close()
     finally:
         for column, kind in originals:

@@ -9,7 +9,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import Patient, User
-from app.services.patient_source_service import create_clinic_note, list_patient_sources
+from app.services.patient_source_service import create_clinic_note, list_patient_sources, update_clinic_note
 
 router = APIRouter(prefix="/api/patients", tags=["patients"])
 
@@ -31,6 +31,30 @@ class ClinicNoteCreate(BaseModel):
     @field_validator("client_summary")
     @classmethod
     def clean_summary(cls, value: str) -> str:
+        return value.strip()
+
+
+class ClinicNoteUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+    recorded_on: date | None = None
+    text: str | None = Field(default=None, max_length=20000)
+    client_summary: str | None = Field(default=None, max_length=20000)
+
+    @field_validator("title", "text")
+    @classmethod
+    def required_when_sent(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
+
+    @field_validator("client_summary")
+    @classmethod
+    def clean_optional_summary(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
         return value.strip()
 
 
@@ -79,3 +103,21 @@ def post_clinic_note(
         client_summary=payload.client_summary,
         created_by_user_id=current_user.id,
     )
+
+
+@router.patch("/{patient_id}/sources/{source_id}/records/{record_id}")
+def patch_clinic_note(
+    patient_id: UUID,
+    source_id: UUID,
+    record_id: UUID,
+    payload: ClinicNoteUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a clinic note. Omitted fields stay as they are. This does not release the note."""
+    provided = payload.model_fields_set
+    if not provided:
+        raise HTTPException(status_code=422, detail="Nothing to update.")
+    patient = _owned_patient(db, patient_id, current_user)
+    changes = {field: getattr(payload, field) for field in provided}
+    return update_clinic_note(db, patient, source_id, record_id, changes)

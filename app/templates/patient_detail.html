@@ -21,6 +21,7 @@
     line-height: 1.6;
 }
 
+
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -611,8 +612,10 @@ button.link {
             <textarea id="clinic-note-summary" rows="3" maxlength="20000"></textarea>
             <div class="muted" style="margin-top:4px;">Only this summary can be released to the client later. The note text stays in the clinic record. You can leave the summary blank.</div>
         </div>
+        <p class="muted" id="clinic-note-editing" style="display:none;">Editing this note.</p>
         <div class="btn-row">
             <button class="btn" type="submit" id="clinic-note-save">Save note</button>
+            <button class="btn secondary" type="button" id="clinic-note-cancel" style="display:none;">Cancel</button>
         </div>
     </form>
 </div>
@@ -2036,16 +2039,34 @@ button.link {
     }
 
     let clinicNoteSourceId = null;
+    let clinicNoteRecordId = null;
+    let clinicNotes = [];
+
+    function clinicNoteSaveLabel() {
+        return clinicNoteRecordId ? "Save changes" : "Save note";
+    }
+
+    function resetClinicNoteForm() {
+        const form = document.getElementById("clinic-note-form");
+        if (form) form.reset();
+        clinicNoteRecordId = null;
+        const editing = document.getElementById("clinic-note-editing");
+        const cancel = document.getElementById("clinic-note-cancel");
+        const button = document.getElementById("clinic-note-save");
+        if (editing) editing.style.display = "none";
+        if (cancel) cancel.style.display = "none";
+        if (button) button.textContent = clinicNoteSaveLabel();
+    }
 
     function renderClinicNotes(records) {
         const body = document.getElementById("clinic-notes-body");
         if (!body) return;
-        const notes = Array.isArray(records) ? records : [];
-        if (!notes.length) {
+        clinicNotes = Array.isArray(records) ? records : [];
+        if (!clinicNotes.length) {
             body.innerHTML = `<div class="muted">No clinic notes yet.</div>`;
             return;
         }
-        body.innerHTML = notes.map(item => {
+        body.innerHTML = clinicNotes.map(item => {
             const summary = item.client_summary
                 ? safeText(item.client_summary)
                 : `<span class="muted">No client summary yet.</span>`;
@@ -2055,6 +2076,9 @@ button.link {
                     <div class="muted">${safeText(item.recorded_on || "")}</div>
                     <p>${safeText(item.text || "")}</p>
                     <p><span class="muted">Client summary:</span> ${summary}</p>
+                    <div class="btn-row" style="margin-top:8px;">
+                        <button class="btn secondary clinic-note-edit" type="button" data-record-id="${safeText(item.record_id)}">Edit</button>
+                    </div>
                 </div>
             `;
         }).join("");
@@ -2090,21 +2114,26 @@ button.link {
             return;
         }
         const button = document.getElementById("clinic-note-save");
+        const editingId = clinicNoteRecordId;
         if (button) {
             button.disabled = true;
             button.textContent = "Saving…";
         }
         clearPatientError();
         clearPatientSuccess();
+        const payload = {
+            title: document.getElementById("clinic-note-title").value,
+            recorded_on: document.getElementById("clinic-note-date").value,
+            text: document.getElementById("clinic-note-text").value,
+            client_summary: document.getElementById("clinic-note-summary").value,
+        };
+        const url = editingId
+            ? `/api/patients/${patientId}/sources/${clinicNoteSourceId}/records/${editingId}`
+            : `/api/patients/${patientId}/sources/${clinicNoteSourceId}/records`;
         try {
-            const response = await apiFetch(`/api/patients/${patientId}/sources/${clinicNoteSourceId}/records`, {
-                method: "POST",
-                body: JSON.stringify({
-                    title: document.getElementById("clinic-note-title").value,
-                    recorded_on: document.getElementById("clinic-note-date").value,
-                    text: document.getElementById("clinic-note-text").value,
-                    client_summary: document.getElementById("clinic-note-summary").value,
-                }),
+            const response = await apiFetch(url, {
+                method: editingId ? "PATCH" : "POST",
+                body: JSON.stringify(payload),
             });
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
@@ -2112,8 +2141,8 @@ button.link {
                 showPatientError(typeof detail === "string" ? detail : "Could not save the clinic note.");
                 return;
             }
-            document.getElementById("clinic-note-form").reset();
-            showPatientSuccess("Clinic note saved.");
+            resetClinicNoteForm();
+            showPatientSuccess(editingId ? "Clinic note updated." : "Clinic note saved.");
             await loadClinicNotes();
         } catch (err) {
             console.error(err);
@@ -2121,9 +2150,27 @@ button.link {
         } finally {
             if (button) {
                 button.disabled = false;
-                button.textContent = "Save note";
+                button.textContent = clinicNoteSaveLabel();
             }
         }
+    }
+
+    function beginClinicNoteEdit(recordId) {
+        const item = clinicNotes.find(note => String(note.record_id) === String(recordId));
+        if (!item) return;
+        clinicNoteRecordId = item.record_id;
+        document.getElementById("clinic-note-title").value = item.title || "";
+        document.getElementById("clinic-note-date").value = item.recorded_on || "";
+        document.getElementById("clinic-note-text").value = item.text || "";
+        document.getElementById("clinic-note-summary").value = item.client_summary || "";
+        const editing = document.getElementById("clinic-note-editing");
+        const cancel = document.getElementById("clinic-note-cancel");
+        const button = document.getElementById("clinic-note-save");
+        if (editing) editing.style.display = "block";
+        if (cancel) cancel.style.display = "inline-block";
+        if (button) button.textContent = clinicNoteSaveLabel();
+        const form = document.getElementById("clinic-note-form");
+        if (form) form.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     async function loadPatientDetail() {
@@ -2430,6 +2477,16 @@ button.link {
 
     const clinicNoteForm = document.getElementById("clinic-note-form");
     if (clinicNoteForm) clinicNoteForm.addEventListener("submit", saveClinicNote);
+    const clinicNoteCancel = document.getElementById("clinic-note-cancel");
+    if (clinicNoteCancel) clinicNoteCancel.addEventListener("click", resetClinicNoteForm);
+    const clinicNotesBody = document.getElementById("clinic-notes-body");
+    if (clinicNotesBody) {
+        clinicNotesBody.addEventListener("click", (event) => {
+            const button = event.target && event.target.closest ? event.target.closest(".clinic-note-edit") : null;
+            if (!button) return;
+            beginClinicNoteEdit(button.dataset.recordId);
+        });
+    }
 
     const reportsBody = document.getElementById("patient-reports-body");
     if (reportsBody) {
