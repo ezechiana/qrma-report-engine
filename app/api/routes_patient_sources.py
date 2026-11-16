@@ -184,9 +184,11 @@ def get_patient_sources(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List clinic notes and lab panels for a patient the practitioner owns.
+    """List sources for a patient the practitioner owns.
 
-    Handles patient identity, note text, and marker values. Share links are not included.
+    Handles patient identity, note text, marker values, and wearable days the
+    client has released. Unreleased wearable days are omitted. Share links are
+    not included.
     """
     patient = _owned_patient(db, patient_id, current_user)
     return list_patient_sources(db, patient)
