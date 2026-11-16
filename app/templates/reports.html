@@ -22,6 +22,7 @@
 .link-danger { color:#dc2626; cursor:pointer; }
 .link-secondary { color:#475569; cursor:pointer; }
 .table td { vertical-align:top; }
+.portal-release-cell .report-type-pill + div .btn { margin-top: 6px; }
 .share-toolbar { display:flex; justify-content:space-between; gap:12px; flex-wrap:wrap; align-items:center; padding:12px; border:1px solid #e5e7eb; background:#f8fafc; border-radius:14px; margin-bottom:14px; }
 .share-selected-summary { color:#475569; font-size:13px; font-weight:700; }
 .modal-backdrop { position:fixed; inset:0; background:rgba(15,23,42,.45); display:none; align-items:center; justify-content:center; padding:24px; z-index:1000; }
@@ -49,7 +50,7 @@
     .reports-search,
     .reports-sort { width: 100%; max-width: none; }
     .card { overflow-x: auto; -webkit-overflow-scrolling: touch; }
-    .table { min-width: 860px; }
+    .table { min-width: 1020px; }
     .modal-card { padding: 16px; border-radius: 20px; }
 }
 
@@ -61,16 +62,18 @@
  .reports-search,.reports-sort{width:100%!important;max-width:none!important;min-width:0!important;min-height:44px}
  .share-toolbar{overflow:hidden}
  .card:has(> table.table){overflow-x:auto!important;-webkit-overflow-scrolling:touch}
- table.table{min-width:860px}
+ table.table{min-width:1020px}
 }
 
 </style>
 
 <div id="reports-error" class="error" style="display:none;"></div>
+<div id="reports-success" class="success" style="display:none;"></div>
 
 <div class="card" style="margin-bottom:16px;">
     <h2 style="margin:0 0 6px;">Reports</h2>
     <p class="muted" style="margin:0;">Assessments show one QRMA scan. Trend reports show what changed across two or more assessments.</p>
+    <p class="muted" style="margin:8px 0 0;">Released reports appear in the client's portal. This does not create a share link.</p>
 </div>
 
 <div class="card">
@@ -122,11 +125,12 @@
                 <th>Version</th>
                 <th><button class="sort-btn" data-sort-set="generated_desc">Generated</button></th>
                 <th>Status</th>
+                <th>Client portal</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="reports-body">
-            <tr><td colspan="8" class="muted">Loading…</td></tr>
+            <tr><td colspan="9" class="muted">Loading…</td></tr>
         </tbody>
     </table>
 </div>
@@ -193,6 +197,8 @@
 let allReports = [];
 let activeTypeTab = "all";
 let selectedReportIds = new Set();
+let releaseState = {};
+let releaseBusy = null;
 
 const currencySymbols = {
     gbp: "£",
@@ -228,6 +234,25 @@ function clearReportsError() {
     const box = document.getElementById("reports-error");
     box.style.display = "none";
     box.textContent = "";
+}
+function showReportsSuccess(message) {
+    const box = document.getElementById("reports-success");
+    box.style.display = "block";
+    box.textContent = message;
+}
+function clearReportsSuccess() {
+    const box = document.getElementById("reports-success");
+    box.style.display = "none";
+    box.textContent = "";
+}
+function sameReportId(left, right) {
+    return String(left || "").replace(/-/g, "").toLowerCase() === String(right || "").replace(/-/g, "").toLowerCase();
+}
+function reportIsReleasable(report) {
+    const status = String((report && report.status) || "").toLowerCase();
+    if (!report || report.is_archived) return false;
+    if (status !== "ready") return false;
+    return reportType(report) === "assessment" || reportType(report) === "trend";
 }
 function reportType(r) { return r.report_type === "trend" ? "trend" : "assessment"; }
 function isTrend(r) { return reportType(r) === "trend"; }
@@ -292,6 +317,26 @@ function currentVisibleRows() {
     return sortRows(rows, sort);
 }
 
+function portalReleaseCell(report) {
+    if (!reportIsReleasable(report)) return `<td class="muted">—</td>`;
+    if (!report.patient_id) return `<td class="muted">Could not load</td>`;
+    const state = releaseState[sameKey(report.patient_id)];
+    if (!state || state.status === "loading") return `<td class="muted">Loading…</td>`;
+    if (state.status === "error") return `<td class="muted">Could not load</td>`;
+    if (!state.available) return `<td class="muted">Not claimed</td>`;
+    const released = !!state.released[sameKey(report.id)];
+    const busy = releaseBusy && sameReportId(releaseBusy, report.id);
+    const button = released
+        ? `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-patient-id="${safeText(report.patient_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+        : `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-patient-id="${safeText(report.patient_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+    const status = released ? `<span class="report-type-pill report-type-assessment">Released</span>` : "";
+    return `<td class="portal-release-cell">${status}<div>${button}</div></td>`;
+}
+
+function sameKey(value) {
+    return String(value || "").replace(/-/g, "").toLowerCase();
+}
+
 function renderReports() {
     const tbody = document.getElementById("reports-body");
     const rows = currentVisibleRows();
@@ -299,7 +344,7 @@ function renderReports() {
     document.getElementById("reports-count").textContent = `${rows.length} shown`;
 
     if (!rows.length) {
-        tbody.innerHTML = `<tr><td colspan="8" class="muted">No reports found.</td></tr>`;
+        tbody.innerHTML = `<tr><td colspan="9" class="muted">No reports found.</td></tr>`;
         document.getElementById("select-visible-reports").checked = false;
         updateShareSelectionUi();
         return;
@@ -326,6 +371,7 @@ function renderReports() {
             <td>${trend ? "—" : `v${safeText(r.version_number || "1")}`}</td>
             <td>${formatDate(r.generated_at)}</td>
             <td>${r.is_archived ? `<span class="badge archived">Archived</span>` : `<span class="badge">Active</span>`}</td>
+            ${portalReleaseCell(r)}
             <td>
                 <a class="link" href="${trend ? `/trend-reports/${r.id}` : `/app/reports/${r.id}`}">Open</a>
                 &nbsp;|&nbsp;
@@ -349,6 +395,7 @@ function renderReports() {
 
 async function loadReports() {
     clearReportsError();
+    clearReportsSuccess();
     const authed = await requireAuthOrRedirect();
     if (!authed) return;
     try {
@@ -360,9 +407,99 @@ async function loadReports() {
         const data = await response.json();
         allReports = Array.isArray(data) ? data : (data.items || []);
         renderReports();
+        await loadReleaseStates();
     } catch (err) {
         console.error(err);
         showReportsError("Unexpected error.");
+    }
+}
+
+async function loadReleaseStates() {
+    const patientIds = [...new Set(allReports.map(report => report.patient_id).filter(Boolean))];
+    releaseState = {};
+    patientIds.forEach(id => {
+        releaseState[sameKey(id)] = { status: "loading", available: false, released: {} };
+    });
+    if (!patientIds.length) {
+        renderReports();
+        return;
+    }
+    const results = await Promise.all(patientIds.map(async (patientId) => {
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/report-releases`);
+            const body = await response.json().catch(() => ({}));
+            if (!response.ok) return { patientId, error: true };
+            const released = {};
+            []
+                .concat(Array.isArray(body.assessment_reports) ? body.assessment_reports : [])
+                .concat(Array.isArray(body.trend_reports) ? body.trend_reports : [])
+                .forEach(item => {
+                    released[sameKey(item.report_id)] = !!item.released;
+                });
+            return { patientId, available: !!body.available, released };
+        } catch (err) {
+            console.error(err);
+            return { patientId, error: true };
+        }
+    }));
+    let failed = false;
+    results.forEach(result => {
+        if (result.error) {
+            failed = true;
+            releaseState[sameKey(result.patientId)] = { status: "error", available: false, released: {} };
+            return;
+        }
+        releaseState[sameKey(result.patientId)] = {
+            status: "ready",
+            available: result.available,
+            released: result.released,
+        };
+    });
+    if (failed) showReportsError("Could not load report releases.");
+    renderReports();
+}
+
+async function setReportRelease(reportId, patientId, released) {
+    if (!reportId || !patientId || releaseBusy) return;
+    if (!released) {
+        const confirmed = window.confirm("Withdraw this report? Share links and the progress view stay as they are.");
+        if (!confirmed) return;
+    }
+    releaseBusy = reportId;
+    clearReportsError();
+    clearReportsSuccess();
+    renderReports();
+    try {
+        const response = await apiFetch(`/api/patients/${patientId}/report-releases/${reportId}`, {
+            method: "POST",
+            body: JSON.stringify({ released: released }),
+        });
+        const data = await response.json().catch(() => ({}));
+        releaseBusy = null;
+        if (!response.ok) {
+            const detail = data && typeof data.detail === "string" && data.detail.trim()
+                ? data.detail
+                : "Could not update the report release.";
+            showReportsError(detail);
+            if (response.status === 409) {
+                const state = releaseState[sameKey(patientId)];
+                if (state) state.available = false;
+            }
+            renderReports();
+            return;
+        }
+        const state = releaseState[sameKey(patientId)] || { status: "ready", available: true, released: {} };
+        state.status = "ready";
+        state.available = true;
+        state.released[sameKey(reportId)] = !!data.released;
+        releaseState[sameKey(patientId)] = state;
+        showReportsSuccess(released ? "Report released to the client." : "Report withdrawn.");
+        renderReports();
+    } catch (err) {
+        console.error(err);
+        releaseBusy = null;
+        showReportsError("Unexpected error while updating the report release.");
+        renderReports();
     }
 }
 
@@ -506,6 +643,11 @@ document.getElementById("open-share-modal-btn").addEventListener("click", async 
 document.getElementById("close-share-modal-btn").addEventListener("click", closeShareModal);
 document.getElementById("create-share-bundle-btn").addEventListener("click", createShareBundle);
 document.getElementById("share-price-currency").addEventListener("change", updateCurrencyPlaceholder);
+document.getElementById("reports-body").addEventListener("click", (event) => {
+    const button = event.target && event.target.closest ? event.target.closest(".portal-release-btn") : null;
+    if (!button || releaseBusy) return;
+    setReportRelease(button.dataset.reportId, button.dataset.patientId, button.dataset.released !== "true");
+});
 
 updateCurrencyPlaceholder();
 loadReports();

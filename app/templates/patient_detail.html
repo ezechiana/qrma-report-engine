@@ -234,7 +234,7 @@ button.link {
     color: #3730a3;
     border-color: #c7d2fe;
 }
-.portal-release-cell .btn {
+.portal-release-cell .report-type-pill + div .btn {
     margin-top: 6px;
 }
 .modal-backdrop {
@@ -804,7 +804,7 @@ button.link {
             : `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
         const status = released
             ? `<span class="report-type-pill report-type-assessment">Released</span>`
-            : `<span class="muted">Not released</span>`;
+            : "";
         return `<td class="portal-release-cell">${status}<div>${button}</div></td>`;
     }
 

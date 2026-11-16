@@ -58,8 +58,14 @@ def test_report_release_is_separate_from_share_links_and_the_portal():
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/report-releases") is True
     page = open("app/templates/patient_detail.html", encoding="utf-8").read()
     assert "Client portal" in page
-    assert "Not released" in page
     assert "Not claimed" in page
+    assert '>${busy ? "Releasing…" : "Release"}</button>' in page
+    assert "Not released" not in page
+    reports_page = open("app/templates/reports.html", encoding="utf-8").read()
+    assert "Client portal" in reports_page
+    assert "portal-release-btn" in reports_page
+    assert "Withdraw this report? Share links and the progress view stay as they are." in reports_page
+    assert "Not released" not in reports_page
     assert "Released reports appear in the client's portal. This does not create a share link." in page
     assert "Release individual reports from the Reports section below." in page
     assert "Withdraw this report? Share links and the progress view stay as they are." in page
