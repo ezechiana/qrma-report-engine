@@ -1,13 +1,16 @@
 # app/api/routes_client_records.py
 
+from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
 from app.schemas.patient_claims import ClaimAccessRead
+from app.services.client_entry_service import list_client_entries, submit_client_entry
 from app.services.client_record_service import (
     _clinic_name,
     claimed_patients,
@@ -19,6 +22,26 @@ from app.services.patient_claim_service import claim_access_state, end_claim_acc
 from app.services.patient_source_service import client_released_note
 
 router = APIRouter(prefix="/api/client", tags=["client-record"])
+
+
+class ClientEntryCreate(BaseModel):
+    title: str = Field(max_length=255)
+    recorded_on: date
+    text: str = Field(max_length=4000)
+    reference: str = Field(default="", max_length=255)
+
+    @field_validator("title", "text")
+    @classmethod
+    def required_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
+
+    @field_validator("reference")
+    @classmethod
+    def clean_reference(cls, value: str) -> str:
+        return value.strip()
 
 
 def _require_client(current_user: User) -> User:
@@ -99,6 +122,47 @@ def get_client_note(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return client_released_note(db, patient, record_id)
+
+
+@router.post("/records/{patient_id}/entries")
+def post_client_entry(
+    patient_id: UUID,
+    body: ClientEntryCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save a plain-text entry and release it to the clinic.
+
+    Handles patient identity. The entry text is not returned here. Share links
+    are not created.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return submit_client_entry(
+        db,
+        patient,
+        client,
+        title=body.title,
+        recorded_on=body.recorded_on,
+        text=body.text,
+        reference=body.reference,
+    )
+
+
+@router.get("/records/{patient_id}/entries")
+def get_client_entries(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List plain-text entries this client sent on one claimed record.
+
+    Handles patient identity. The entry text is included because this client wrote it.
+    Other patients' entries are not included.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return list_client_entries(db, patient, client)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

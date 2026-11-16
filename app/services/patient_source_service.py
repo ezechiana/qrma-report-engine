@@ -624,7 +624,8 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
     """Released clinic notes and lab panels, grouped by source name.
 
     A record is included only when it is released and its client summary has text.
-    The list is title and date. Note text and marker values are not included.
+    The list is title and date. Note text, marker values, and entries the client
+    sent to the clinic are not included.
     """
     rows = (
         db.query(SourceRecord, PatientSource)
@@ -662,7 +663,7 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
 def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict:
     """The client summary of one released note or lab panel.
 
-    Note text and marker values are not included.
+    Note text, marker values, and entries the client sent to the clinic are not included.
     """
     record = (
         db.query(SourceRecord)

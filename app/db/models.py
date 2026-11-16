@@ -515,10 +515,11 @@ class PatientClaimInvite(Base):
 
 
 class ContentRelease(Base):
-    """Whether one kind of information is released between a clinic and a claimed client.
+    """Whether one piece of a record is released between a clinic and a claimed client.
 
-    Share-link tables are not used. Version 1 has one source: the progress view,
-    released from the clinic to the client.
+    Share-link tables are not used. clinic_to_client covers the progress view,
+    reports, clinic notes, and lab panels. client_to_clinic covers a plain-text
+    entry the client sends to the clinic.
     """
 
     __tablename__ = "content_releases"
