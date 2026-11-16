@@ -96,14 +96,17 @@ def _user(email, role, name, verified=True):
     )
 
 
-def test_request_routes_do_not_accept_or_decline():
+def test_request_routes_keep_decisions_on_the_request():
     paths = set()
     for route in router.routes:
         for method in route.methods or ():
             paths.add((route.path, method))
     assert ("/api/client/association-requests", "POST") in paths
     assert ("/api/association-requests", "GET") in paths
-    assert all("accept" not in path and "decline" not in path for path, _method in paths)
+    assert ("/api/association-requests/{request_id}/accept", "POST") in paths
+    assert ("/api/association-requests/{request_id}/decline", "POST") in paths
+    assert ("/api/client/association-requests/{request_id}/cancel", "POST") in paths
+    assert all("share" not in path for path, _method in paths)
 
 
 def test_person_can_request_a_practitioner_without_sharing_a_record():

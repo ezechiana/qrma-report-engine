@@ -16,9 +16,11 @@ from app.db.models import ClinicAssociation, Patient, User, UserCapability
 
 ACTIVE = "active"
 PENDING = "pending"
+ENDED = "ended"
 PRACTITIONER = "practitioner"
 PERSON = "person"
 GENERIC_REQUEST = "If that email belongs to a practitioner, they can see your request."
+REQUEST_NOT_FOUND = "Request not found"
 
 
 def _now() -> datetime:
@@ -199,3 +201,99 @@ def list_person_requests(db: Session, practitioner: User) -> dict:
             for association, requester in rows
         ]
     }
+
+
+def _verified(user: User, detail: str) -> None:
+    if not user.email_verified_at:
+        raise HTTPException(status_code=403, detail=detail)
+
+
+def _pending_for_practitioner(db: Session, practitioner: User, request_id) -> ClinicAssociation:
+    _verified(practitioner, "Verify your email before answering a request.")
+    if not is_practitioner_account(db, practitioner):
+        raise HTTPException(status_code=403, detail="Practitioner account required.")
+    row = db.query(ClinicAssociation).filter(ClinicAssociation.id == request_id).first()
+    if (
+        row is None
+        or row.practitioner_user_id != practitioner.id
+        or row.status != PENDING
+        or row.initiated_by != PERSON
+    ):
+        raise HTTPException(status_code=404, detail=REQUEST_NOT_FOUND)
+    return row
+
+
+def _clinic_chart(db: Session, personal: Patient, practitioner: User) -> Patient:
+    """A new clinic chart named for the requester. Health fields stay empty."""
+    chart = Patient(
+        user_id=practitioner.id,
+        subject_user_id=None,
+        first_name=(personal.first_name or "Account")[:120],
+        last_name=(personal.last_name or "Account")[:120],
+        full_name=(personal.full_name or "Account")[:255],
+        claimed_by_user_id=None,
+    )
+    db.add(chart)
+    db.flush()
+    return chart
+
+
+def accept_person_request(db: Session, practitioner: User, request_id) -> dict:
+    """Activate one pending request and open a clinic chart when one is missing.
+
+    Does not copy shelves or date of birth, and does not release anything.
+    """
+    row = _pending_for_practitioner(db, practitioner, request_id)
+    other = _active_for_personal(db, row.personal_patient_id)
+    if other is not None:
+        raise HTTPException(
+            status_code=409,
+            detail="This person already has an active clinic connection.",
+        )
+    personal = db.query(Patient).filter(Patient.id == row.personal_patient_id).first()
+    if personal is None:
+        raise HTTPException(status_code=404, detail=REQUEST_NOT_FOUND)
+    chart = _clinic_chart(db, personal, practitioner)
+    row.clinic_patient_id = chart.id
+    row.status = ACTIVE
+    row.activated_at = _now()
+    row.ended_at = None
+    row.ended_by = None
+    db.commit()
+    return {
+        "request_id": str(row.id),
+        "status": ACTIVE,
+        "clinic_patient_id": str(chart.id),
+    }
+
+
+def decline_person_request(db: Session, practitioner: User, request_id) -> dict:
+    """End a pending request. The personal record stays with the person."""
+    row = _pending_for_practitioner(db, practitioner, request_id)
+    row.status = ENDED
+    row.ended_at = _now()
+    row.ended_by = PRACTITIONER
+    db.commit()
+    return {"request_id": str(row.id), "status": ENDED}
+
+
+def cancel_person_request(db: Session, person: User, request_id) -> dict:
+    """The requester withdraws a pending request. No clinic chart is created."""
+    _verified(person, "Verify your email before cancelling a request.")
+    from app.services.personal_record_service import personal_record_for
+
+    personal = personal_record_for(db, person)
+    row = db.query(ClinicAssociation).filter(ClinicAssociation.id == request_id).first()
+    if (
+        personal is None
+        or row is None
+        or row.personal_patient_id != personal.id
+        or row.status != PENDING
+        or row.initiated_by != PERSON
+    ):
+        raise HTTPException(status_code=404, detail=REQUEST_NOT_FOUND)
+    row.status = ENDED
+    row.ended_at = _now()
+    row.ended_by = PERSON
+    db.commit()
+    return {"request_id": str(row.id), "status": ENDED}
