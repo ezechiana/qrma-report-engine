@@ -118,8 +118,9 @@ def unlink_claim_access(
 ):
     """Remove the claimed client from this record.
 
-    Cases, reports, clinic notes, lab panels, and share links stay. Portal releases
-    are withdrawn, including released lab panels. Marker values stay in the clinic record.
+    Cases, reports, clinic notes, lab panels, client entries, and share links stay.
+    Portal releases are withdrawn, including released lab panels and entries the
+    client sent. Marker values and entry text stay in the clinic record.
     """
     patient = _owned_patient(db, patient_id, current_user)
     patient = end_claim_access(db, patient, "practitioner")

@@ -18,6 +18,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.models import Patient, PatientClaimInvite, RecommendationMode, User
+from app.services.client_entry_service import clear_client_entry_releases
 from app.services.content_release_service import clear_progress_release, clear_report_releases
 from app.services.patient_source_service import clear_clinic_note_releases
 from app.services.email_service import send_email, send_verification_email
@@ -279,6 +280,7 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
     """Link a verified client to the one record reserved by their invite.
 
     Does not commit. The practitioner user_id on the patient stays unchanged.
+    Earlier releases stay withdrawn.
     """
     if str(getattr(user, "role", "") or "").lower() != "client" or not user.email_verified_at:
         return None
@@ -323,9 +325,9 @@ def claim_access_state(patient: Patient) -> dict:
 def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
     """Remove a client's account access without deleting the clinical record.
 
-    Pending invites for this patient stop working. Progress, report, note, and lab-panel
-    releases are withdrawn in this same save. The notes, panels, and marker values stay.
-    Share links are left as they are.
+    Pending invites for this patient stop working. Progress, report, note, lab-panel,
+    and client-entry releases are withdrawn in this same save. The notes, panels,
+    marker values, and client entries stay. Share links are left as they are.
     """
     if ended_by not in {"practitioner", "client"}:
         raise HTTPException(status_code=400, detail="Access can only be ended by the clinic or the client.")
@@ -349,6 +351,7 @@ def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
     clear_progress_release(db, patient, now)
     clear_report_releases(db, patient, now)
     clear_clinic_note_releases(db, patient, now)
+    clear_client_entry_releases(db, patient, now)
     db.commit()
     db.refresh(patient)
     return patient

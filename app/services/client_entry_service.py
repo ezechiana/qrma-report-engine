@@ -295,6 +295,29 @@ def set_client_entry_release(
     return {"record_id": str(record.id), "released": bool(row.released)}
 
 
+def clear_client_entry_releases(db: Session, patient: Patient, now: datetime | None = None) -> None:
+    """Turn released client entries off without committing. Used when a claim ends.
+
+    Any client-to-clinic row whose key starts with client: is withdrawn. The entry
+    text stays. Share links are not changed.
+    """
+    moment = now or _now()
+    rows = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.direction == CLIENT_TO_CLINIC,
+            ContentRelease.source_key.startswith(CLIENT_PREFIX),
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    )
+    for row in rows:
+        row.released = False
+        row.withdrawn_at = moment
+
+
 def list_client_entries(db: Session, patient: Patient, client: User) -> dict:
     """Entries this client sent on one claimed record, including ones they withdrew.
 
