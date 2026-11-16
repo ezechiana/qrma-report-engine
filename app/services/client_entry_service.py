@@ -237,6 +237,64 @@ def released_clinic_client_source(db: Session, patient: Patient) -> dict | None:
     }
 
 
+def _own_entry(db: Session, patient: Patient, client: User, record_id: UUID) -> SourceRecord:
+    _require_claimed(patient, client)
+    record = (
+        db.query(SourceRecord)
+        .join(PatientSource, PatientSource.id == SourceRecord.patient_source_id)
+        .filter(
+            SourceRecord.id == record_id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.created_by_user_id == client.id,
+            SourceRecord.is_archived.is_(False),
+            PatientSource.patient_id == patient.id,
+            PatientSource.practitioner_user_id == patient.user_id,
+            PatientSource.source_type == CLIENT,
+            PatientSource.status == "active",
+        )
+        .first()
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    return record
+
+
+def set_client_entry_release(
+    db: Session,
+    patient: Patient,
+    client: User,
+    record_id: UUID,
+    released: bool,
+) -> dict:
+    """Withdraw or send again one entry this client already saved.
+
+    Handles patient identity. The entry text is not returned. The saved text
+    stays as it is. Does not create a share link or change a clinic-to-client release.
+    """
+    record = _own_entry(db, patient, client, record_id)
+    now = _now()
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.source_key == client_entry_source_key(record.id),
+            ContentRelease.direction == CLIENT_TO_CLINIC,
+        )
+        .first()
+    )
+    if row is None:
+        raise HTTPException(status_code=404, detail="Entry not found")
+    if released:
+        row.released = True
+        row.released_at = now
+    else:
+        row.released = False
+        row.withdrawn_at = now
+    db.commit()
+    return {"record_id": str(record.id), "released": bool(row.released)}
+
+
 def list_client_entries(db: Session, patient: Patient, client: User) -> dict:
     """Entries this client sent on one claimed record, including ones they withdrew.
 

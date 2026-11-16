@@ -10,7 +10,11 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
 from app.schemas.patient_claims import ClaimAccessRead
-from app.services.client_entry_service import list_client_entries, submit_client_entry
+from app.services.client_entry_service import (
+    list_client_entries,
+    set_client_entry_release,
+    submit_client_entry,
+)
 from app.services.client_record_service import (
     _clinic_name,
     claimed_patients,
@@ -42,6 +46,10 @@ class ClientEntryCreate(BaseModel):
     @classmethod
     def clean_reference(cls, value: str) -> str:
         return value.strip()
+
+
+class ClientEntryReleaseUpdate(BaseModel):
+    released: bool
 
 
 def _require_client(current_user: User) -> User:
@@ -163,6 +171,24 @@ def get_client_entries(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return list_client_entries(db, patient, client)
+
+
+@router.post("/records/{patient_id}/entries/{record_id}/release")
+def post_client_entry_release(
+    patient_id: UUID,
+    record_id: UUID,
+    body: ClientEntryReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Withdraw or send again one entry this client already saved.
+
+    Handles patient identity. The entry text is not returned. Share links are
+    not created or changed.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return set_client_entry_release(db, patient, client, record_id, body.released)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

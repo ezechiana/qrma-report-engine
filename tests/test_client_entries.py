@@ -392,10 +392,70 @@ def test_claimed_client_can_send_an_entry_to_the_clinic(monkeypatch):
         blocked = http.get(f"/api/patients/{patient.id}/sources")
         assert blocked.status_code == 404
         assert "I slept poorly." not in blocked.text
+        holder["user"] = client_user
+        earlier_id = earlier.json()["record_id"]
+        withdrawn = http.post(
+            f"/api/client/records/{patient.id}/entries/{record_id}/release",
+            json={"released": False},
+        )
+        assert withdrawn.status_code == 200
+        assert withdrawn.json() == {"record_id": record_id, "released": False}
+        assert "I slept poorly." not in withdrawn.text
+        assert "home-sleep-note.pdf" not in withdrawn.text
+        own = http.get(f"/api/client/records/{patient.id}/entries")
+        by_id = {item["record_id"]: item for item in own.json()["entries"]}
+        assert by_id[record_id]["released"] is False
+        assert by_id[record_id]["text"] == "I slept poorly."
+        assert by_id[record_id]["reference"] == "home-sleep-note.pdf"
+        assert by_id[earlier_id]["released"] is True
         holder["user"] = practitioner
-        for row in db.query(ContentRelease).filter(ContentRelease.direction == "client_to_clinic"):
-            row.released = False
-        db.commit()
+        after_withdraw = http.get(f"/api/patients/{patient.id}/sources").json()
+        assert [item["title"] for item in after_withdraw["sources"][2]["records"]] == ["Earlier day"]
+        assert "I slept poorly." not in http.get(f"/api/patients/{patient.id}/sources").text
+        holder["user"] = client_user
+        again = http.post(
+            f"/api/client/records/{patient.id}/entries/{record_id}/release",
+            json={"released": True},
+        )
+        assert again.status_code == 200
+        assert again.json()["released"] is True
+        assert "I slept poorly." not in again.text
+        db.refresh(stored)
+        assert stored.payload_json == {
+            "kind": "client_entry",
+            "text": "I slept poorly.",
+            "reference": "home-sleep-note.pdf",
+        }
+        holder["user"] = practitioner
+        restored = http.get(f"/api/patients/{patient.id}/sources").json()["sources"][2]
+        restored_by_id = {item["record_id"]: item for item in restored["records"]}
+        assert restored_by_id[record_id]["text"] == "I slept poorly."
+        assert restored_by_id[record_id]["reference"] == "home-sleep-note.pdf"
+        assert restored_by_id[record_id]["title"] == "Sleep note"
+        assert restored_by_id[earlier_id]["text"] == "No reference here"
+        holder["user"] = other_client
+        assert http.post(
+            f"/api/client/records/{patient.id}/entries/{record_id}/release",
+            json={"released": False},
+        ).status_code == 404
+        holder["user"] = client_user
+        assert http.post(
+            f"/api/client/records/{patient.id}/entries/{note_id}/release",
+            json={"released": False},
+        ).status_code == 404
+        db.refresh(release)
+        assert release.released is True
+        note_release = db.query(ContentRelease).filter(ContentRelease.source_key == f"record:{note_id}").one()
+        assert note_release.released is True
+        assert http.post(
+            f"/api/client/records/{patient.id}/entries/{record_id}/release",
+            json={"released": False},
+        ).status_code == 200
+        assert http.post(
+            f"/api/client/records/{patient.id}/entries/{earlier_id}/release",
+            json={"released": False},
+        ).status_code == 200
+        holder["user"] = practitioner
         hidden = http.get(f"/api/patients/{patient.id}/sources")
         assert [item["display_name"] for item in hidden.json()["sources"]] == ["Clinic notes", "Lab results"]
         assert "I slept poorly." not in hidden.text
