@@ -57,12 +57,22 @@ def test_report_release_is_separate_from_share_links_and_the_portal():
     client = User(role="client")
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/report-releases") is True
     page = open("app/templates/patient_detail.html", encoding="utf-8").read()
-    assert "Assessment reports" in page
-    assert "Trend reports" in page
-    assert "Release report" in page
-    assert "Withdraw report" in page
+    assert "Client portal" in page
+    assert "Not released" in page
+    assert "Not claimed" in page
+    assert "Released reports appear in the client's portal. This does not create a share link." in page
+    assert "Release individual reports from the Reports section below." in page
     assert "Withdraw this report? Share links and the progress view stay as they are." in page
     assert "/report-releases" in page
+    assert "claim-report-release-btn" not in page
+    detail = open("app/templates/report_detail.html", encoding="utf-8").read()
+    assert "Client portal" in detail
+    assert "Not released. The client will not see this report in their portal." in detail
+    assert "Released. The client can open this report in their portal." in detail
+    assert "A client must claim this record before this report can be released." in detail
+    assert "Could not load the portal release." in detail
+    assert "Releasing this report does not create a share link. Withdrawing it leaves existing share links unchanged." in detail
+    assert "Create share link" in detail
 
 
 def test_practitioner_can_release_and_withdraw_one_report():

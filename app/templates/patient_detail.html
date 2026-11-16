@@ -234,6 +234,9 @@ button.link {
     color: #3730a3;
     border-color: #c7d2fe;
 }
+.portal-release-cell .btn {
+    margin-top: 6px;
+}
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -545,6 +548,7 @@ button.link {
         <div>
             <h3 style="margin:0;">Reports</h3>
             <div class="muted" style="margin-top:4px;">Assessment reports are single QRMA scans. Trend reports are generated from two or more assessment reports.</div>
+            <div class="muted" style="margin-top:4px;">Released reports appear in the client's portal. This does not create a share link.</div>
         </div>
         <div class="report-bulk-actions">
             <button class="btn secondary" type="button" id="create-trend-report-btn">Create Trend Report</button>
@@ -560,11 +564,12 @@ button.link {
                 <th>Report</th>
                 <th>Version</th>
                 <th>Generated</th>
+                <th>Client portal</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="patient-reports-body">
-            <tr><td colspan="6" class="muted">Loading…</td></tr>
+            <tr><td colspan="7" class="muted">Loading…</td></tr>
         </tbody>
     </table>
 </div>
@@ -753,13 +758,63 @@ button.link {
         return (currentReports || []).filter(report => ids.has(String(report.id)));
     }
 
+    function sameReportId(left, right) {
+        return String(left || "").replace(/-/g, "").toLowerCase() === String(right || "").replace(/-/g, "").toLowerCase();
+    }
+
+    function reportIsReleasable(report) {
+        const type = (report && report.report_type) || "assessment";
+        const status = String((report && report.status) || "").toLowerCase();
+        if (!report || report.is_archived) return false;
+        if (status !== "ready") return false;
+        return type === "assessment" || type === "trend";
+    }
+
+    function reportReleaseBusy(reportId) {
+        return typeof claimBusy === "string"
+            && claimBusy.indexOf("report:") === 0
+            && sameReportId(claimBusy.slice(7), reportId);
+    }
+
+    function releasedFlagFor(reportId) {
+        const rows = []
+            .concat((reportReleases && reportReleases.assessment_reports) || [])
+            .concat((reportReleases && reportReleases.trend_reports) || []);
+        const match = rows.find(row => sameReportId(row.report_id, reportId));
+        return !!(match && match.released);
+    }
+
+    function portalReleaseCell(report) {
+        if (!reportIsReleasable(report)) {
+            return `<td class="muted">—</td>`;
+        }
+        if (!claimLoaded || claimLoadError || !claimAccess) {
+            return `<td class="muted">${claimLoaded ? "Could not load" : "Loading…"}</td>`;
+        }
+        if (!claimAccess.claimed) {
+            return `<td class="muted">Not claimed</td>`;
+        }
+        if (reportReleaseError || !reportReleases) {
+            return `<td class="muted">Could not load</td>`;
+        }
+        const released = releasedFlagFor(report.id);
+        const busy = reportReleaseBusy(report.id);
+        const button = released
+            ? `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+            : `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+        const status = released
+            ? `<span class="report-type-pill report-type-assessment">Released</span>`
+            : `<span class="muted">Not released</span>`;
+        return `<td class="portal-release-cell">${status}<div>${button}</div></td>`;
+    }
+
     function renderReports(reportsData) {
         const reportsBody = document.getElementById("patient-reports-body");
         const selectAll = document.getElementById("select-all-assessment-reports");
         const reportRows = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
 
         if (!reportRows.length) {
-            reportsBody.innerHTML = `<tr><td colspan="6" class="muted">No reports yet.</td></tr>`;
+            reportsBody.innerHTML = `<tr><td colspan="7" class="muted">No reports yet.</td></tr>`;
             if (selectAll) selectAll.checked = false;
             return;
         }
@@ -781,6 +836,7 @@ button.link {
                     <td>${safeText(report.display_name || report.case_title || "Report")}${subText}</td>
                     <td>v${safeText(report.version_number || "1")}</td>
                     <td>${formatDate(report.generated_at)}</td>
+                    ${portalReleaseCell(report)}
                     <td><a class="link" href="/app/reports/${report.id}">Open</a></td>
                 </tr>
             `;
@@ -1575,7 +1631,7 @@ button.link {
         const button = released
             ? `<button class="btn secondary" type="button" id="claim-withdraw-release-btn" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw progress view"}</button>`
             : `<button class="btn secondary" type="button" id="claim-release-btn" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release progress view"}</button>`;
-        return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div>`;
+        return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div><p class="muted" style="margin:8px 0 0;">Release individual reports from the Reports section below.</p>`;
     }
 
     function pickReportRelease(item) {
@@ -1584,31 +1640,6 @@ button.link {
             label: item && typeof item.label === "string" && item.label.trim() ? item.label.trim() : "Report",
             released: !!(item && item.released),
         };
-    }
-
-    function reportReleaseRows(title, rows) {
-        const list = Array.isArray(rows) ? rows : [];
-        const body = list.length
-            ? list.map(item => {
-                const busy = claimBusy === `report:${item.report_id}`;
-                const button = item.released
-                    ? `<button class="btn secondary claim-report-release-btn" type="button" data-report-id="${claimHtml(item.report_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw report"}</button>`
-                    : `<button class="btn secondary claim-report-release-btn" type="button" data-report-id="${claimHtml(item.report_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release report"}</button>`;
-                const status = item.released ? "Released to the client." : "Not released to the client.";
-                return `<p style="margin:12px 0 4px;">${claimHtml(item.label)}</p><p class="muted" style="margin:0 0 8px;">${status}</p><div class="btn-row">${button}</div>`;
-            }).join("")
-            : `<p class="muted" style="margin:0 0 8px;">No ${claimHtml(title).toLowerCase()} yet.</p>`;
-        return `<p style="margin:16px 0 8px;"><strong>${claimHtml(title)}</strong></p>${body}`;
-    }
-
-    function reportReleaseBlock() {
-        if (!(claimAccess && claimAccess.claimed)) return "";
-        if (reportReleaseError) {
-            return `<p class="error">Could not load report releases.</p>`;
-        }
-        if (!reportReleases) return "";
-        return reportReleaseRows("Assessment reports", reportReleases.assessment_reports)
-            + reportReleaseRows("Trend reports", reportReleases.trend_reports);
     }
 
     function claimHistoryTable() {
@@ -1668,7 +1699,6 @@ button.link {
         body.innerHTML = `
             ${claimStatusBlock()}
             ${progressReleaseBlock()}
-            ${reportReleaseBlock()}
             <div id="client-claim-actions">${claimActionBlock()}</div>
             ${claimHistoryTable()}
         `;
@@ -1726,6 +1756,9 @@ button.link {
             }
             claimLoaded = true;
             claimLoadError = false;
+            if (claimAccess && claimAccess.claimed && reportReleaseError) {
+                showPatientError("Could not load report releases.");
+            }
         } catch (err) {
             console.error(err);
             if (suppressClaim) return;
@@ -1738,7 +1771,10 @@ button.link {
         claimLoaded = false;
         claimLoadError = false;
         await fetchClaimData();
-        if (!suppressClaim) renderClaimCard();
+        if (!suppressClaim) {
+            renderClaimCard();
+            renderReports(currentReports);
+        }
     }
 
     async function sendClaimInvite() {
@@ -1892,6 +1928,32 @@ button.link {
         }
     }
 
+    function rememberReportRelease(reportId, released, reportType) {
+        const apply = (rows) => {
+            let found = false;
+            const next = (rows || []).map(row => {
+                if (!sameReportId(row.report_id, reportId)) return row;
+                found = true;
+                return { ...row, released: released };
+            });
+            return { next, found };
+        };
+        if (!reportReleases) {
+            reportReleases = { assessment_reports: [], trend_reports: [] };
+        }
+        const assessment = apply(reportReleases.assessment_reports);
+        const trend = apply(reportReleases.trend_reports);
+        if (!assessment.found && !trend.found) {
+            const item = { report_id: String(reportId), label: "Report", released: released };
+            if (reportType === "trend") trend.next.push(item);
+            else assessment.next.push(item);
+        }
+        reportReleases = {
+            assessment_reports: assessment.next,
+            trend_reports: trend.next,
+        };
+    }
+
     async function setReportRelease(reportId, released) {
         if (!reportId || claimBusy) return;
         if (!released) {
@@ -1901,7 +1963,7 @@ button.link {
         claimBusy = `report:${reportId}`;
         clearPatientError();
         clearPatientSuccess();
-        renderClaimCard();
+        renderReports(currentReports);
         try {
             const response = await apiFetch(`/api/patients/${patientId}/report-releases/${reportId}`, {
                 method: "POST",
@@ -1911,27 +1973,22 @@ button.link {
             claimBusy = false;
             if (!response.ok) {
                 showPatientError(claimErrorDetail(data, "Could not update the report release."));
-                renderClaimCard();
+                if (response.status === 409) {
+                    claimAccess = { claimed: false };
+                    renderClaimCard();
+                }
+                renderReports(currentReports);
                 return;
             }
-            const nextReleased = !!data.released;
-            const apply = (rows) => (rows || []).map(row => (
-                String(row.report_id) === String(reportId) ? { ...row, released: nextReleased } : row
-            ));
-            if (reportReleases) {
-                reportReleases = {
-                    assessment_reports: apply(reportReleases.assessment_reports),
-                    trend_reports: apply(reportReleases.trend_reports),
-                };
-            }
+            rememberReportRelease(reportId, !!data.released, data.report_type);
             reportReleaseError = false;
             showPatientSuccess(released ? "Report released to the client." : "Report withdrawn.");
-            renderClaimCard();
+            renderReports(currentReports);
         } catch (err) {
             console.error(err);
             claimBusy = false;
             showPatientError("Unexpected error while updating the report release.");
-            renderClaimCard();
+            renderReports(currentReports);
         }
     }
 
@@ -1994,7 +2051,10 @@ button.link {
             renderTimeline();
             renderTrends(trendsData);
             await claimTask;
-            if (!suppressClaim) renderClaimCard();
+            if (!suppressClaim) {
+                renderClaimCard();
+                renderReports(currentReports);
+            }
 
         } catch (err) {
             console.error(err);
@@ -2229,12 +2289,16 @@ button.link {
 
             if (target.id === "claim-withdraw-release-btn") {
                 setProgressRelease(false);
-                return;
             }
+        });
+    }
 
-            if (target.classList.contains("claim-report-release-btn")) {
-                setReportRelease(target.dataset.reportId, target.dataset.released !== "true");
-            }
+    const reportsBody = document.getElementById("patient-reports-body");
+    if (reportsBody) {
+        reportsBody.addEventListener("click", (event) => {
+            const target = event.target && event.target.closest ? event.target.closest(".portal-release-btn") : null;
+            if (!target || claimBusy) return;
+            setReportRelease(target.dataset.reportId, target.dataset.released !== "true");
         });
     }
 
