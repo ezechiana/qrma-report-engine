@@ -17,6 +17,8 @@ from app.services.clinic_association_service import (
     accept_person_request,
     cancel_person_request,
     decline_person_request,
+    end_association_for_clinic,
+    end_association_for_person,
     list_person_requests,
     request_practitioner_by_email,
 )
@@ -100,3 +102,31 @@ def cancel_association_request(
     The personal record stays available. No clinic chart is created.
     """
     return cancel_person_request(db, current_user, request_id)
+
+
+@router.post("/api/patients/{patient_id}/association/end")
+def end_clinic_association(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """End the active connection for this clinic chart. Handles patient identity.
+
+    Withdraws released items in both directions. The chart, the personal record,
+    and existing share links stay. The response has no clinical values.
+    """
+    return end_association_for_clinic(db, current_user, patient_id)
+
+
+@router.post("/api/client/records/{patient_id}/association/end")
+def end_personal_association(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """End the caller's active connection. Handles patient identity.
+
+    The id may be the personal record or the clinic chart. Released items in
+    both directions are withdrawn. Records and share links stay.
+    """
+    return end_association_for_person(db, current_user, patient_id)

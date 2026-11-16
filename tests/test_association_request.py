@@ -106,6 +106,8 @@ def test_request_routes_keep_decisions_on_the_request():
     assert ("/api/association-requests/{request_id}/accept", "POST") in paths
     assert ("/api/association-requests/{request_id}/decline", "POST") in paths
     assert ("/api/client/association-requests/{request_id}/cancel", "POST") in paths
+    assert ("/api/patients/{patient_id}/association/end", "POST") in paths
+    assert ("/api/client/records/{patient_id}/association/end", "POST") in paths
     assert all("share" not in path for path, _method in paths)
 
 

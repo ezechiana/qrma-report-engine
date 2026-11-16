@@ -13,7 +13,7 @@ from fastapi import HTTPException
 from sqlalchemy import inspect, or_
 from sqlalchemy.orm import Session
 
-from app.db.models import ClinicAssociation, Patient, User, UserCapability
+from app.db.models import ClinicAssociation, ContentRelease, Patient, User, UserCapability
 
 ACTIVE = "active"
 PENDING = "pending"
@@ -22,6 +22,7 @@ PRACTITIONER = "practitioner"
 PERSON = "person"
 GENERIC_REQUEST = "If that email belongs to a practitioner, they can see your request."
 REQUEST_NOT_FOUND = "Request not found"
+ASSOCIATION_NOT_FOUND = "Association not found"
 
 
 def _now() -> datetime:
@@ -298,6 +299,89 @@ def cancel_person_request(db: Session, person: User, request_id) -> dict:
     row.ended_by = PERSON
     db.commit()
     return {"request_id": str(row.id), "status": ENDED}
+
+
+def _withdraw_association_releases(db: Session, row: ClinicAssociation, now: datetime) -> None:
+    """Turn off releases for this connection. Shelves and share links stay."""
+    patient_ids = [row.personal_patient_id]
+    if row.clinic_patient_id is not None and row.clinic_patient_id not in patient_ids:
+        patient_ids.append(row.clinic_patient_id)
+    releases = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.practitioner_user_id == row.practitioner_user_id,
+            ContentRelease.patient_id.in_(patient_ids),
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    )
+    for release in releases:
+        release.released = False
+        release.withdrawn_at = now
+
+
+def _end_active(db: Session, row: ClinicAssociation, ended_by: str) -> dict:
+    now = _now()
+    _withdraw_association_releases(db, row, now)
+    row.status = ENDED
+    row.ended_at = now
+    row.ended_by = ended_by
+    db.commit()
+    return {"association_id": str(row.id), "status": ENDED}
+
+
+def end_association_for_clinic(db: Session, practitioner: User, clinic_patient_id) -> dict:
+    """The practitioner ends the active connection for one clinic chart.
+
+    Handles patient identity. Releases in both directions are withdrawn.
+    The personal record, clinic chart, and share links stay.
+    """
+    _verified(practitioner, "Verify your email before ending a connection.")
+    if not is_practitioner_account(db, practitioner):
+        raise HTTPException(status_code=403, detail="Practitioner account required.")
+    clinic = (
+        db.query(Patient)
+        .filter(Patient.id == clinic_patient_id, Patient.user_id == practitioner.id)
+        .first()
+    )
+    row = None
+    if clinic is not None:
+        row = (
+            db.query(ClinicAssociation)
+            .filter(
+                ClinicAssociation.clinic_patient_id == clinic.id,
+                ClinicAssociation.practitioner_user_id == practitioner.id,
+                ClinicAssociation.status == ACTIVE,
+            )
+            .first()
+        )
+    if row is None:
+        raise HTTPException(status_code=404, detail=ASSOCIATION_NOT_FOUND)
+    return _end_active(db, row, PRACTITIONER)
+
+
+def end_association_for_person(db: Session, person: User, patient_id) -> dict:
+    """The person ends their active connection.
+
+    Handles patient identity. The id may be the personal record or the clinic
+    chart. Releases in both directions are withdrawn. Records and share links stay.
+    """
+    _verified(person, "Verify your email before ending a connection.")
+    from app.services.personal_record_service import personal_record_for
+
+    personal = personal_record_for(db, person)
+    row = None
+    if personal is not None and personal.subject_user_id == person.id:
+        query = db.query(ClinicAssociation).filter(
+            ClinicAssociation.personal_patient_id == personal.id,
+            ClinicAssociation.status == ACTIVE,
+        )
+        if patient_id != personal.id:
+            query = query.filter(ClinicAssociation.clinic_patient_id == patient_id)
+        row = query.first()
+    if row is None:
+        raise HTTPException(status_code=404, detail=ASSOCIATION_NOT_FOUND)
+    return _end_active(db, row, PERSON)
 
 
 def _association_table(db: Session) -> bool:
