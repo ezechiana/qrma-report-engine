@@ -21,6 +21,15 @@
     line-height: 1.6;
 }
 
+.patient-hero .btn[disabled],
+.patient-hero .btn[disabled]:hover {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--line);
+}
+
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -341,6 +350,80 @@ button.link {
  .trend-summary-panel table.table{min-width:680px}
 }
 
+.patient-meta-row { color: #64748b; line-height: 1.5; }
+.patient-manage { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.snapshot-tile {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+}
+.snapshot-tile:hover { border-color: #bfdbfe; }
+.snapshot-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+.snapshot-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+.snapshot-meta { color: #64748b; font-size: 13px; margin-top: 4px; }
+.snapshot-chart { width: 100%; height: 120px; display: block; margin-top: 8px; }
+.snapshot-more { display: none; margin-bottom: 12px; }
+.section-chips {
+    position: sticky;
+    top: 64px;
+    z-index: 30;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 0 12px;
+    background: var(--bg);
+}
+.section-chip {
+    border: 1px solid #dbe7f3;
+    background: #fff;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.section-chip.is-active {
+    background: #dbeafe;
+    color: #1e3a8a;
+    border-color: #93c5fd;
+}
+.patient-section { display: none; }
+.patient-section.is-open { display: block; }
+.patient-section[data-section="reports"].is-open {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+@media (max-width: 900px) {
+    .snapshot-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+    .snapshot-tile.is-extra { display: none; }
+    .snapshot-grid.is-expanded .snapshot-tile.is-extra { display: block; }
+    .snapshot-more { display: inline-flex; }
+}
+
 </style>
 
 <div id="patient-error" class="error" style="display:none;"></div>
@@ -354,37 +437,56 @@ button.link {
         </div>
 
         <div class="btn-row">
-            <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
             <a class="btn" href="/app/cases/new?patient_id={{ patient_id }}">New case</a>
-            <button class="btn secondary" type="button" id="invite-client-claim-btn">Invite client to claim</button>
-            <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
+            <button class="btn secondary" type="button" id="manage-patient-btn" aria-expanded="false" aria-controls="patient-manage">Manage</button>
         </div>
     </div>
-</div>
-
-<div class="summary-grid">
-    <div class="summary-card">
-        <div class="summary-label">Cases</div>
-        <div class="summary-value" id="patient-case-count">—</div>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-label">Reports</div>
-        <div class="summary-value" id="patient-report-count">—</div>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-label">Last activity</div>
-        <div class="summary-value" id="patient-last-activity" style="font-size:18px;">—</div>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-label">Data sources</div>
-        <div class="summary-value" id="patient-data-sources" style="font-size:18px;">—</div>
+    <div id="patient-manage" class="patient-manage" hidden>
+        <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
+        <button class="btn secondary" type="button" id="invite-client-claim-btn">Invite client to claim</button>
+        <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
     </div>
 </div>
 
-<div class="card" id="client-claim-card">
+<div class="snapshot-grid" id="snapshot-grid">
+    <button class="snapshot-tile" type="button" data-open="progress">
+        <div class="snapshot-label">Progress</div>
+        <div id="snapshot-progress">Loading…</div>
+    </button>
+    <button class="snapshot-tile" type="button" data-open="reports">
+        <div class="snapshot-label">Latest report</div>
+        <div id="snapshot-report">Loading…</div>
+    </button>
+    <button class="snapshot-tile is-extra" type="button" data-open="notes">
+        <div class="snapshot-label">Latest clinic note</div>
+        <div id="snapshot-note">Loading…</div>
+    </button>
+    <button class="snapshot-tile is-extra" type="button" data-open="labs">
+        <div class="snapshot-label">Latest lab panel</div>
+        <div id="snapshot-lab">Loading…</div>
+    </button>
+    <button class="snapshot-tile is-extra" type="button" data-open="client">
+        <div class="snapshot-label">From the client</div>
+        <div id="snapshot-client">Loading…</div>
+    </button>
+    <button class="snapshot-tile" type="button" data-open="wearables">
+        <div class="snapshot-label">Wearables</div>
+        <div id="snapshot-wearable">Loading…</div>
+    </button>
+</div>
+<button class="btn secondary snapshot-more" type="button" id="snapshot-more" aria-expanded="false">More on this record</button>
+
+<div class="section-chips" id="section-chips" role="tablist" aria-label="Patient sections">
+    <button class="section-chip is-active" type="button" role="tab" aria-selected="true" data-section="progress">Progress</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="reports">Reports</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="notes">Notes</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="labs">Labs</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="client">From the client</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="wearables">Wearables</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="activity">Activity</button>
+</div>
+
+<div class="card" id="client-claim-card" style="display:none;">
     <div class="section-toolbar">
         <h3 style="margin:0;">Client claim</h3>
     </div>
@@ -393,10 +495,11 @@ button.link {
     </div>
 </div>
 
-<div class="card">
+<div class="card patient-section is-open" data-section="progress" id="section-progress">
     <div class="section-toolbar">
-        <h3 style="margin:0;">Trend overview</h3>
+        <h3 style="margin:0;">Progress</h3>
     </div>
+    <div id="progress-release-host"></div>
 
     <div class="trend-summary-panel">
         <div class="section-toolbar">
@@ -541,27 +644,7 @@ button.link {
     </div>
 </div>
 
-<div class="card">
-    <div class="section-toolbar">
-        <h3 style="margin:0;">Cases</h3>
-        <a class="btn secondary" href="/app/cases">View all cases</a>
-    </div>
-
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Case</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="patient-cases-body">
-            <tr><td colspan="4" class="muted">Loading…</td></tr>
-        </tbody>
-    </table>
-</div>
-
+<div class="patient-section" data-section="reports" id="section-reports">
 <div class="card" id="reports-content-section">
     <div class="section-toolbar">
         <div>
@@ -592,19 +675,40 @@ button.link {
         </tbody>
     </table>
 </div>
+<div class="card" id="patient-cases-card">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Cases</h3>
+        <a class="btn secondary" href="/app/cases">View all cases</a>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Case</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="patient-cases-body">
+            <tr><td colspan="4" class="muted">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+</div>
 
-<div class="card" id="sources-section">
+<div class="card patient-section" data-section="notes" id="section-notes">
     <div class="section-toolbar">
         <div>
-            <h3 style="margin:0;">Sources</h3>
+            <h3 style="margin:0;">Notes</h3>
             <div class="muted" id="clinic-source-name" style="margin-top:4px;">Clinic notes</div>
         </div>
+        <button class="btn secondary" type="button" id="show-clinic-note-form">Add note</button>
     </div>
     <p class="muted" style="margin-top:0;">A new note is not released. Release uses the client summary only and does not create a share link.</p>
     <div id="clinic-notes-body">
         <div class="muted">Loading clinic notes…</div>
     </div>
-    <form id="clinic-note-form" style="margin-top:16px;">
+    <form id="clinic-note-form" hidden>
         <div class="field">
             <label for="clinic-note-title">Title</label>
             <input id="clinic-note-title" maxlength="255" required>
@@ -628,13 +732,18 @@ button.link {
             <button class="btn secondary" type="button" id="clinic-note-cancel" style="display:none;">Cancel</button>
         </div>
     </form>
-    <div id="lab-results-section" style="margin-top:28px;">
-        <h3 style="margin:0;">Lab results</h3>
+</div>
+<div class="card patient-section" data-section="labs" id="section-labs">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Labs</h3>
+        <button class="btn secondary" type="button" id="show-lab-panel-form">Add panel</button>
+    </div>
+    <div id="lab-results-section">
         <p class="muted">A new panel is not released. Marker values stay in the clinic record. Only a client summary can be released later.</p>
         <div id="lab-panels-body">
             <div class="muted">Loading lab results…</div>
         </div>
-        <form id="lab-panel-form" style="margin-top:16px;">
+        <form id="lab-panel-form" hidden>
             <div class="field">
                 <label for="lab-panel-title">Title</label>
                 <input id="lab-panel-title" maxlength="255" required>
@@ -665,19 +774,23 @@ button.link {
             </div>
         </form>
     </div>
-    <div id="client-entries-section" style="margin-top:28px; display:none;">
+</div>
+<div class="card patient-section" data-section="client" id="section-client">
+    <div id="client-entries-section">
         <h3 style="margin:0;">From the client</h3>
         <p class="muted">Shared by the client. This clinic cannot change them here.</p>
-        <div id="client-entries-body"></div>
+        <div id="client-entries-body"><div class="muted">Nothing shared yet.</div></div>
     </div>
-    <div id="wearable-days-section" style="margin-top:28px; display:none;">
+</div>
+<div class="card patient-section" data-section="wearables" id="section-wearables">
+    <div id="wearable-days-section">
         <h3 style="margin:0;">Wearables</h3>
         <p class="muted">Shared by the client. This clinic cannot change them here.</p>
-        <div id="wearable-days-body"></div>
+        <div id="wearable-days-body"><div class="muted">No shared days.</div></div>
     </div>
 </div>
 
-<div class="card">
+<div class="card patient-section" data-section="activity" id="section-activity">
     <div class="section-toolbar">
         <h3 style="margin:0;">Activity timeline</h3>
     </div>
@@ -804,22 +917,196 @@ button.link {
         updateAgePreview();
     }
 
+    function connectionLabel() {
+        if (!claimLoaded) return "Loading…";
+        if (claimAccess && claimAccess.claimed) return "Connected";
+        const newest = claimInvites[0];
+        if (newest && newest.status === "pending") return "Pending";
+        return "Not connected";
+    }
+
     function renderPatientSummary(patient) {
         document.getElementById("patient-name").textContent = patientName(patient);
-        document.getElementById("patient-summary").innerHTML = `
-            Sex: ${safeText(patient.sex)}<br>
-            Date of birth: ${safeText(patient.date_of_birth)}<br>
-            Height: ${safeText(patient.height_cm)}${patient.height_cm ? " cm" : ""}<br>
-            Weight: ${safeText(patient.weight_kg)}${patient.weight_kg ? " kg" : ""}
+        const age = calculateAgeFromDob(patient.date_of_birth);
+        const sources = (patient.data_sources && patient.data_sources.length)
+            ? patient.data_sources.join(", ")
+            : "—";
+        document.getElementById("patient-summary").textContent = [
+            age === null ? "Age —" : `Age ${age}`,
+            `Sex ${safeText(patient.sex)}`,
+            `Last activity ${formatDate(patient.last_activity_at)}`,
+            connectionLabel(),
+            `Cases ${patient.case_count || 0}`,
+            `Reports ${patient.report_count || 0}`,
+            `Sources ${sources}`,
+        ].join(" · ");
+        renderSnapshot();
+    }
+
+    function snapshotChip(text, released) {
+        const kind = released ? "report-type-pill report-type-assessment" : "report-type-pill";
+        return `<span class="${kind}">${escapeHtml(text)}</span>`;
+    }
+
+    function firstSummaryLine(value) {
+        const line = String(value || "").split(/\r?\n/).map(part => part.trim()).find(Boolean) || "";
+        if (!line) return "";
+        return line.length > 120 ? `${line.slice(0, 117)}…` : line;
+    }
+
+    function newestRecord(items, field) {
+        const rows = Array.isArray(items) ? items.slice() : [];
+        rows.sort((a, b) => String((b && b[field]) || "").localeCompare(String((a && a[field]) || "")));
+        return rows[0] || null;
+    }
+
+    function renderSnapshotChart(points) {
+        const values = (points || []).map(point => Number(point.value)).filter(value => !Number.isNaN(value));
+        if (values.length < 2) return "";
+        const width = 320;
+        const height = 120;
+        const pad = 8;
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+        if (min === max) {
+            min -= 1;
+            max += 1;
+        }
+        const coords = values.map((value, index) => {
+            const x = pad + (index / (values.length - 1)) * (width - pad * 2);
+            const y = pad + (1 - ((value - min) / (max - min))) * (height - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+        return `<svg class="snapshot-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Health Index"><polyline points="${coords}" fill="none" stroke="#1d4ed8" stroke-width="2"></polyline></svg>`;
+    }
+
+    function renderSnapshot() {
+        const progress = document.getElementById("snapshot-progress");
+        const report = document.getElementById("snapshot-report");
+        const note = document.getElementById("snapshot-note");
+        const lab = document.getElementById("snapshot-lab");
+        const client = document.getElementById("snapshot-client");
+        const wearable = document.getElementById("snapshot-wearable");
+        if (!progress || !report || !note || !lab || !client || !wearable) return;
+
+        const points = (currentTrends && currentTrends.health_index) || [];
+        const latestPoint = points.length ? points[points.length - 1] : null;
+        const firstPoint = points.length ? points[0] : null;
+        let change = "—";
+        if (points.length > 1 && latestPoint && firstPoint) {
+            const delta = Number(latestPoint.value) - Number(firstPoint.value);
+            if (!Number.isNaN(delta)) change = `${delta > 0 ? "+" : ""}${delta.toFixed(1)}`;
+        }
+        const latestValue = latestPoint && !Number.isNaN(Number(latestPoint.value)) ? Number(latestPoint.value).toFixed(1) : "—";
+        const firstValue = !firstPoint ? "—" : (points.length < 2 ? "Baseline" : Number(firstPoint.value).toFixed(1));
+        const progressReleased = !!(progressRelease && progressRelease.released);
+        const progressState = progressReleaseError
+            ? snapshotChip("Could not load", false)
+            : snapshotChip(progressReleased ? "Released to client" : "Not released", progressReleased);
+        progress.innerHTML = `
+            <div class="snapshot-title">Health Index ${escapeHtml(latestValue)}</div>
+            <div class="snapshot-meta">First ${escapeHtml(firstValue)} · Latest ${escapeHtml(latestValue)} · Change ${escapeHtml(change)}</div>
+            ${renderSnapshotChart(points)}
+            <div style="margin-top:8px;">${progressState}</div>
         `;
 
-        document.getElementById("patient-case-count").textContent = safeText(patient.case_count || 0);
-        document.getElementById("patient-report-count").textContent = safeText(patient.report_count || 0);
-        document.getElementById("patient-last-activity").textContent = formatDate(patient.last_activity_at);
-        document.getElementById("patient-data-sources").textContent =
-            (patient.data_sources && patient.data_sources.length)
-                ? patient.data_sources.join(", ")
-                : "—";
+        const reportRow = newestRecord(currentReports, "generated_at");
+        if (!reportRow) {
+            report.innerHTML = `<div class="muted">No reports yet.</div>`;
+        } else {
+            const inPortal = releasedFlagFor(reportRow.id);
+            report.innerHTML = `
+                <div><span class="report-type-pill ${reportTypeClass(reportRow)}">${escapeHtml(reportTypeLabel(reportRow))}</span></div>
+                <div class="snapshot-title">${escapeHtml(reportRow.display_name || reportRow.case_title || "Report")}</div>
+                <div class="snapshot-meta">${escapeHtml(formatDate(reportRow.generated_at))}</div>
+                <div style="margin-top:8px;">${snapshotChip(inPortal ? "In portal" : "Clinic only", inPortal)}</div>
+            `;
+        }
+
+        if (sourcesLoadError) {
+            const failed = `<div class="error">Could not load.</div>`;
+            note.innerHTML = failed;
+            lab.innerHTML = failed;
+            client.innerHTML = failed;
+            wearable.innerHTML = failed;
+            return;
+        }
+
+        const noteRow = newestRecord(clinicNotes, "recorded_on");
+        if (!noteRow) {
+            note.innerHTML = `<div class="muted">No clinic notes yet.</div>`;
+        } else {
+            const summary = firstSummaryLine(noteRow.client_summary);
+            note.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(noteRow.title || "Clinic note")}</div>
+                <div class="snapshot-meta">${escapeHtml(noteRow.recorded_on || "")}</div>
+                <div class="snapshot-meta">Client summary ${summary ? escapeHtml(summary) : "—"}</div>
+                <div style="margin-top:8px;">${snapshotChip(noteRow.released ? "Released" : "Not released", !!noteRow.released)}</div>
+            `;
+        }
+
+        const labRow = newestRecord(labPanels, "recorded_on");
+        if (!labRow) {
+            lab.innerHTML = `<div class="muted">No lab panels yet.</div>`;
+        } else {
+            const markers = (Array.isArray(labRow.observations) ? labRow.observations : []).slice(0, 3).map(marker => {
+                const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
+                const unit = marker.unit ? ` ${marker.unit}` : "";
+                return `${escapeHtml(marker.name || "Marker")} ${escapeHtml(String(value))}${escapeHtml(unit)}`;
+            }).join("<br>");
+            lab.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(labRow.title || "Lab panel")}</div>
+                <div class="snapshot-meta">${escapeHtml(labRow.recorded_on || "")}</div>
+                <div class="snapshot-meta">${markers || "No markers"}</div>
+                <div style="margin-top:8px;">${snapshotChip(labRow.released ? "Released" : "Not released", !!labRow.released)}</div>
+            `;
+        }
+
+        const sharedClosed = connectionLabel() !== "Connected";
+        if (!clientEntries.length) {
+            client.innerHTML = `<div class="muted">${sharedClosed ? "Nothing currently shared" : "Nothing shared yet."}</div>`;
+        } else {
+            const entry = newestRecord(clientEntries, "recorded_on");
+            client.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(String(clientEntries.length))} released</div>
+                <div class="snapshot-meta">${escapeHtml(entry && entry.title || "Client entry")}</div>
+                <div class="snapshot-meta">${escapeHtml(entry && entry.recorded_on || "")}</div>
+            `;
+        }
+
+        if (!wearableDays.length) {
+            wearable.innerHTML = `<div class="muted">${sharedClosed ? "Nothing currently shared" : "No shared days."}</div>`;
+        } else {
+            const day = newestRecord(wearableDays, "recorded_on") || {};
+            const bits = [
+                ["steps", "Steps"],
+                ["resting_heart_rate", "Resting heart rate"],
+                ["sleep_duration", "Sleep"],
+                ["hrv", "HRV"],
+            ].map(([key, label]) => {
+                const metric = day[key];
+                if (!metric || metric.value === null || metric.value === undefined || metric.value === "") return "";
+                return `${escapeHtml(label)} ${escapeHtml(String(metric.value))}${metric.unit ? ` ${escapeHtml(metric.unit)}` : ""}`;
+            }).filter(Boolean).join(" · ");
+            wearable.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(day.recorded_on || "Daily summary")}</div>
+                <div class="snapshot-meta">${bits || "No values"}</div>
+            `;
+        }
+    }
+
+    function openPatientSection(name, scroll) {
+        document.querySelectorAll(".patient-section").forEach(section => {
+            section.classList.toggle("is-open", section.dataset.section === name);
+        });
+        document.querySelectorAll(".section-chip").forEach(chip => {
+            const selected = chip.dataset.section === name;
+            chip.classList.toggle("is-active", selected);
+            chip.setAttribute("aria-selected", selected ? "true" : "false");
+        });
+        if (!scroll) return;
+        const section = document.querySelector(`.patient-section[data-section="${name}"]`);
+        if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
     function renderCases(casesData) {
@@ -949,6 +1236,7 @@ button.link {
             selectAll.checked = false;
             selectAll.disabled = !reportRows.some(report => (report.report_type || "assessment") === "assessment");
         }
+        renderSnapshot();
     }
 
     function openTrendReportModal() {
@@ -1431,6 +1719,7 @@ button.link {
         renderSelectedTrend();
 
         renderSimpleLineChart("weight-chart", "weight-empty", currentTrends.weight_kg || [], null, null);
+        renderSnapshot();
     }
 
 
@@ -1661,11 +1950,12 @@ button.link {
         if (claimed) {
             const accepted = claimInvites.find(item => item.status === "accepted" && item.accepted_at)
                 || claimInvites.find(item => item.accepted_at);
-            let line = "This record is claimed.";
-            if (accepted && accepted.accepted_at) {
-                line += ` Accepted ${formatDate(accepted.accepted_at)}.`;
-            }
-            return `<p id="client-claim-status" style="margin:0 0 8px;">${claimHtml(line)}</p>`;
+            const when = accepted && accepted.accepted_at ? ` on ${formatDate(accepted.accepted_at)}` : "";
+            const line = `Accepted${when}. This client has claimed this record.`;
+            return `
+                <p id="client-claim-status" style="margin:0 0 8px;">${claimHtml(line)}</p>
+                <p class="muted" style="margin:0 0 8px;">A new invite cannot be sent while this claim is active.</p>
+            `;
         }
 
         if (!newest) {
@@ -1734,7 +2024,7 @@ button.link {
         const button = released
             ? `<button class="btn secondary" type="button" id="claim-withdraw-release-btn" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw progress view"}</button>`
             : `<button class="btn secondary" type="button" id="claim-release-btn" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release progress view"}</button>`;
-        return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div><p class="muted" style="margin:8px 0 0;">Release individual reports from the Reports section below.</p>`;
+        return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div><p class="muted" style="margin:8px 0 0;">Release individual reports from the Reports section.</p>`;
     }
 
     function pickReportRelease(item) {
@@ -1783,6 +2073,7 @@ button.link {
     function renderClaimCard() {
         if (suppressClaim) {
             clearClaimBody();
+            syncInviteClaimButton();
             return;
         }
 
@@ -1796,15 +2087,34 @@ button.link {
 
         if (claimLoadError) {
             body.innerHTML = `<div class="error">Could not load claim invites.</div>`;
+            syncInviteClaimButton();
             return;
         }
 
         body.innerHTML = `
             ${claimStatusBlock()}
-            ${progressReleaseBlock()}
             <div id="client-claim-actions">${claimActionBlock()}</div>
             ${claimHistoryTable()}
         `;
+        const progressHost = document.getElementById("progress-release-host");
+        if (progressHost) progressHost.innerHTML = progressReleaseBlock();
+        syncInviteClaimButton();
+        if (currentPatient) renderPatientSummary(currentPatient);
+    }
+
+    function syncInviteClaimButton() {
+        const button = document.getElementById("invite-client-claim-btn");
+        if (!button) return;
+        const claimed = !!(claimAccess && claimAccess.claimed);
+        button.disabled = claimed;
+        button.textContent = claimed ? "Claimed" : "Invite client to claim";
+        if (claimed) {
+            button.setAttribute("aria-disabled", "true");
+            button.title = "This client has claimed this record.";
+            return;
+        }
+        button.removeAttribute("aria-disabled");
+        button.removeAttribute("title");
     }
 
     async function fetchClaimData() {
@@ -1882,6 +2192,11 @@ button.link {
     }
 
     async function sendClaimInvite() {
+        if (claimAccess && claimAccess.claimed) {
+            showPatientError("This record is already claimed. A new invite cannot be sent.");
+            return;
+        }
+
         const input = document.getElementById("claim-email");
         const email = ((input && input.value) || "").trim();
         if (!email) {
@@ -2102,6 +2417,9 @@ button.link {
     let labPanels = [];
     let clinicNoteRecordId = null;
     let clinicNotes = [];
+    let clientEntries = [];
+    let wearableDays = [];
+    let sourcesLoadError = false;
 
     function clinicNoteSaveLabel() {
         return clinicNoteRecordId ? "Save changes" : "Save note";
@@ -2117,6 +2435,7 @@ button.link {
         if (editing) editing.style.display = "none";
         if (cancel) cancel.style.display = "none";
         if (button) button.textContent = clinicNoteSaveLabel();
+        if (form) form.hidden = true;
     }
 
     function clinicNoteReleaseBusy(recordId) {
@@ -2148,6 +2467,7 @@ button.link {
         clinicNotes = Array.isArray(records) ? records : [];
         if (!clinicNotes.length) {
             body.innerHTML = `<div class="muted">No clinic notes yet.</div>`;
+            renderSnapshot();
             return;
         }
         body.innerHTML = clinicNotes.map(item => {
@@ -2167,6 +2487,7 @@ button.link {
                 </div>
             `;
         }).join("");
+        renderSnapshot();
     }
 
     function labMarkerFields() {
@@ -2224,6 +2545,7 @@ button.link {
         if (editing) editing.style.display = "none";
         if (cancel) cancel.style.display = "none";
         if (button) button.textContent = labPanelSaveLabel();
+        if (form) form.hidden = true;
     }
 
     function fillLabMarker(row, marker) {
@@ -2297,6 +2619,7 @@ button.link {
         const panels = labPanels;
         if (!panels.length) {
             body.innerHTML = `<div class="muted">No lab panels yet.</div>`;
+            renderSnapshot();
             return;
         }
         body.innerHTML = panels.map(item => {
@@ -2320,6 +2643,7 @@ button.link {
                 </div>
             `;
         }).join("");
+        renderSnapshot();
     }
 
     function beginLabPanelEdit(recordId) {
@@ -2349,7 +2673,10 @@ button.link {
         if (cancel) cancel.style.display = "inline-block";
         if (button) button.textContent = labPanelSaveLabel();
         const form = document.getElementById("lab-panel-form");
-        if (form) form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (form) {
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
     }
 
     async function saveLabPanel(event) {
@@ -2441,12 +2768,13 @@ button.link {
         const body = document.getElementById("client-entries-body");
         const items = Array.isArray(records) ? records : [];
         if (!section || !body) return;
+        clientEntries = items;
+        section.style.display = "block";
         if (!items.length) {
-            section.style.display = "none";
-            body.textContent = "";
+            body.innerHTML = `<div class="muted">Nothing shared yet.</div>`;
+            renderSnapshot();
             return;
         }
-        section.style.display = "block";
         body.innerHTML = items.map((item) => {
             const reference = String(item && item.reference || "").trim();
             const referenceLine = reference
@@ -2461,6 +2789,7 @@ button.link {
                 </div>
             `;
         }).join("");
+        renderSnapshot();
     }
 
     function renderWearableDays(records) {
@@ -2468,12 +2797,13 @@ button.link {
         const body = document.getElementById("wearable-days-body");
         const items = Array.isArray(records) ? records : [];
         if (!section || !body) return;
+        wearableDays = items;
+        section.style.display = "block";
         if (!items.length) {
-            section.style.display = "none";
-            body.textContent = "";
+            body.innerHTML = `<div class="muted">No shared days.</div>`;
+            renderSnapshot();
             return;
         }
-        section.style.display = "block";
         const labels = [
             ["steps", "Steps"],
             ["resting_heart_rate", "Resting heart rate"],
@@ -2497,6 +2827,7 @@ button.link {
                 </div>
             `;
         }).join("");
+        renderSnapshot();
     }
 
     async function loadClinicNotes() {
@@ -2508,13 +2839,19 @@ button.link {
             const response = await apiFetch(`/api/patients/${patientId}/sources`);
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
+                sourcesLoadError = true;
+                clientEntries = [];
+                wearableDays = [];
                 if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
-                if (labBody) labBody.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
-                renderClientEntries([]);
-                renderWearableDays([]);
-                showPatientError(typeof data.detail === "string" ? data.detail : "Could not load clinic notes.");
+                if (labBody) labBody.innerHTML = `<div class="error">Could not load lab results.</div>`;
+                const clientBody = document.getElementById("client-entries-body");
+                const wearableBody = document.getElementById("wearable-days-body");
+                if (clientBody) clientBody.innerHTML = `<div class="error">Could not load.</div>`;
+                if (wearableBody) wearableBody.innerHTML = `<div class="error">Could not load.</div>`;
+                renderSnapshot();
                 return;
             }
+            sourcesLoadError = false;
             const sources = Array.isArray(data.sources) ? data.sources : [];
             const source = sources.find(item => item.source_type === "manual") || null;
             const laboratory = sources.find(item => item.source_type === "laboratory") || null;
@@ -2530,11 +2867,16 @@ button.link {
             renderWearableDays(wearableSource ? wearableSource.records : []);
         } catch (err) {
             console.error(err);
+            sourcesLoadError = true;
+            clientEntries = [];
+            wearableDays = [];
             if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
-            if (labBody) labBody.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
-            renderClientEntries([]);
-            renderWearableDays([]);
-            showPatientError("Unexpected error while loading clinic notes.");
+            if (labBody) labBody.innerHTML = `<div class="error">Could not load lab results.</div>`;
+            const clientBody = document.getElementById("client-entries-body");
+            const wearableBody = document.getElementById("wearable-days-body");
+            if (clientBody) clientBody.innerHTML = `<div class="error">Could not load.</div>`;
+            if (wearableBody) wearableBody.innerHTML = `<div class="error">Could not load.</div>`;
+            renderSnapshot();
         }
     }
 
@@ -2601,7 +2943,10 @@ button.link {
         if (cancel) cancel.style.display = "inline-block";
         if (button) button.textContent = clinicNoteSaveLabel();
         const form = document.getElementById("clinic-note-form");
-        if (form) form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        if (form) {
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
     }
 
     async function setLabPanelRelease(recordId, released) {
@@ -2940,8 +3285,12 @@ button.link {
     const inviteClientBtn = document.getElementById("invite-client-claim-btn");
     if (inviteClientBtn) {
         inviteClientBtn.addEventListener("click", () => {
+            if (inviteClientBtn.disabled || (claimAccess && claimAccess.claimed)) return;
             const card = document.getElementById("client-claim-card");
-            if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+            if (card) {
+                card.style.display = "block";
+                card.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
             const email = document.getElementById("claim-email");
             if (email && !email.disabled) email.focus();
         });
@@ -2975,17 +3324,78 @@ button.link {
             if (target.id === "claim-cancel-btn" || target.classList.contains("claim-row-cancel")) {
                 const pending = currentPendingInvite();
                 cancelClaimInvite(target.dataset.inviteId || (pending && pending.id));
-                return;
             }
+        });
+    }
 
-            if (target.id === "claim-release-btn") {
-                setProgressRelease(true);
-                return;
-            }
+    const progressHost = document.getElementById("progress-release-host");
+    if (progressHost) {
+        progressHost.addEventListener("click", (event) => {
+            const target = event.target && event.target.closest ? event.target.closest("button") : null;
+            if (!target || claimBusy) return;
+            if (target.id === "claim-release-btn") setProgressRelease(true);
+            if (target.id === "claim-withdraw-release-btn") setProgressRelease(false);
+        });
+    }
 
-            if (target.id === "claim-withdraw-release-btn") {
-                setProgressRelease(false);
-            }
+    const managePatientBtn = document.getElementById("manage-patient-btn");
+    if (managePatientBtn) {
+        managePatientBtn.addEventListener("click", () => {
+            const panel = document.getElementById("patient-manage");
+            if (!panel) return;
+            panel.hidden = !panel.hidden;
+            managePatientBtn.setAttribute("aria-expanded", panel.hidden ? "false" : "true");
+        });
+    }
+
+    const sectionChips = document.getElementById("section-chips");
+    if (sectionChips) {
+        sectionChips.addEventListener("click", (event) => {
+            const chip = event.target && event.target.closest ? event.target.closest(".section-chip") : null;
+            if (chip) openPatientSection(chip.dataset.section, true);
+        });
+    }
+
+    const snapshotGrid = document.getElementById("snapshot-grid");
+    if (snapshotGrid) {
+        snapshotGrid.addEventListener("click", (event) => {
+            const tile = event.target && event.target.closest ? event.target.closest(".snapshot-tile") : null;
+            if (tile) openPatientSection(tile.dataset.open, true);
+        });
+    }
+
+    const snapshotMore = document.getElementById("snapshot-more");
+    if (snapshotMore) {
+        snapshotMore.addEventListener("click", () => {
+            const grid = document.getElementById("snapshot-grid");
+            if (!grid) return;
+            const expanded = grid.classList.toggle("is-expanded");
+            snapshotMore.setAttribute("aria-expanded", expanded ? "true" : "false");
+            snapshotMore.textContent = expanded ? "Fewer on this record" : "More on this record";
+        });
+    }
+
+    const showClinicNoteForm = document.getElementById("show-clinic-note-form");
+    if (showClinicNoteForm) {
+        showClinicNoteForm.addEventListener("click", () => {
+            openPatientSection("notes", false);
+            resetClinicNoteForm();
+            const form = document.getElementById("clinic-note-form");
+            if (!form) return;
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+    }
+
+    const showLabPanelForm = document.getElementById("show-lab-panel-form");
+    if (showLabPanelForm) {
+        showLabPanelForm.addEventListener("click", () => {
+            openPatientSection("labs", false);
+            resetLabPanelForm();
+            const form = document.getElementById("lab-panel-form");
+            if (!form) return;
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
         });
     }
 
