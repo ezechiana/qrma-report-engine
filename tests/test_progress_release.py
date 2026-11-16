@@ -38,7 +38,9 @@ def test_progress_release_is_not_a_share_link():
     assert "share_link" not in portal
     assert "progress_release_state" in portal
     paths = {route.path for route in routes_content_releases.router.routes}
-    assert paths == {"/api/patients/{patient_id}/progress-release"}
+    assert "/api/patients/{patient_id}/progress-release" in paths
+    assert "/api/patients/{patient_id}/report-releases" in paths
+    assert "/api/patients/{patient_id}/report-releases/{report_id}" in paths
     client = User(role="client")
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/progress-release") is True
 

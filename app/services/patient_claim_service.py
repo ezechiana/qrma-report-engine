@@ -18,7 +18,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.models import Patient, PatientClaimInvite, RecommendationMode, User
-from app.services.content_release_service import clear_progress_release
+from app.services.content_release_service import clear_progress_release, clear_report_releases
 from app.services.email_service import send_email, send_verification_email
 from app.utils.security import hash_password
 
@@ -344,6 +344,7 @@ def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
         invite.status = "cancelled"
         invite.cancelled_at = now
     clear_progress_release(db, patient, now)
+    clear_report_releases(db, patient, now)
     db.commit()
     db.refresh(patient)
     return patient

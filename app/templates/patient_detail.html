@@ -1431,6 +1431,8 @@ button.link {
     let claimBusy = false;
     let progressRelease = null;
     let progressReleaseError = false;
+    let reportReleases = null;
+    let reportReleaseError = false;
 
     function escapeHtml(value) {
         return String(value)
@@ -1576,6 +1578,39 @@ button.link {
         return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div>`;
     }
 
+    function pickReportRelease(item) {
+        return {
+            report_id: item && typeof item.report_id === "string" ? item.report_id : "",
+            label: item && typeof item.label === "string" && item.label.trim() ? item.label.trim() : "Report",
+            released: !!(item && item.released),
+        };
+    }
+
+    function reportReleaseRows(title, rows) {
+        const list = Array.isArray(rows) ? rows : [];
+        const body = list.length
+            ? list.map(item => {
+                const busy = claimBusy === `report:${item.report_id}`;
+                const button = item.released
+                    ? `<button class="btn secondary claim-report-release-btn" type="button" data-report-id="${claimHtml(item.report_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw report"}</button>`
+                    : `<button class="btn secondary claim-report-release-btn" type="button" data-report-id="${claimHtml(item.report_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release report"}</button>`;
+                const status = item.released ? "Released to the client." : "Not released to the client.";
+                return `<p style="margin:12px 0 4px;">${claimHtml(item.label)}</p><p class="muted" style="margin:0 0 8px;">${status}</p><div class="btn-row">${button}</div>`;
+            }).join("")
+            : `<p class="muted" style="margin:0 0 8px;">No ${claimHtml(title).toLowerCase()} yet.</p>`;
+        return `<p style="margin:16px 0 8px;"><strong>${claimHtml(title)}</strong></p>${body}`;
+    }
+
+    function reportReleaseBlock() {
+        if (!(claimAccess && claimAccess.claimed)) return "";
+        if (reportReleaseError) {
+            return `<p class="error">Could not load report releases.</p>`;
+        }
+        if (!reportReleases) return "";
+        return reportReleaseRows("Assessment reports", reportReleases.assessment_reports)
+            + reportReleaseRows("Trend reports", reportReleases.trend_reports);
+    }
+
     function claimHistoryTable() {
         const pending = currentPendingInvite();
         const rows = claimInvites.length
@@ -1633,6 +1668,7 @@ button.link {
         body.innerHTML = `
             ${claimStatusBlock()}
             ${progressReleaseBlock()}
+            ${reportReleaseBlock()}
             <div id="client-claim-actions">${claimActionBlock()}</div>
             ${claimHistoryTable()}
         `;
@@ -1640,10 +1676,11 @@ button.link {
 
     async function fetchClaimData() {
         try {
-            const [accessRes, invitesRes, releaseRes] = await Promise.all([
+            const [accessRes, invitesRes, releaseRes, reportRes] = await Promise.all([
                 apiFetch(`/api/patients/${patientId}/claim-access`),
                 apiFetch(`/api/patients/${patientId}/claim-invites`),
                 apiFetch(`/api/patients/${patientId}/progress-release`),
+                apiFetch(`/api/patients/${patientId}/report-releases`),
             ]);
             if (suppressClaim) return;
 
@@ -1656,6 +1693,7 @@ button.link {
             const accessData = await accessRes.json().catch(() => ({}));
             const invitesData = await invitesRes.json().catch(() => ([]));
             const releaseData = releaseRes.ok ? await releaseRes.json().catch(() => ({})) : null;
+            const reportData = reportRes.ok ? await reportRes.json().catch(() => ({})) : null;
             if (suppressClaim) return;
 
             claimAccess = { claimed: !!(accessData && accessData.claimed) };
@@ -1672,6 +1710,19 @@ button.link {
             } else {
                 progressRelease = null;
                 progressReleaseError = false;
+            }
+            if (reportData) {
+                reportReleases = {
+                    assessment_reports: (Array.isArray(reportData.assessment_reports) ? reportData.assessment_reports : []).map(pickReportRelease),
+                    trend_reports: (Array.isArray(reportData.trend_reports) ? reportData.trend_reports : []).map(pickReportRelease),
+                };
+                reportReleaseError = false;
+            } else if (claimAccess.claimed) {
+                reportReleases = null;
+                reportReleaseError = true;
+            } else {
+                reportReleases = null;
+                reportReleaseError = false;
             }
             claimLoaded = true;
             claimLoadError = false;
@@ -1841,6 +1892,49 @@ button.link {
         }
     }
 
+    async function setReportRelease(reportId, released) {
+        if (!reportId || claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw this report? Share links and the progress view stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = `report:${reportId}`;
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/report-releases/${reportId}`, {
+                method: "POST",
+                body: JSON.stringify({ released: released }),
+            });
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the report release."));
+                renderClaimCard();
+                return;
+            }
+            const nextReleased = !!data.released;
+            const apply = (rows) => (rows || []).map(row => (
+                String(row.report_id) === String(reportId) ? { ...row, released: nextReleased } : row
+            ));
+            if (reportReleases) {
+                reportReleases = {
+                    assessment_reports: apply(reportReleases.assessment_reports),
+                    trend_reports: apply(reportReleases.trend_reports),
+                };
+            }
+            reportReleaseError = false;
+            showPatientSuccess(released ? "Report released to the client." : "Report withdrawn.");
+            renderClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the report release.");
+            renderClaimCard();
+        }
+    }
+
     async function loadPatientDetail() {
         clearPatientError();
         clearPatientSuccess();
@@ -1854,6 +1948,8 @@ button.link {
         claimBusy = false;
         progressRelease = null;
         progressReleaseError = false;
+        reportReleases = null;
+        reportReleaseError = false;
         renderClaimCard();
 
         const authed = await requireAuthOrRedirect();
@@ -2133,6 +2229,11 @@ button.link {
 
             if (target.id === "claim-withdraw-release-btn") {
                 setProgressRelease(false);
+                return;
+            }
+
+            if (target.classList.contains("claim-report-release-btn")) {
+                setReportRelease(target.dataset.reportId, target.dataset.released !== "true");
             }
         });
     }
