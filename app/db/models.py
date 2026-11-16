@@ -512,6 +512,7 @@ class PatientClaimInvite(Base):
         index=True,
     )
 
+
 class ContentRelease(Base):
     """Whether one kind of information is released between a clinic and a claimed client.
 
@@ -540,9 +541,85 @@ class ContentRelease(Base):
         ForeignKey("users.id", ondelete="CASCADE"),
         index=True,
     )
-    source_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    source_key: Mapped[str] = mapped_column(String(80), nullable=False)
     direction: Mapped[str] = mapped_column(String(40), nullable=False)
     released: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
     released_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     withdrawn_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class PatientSource(Base):
+    """A data source attached to one practitioner-owned patient.
+
+    Version 1 has a single manual source. QRMA cases stay on their own tables.
+    """
+
+    __tablename__ = "patient_sources"
+    __table_args__ = (
+        UniqueConstraint("patient_id", "source_type", name="uq_patient_sources_patient_type"),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+    )
+    practitioner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    source_type: Mapped[str] = mapped_column(String(40), nullable=False)
+    display_name: Mapped[str] = mapped_column(String(120), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active")
+    external_account_ref: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    records: Mapped[list["SourceRecord"]] = relationship(
+        back_populates="source",
+        cascade="all, delete-orphan",
+    )
+
+
+class SourceRecord(Base):
+    """One dated entry from a patient source. The raw payload is clinic-only."""
+
+    __tablename__ = "source_records"
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_source_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patient_sources.id", ondelete="CASCADE"),
+        index=True,
+    )
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+    )
+    recorded_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False)
+    title: Mapped[str] = mapped_column(String(255), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="ready")
+    payload_json: Mapped[dict] = mapped_column(JSONB, nullable=False, default=dict)
+    client_summary: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_archived: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    source: Mapped["PatientSource"] = relationship(back_populates="records")

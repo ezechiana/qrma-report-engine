@@ -20,6 +20,7 @@ from app.api.routes_patient_claim_invites import router as patient_claim_invites
 from app.api.routes_patient_claims import router as patient_claims_router
 from app.api.routes_client_records import router as client_records_router
 from app.api.routes_content_releases import router as content_releases_router
+from app.api.routes_patient_sources import router as patient_sources_router
 from app.api.routes_reports import router as reports_router
 from app.api.routes_share import router as share_router
 from app.api.routes_ui import router as ui_router
@@ -164,6 +165,7 @@ def create_app() -> FastAPI:
     app.include_router(patient_claim_invites_router)
     app.include_router(patient_claims_router)
     app.include_router(content_releases_router)
+    app.include_router(patient_sources_router)
     app.include_router(client_records_router)
     app.include_router(patients_router)
     app.include_router(cases_router)

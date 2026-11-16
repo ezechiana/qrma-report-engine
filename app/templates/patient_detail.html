@@ -237,6 +237,14 @@ button.link {
 .portal-release-cell .report-type-pill + div .btn {
     margin-top: 6px;
 }
+.clinic-note {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #fff;
+}
+.clinic-note p { margin: 6px 0 0; white-space: pre-wrap; }
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -572,6 +580,41 @@ button.link {
             <tr><td colspan="7" class="muted">Loading…</td></tr>
         </tbody>
     </table>
+</div>
+
+<div class="card" id="sources-section">
+    <div class="section-toolbar">
+        <div>
+            <h3 style="margin:0;">Sources</h3>
+            <div class="muted" id="clinic-source-name" style="margin-top:4px;">Clinic notes</div>
+        </div>
+    </div>
+    <p class="muted" style="margin-top:0;">Clinic notes stay on this record until you choose to share a client summary later. A new note is not released.</p>
+    <div id="clinic-notes-body">
+        <div class="muted">Loading clinic notes…</div>
+    </div>
+    <form id="clinic-note-form" style="margin-top:16px;">
+        <div class="field">
+            <label for="clinic-note-title">Title</label>
+            <input id="clinic-note-title" maxlength="255" required>
+        </div>
+        <div class="field">
+            <label for="clinic-note-date">Date</label>
+            <input id="clinic-note-date" type="date" required>
+        </div>
+        <div class="field">
+            <label for="clinic-note-text">Note text</label>
+            <textarea id="clinic-note-text" rows="4" maxlength="20000" required></textarea>
+        </div>
+        <div class="field">
+            <label for="clinic-note-summary">Client summary</label>
+            <textarea id="clinic-note-summary" rows="3" maxlength="20000"></textarea>
+            <div class="muted" style="margin-top:4px;">Only this summary can be released to the client later. The note text stays in the clinic record. You can leave the summary blank.</div>
+        </div>
+        <div class="btn-row">
+            <button class="btn" type="submit" id="clinic-note-save">Save note</button>
+        </div>
+    </form>
 </div>
 
 <div class="card">
@@ -1992,6 +2035,97 @@ button.link {
         }
     }
 
+    let clinicNoteSourceId = null;
+
+    function renderClinicNotes(records) {
+        const body = document.getElementById("clinic-notes-body");
+        if (!body) return;
+        const notes = Array.isArray(records) ? records : [];
+        if (!notes.length) {
+            body.innerHTML = `<div class="muted">No clinic notes yet.</div>`;
+            return;
+        }
+        body.innerHTML = notes.map(item => {
+            const summary = item.client_summary
+                ? safeText(item.client_summary)
+                : `<span class="muted">No client summary yet.</span>`;
+            return `
+                <div class="clinic-note">
+                    <strong>${safeText(item.title || "Clinic note")}</strong>
+                    <div class="muted">${safeText(item.recorded_on || "")}</div>
+                    <p>${safeText(item.text || "")}</p>
+                    <p><span class="muted">Client summary:</span> ${summary}</p>
+                </div>
+            `;
+        }).join("");
+    }
+
+    async function loadClinicNotes() {
+        const body = document.getElementById("clinic-notes-body");
+        if (body) body.innerHTML = `<div class="muted">Loading clinic notes…</div>`;
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/sources`);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
+                showPatientError(typeof data.detail === "string" ? data.detail : "Could not load clinic notes.");
+                return;
+            }
+            const source = Array.isArray(data.sources) ? data.sources[0] : null;
+            clinicNoteSourceId = source && source.source_id ? source.source_id : null;
+            const name = document.getElementById("clinic-source-name");
+            if (name) name.textContent = source && source.display_name ? source.display_name : "Clinic notes";
+            renderClinicNotes(source ? source.records : []);
+        } catch (err) {
+            console.error(err);
+            if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
+            showPatientError("Unexpected error while loading clinic notes.");
+        }
+    }
+
+    async function saveClinicNote(event) {
+        event.preventDefault();
+        if (!clinicNoteSourceId) {
+            showPatientError("Clinic notes are still loading.");
+            return;
+        }
+        const button = document.getElementById("clinic-note-save");
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Saving…";
+        }
+        clearPatientError();
+        clearPatientSuccess();
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/sources/${clinicNoteSourceId}/records`, {
+                method: "POST",
+                body: JSON.stringify({
+                    title: document.getElementById("clinic-note-title").value,
+                    recorded_on: document.getElementById("clinic-note-date").value,
+                    text: document.getElementById("clinic-note-text").value,
+                    client_summary: document.getElementById("clinic-note-summary").value,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const detail = Array.isArray(data.detail) ? "Check the title, date, and note text." : data.detail;
+                showPatientError(typeof detail === "string" ? detail : "Could not save the clinic note.");
+                return;
+            }
+            document.getElementById("clinic-note-form").reset();
+            showPatientSuccess("Clinic note saved.");
+            await loadClinicNotes();
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while saving the clinic note.");
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = "Save note";
+            }
+        }
+    }
+
     async function loadPatientDetail() {
         clearPatientError();
         clearPatientSuccess();
@@ -2050,6 +2184,7 @@ button.link {
             renderReports(currentReports);
             renderTimeline();
             renderTrends(trendsData);
+            await loadClinicNotes();
             await claimTask;
             if (!suppressClaim) {
                 renderClaimCard();
@@ -2292,6 +2427,9 @@ button.link {
             }
         });
     }
+
+    const clinicNoteForm = document.getElementById("clinic-note-form");
+    if (clinicNoteForm) clinicNoteForm.addEventListener("submit", saveClinicNote);
 
     const reportsBody = document.getElementById("patient-reports-body");
     if (reportsBody) {
