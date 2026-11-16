@@ -8,10 +8,12 @@ from uuid import UUID
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import Patient, PatientSource, SourceRecord
+from app.db.models import ContentRelease, Patient, PatientSource, SourceRecord
+from app.services.content_release_service import CLINIC_TO_CLIENT
 
 MANUAL = "manual"
 MANUAL_NAME = "Clinic notes"
+RECORD_PREFIX = "record:"
 
 
 def _note_text(record: SourceRecord) -> str:
@@ -20,7 +22,12 @@ def _note_text(record: SourceRecord) -> str:
     return text.strip() if isinstance(text, str) else ""
 
 
-def _record_payload(record: SourceRecord) -> dict:
+def record_source_key(record_id: UUID) -> str:
+    """Portal key for one note. A bare record id would look like a report release."""
+    return f"{RECORD_PREFIX}{record_id}"
+
+
+def _record_payload(record: SourceRecord, released: bool = False) -> dict:
     recorded = record.recorded_at
     recorded_on = recorded.date().isoformat() if isinstance(recorded, datetime) else None
     return {
@@ -29,16 +36,38 @@ def _record_payload(record: SourceRecord) -> dict:
         "recorded_on": recorded_on,
         "text": _note_text(record),
         "client_summary": record.client_summary or "",
+        "released": released,
     }
 
 
-def _source_payload(source: PatientSource, records: list[SourceRecord]) -> dict:
+def _released_record_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
+    if patient.claimed_by_user_id is None or not records:
+        return set()
+    keys = [record_source_key(record.id) for record in records]
+    rows = (
+        db.query(ContentRelease.source_key)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.direction == CLINIC_TO_CLIENT,
+            ContentRelease.source_key.in_(keys),
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    )
+    return {row[0] for row in rows}
+
+
+def _source_payload(source: PatientSource, records: list[SourceRecord], released_keys: set[str]) -> dict:
     return {
         "source_id": str(source.id),
         "source_type": source.source_type,
         "display_name": source.display_name,
         "status": source.status,
-        "records": [_record_payload(record) for record in records],
+        "records": [
+            _record_payload(record, released=record_source_key(record.id) in released_keys)
+            for record in records
+        ],
     }
 
 
@@ -81,7 +110,8 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
         .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
         .all()
     )
-    return {"patient_id": str(patient.id), "sources": [_source_payload(source, records)]}
+    released_keys = _released_record_keys(db, patient, records)
+    return {"patient_id": str(patient.id), "sources": [_source_payload(source, records, released_keys)]}
 
 
 def _manual_source(db: Session, patient: Patient, source_id: UUID) -> PatientSource:
@@ -144,7 +174,7 @@ def create_clinic_note(
     db.add(record)
     db.commit()
     db.refresh(record)
-    return _record_payload(record)
+    return _record_payload(record, released=False)
 
 
 def update_clinic_note(
@@ -168,4 +198,63 @@ def update_clinic_note(
     record.updated_at = datetime.now(timezone.utc)
     db.commit()
     db.refresh(record)
-    return _record_payload(record)
+    released = record_source_key(record.id) in _released_record_keys(db, patient, [record])
+    return _record_payload(record, released=released)
+
+
+def set_clinic_note_release(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    record_id: UUID,
+    released: bool,
+) -> dict:
+    """Release or withdraw one note. Does not create a share link or change a report."""
+    if patient.claimed_by_user_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="A client must claim this record before a note can be released.",
+        )
+    source = _manual_source(db, patient, source_id)
+    record = _clinic_note(db, patient, source, record_id)
+    summary = (record.client_summary or "").strip()
+    if released and not summary:
+        raise HTTPException(
+            status_code=422,
+            detail="Add a client summary before releasing this note.",
+        )
+    now = datetime.now(timezone.utc)
+    source_key = record_source_key(record.id)
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.source_key == source_key,
+            ContentRelease.direction == CLINIC_TO_CLIENT,
+        )
+        .first()
+    )
+    if row is None:
+        row = ContentRelease(
+            patient_id=patient.id,
+            practitioner_user_id=patient.user_id,
+            source_key=source_key,
+            direction=CLINIC_TO_CLIENT,
+            released=False,
+            created_at=now,
+        )
+        db.add(row)
+    if released:
+        row.released = True
+        row.released_at = now
+    else:
+        row.released = False
+        row.withdrawn_at = now
+    db.commit()
+    return {
+        "patient_id": str(patient.id),
+        "record_id": str(record.id),
+        "released": bool(row.released),
+        "available": True,
+    }

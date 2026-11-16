@@ -9,7 +9,12 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import Patient, User
-from app.services.patient_source_service import create_clinic_note, list_patient_sources, update_clinic_note
+from app.services.patient_source_service import (
+    create_clinic_note,
+    list_patient_sources,
+    set_clinic_note_release,
+    update_clinic_note,
+)
 
 router = APIRouter(prefix="/api/patients", tags=["patients"])
 
@@ -32,6 +37,10 @@ class ClinicNoteCreate(BaseModel):
     @classmethod
     def clean_summary(cls, value: str) -> str:
         return value.strip()
+
+
+class ClinicNoteReleaseUpdate(BaseModel):
+    released: bool
 
 
 class ClinicNoteUpdate(BaseModel):
@@ -121,3 +130,21 @@ def patch_clinic_note(
     patient = _owned_patient(db, patient_id, current_user)
     changes = {field: getattr(payload, field) for field in provided}
     return update_clinic_note(db, patient, source_id, record_id, changes)
+
+
+@router.post("/{patient_id}/sources/{source_id}/records/{record_id}/release")
+def post_clinic_note_release(
+    patient_id: UUID,
+    source_id: UUID,
+    record_id: UUID,
+    payload: ClinicNoteReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Release or withdraw one clinic note for the client who claimed this record.
+
+    Handles patient identity. The note text and client summary are not returned.
+    A share link is not created.
+    """
+    patient = _owned_patient(db, patient_id, current_user)
+    return set_clinic_note_release(db, patient, source_id, record_id, payload.released)

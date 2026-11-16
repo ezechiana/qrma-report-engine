@@ -246,6 +246,8 @@ button.link {
     background: #fff;
 }
 .clinic-note p { margin: 6px 0 0; white-space: pre-wrap; }
+.clinic-note-release-state { margin-top: 8px; }
+.clinic-note-release-state .report-type-pill + div .btn { margin-top: 6px; }
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -590,7 +592,7 @@ button.link {
             <div class="muted" id="clinic-source-name" style="margin-top:4px;">Clinic notes</div>
         </div>
     </div>
-    <p class="muted" style="margin-top:0;">Clinic notes stay on this record until you choose to share a client summary later. A new note is not released.</p>
+    <p class="muted" style="margin-top:0;">A new note is not released. Release uses the client summary only and does not create a share link.</p>
     <div id="clinic-notes-body">
         <div class="muted">Loading clinic notes…</div>
     </div>
@@ -1820,6 +1822,7 @@ button.link {
         if (!suppressClaim) {
             renderClaimCard();
             renderReports(currentReports);
+            renderClinicNotes(clinicNotes);
         }
     }
 
@@ -2058,6 +2061,29 @@ button.link {
         if (button) button.textContent = clinicNoteSaveLabel();
     }
 
+    function clinicNoteReleaseBusy(recordId) {
+        return typeof claimBusy === "string"
+            && claimBusy.indexOf("note:") === 0
+            && String(claimBusy.slice(5)) === String(recordId);
+    }
+
+    function clinicNoteReleaseControls(item) {
+        if (!claimLoaded || claimLoadError || !claimAccess || !claimAccess.claimed) return "";
+        const summary = String(item.client_summary || "").trim();
+        const released = !!item.released;
+        if (!released && !summary) {
+            return `<p class="muted" style="margin:8px 0 0;">Add a client summary before this note can be released.</p>`;
+        }
+        const busy = clinicNoteReleaseBusy(item.record_id);
+        const button = released
+            ? `<button class="btn secondary clinic-note-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+            : `<button class="btn secondary clinic-note-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+        const status = released
+            ? `<span class="report-type-pill report-type-assessment">Released</span>`
+            : "";
+        return `<div class="clinic-note-release-state">${status}<div>${button}</div></div>`;
+    }
+
     function renderClinicNotes(records) {
         const body = document.getElementById("clinic-notes-body");
         if (!body) return;
@@ -2076,6 +2102,7 @@ button.link {
                     <div class="muted">${safeText(item.recorded_on || "")}</div>
                     <p>${safeText(item.text || "")}</p>
                     <p><span class="muted">Client summary:</span> ${summary}</p>
+                    ${clinicNoteReleaseControls(item)}
                     <div class="btn-row" style="margin-top:8px;">
                         <button class="btn secondary clinic-note-edit" type="button" data-record-id="${safeText(item.record_id)}">Edit</button>
                     </div>
@@ -2173,6 +2200,47 @@ button.link {
         if (form) form.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
+    async function setClinicNoteRelease(recordId, released) {
+        if (!recordId || !clinicNoteSourceId || claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw this note? Share links and the progress view stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = `note:${recordId}`;
+        clearPatientError();
+        clearPatientSuccess();
+        renderClinicNotes(clinicNotes);
+        try {
+            const response = await apiFetch(
+                `/api/patients/${patientId}/sources/${clinicNoteSourceId}/records/${recordId}/release`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ released: released }),
+                }
+            );
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the clinic note release."));
+                if (response.status === 409) {
+                    claimAccess = { claimed: false };
+                    renderClaimCard();
+                }
+                renderClinicNotes(clinicNotes);
+                return;
+            }
+            const match = clinicNotes.find(note => String(note.record_id) === String(recordId));
+            if (match) match.released = !!data.released;
+            showPatientSuccess(released ? "Clinic note released." : "Clinic note withdrawn.");
+            renderClinicNotes(clinicNotes);
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the clinic note release.");
+            renderClinicNotes(clinicNotes);
+        }
+    }
+
     async function loadPatientDetail() {
         clearPatientError();
         clearPatientSuccess();
@@ -2236,6 +2304,7 @@ button.link {
             if (!suppressClaim) {
                 renderClaimCard();
                 renderReports(currentReports);
+                renderClinicNotes(clinicNotes);
             }
 
         } catch (err) {
@@ -2482,6 +2551,12 @@ button.link {
     const clinicNotesBody = document.getElementById("clinic-notes-body");
     if (clinicNotesBody) {
         clinicNotesBody.addEventListener("click", (event) => {
+            const releaseButton = event.target && event.target.closest ? event.target.closest(".clinic-note-release") : null;
+            if (releaseButton) {
+                if (claimBusy) return;
+                setClinicNoteRelease(releaseButton.dataset.recordId, releaseButton.dataset.released !== "true");
+                return;
+            }
             const button = event.target && event.target.closest ? event.target.closest(".clinic-note-edit") : null;
             if (!button) return;
             beginClinicNoteEdit(button.dataset.recordId);
