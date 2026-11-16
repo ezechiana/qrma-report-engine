@@ -17,8 +17,7 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_client_records, routes_share
 from app.api.deps import _client_blocked_from_practitioner_path, get_current_user, get_db
-from app.db.models import Case, Patient, ReportStatus, ReportVersion, ShareLink, User
-from app.services.client_record_service import released_report_scope
+from app.db.models import Case, ContentRelease, Patient, ReportStatus, ReportVersion, ShareLink, User
 
 
 class FlexibleUuid(TypeDecorator):
@@ -79,7 +78,7 @@ def test_signed_in_client_sees_only_the_claimed_client_safe_record(monkeypatch):
         poolclass=StaticPool,
     )
     originals = []
-    models = (User, Patient, Case, ReportVersion, ShareLink)
+    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease)
     for model in models:
         for column in model.__table__.columns:
             if isinstance(column.type, Uuid):
@@ -199,10 +198,6 @@ def test_signed_in_client_sees_only_the_claimed_client_safe_record(monkeypatch):
         ))
         db.commit()
 
-        longitudinal, report_ids = released_report_scope(db, claimed)
-        assert longitudinal is False
-        assert report_ids == [released.id]
-
         app = FastAPI()
         app.include_router(routes_client_records.router)
         holder = {"user": client_user}
@@ -226,6 +221,27 @@ def test_signed_in_client_sees_only_the_claimed_client_safe_record(monkeypatch):
         assert "Grace Hopper" not in listed.text
         assert "Private practitioner note" not in listed.text
 
+        held = http.get(f"/api/client/records/{claimed.id}")
+        assert held.status_code == 200
+        assert held.json()["trend"]["client_view"]["summary"] == (
+            "Your practitioner has not released a progress view yet."
+        )
+        assert calls == []
+        assert "released-share" not in held.text
+        assert "Private practitioner note" not in held.text
+
+        db.add(ContentRelease(
+            id=uuid.uuid4(),
+            patient_id=claimed.id,
+            practitioner_user_id=practitioner.id,
+            source_key="progress_view",
+            direction="clinic_to_client",
+            released=True,
+            released_at=datetime.now(timezone.utc),
+            created_at=datetime.now(timezone.utc),
+        ))
+        db.commit()
+
         opened = http.get(f"/api/client/records/{claimed.id}")
         assert opened.status_code == 200
         body = opened.json()
@@ -242,8 +258,18 @@ def test_signed_in_client_sees_only_the_claimed_client_safe_record(monkeypatch):
         assert "Private practitioner note" not in opened.text
         assert calls[0]["view_mode"] == "client"
         assert calls[0]["current_user"].id == practitioner.id
-        assert calls[0]["source_report_ids"] == [str(released.id)]
-        assert str(hidden.id) not in calls[0]["source_report_ids"]
+        assert calls[0]["source_report_ids"] is None
+
+        withdrawn = db.query(ContentRelease).one()
+        withdrawn.released = False
+        withdrawn.withdrawn_at = datetime.now(timezone.utc)
+        db.commit()
+        hidden_again = http.get(f"/api/client/records/{claimed.id}")
+        assert hidden_again.status_code == 200
+        assert hidden_again.json()["trend"]["client_view"]["summary"] == (
+            "Your practitioner has not released a progress view yet."
+        )
+        assert len(calls) == 1
 
         denied = http.get(f"/api/client/records/{other.id}")
         assert denied.status_code == 404

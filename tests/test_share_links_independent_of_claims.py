@@ -25,6 +25,7 @@ from app.api.share_helpers import _enforce_share_payment_or_402, _share_payment_
 from app.db.models import (
     AuditLog,
     Case,
+    ContentRelease,
     Patient,
     PatientClaimInvite,
     PractitionerSettings,
@@ -33,6 +34,7 @@ from app.db.models import (
     ShareLink,
     User,
 )
+from app.services.content_release_service import progress_release_state, set_progress_release
 from app.services.patient_claim_service import cancel_claim_invite, hash_claim_token
 from app.services.share_link_service import create_share_link
 
@@ -78,6 +80,8 @@ def test_share_routes_do_not_reference_claim_records():
     revoke_source = inspect.getsource(revoke_share)
     assert "PatientClaimInvite" not in share_source
     assert "claimed_by_user_id" not in share_source
+    assert "ContentRelease" not in share_source
+    assert "progress_release" not in share_source
     assert "patient_claim" not in payment_source
     assert "ShareLink" not in cancel_source
     assert "users" not in revoke_source.lower()
@@ -142,6 +146,7 @@ def test_share_links_keep_working_with_or_without_a_claim_invite(monkeypatch):
         ReportVersion,
         ShareLink,
         AuditLog,
+        ContentRelease,
     )
     originals = []
     for model in models:
@@ -295,6 +300,7 @@ def test_share_links_keep_working_with_or_without_a_claim_invite(monkeypatch):
         assert with_invite.status_code == 200
         assert "Download PDF" in with_invite.text
         assert_unclaimed()
+        assert db.query(ContentRelease).count() == 0
 
         locked = http.get(f"/share/{locked_link.token}")
         assert locked.status_code == 200
@@ -337,6 +343,12 @@ def test_share_links_keep_working_with_or_without_a_claim_invite(monkeypatch):
         assert invited_patient.claimed_by_user_id == client.id
         assert client.role == "client"
         assert db.query(User).filter(User.id == client.id).count() == 1
+        assert db.query(ContentRelease).count() == 0
+        set_progress_release(db, invited_patient, True)
+        opened_again = http.get(f"/share/{invited_link.token}")
+        assert opened_again.status_code == 200
+        assert progress_release_state(db, invited_patient)["released"] is True
+        assert db.query(ContentRelease).count() == 1
 
         cancel_claim_invite(db, practitioner.id, invited_patient.id, invite.id)
         db.refresh(invited_link)

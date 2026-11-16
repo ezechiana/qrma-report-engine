@@ -54,7 +54,11 @@ def get_client_record(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return the client-safe longitudinal view for one claimed record."""
+    """Return the client-safe progress view for one claimed record.
+
+    Handles patient identity. The view is included only when this clinic has
+    released it. Share links are not consulted, and practitioner notes are omitted.
+    """
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return client_record_payload(db, client, patient)

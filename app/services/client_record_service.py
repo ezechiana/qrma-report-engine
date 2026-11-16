@@ -1,9 +1,8 @@
 """Signed-in client access to a claimed longitudinal record.
 
-The trend body is the client-safe view already returned for a shared trend.
-Reports stay hidden until an active share link releases them. A trend share
-releases the same ready-report set the public trend page uses. An assessment
-share releases only that report.
+The progress view is the client-safe trend already built for a practitioner.
+It is included only when this clinic has released it. Share links do not
+decide what this portal shows, and opening one does not change the release.
 """
 
 from __future__ import annotations
@@ -15,8 +14,8 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.api.share_helpers import _patient_display_name
-from app.db.models import Case, Patient, ReportVersion, ShareLink, User
-from app.services.share_link_service import is_share_link_valid
+from app.db.models import Patient, User
+from app.services.content_release_service import progress_release_state
 
 _EMPTY_CLIENT_VIEW = {
     "summary": "Your practitioner has not released a progress view yet.",
@@ -40,36 +39,6 @@ def claimed_patients(db: Session, client: User) -> list[Patient]:
         .order_by(Patient.full_name.asc())
         .all()
     )
-
-
-def _active_links_for_patient(db: Session, patient: Patient) -> list[ShareLink]:
-    links = (
-        db.query(ShareLink)
-        .join(ReportVersion, ReportVersion.id == ShareLink.report_version_id)
-        .join(Case, Case.id == ReportVersion.case_id)
-        .filter(
-            ShareLink.is_active.is_(True),
-            Case.patient_id == patient.id,
-            Case.user_id == patient.user_id,
-        )
-        .all()
-    )
-    return [link for link in links if is_share_link_valid(link)]
-
-
-def released_report_scope(db: Session, patient: Patient) -> tuple[bool, list[UUID]]:
-    """Return whether the full trend set is released, and any single-report ids."""
-    longitudinal = False
-    report_ids: list[UUID] = []
-    for link in _active_links_for_patient(db, patient):
-        report = link.report_version
-        report_type = getattr(report, "report_type", None) or ""
-        if (link.share_type or "") == "trend" or report_type == "trend":
-            longitudinal = True
-            continue
-        if link.report_version_id:
-            report_ids.append(link.report_version_id)
-    return longitudinal, report_ids
 
 
 def _project_client_trend(payload: dict) -> dict:
@@ -101,8 +70,7 @@ def _empty_trend() -> dict:
 
 def client_record_payload(db: Session, client: User, patient: Patient) -> dict:
     practitioner = db.query(User).filter(User.id == patient.user_id).first()
-    longitudinal, report_ids = released_report_scope(db, patient)
-    if not longitudinal and not report_ids:
+    if not progress_release_state(db, patient)["released"]:
         trend = _empty_trend()
     else:
         from app.api.routes_patients import get_patient_trends
@@ -111,7 +79,7 @@ def client_record_payload(db: Session, client: User, patient: Patient) -> dict:
             patient_id=patient.id,
             include_archived=False,
             view_mode="client",
-            source_report_ids=[str(item) for item in report_ids] if not longitudinal else None,
+            source_report_ids=None,
             db=db,
             current_user=SimpleNamespace(id=patient.user_id),
         )

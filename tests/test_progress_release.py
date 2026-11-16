@@ -34,8 +34,9 @@ def test_progress_release_is_not_a_share_link():
     assert "ShareLink" not in source
     assert "share_link" not in source
     portal = inspect.getsource(client_record_service)
-    assert "content_release" not in portal
-    assert "ContentRelease" not in portal
+    assert "ShareLink" not in portal
+    assert "share_link" not in portal
+    assert "progress_release_state" in portal
     paths = {route.path for route in routes_content_releases.router.routes}
     assert paths == {"/api/patients/{patient_id}/progress-release"}
     client = User(role="client")
