@@ -24,6 +24,7 @@ from app.services.client_record_service import (
 )
 from app.services.patient_claim_service import claim_access_state, end_claim_access
 from app.services.patient_source_service import client_released_note
+from app.services.wearable_connection_service import connect_wearable, wearable_connection
 
 router = APIRouter(prefix="/api/client", tags=["client-record"])
 
@@ -50,6 +51,18 @@ class ClientEntryCreate(BaseModel):
 
 class ClientEntryReleaseUpdate(BaseModel):
     released: bool
+
+
+class WearableConnect(BaseModel):
+    external_account_ref: str = Field(max_length=255)
+
+    @field_validator("external_account_ref")
+    @classmethod
+    def required_account(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
 
 
 def _require_client(current_user: User) -> User:
@@ -189,6 +202,40 @@ def post_client_entry_release(
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)
     return set_client_entry_release(db, patient, client, record_id, body.released)
+
+
+@router.get("/records/{patient_id}/wearable")
+def get_wearable_connection(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Return whether this claimed client has connected a wearable.
+
+    Handles patient identity. The Open Health Sync user id is included only
+    for this client. Daily summaries are not included.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return wearable_connection(db, patient, client)
+
+
+@router.post("/records/{patient_id}/wearable")
+def post_wearable_connection(
+    patient_id: UUID,
+    body: WearableConnect,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Connect one wearable account for this claimed record.
+
+    Handles patient identity. The Open Health Sync user id is stored on the
+    Wearables shelf. A later connection uses the same shelf. Daily summaries
+    and share links are not created.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return connect_wearable(db, patient, client, body.external_account_ref)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

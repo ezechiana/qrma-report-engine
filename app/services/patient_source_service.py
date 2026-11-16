@@ -145,6 +145,7 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
     """Clinic-facing sources. Note text and marker values stay in this response.
 
     A From the client group is added only when that client has a released entry.
+    The Wearables shelf is left out of this list.
     """
     manual = ensure_manual_source(db, patient)
     laboratory = ensure_laboratory_source(db, patient)
@@ -631,8 +632,8 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
     """Released clinic notes and lab panels, grouped by source name.
 
     A record is included only when it is released and its client summary has text.
-    The list is title and date. Note text, marker values, and entries the client
-    sent to the clinic are not included.
+    The list is title and date. Note text, marker values, entries the client
+    sent to the clinic, and the Wearables shelf are not included.
     """
     rows = (
         db.query(SourceRecord, PatientSource)
