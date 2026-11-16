@@ -21,6 +21,7 @@ from app.services.client_record_service import (
     client_connection_status,
     client_record_payload,
     client_released_report,
+    latest_item_summary,
     require_claimed_patient,
 )
 from app.services.patient_claim_service import claim_access_state, end_claim_access
@@ -207,6 +208,16 @@ def list_client_records(
     Handles patient identity. Practitioner notes and other patients are not included.
     """
     client = _require_client(current_user)
+    from app.services.personal_record_service import personal_record_for
+
+    personal_row = personal_record_for(db, client)
+    personal = None
+    if personal_row is not None:
+        personal = {
+            "patient_id": str(personal_row.id),
+            "full_name": personal_row.full_name,
+            **latest_item_summary(db, personal_row, audience="owner"),
+        }
     rows = []
     for patient in claimed_patients(db, client):
         practitioner = patient.user
@@ -214,8 +225,9 @@ def list_client_records(
             "patient_id": str(patient.id),
             "display_name": patient.full_name,
             "clinic_name": _clinic_name(practitioner),
+            **latest_item_summary(db, patient, audience="client"),
         })
-    return {"records": rows}
+    return {"records": rows, "personal": personal}
 
 
 @router.get("/records/{patient_id}")

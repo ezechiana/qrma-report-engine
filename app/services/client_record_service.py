@@ -102,6 +102,185 @@ def client_connection_status(db: Session, user: User) -> str:
     return "pending" if pending is not None else "none"
 
 
+_ITEM_LABELS = {
+    "manual": "Clinic note",
+    "laboratory": "Lab panel",
+    "wearable": "Wearable day",
+    "client": "From the client",
+}
+
+
+def latest_item_summary(db: Session, patient: Patient, *, audience: str) -> dict:
+    """Newest item type and date for a list card.
+
+    audience is owner, clinic, or client. The result has no title, note text,
+    or lab value.
+    """
+    found = _newest_item(db, patient, audience)
+    if found is None:
+        return {"latest_type": None, "latest_on": None}
+    label, moment = found
+    return {"latest_type": label, "latest_on": moment.date().isoformat()}
+
+
+def _newest_item(db: Session, patient: Patient, audience: str):
+    from datetime import datetime
+
+    from sqlalchemy import inspect
+
+    from app.db.models import Case, ContentRelease, PatientSource, ReportVersion, SourceRecord
+    from app.db.models import ReportStatus
+    from app.services.clinic_association_service import sharing_practitioner_id
+    from app.services.content_release_service import CLINIC_TO_CLIENT
+
+    bind = db.get_bind()
+    has_sources = inspect(bind).has_table("source_records") and inspect(bind).has_table("patient_sources")
+    has_reports = inspect(bind).has_table("report_versions") and inspect(bind).has_table("cases")
+    has_releases = inspect(bind).has_table("content_releases")
+    best: tuple[datetime, str] | None = None
+
+    def consider(moment, label: str) -> None:
+        nonlocal best
+        if moment is None or not label:
+            return
+        if getattr(moment, "tzinfo", None) is not None:
+            moment = moment.replace(tzinfo=None)
+        if best is None or moment > best[0]:
+            best = (moment, label)
+
+    def release_keys(patient_id, practitioner_id, direction: str) -> set[str]:
+        if not has_releases or practitioner_id is None:
+            return set()
+        rows = (
+            db.query(ContentRelease.source_key)
+            .filter(
+                ContentRelease.patient_id == patient_id,
+                ContentRelease.practitioner_user_id == practitioner_id,
+                ContentRelease.direction == direction,
+                ContentRelease.released.is_(True),
+            )
+            .all()
+        )
+        return {row[0] for row in rows}
+
+    def source_key(source_type: str, record_id) -> str:
+        if source_type == "wearable":
+            return f"wearable:{record_id}"
+        if source_type == "client":
+            return f"client:{record_id}"
+        return f"record:{record_id}"
+
+    def scan_sources(patient_id, *, released: set[str] | None, owner_note: bool) -> None:
+        if not has_sources:
+            return
+        rows = (
+            db.query(PatientSource.source_type, SourceRecord.id, SourceRecord.recorded_at)
+            .join(PatientSource, PatientSource.id == SourceRecord.patient_source_id)
+            .filter(
+                SourceRecord.patient_id == patient_id,
+                SourceRecord.is_archived.is_(False),
+            )
+            .all()
+        )
+        for source_type, record_id, recorded_at in rows:
+            if released is not None and source_key(source_type, record_id) not in released:
+                continue
+            label = "Note" if owner_note and source_type == "manual" else _ITEM_LABELS.get(source_type)
+            consider(recorded_at, label or "")
+
+    if audience == "owner":
+        scan_sources(patient.id, released=None, owner_note=True)
+        return best
+
+    if audience == "client":
+        practitioner_id = sharing_practitioner_id(db, patient)
+        if practitioner_id is None:
+            return None
+        scan_sources(
+            patient.id,
+            released=release_keys(patient.id, practitioner_id, CLINIC_TO_CLIENT),
+            owner_note=False,
+        )
+        released_reports = release_keys(patient.id, practitioner_id, CLINIC_TO_CLIENT)
+    else:
+        scan_sources(patient.id, released=None, owner_note=False)
+        released_reports = None
+        _include_released_personal_items(db, patient, consider, has_sources, has_releases)
+
+    if has_reports:
+        reports = (
+            db.query(ReportVersion.id, ReportVersion.generated_at)
+            .join(Case, Case.id == ReportVersion.case_id)
+            .filter(
+                Case.patient_id == patient.id,
+                Case.user_id == patient.user_id,
+                ReportVersion.status == ReportStatus.ready,
+                ReportVersion.is_archived.is_(False),
+                ReportVersion.report_type.in_(("assessment", "trend")),
+            )
+            .all()
+        )
+        for report_id, generated_at in reports:
+            if released_reports is not None and str(report_id) not in released_reports:
+                continue
+            consider(generated_at, "Report")
+    return best
+
+
+def _include_released_personal_items(db, patient: Patient, consider, has_sources: bool, has_releases: bool) -> None:
+    """Released items that live on the linked personal record, type and date only."""
+    if not has_sources or not has_releases:
+        return
+    from app.db.models import ClinicAssociation, ContentRelease, PatientSource, SourceRecord
+    from app.services.clinic_association_service import _association_table
+
+    if not _association_table(db):
+        return
+    link = (
+        db.query(ClinicAssociation.personal_patient_id)
+        .filter(
+            ClinicAssociation.clinic_patient_id == patient.id,
+            ClinicAssociation.status == "active",
+            ClinicAssociation.personal_patient_id.is_not(None),
+            ClinicAssociation.personal_patient_id != patient.id,
+        )
+        .first()
+    )
+    if link is None or link[0] is None:
+        return
+    personal_id = link[0]
+    released = {
+        row[0]
+        for row in db.query(ContentRelease.source_key)
+        .filter(
+            ContentRelease.patient_id == personal_id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.direction == "client_to_clinic",
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    }
+    if not released:
+        return
+    rows = (
+        db.query(PatientSource.source_type, SourceRecord.id, SourceRecord.recorded_at)
+        .join(PatientSource, PatientSource.id == SourceRecord.patient_source_id)
+        .filter(
+            SourceRecord.patient_id == personal_id,
+            SourceRecord.is_archived.is_(False),
+        )
+        .all()
+    )
+    for source_type, record_id, recorded_at in rows:
+        key = f"wearable:{record_id}" if source_type == "wearable" else (
+            f"client:{record_id}" if source_type == "client" else f"record:{record_id}"
+        )
+        if key not in released:
+            continue
+        label = "Note" if source_type == "manual" else _ITEM_LABELS.get(source_type)
+        consider(recorded_at, label or "")
+
+
 def _project_client_trend(payload: dict) -> dict:
     """Keep the fields the shared trend page reads, and leave practitioner controls out."""
     intelligence = payload.get("trend_intelligence") if isinstance(payload.get("trend_intelligence"), dict) else {}

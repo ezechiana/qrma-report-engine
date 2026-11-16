@@ -116,6 +116,9 @@ def test_patient_list_and_create_still_work():
         assert body["case_count"] == 0
         assert body["report_count"] == 0
         assert body["data_sources"] == []
+        assert body["latest_type"] is None
+        assert body["latest_on"] is None
+        assert "notes" not in body
 
         listed = client.get("/api/patients")
         assert listed.status_code == 200

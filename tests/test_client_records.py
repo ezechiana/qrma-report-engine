@@ -226,7 +226,10 @@ def test_signed_in_client_sees_only_the_claimed_client_safe_record(monkeypatch):
                 "patient_id": str(claimed.id),
                 "display_name": "Ada Lovelace",
                 "clinic_name": "North Clinic",
-            }]
+                "latest_type": None,
+                "latest_on": None,
+            }],
+            "personal": None,
         }
         assert "Grace Hopper" not in listed.text
         assert "Private practitioner note" not in listed.text

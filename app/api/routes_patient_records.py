@@ -48,6 +48,9 @@ def _serialise_patient(db: Session, patient: Patient) -> dict:
     last_activity_at = max(activity_candidates) if activity_candidates else None
 
     data_sources = ["QRMA"] if case_count > 0 else []
+    from app.services.client_record_service import latest_item_summary
+
+    latest = latest_item_summary(db, patient, audience="clinic")
 
     return {
         "id": patient.id,
@@ -65,6 +68,8 @@ def _serialise_patient(db: Session, patient: Patient) -> dict:
         "report_count": report_count,
         "last_activity_at": last_activity_at,
         "data_sources": data_sources,
+        "latest_type": latest["latest_type"],
+        "latest_on": latest["latest_on"],
     }
 
 

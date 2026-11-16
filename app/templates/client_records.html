@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "shared/brand_head.html" %}
+    <title>Your records · go360</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        {% include "shared/public_card_styles.html" %}
+        #client-card {
+            width: min(100%, 960px);
+            background: transparent;
+            border: 0;
+            box-shadow: none;
+            padding: 0;
+        }
+        .record-cards {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+        }
+        .record-card {
+            background: #fff;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 16px;
+            min-width: 0;
+        }
+        .record-card h2 { margin: 0 0 6px; font-size: 18px; }
+        .record-card a.card-link { color: inherit; text-decoration: none; display: block; }
+        .record-card .latest { margin: 8px 0 0; }
+        @media (max-width: 900px) {
+            .record-cards { grid-template-columns: 1fr; }
+        }
+        #client-card .quiet-panel {
+            margin-top: 16px;
+            border: 1px solid var(--line);
+            border-radius: 14px;
+            background: #f8fafc;
+            padding: 16px;
+        }
+        #client-card .quiet-panel p { margin: 0 0 8px; }
+        #client-card .quiet-panel p:last-child { margin-bottom: 0; }
+        #client-card .row-actions {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px 16px;
+            align-items: center;
+            margin-top: 4px;
+        }
+        #client-card .text-link,
+        #client-card .text-button {
+            display: inline-flex;
+            align-items: center;
+            min-height: 44px;
+        }
+        #client-card .text-button {
+            border: 0;
+            background: none;
+            padding: 0;
+            color: var(--muted);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        #client-card .text-button:disabled { cursor: default; opacity: 0.6; }
+        #client-card .confirm-copy { margin: 8px 0 0; }
+    </style>
+</head>
+<body>
+<main class="public-page">
+    {% set portal_section = "today" %}
+    {% include "shared/client_portal_header.html" %}
+    <section class="card" id="client-card">
+        <p class="muted">Loading your records…</p>
+    </section>
+</main>
+<script>
+    let card = document.getElementById("client-card");
+    const intro = "Your record, and a clinic record when one is connected.";
+    let records = [];
+    let personal = null;
+    let connection = "none";
+    let confirmingId = null;
+    let closingId = null;
+    let successText = "";
+    let noticeText = "";
+    let closeError = "";
+
+    function add(parent, tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        parent.appendChild(node);
+        return node;
+    }
+
+    function recordName(item) {
+        const name = item && typeof item.display_name === "string" ? item.display_name.trim() : "";
+        return name || "Your record";
+    }
+
+    function recordKey(item) {
+        return item && item.patient_id ? String(item.patient_id) : "";
+    }
+
+    function showLoadError() {
+        card.textContent = "";
+        add(card, "h1", "", "Your records");
+        add(card, "p", "error", "Could not load your records.");
+    }
+
+    function renderEmpty() {
+        const panel = add(card, "div", "quiet-panel");
+        add(panel, "p", "", "You have no records on this account yet.");
+        add(panel, "p", "muted", "When a clinic invites you and you claim a record, it will appear here.");
+    }
+
+    function connectionWord() {
+        if (connection === "connected") return "Connected";
+        if (connection === "pending") return "Pending";
+        return "No clinic";
+    }
+
+    function latestLine(item) {
+        const type = item && typeof item.latest_type === "string" ? item.latest_type.trim() : "";
+        const when = item && typeof item.latest_on === "string" ? item.latest_on.trim() : "";
+        if (!type) return "Nothing here yet";
+        if (!when) return type;
+        const date = new Date(when + "T00:00:00");
+        const label = Number.isNaN(date.getTime())
+            ? when
+            : date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+        return type + " · " + label;
+    }
+
+    function renderCard(title, status, item, href) {
+        const tile = add(card, "article", "record-card");
+        const body = href ? add(tile, "a", "card-link") : add(tile, "div", "");
+        if (href) body.href = href;
+        add(body, "h2", "", title);
+        add(body, "p", "muted", status);
+        add(body, "p", "latest", latestLine(item));
+        return tile;
+    }
+
+    function renderRow(item) {
+        const key = recordKey(item);
+        const name = recordName(item);
+        const clinic = item && typeof item.clinic_name === "string" ? item.clinic_name.trim() : "";
+        const status = clinic ? "Connected · " + clinic : "Connected";
+        const row = renderCard(name, status, item, key ? "/client/records/" + encodeURIComponent(key) : "");
+
+        const confirming = confirmingId && confirmingId === key;
+        if (confirming) {
+            if (closeError) add(row, "p", "error", closeError);
+            add(row, "p", "confirm-copy", "Close your access to " + name + "?");
+            add(row, "p", "muted confirm-copy", "You will no longer be able to open this record here. Your clinic keeps the record.");
+            const actions = add(row, "div", "row-actions");
+            const closing = closingId === key;
+            const closeBtn = add(actions, "button", "text-button", closing ? "Closing…" : "Close access");
+            closeBtn.type = "button";
+            closeBtn.disabled = closing;
+            closeBtn.addEventListener("click", () => closeAccess(item));
+            const keepBtn = add(actions, "button", "text-button", "Keep access");
+            keepBtn.type = "button";
+            keepBtn.disabled = closing;
+            keepBtn.addEventListener("click", () => {
+                if (closingId) return;
+                confirmingId = null;
+                closeError = "";
+                render();
+            });
+            return;
+        }
+
+        if (!key) return;
+        const actions = add(row, "div", "row-actions");
+        const closeBtn = add(actions, "button", "text-button", "Close access");
+        closeBtn.type = "button";
+        closeBtn.addEventListener("click", () => {
+            if (closingId) return;
+            confirmingId = key;
+            closeError = "";
+            render();
+        });
+    }
+
+    function render() {
+        card.textContent = "";
+        add(card, "h1", "", "Today");
+        add(card, "p", "muted", intro);
+        if (successText) add(card, "div", "success", successText);
+        if (noticeText) add(card, "p", "muted", noticeText);
+        const personalId = personal && personal.patient_id ? String(personal.patient_id) : "";
+        const sameRecord = personalId ? records.find((item) => recordKey(item) === personalId) : null;
+        const clinics = records.filter((item) => recordKey(item) && recordKey(item) !== personalId);
+        if (!personal && !clinics.length) {
+            renderEmpty();
+            return;
+        }
+        const grid = add(card, "div", "record-cards");
+        const previous = card;
+        if (personal) {
+            card = grid;
+            const personalName = personal.full_name && String(personal.full_name).trim()
+                ? String(personal.full_name).trim()
+                : "Your record";
+            const clinicName = sameRecord && typeof sameRecord.clinic_name === "string" ? sameRecord.clinic_name.trim() : "";
+            const status = sameRecord ? (clinicName ? "Connected · " + clinicName : "Connected") : connectionWord();
+            const shown = sameRecord && sameRecord.latest_on && (!personal.latest_on || sameRecord.latest_on > personal.latest_on)
+                ? sameRecord
+                : personal;
+            renderCard(
+                personalName,
+                status,
+                shown,
+                "/client/records/" + encodeURIComponent(personalId)
+            );
+            card = previous;
+        }
+        if (!clinics.length && personal && !sameRecord) {
+            add(card, "p", "muted", "Your record is ready.");
+        }
+        clinics.forEach((item) => {
+            card = grid;
+            renderRow(item);
+            card = previous;
+        });
+    }
+
+    async function closeAccess(item) {
+        const key = recordKey(item);
+        if (!key || closingId) return;
+        closingId = key;
+        closeError = "";
+        render();
+        try {
+            const response = await fetch("/api/client/records/" + encodeURIComponent(key) + "/close-access", {
+                method: "POST",
+                credentials: "same-origin",
+            });
+            if (response.ok) {
+                records = records.filter((row) => recordKey(row) !== key);
+                confirmingId = null;
+                closingId = null;
+                successText = "Access closed for " + recordName(item) + ".";
+                noticeText = "";
+                render();
+                return;
+            }
+            if (response.status === 404 || response.status === 409) {
+                records = records.filter((row) => recordKey(row) !== key);
+                confirmingId = null;
+                closingId = null;
+                successText = "";
+                noticeText = "This record is no longer on your account.";
+                render();
+                return;
+            }
+            closingId = null;
+            closeError = "Access could not be closed. Try again.";
+            render();
+        } catch (err) {
+            closingId = null;
+            closeError = "Access could not be closed. Try again.";
+            render();
+        }
+    }
+
+    async function requireClient() {
+        const response = await fetch("/auth/me", { credentials: "same-origin" });
+        if (response.status === 401) {
+            window.location.href = "/login";
+            return null;
+        }
+        if (!response.ok) {
+            showLoadError();
+            return null;
+        }
+        const data = await response.json().catch(() => ({}));
+        const user = data.user || {};
+        const role = String(user.role || "").toLowerCase();
+        if (role === "client" && !user.email_verified_at) {
+            window.location.href = "/login";
+            return null;
+        }
+        return user;
+    }
+
+    async function loadRecords() {
+        const user = await requireClient();
+        if (!user) return;
+        try {
+            const [response, connectionResponse] = await Promise.all([
+                fetch("/api/client/records", { credentials: "same-origin" }),
+                fetch("/api/client/connection", { credentials: "same-origin" }),
+            ]);
+            const data = await response.json().catch(() => ({}));
+            const connectionData = await connectionResponse.json().catch(() => ({}));
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (response.status === 403) {
+                const detail = String(data.detail || "");
+                window.location.href = detail.toLowerCase().includes("verify") ? "/login" : "/app";
+                return;
+            }
+            if (!response.ok) {
+                showLoadError();
+                return;
+            }
+            records = Array.isArray(data.records) ? data.records : [];
+            personal = data.personal && typeof data.personal === "object" ? data.personal : null;
+            connection = typeof connectionData.status === "string" ? connectionData.status : "none";
+            render();
+        } catch (err) {
+            showLoadError();
+        }
+    }
+
+    loadRecords();
+</script>
+</body>
+</html>
