@@ -61,6 +61,10 @@ def test_clinic_note_routes_stay_off_the_client_portal():
     assert "Clinic notes" in page
     assert "Lab results" in page
     assert "Save panel" in page
+    assert "Collection date" in page
+    assert "Reference range" in page
+    assert "lab-marker-remove" in page
+    assert "lab-marker-table" in page
     assert "lab-panel-edit" in page
     assert "Editing this panel." in page
     assert "lab-panel-release" in page

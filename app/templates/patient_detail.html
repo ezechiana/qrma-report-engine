@@ -245,7 +245,15 @@ button.link {
     background: #fff;
 }
 .clinic-note p { margin: 6px 0 0; white-space: pre-wrap; }
-.lab-marker { display: grid; gap: 8px; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); margin-bottom: 12px; }
+.lab-marker { display: grid; gap: 8px; margin-bottom: 12px; }
+.lab-marker label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.lab-marker-remove { align-self: end; color: var(--muted); }
+.lab-marker-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.lab-marker-table th, .lab-marker-table td { text-align: left; padding: 4px 10px 4px 0; vertical-align: top; }
+.lab-marker-table th { font-size: 12px; font-weight: 600; color: var(--muted); }
+@media (min-width: 960px) {
+    .lab-marker { grid-template-columns: 1.3fr 1fr 0.7fr 0.8fr 0.8fr 1fr 1fr auto; align-items: end; }
+}
 .clinic-note-release-state { margin-top: 8px; }
 .clinic-note-release-state .report-type-pill + div .btn { margin-top: 6px; }
 .modal-backdrop {
@@ -632,7 +640,7 @@ button.link {
                 <input id="lab-panel-title" maxlength="255" required>
             </div>
             <div class="field">
-                <label for="lab-panel-date">Date</label>
+                <label for="lab-panel-date">Collection date</label>
                 <input id="lab-panel-date" type="date" required>
             </div>
             <div class="field">
@@ -2155,21 +2163,32 @@ button.link {
         const row = document.createElement("div");
         row.className = "lab-marker";
         row.innerHTML = `
-            <input class="lab-marker-name" maxlength="255" placeholder="Marker" aria-label="Marker name">
-            <input class="lab-marker-value" maxlength="255" placeholder="Value" aria-label="Marker value">
-            <input class="lab-marker-unit" maxlength="40" placeholder="Unit" aria-label="Unit">
-            <input class="lab-marker-low" inputmode="decimal" placeholder="Range low" aria-label="Reference low">
-            <input class="lab-marker-high" inputmode="decimal" placeholder="Range high" aria-label="Reference high">
-            <input class="lab-marker-range" maxlength="255" placeholder="Range text" aria-label="Reference text">
-            <select class="lab-marker-interpretation" aria-label="Interpretation">
-                <option value="">Interpretation</option>
-                <option value="normal">Normal</option>
-                <option value="low">Low</option>
-                <option value="high">High</option>
-                <option value="abnormal">Abnormal</option>
-            </select>
+            <label>Marker <input class="lab-marker-name" maxlength="255"></label>
+            <label>Value <input class="lab-marker-value" maxlength="255"></label>
+            <label>Unit <input class="lab-marker-unit" maxlength="40"></label>
+            <label>Range low <input class="lab-marker-low" inputmode="decimal"></label>
+            <label>Range high <input class="lab-marker-high" inputmode="decimal"></label>
+            <label>Range text <input class="lab-marker-range" maxlength="255"></label>
+            <label>Interpretation
+                <select class="lab-marker-interpretation">
+                    <option value="">Interpretation</option>
+                    <option value="normal">Normal</option>
+                    <option value="low">Low</option>
+                    <option value="high">High</option>
+                    <option value="abnormal">Abnormal</option>
+                </select>
+            </label>
+            <button class="link lab-marker-remove" type="button" hidden>Remove</button>
         `;
         return row;
+    }
+
+    function syncLabMarkerRemove() {
+        const rows = Array.from(document.querySelectorAll("#lab-marker-rows .lab-marker"));
+        rows.forEach(row => {
+            const button = row.querySelector(".lab-marker-remove");
+            if (button) button.hidden = rows.length < 2;
+        });
     }
 
     function resetLabMarkers() {
@@ -2177,6 +2196,7 @@ button.link {
         if (!host) return;
         host.textContent = "";
         host.appendChild(labMarkerFields());
+        syncLabMarkerRemove();
     }
 
     function labPanelSaveLabel() {
@@ -2237,6 +2257,29 @@ button.link {
         return `<div class="clinic-note-release-state">${status}<div>${button}</div></div>`;
     }
 
+    function labInterpretationLabel(value) {
+        const labels = { normal: "Normal", low: "Low", high: "High", abnormal: "Abnormal" };
+        return labels[String(value || "")] || "";
+    }
+
+    function labRangeLabel(marker) {
+        const text = String(marker.reference_text || "").trim();
+        if (text) return text;
+        const low = marker.reference_low !== null && marker.reference_low !== undefined ? String(marker.reference_low) : "";
+        const high = marker.reference_high !== null && marker.reference_high !== undefined ? String(marker.reference_high) : "";
+        if (low && high) return `${low}–${high}`;
+        return low || high;
+    }
+
+    function labMarkerTable(observations) {
+        const rows = (Array.isArray(observations) ? observations : []).map(marker => {
+            const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
+            return `<tr><td>${safeText(marker.name)}</td><td>${safeText(value)}</td><td>${safeText(marker.unit || "")}</td><td>${safeText(labRangeLabel(marker))}</td><td>${safeText(labInterpretationLabel(marker.interpretation))}</td></tr>`;
+        }).join("");
+        if (!rows) return "";
+        return `<table class="lab-marker-table"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Reference range</th><th>Interpretation</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
     function renderLabPanels(records) {
         const body = document.getElementById("lab-panels-body");
         if (!body) return;
@@ -2247,16 +2290,6 @@ button.link {
             return;
         }
         body.innerHTML = panels.map(item => {
-            const markers = (Array.isArray(item.observations) ? item.observations : []).map(marker => {
-                const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
-                const unit = marker.unit ? ` ${marker.unit}` : "";
-                const numericRange = marker.reference_low !== null && marker.reference_low !== undefined && marker.reference_high !== null && marker.reference_high !== undefined
-                    ? `${marker.reference_low}–${marker.reference_high}`
-                    : "";
-                const range = marker.reference_text || numericRange;
-                const rangeText = range ? ` (${range})` : "";
-                return `<div>${safeText(marker.name)} ${safeText(value)}${safeText(unit)}${safeText(rangeText)}</div>`;
-            }).join("");
             const summary = item.client_summary
                 ? safeText(item.client_summary)
                 : `<span class="muted">No client summary yet.</span>`;
@@ -2268,7 +2301,7 @@ button.link {
                     <div class="muted">${safeText(item.recorded_on || "")}</div>
                     ${specimen}
                     ${laboratoryName}
-                    ${markers}
+                    ${labMarkerTable(item.observations)}
                     <p><span class="muted">Client summary:</span> ${summary}</p>
                     ${labPanelReleaseControls(item)}
                     <div class="btn-row" style="margin-top:8px;">
@@ -2297,6 +2330,7 @@ button.link {
                 fillLabMarker(row, marker);
                 host.appendChild(row);
             });
+            syncLabMarkerRemove();
         }
         const editing = document.getElementById("lab-panel-editing");
         const cancel = document.getElementById("lab-panel-cancel");
@@ -2394,12 +2428,15 @@ button.link {
 
     async function loadClinicNotes() {
         const body = document.getElementById("clinic-notes-body");
+        const labBody = document.getElementById("lab-panels-body");
         if (body) body.innerHTML = `<div class="muted">Loading clinic notes…</div>`;
+        if (labBody) labBody.innerHTML = `<div class="muted">Loading lab results…</div>`;
         try {
             const response = await apiFetch(`/api/patients/${patientId}/sources`);
             const data = await response.json().catch(() => ({}));
             if (!response.ok) {
                 if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
+                if (labBody) labBody.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
                 showPatientError(typeof data.detail === "string" ? data.detail : "Could not load clinic notes.");
                 return;
             }
@@ -2415,6 +2452,7 @@ button.link {
         } catch (err) {
             console.error(err);
             if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
+            if (labBody) labBody.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
             showPatientError("Unexpected error while loading clinic notes.");
         }
     }
@@ -2880,6 +2918,18 @@ button.link {
         labAddMarker.addEventListener("click", () => {
             const host = document.getElementById("lab-marker-rows");
             if (host) host.appendChild(labMarkerFields());
+            syncLabMarkerRemove();
+        });
+    }
+    const labMarkerRows = document.getElementById("lab-marker-rows");
+    if (labMarkerRows) {
+        labMarkerRows.addEventListener("click", (event) => {
+            const button = event.target && event.target.closest ? event.target.closest(".lab-marker-remove") : null;
+            if (!button) return;
+            if (labMarkerRows.querySelectorAll(".lab-marker").length < 2) return;
+            const row = button.closest(".lab-marker");
+            if (row) row.remove();
+            syncLabMarkerRemove();
         });
     }
     const labPanelCancel = document.getElementById("lab-panel-cancel");
