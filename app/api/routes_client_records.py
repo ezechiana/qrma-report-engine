@@ -4,7 +4,7 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, ConfigDict, Field, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
@@ -23,6 +23,14 @@ from app.services.client_record_service import (
     require_claimed_patient,
 )
 from app.services.patient_claim_service import claim_access_state, end_claim_access
+from app.services.personal_record_service import open_unclaimed_personal_record
+from app.services.personal_source_service import (
+    add_personal_lab,
+    add_personal_note,
+    list_personal_labs,
+    list_personal_notes,
+    refuse_personal_share,
+)
 from app.services.patient_source_service import client_released_note
 from app.services.wearable_connection_service import (
     connect_wearable,
@@ -100,6 +108,67 @@ class WearableDaySync(BaseModel):
 
 
 class WearableDayReleaseUpdate(BaseModel):
+    released: bool
+
+
+class PersonalNoteCreate(BaseModel):
+    title: str = Field(max_length=255)
+    recorded_on: date
+    text: str = Field(max_length=20000)
+
+    @field_validator("title", "text")
+    @classmethod
+    def required_personal_text(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
+
+
+class PersonalLabMarker(BaseModel):
+    name: str = Field(max_length=255)
+    value_text: str | None = Field(default=None, max_length=255)
+    value_numeric: float | None = None
+    unit: str | None = Field(default=None, max_length=40)
+
+    @field_validator("name")
+    @classmethod
+    def required_marker_name(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("A marker name is required.")
+        return cleaned
+
+    @field_validator("value_text", "unit")
+    @classmethod
+    def clean_marker_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+    @model_validator(mode="after")
+    def marker_has_a_value(self):
+        if self.value_numeric is None and not self.value_text:
+            raise ValueError("A marker needs a value.")
+        return self
+
+
+class PersonalLabCreate(BaseModel):
+    title: str = Field(max_length=255)
+    recorded_on: date
+    observations: list[PersonalLabMarker] = Field(min_length=1, max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def required_lab_title(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
+
+
+class PersonalReleaseUpdate(BaseModel):
     released: bool
 
 
@@ -325,6 +394,108 @@ def post_wearable_day_release(
     """
     patient = open_wearable_record(db, current_user, patient_id)
     return set_wearable_day_release(db, patient, current_user, record_id, body.released)
+
+
+@router.get("/records/{patient_id}/notes")
+def get_personal_notes(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List notes this person saved on their personal record.
+
+    Handles patient identity and note text. Each note is unshared. Another
+    person's notes are not included.
+    """
+    patient = open_unclaimed_personal_record(db, current_user, patient_id)
+    return list_personal_notes(db, patient, current_user)
+
+
+@router.post("/records/{patient_id}/notes")
+def post_personal_note(
+    patient_id: UUID,
+    body: PersonalNoteCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save a note on this personal record. It is not shared with a clinic."""
+    patient = open_unclaimed_personal_record(db, current_user, patient_id)
+    return add_personal_note(
+        db,
+        patient,
+        current_user,
+        title=body.title,
+        recorded_on=body.recorded_on,
+        text=body.text,
+    )
+
+
+@router.post("/records/{patient_id}/notes/{record_id}/release")
+def post_personal_note_release(
+    patient_id: UUID,
+    record_id: UUID,
+    body: PersonalReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Refuse to share a personal note while no clinic is connected.
+
+    Handles patient identity. The note text is not returned.
+    """
+    patient = open_unclaimed_personal_record(db, current_user, patient_id)
+    refuse_personal_share(db, patient, current_user, record_id)
+
+
+@router.get("/records/{patient_id}/labs")
+def get_personal_labs(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List lab panels this person saved, including the values they entered.
+
+    Handles patient identity and marker values. Each panel is unshared.
+    """
+    patient = open_unclaimed_personal_record(db, current_user, patient_id)
+    return list_personal_labs(db, patient, current_user)
+
+
+@router.post("/records/{patient_id}/labs")
+def post_personal_lab(
+    patient_id: UUID,
+    body: PersonalLabCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save a lab panel on this personal record. It is not shared with a clinic.
+
+    Handles patient identity and marker values.
+    """
+    patient = open_unclaimed_personal_record(db, current_user, patient_id)
+    return add_personal_lab(
+        db,
+        patient,
+        current_user,
+        title=body.title,
+        recorded_on=body.recorded_on,
+        observations=[item.model_dump() for item in body.observations],
+    )
+
+
+@router.post("/records/{patient_id}/labs/{record_id}/release")
+def post_personal_lab_release(
+    patient_id: UUID,
+    record_id: UUID,
+    body: PersonalReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Refuse to share a personal lab panel while no clinic is connected.
+
+    Handles patient identity. Marker values are not returned.
+    """
+    patient = open_unclaimed_personal_record(db, current_user, patient_id)
+    refuse_personal_share(db, patient, current_user, record_id)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

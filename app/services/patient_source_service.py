@@ -129,6 +129,13 @@ def ensure_laboratory_source(db: Session, patient: Patient) -> PatientSource:
     return source
 
 
+def _records_for_clinic(patient: Patient, records: list[SourceRecord]) -> list[SourceRecord]:
+    """Keep a personal record's notes and labs off the clinic source list."""
+    if patient.subject_user_id is not None and patient.claimed_by_user_id is None:
+        return []
+    return records
+
+
 def _source_records(db: Session, patient: Patient, source: PatientSource) -> list[SourceRecord]:
     return (
         db.query(SourceRecord)
@@ -147,12 +154,13 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
 
     A From the client group is added only when that client has a released entry.
     A Wearables group is added only when a wearable day is currently released.
+    Notes and lab panels on an unclaimed personal record are omitted.
     """
     manual = ensure_manual_source(db, patient)
     laboratory = ensure_laboratory_source(db, patient)
     payloads = []
     for source in (manual, laboratory):
-        records = _source_records(db, patient, source)
+        records = _records_for_clinic(patient, _source_records(db, patient, source))
         released_keys = _released_record_keys(db, patient, records)
         if source.source_type == LABORATORY:
             payloads.append(_lab_source_payload(db, source, records, released_keys))

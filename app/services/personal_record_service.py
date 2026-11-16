@@ -7,6 +7,9 @@ create a share link or a content release.
 
 from __future__ import annotations
 
+from uuid import UUID
+
+from fastapi import HTTPException
 from sqlalchemy import or_
 from sqlalchemy.orm import Session
 
@@ -71,3 +74,26 @@ def ensure_personal_record(db: Session, user: User, *, commit: bool = True) -> P
     else:
         db.flush()
     return patient
+
+
+def open_unclaimed_personal_record(db: Session, user: User, patient_id: UUID) -> Patient:
+    """Open this person's record when no clinic has claimed it.
+
+    A verified subject may open it. Another practitioner is refused before the
+    response can show whether a different person's record exists.
+    """
+    if not user.email_verified_at:
+        raise HTTPException(
+            status_code=403,
+            detail="Verify your email before opening your record.",
+        )
+    patient = db.query(Patient).filter(Patient.id == patient_id).first()
+    if (
+        patient is not None
+        and patient.subject_user_id == user.id
+        and patient.claimed_by_user_id is None
+    ):
+        return patient
+    if str(getattr(user, "role", "") or "").lower() != "client":
+        raise HTTPException(status_code=403, detail="Client account required.")
+    raise HTTPException(status_code=404, detail="Record not found")
