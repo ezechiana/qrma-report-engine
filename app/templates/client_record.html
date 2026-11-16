@@ -6,32 +6,184 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <style>
         {% include "shared/public_card_styles.html" %}
-        #record-card { width: min(100%, 640px); }
-        #record-card .quiet-panel {
-            margin-top: 16px;
-            border: 1px solid var(--line);
-            border-radius: 14px;
-            background: #f8fafc;
-            padding: 16px;
+        .portal-bar,
+        #record-shell { width: min(100%, 960px); }
+        #record-shell { display: flex; flex-direction: column; }
+        #record-shell .card { width: 100%; border-radius: 16px; box-shadow: none; }
+        #record-shell h1 { font-size: 28px; }
+        .snapshot-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 12px;
         }
-        #record-card .quiet-panel p { margin: 0 0 8px; }
-        #record-card .quiet-panel p:last-child { margin-bottom: 0; }
-        #record-card article strong { display: block; margin: 2px 0; }
-        #record-card .report-list { display: grid; gap: 8px; margin-top: 8px; }
-        #record-card .report-list a { min-height: 44px; display: flex; align-items: center; }
-        #record-card .note-item { display: grid; gap: 2px; }
+        .snapshot-tile {
+            display: block;
+            width: 100%;
+            text-align: left;
+            background: #fff;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 16px;
+            cursor: pointer;
+            color: inherit;
+            font: inherit;
+        }
+        .snapshot-tile:hover { border-color: #bfdbfe; }
+        .snapshot-label {
+            font-size: 12px;
+            font-weight: 700;
+            letter-spacing: .03em;
+            text-transform: uppercase;
+            color: #64748b;
+            margin-bottom: 8px;
+        }
+        .snapshot-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+        .snapshot-meta { color: #64748b; font-size: 13px; margin-top: 4px; }
+        .snapshot-chart { width: 100%; height: 120px; display: block; margin-top: 8px; }
+        .snapshot-more { display: none; margin-bottom: 12px; width: auto; }
+        .section-chips {
+            position: sticky;
+            top: 0;
+            z-index: 30;
+            display: flex;
+            gap: 8px;
+            overflow-x: auto;
+            padding: 8px 0 12px;
+            background: #f7faf8;
+        }
+        .section-chip {
+            border: 1px solid #dbe7f3;
+            background: #fff;
+            border-radius: 999px;
+            padding: 7px 12px;
+            font-weight: 700;
+            color: #475569;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .section-chip.is-active {
+            background: #dbeafe;
+            color: #1e3a8a;
+            border-color: #93c5fd;
+        }
+        .patient-section { display: none; }
+        .patient-section.is-open { display: block; }
+        .status-chip {
+            display: inline-flex;
+            border-radius: 999px;
+            padding: 3px 8px;
+            font-size: 11px;
+            font-weight: 800;
+            border: 1px solid #e5e7eb;
+            background: #f8fafc;
+            color: #334155;
+        }
+        .status-chip.is-shared {
+            background: #ecfdf5;
+            color: #065f46;
+            border-color: #bbf7d0;
+        }
+        .record-list { display: grid; gap: 8px; }
+        .record-list a { min-height: 44px; display: inline-flex; align-items: center; }
+        .day-bars { display: flex; align-items: flex-end; gap: 8px; height: 72px; margin-top: 10px; }
+        .day-bar { flex: 1; min-height: 4px; border-radius: 8px 8px 4px 4px; background: #1d4ed8; }
+        .release-btn {
+            border: 1px solid var(--line);
+            background: #fff;
+            color: var(--green);
+            border-radius: 10px;
+            padding: 8px 12px;
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+        .release-btn:disabled { opacity: 0.6; cursor: default; }
+        @media (max-width: 900px) {
+            .snapshot-grid { grid-template-columns: 1fr; }
+        }
+        @media (max-width: 760px) {
+            .snapshot-tile.is-extra { display: none; }
+            .snapshot-grid.is-expanded .snapshot-tile.is-extra { display: block; }
+            .snapshot-more { display: inline-flex; }
+            .release-btn { width: 100%; min-height: 44px; }
+        }
     </style>
 </head>
 <body>
 <main class="public-page">
     {% set portal_section = "records" %}
     {% include "shared/client_portal_header.html" %}
-    <section class="card" id="record-card">
-        <p class="muted">Loading your record…</p>
-    </section>
+    <div id="record-shell">
+        <p id="record-error" class="error" hidden></p>
+        <p id="record-success" class="success" hidden></p>
+        <section class="card">
+            <h1 id="record-name">Loading your record…</h1>
+            <p id="record-meta" class="muted"></p>
+        </section>
+        <div class="snapshot-grid" id="snapshot-grid">
+            <button class="snapshot-tile" type="button" data-open="today">
+                <div class="snapshot-label">Today</div>
+                <div id="snapshot-today">Loading…</div>
+            </button>
+            <button class="snapshot-tile is-extra" type="button" data-open="clinic">
+                <div class="snapshot-label">From your clinic</div>
+                <div id="snapshot-clinic">Loading…</div>
+            </button>
+            <button class="snapshot-tile is-extra" type="button" data-open="notes">
+                <div class="snapshot-label">Your notes</div>
+                <div id="snapshot-notes">Loading…</div>
+            </button>
+            <button class="snapshot-tile is-extra" type="button" data-open="labs">
+                <div class="snapshot-label">Your labs</div>
+                <div id="snapshot-labs">Loading…</div>
+            </button>
+            <button class="snapshot-tile" type="button" data-open="progress">
+                <div class="snapshot-label">Progress</div>
+                <div id="snapshot-progress">Loading…</div>
+            </button>
+            <button class="snapshot-tile" type="button" data-open="reports">
+                <div class="snapshot-label">Reports</div>
+                <div id="snapshot-reports">Loading…</div>
+            </button>
+        </div>
+        <button class="secondary-btn snapshot-more" type="button" id="snapshot-more" aria-expanded="false">More on this record</button>
+        <div class="section-chips" id="section-chips" role="tablist" aria-label="Record sections">
+            <button class="section-chip is-active" type="button" role="tab" aria-selected="true" data-section="today">Today</button>
+            <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="clinic">From your clinic</button>
+            <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="notes">Notes</button>
+            <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="labs">Labs</button>
+            <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="progress">Progress</button>
+            <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="reports">Reports</button>
+        </div>
+        <section class="card patient-section is-open" data-section="today" id="section-today"></section>
+        <section class="card patient-section" data-section="clinic" id="section-clinic"></section>
+        <section class="card patient-section" data-section="notes" id="section-notes"></section>
+        <section class="card patient-section" data-section="labs" id="section-labs"></section>
+        <section class="card patient-section" data-section="progress" id="section-progress"></section>
+        <section class="card patient-section" data-section="reports" id="section-reports">
+            <h2>Assessment reports</h2>
+            <div id="assessment-reports" class="record-list"></div>
+            <h2>Trend reports</h2>
+            <div id="trend-reports" class="record-list"></div>
+        </section>
+    </div>
 </main>
 <script>
-    const card = document.getElementById("record-card");
+    const EMPTY_SUMMARY = "Your practitioner has not released a progress view yet.";
+    const pageId = recordId();
+    let personalId = "";
+    let shelfId = "";
+    let clinic = null;
+    let clinicOpen = false;
+    let notes = [];
+    let labs = [];
+    let days = [];
+    let wearableConnected = false;
+    let notesError = false;
+    let labsError = false;
+    let wearableError = false;
+    let busyKey = "";
 
     function recordId() {
         const parts = window.location.pathname.split("/").filter(Boolean);
@@ -43,6 +195,11 @@
         }
     }
 
+    function textOf(value) {
+        if (typeof value !== "string") return "";
+        return value.trim();
+    }
+
     function add(parent, tag, className, text) {
         const node = document.createElement(tag);
         if (className) node.className = className;
@@ -51,130 +208,548 @@
         return node;
     }
 
-    function showMessage(text, isError) {
-        card.textContent = "";
-        add(card, "p", isError ? "error" : "muted", text);
+    function clearNode(node) {
+        if (node) node.textContent = "";
     }
 
-    const EMPTY_SUMMARY = "Your practitioner has not released a progress view yet.";
-
-    function textOf(value) {
-        if (typeof value !== "string") return "";
-        return value.trim();
+    function showError(text) {
+        const box = document.getElementById("record-error");
+        box.hidden = !text;
+        box.textContent = text || "";
     }
 
-    function renderHeader(name, clinic) {
-        card.textContent = "";
-        add(card, "h1", "", name || "Your record");
-        if (clinic) add(card, "p", "muted", clinic);
+    function showSuccess(text) {
+        const box = document.getElementById("record-success");
+        box.hidden = !text;
+        box.textContent = text || "";
     }
 
-    function renderSection(title, rows) {
-        if (!rows.length) return;
-        add(card, "h2", "", title);
-        const stack = add(card, "div", "stack");
-        rows.forEach((row) => {
-            const article = add(stack, "article");
-            if (row.label) add(article, "div", "muted", row.label);
-            if (row.value) add(article, "strong", "", row.value);
-            if (row.detail) add(article, "p", "muted", row.detail);
+    function chip(parent, text, shared) {
+        add(parent, "span", shared ? "status-chip is-shared" : "status-chip", text);
+    }
+
+    function newest(items) {
+        const rows = Array.isArray(items) ? items.slice() : [];
+        rows.sort((a, b) => String((b && b.recorded_on) || "").localeCompare(String((a && a.recorded_on) || "")));
+        return rows[0] || null;
+    }
+
+    function markerValue(marker) {
+        const numeric = marker["value_" + "numeric"];
+        if (numeric !== null && numeric !== undefined && numeric !== "") return String(numeric);
+        return textOf(marker["value_" + "text"]);
+    }
+
+    function metricText(day, key, label) {
+        const metric = day && day[key];
+        if (!metric || metric.value === null || metric.value === undefined || metric.value === "") return "";
+        const unit = metric.unit ? " " + metric.unit : "";
+        return label + " " + metric.value + unit;
+    }
+
+    function openSection(name, scroll) {
+        document.querySelectorAll(".patient-section").forEach((section) => {
+            section.classList.toggle("is-open", section.dataset.section === name);
+        });
+        document.querySelectorAll(".section-chip").forEach((button) => {
+            const selected = button.dataset.section === name;
+            button.classList.toggle("is-active", selected);
+            button.setAttribute("aria-selected", selected ? "true" : "false");
+        });
+        if (!scroll) return;
+        const section = document.querySelector('.patient-section[data-section="' + name + '"]');
+        if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function fillTile(id, lines) {
+        const node = document.getElementById(id);
+        clearNode(node);
+        lines.forEach((line) => {
+            if (line.node) {
+                node.appendChild(line.node);
+                return;
+            }
+            add(node, "div", line.className || "snapshot-meta", line.text || "");
         });
     }
 
-    function renderReportList(title, rows) {
-        const items = (Array.isArray(rows) ? rows : []).filter((item) => textOf(item && item.label) && textOf(item && item.report_id));
-        if (!items.length) return;
-        add(card, "h2", "", title);
-        const list = add(card, "div", "report-list");
-        items.forEach((item) => {
-            const link = add(list, "a", "text-link", textOf(item.label));
-            link.href = "/client/records/" + encodeURIComponent(recordId()) + "/reports/" + encodeURIComponent(textOf(item.report_id));
-        });
+    function lineChart(points) {
+        const values = (points || []).map((point) => Number(point && point.value)).filter((value) => !Number.isNaN(value));
+        if (values.length < 2) return null;
+        const width = 320;
+        const height = 120;
+        const pad = 8;
+        let min = Math.min.apply(null, values);
+        let max = Math.max.apply(null, values);
+        if (min === max) {
+            min -= 1;
+            max += 1;
+        }
+        const coords = values.map((value, index) => {
+            const x = pad + (index / (values.length - 1)) * (width - pad * 2);
+            const y = pad + (1 - ((value - min) / (max - min))) * (height - pad * 2);
+            return x.toFixed(1) + "," + y.toFixed(1);
+        }).join(" ");
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("class", "snapshot-chart");
+        svg.setAttribute("viewBox", "0 0 " + width + " " + height);
+        svg.setAttribute("role", "img");
+        svg.setAttribute("aria-label", "Health Index");
+        const shape = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        shape.setAttribute("points", coords);
+        shape.setAttribute("fill", "none");
+        shape.setAttribute("stroke", "#1d4ed8");
+        shape.setAttribute("stroke-width", "2");
+        svg.appendChild(shape);
+        return svg;
     }
 
-    function renderReports(data) {
-        const reports = data.reports || {};
-        renderReportList("Assessment reports", reports.assessment_reports);
-        renderReportList("Trend reports", reports.trend_reports);
+    function progressReleased() {
+        const view = clinic && clinic.trend && clinic.trend.client_view;
+        const summary = textOf(view && view.summary);
+        return !!clinicOpen && !!summary && summary !== EMPTY_SUMMARY;
     }
 
-    function renderSources(data) {
-        const sources = Array.isArray(data.sources) ? data.sources : [];
+    function clinicItems() {
+        const items = [];
+        const sources = clinic && Array.isArray(clinic.sources) ? clinic.sources : [];
         sources.forEach((source) => {
-            const name = textOf(source && source.display_name);
-            const items = (Array.isArray(source && source.records) ? source.records : []).filter((item) => {
-                return textOf(item && item.title) && textOf(item && item.record_id);
-            });
-            if (!name || !items.length) return;
-            add(card, "h2", "", name);
-            const list = add(card, "div", "report-list");
-            items.forEach((item) => {
-                const entry = add(list, "div", "note-item");
-                const link = add(entry, "a", "text-link", textOf(item.title));
-                link.href = "/client/records/" + encodeURIComponent(recordId()) + "/notes/" + encodeURIComponent(textOf(item.record_id));
-                const when = textOf(item.recorded_on);
-                if (when) add(entry, "div", "muted", when);
+            const records = Array.isArray(source && source.records) ? source.records : [];
+            records.forEach((record) => {
+                if (!textOf(record && record.title) || !textOf(record && record.record_id)) return;
+                items.push({
+                    title: textOf(record.title),
+                    recorded_on: textOf(record.recorded_on),
+                    record_id: textOf(record.record_id),
+                    kind: textOf(source.display_name) || "From your clinic",
+                });
             });
         });
+        return items.sort((a, b) => b.recorded_on.localeCompare(a.recorded_on));
     }
 
-    function renderRecord(data) {
-        const patient = data.patient || {};
-        const tenant = data.tenant || {};
-        const view = (data.trend && data.trend.client_view) || {};
-        const name = textOf(patient.display_name);
-        const clinic = textOf(tenant.tenant_name);
-        const summary = textOf(view.summary);
+    function reportRows(kind) {
+        const reports = clinic && clinic.reports ? clinic.reports : {};
+        const rows = Array.isArray(reports[kind]) ? reports[kind] : [];
+        return rows.filter((item) => textOf(item && item.label) && textOf(item && item.report_id));
+    }
 
-        if (summary === EMPTY_SUMMARY) {
-            renderHeader(name, clinic);
-            const panel = add(card, "div", "quiet-panel");
-            add(panel, "p", "", EMPTY_SUMMARY);
-            add(panel, "p", "muted", "When your clinic shares a progress view, it will appear here.");
-            renderReports(data);
-            renderSources(data);
-            return;
+    function renderSnapshot() {
+        const latestDay = newest(days);
+        if (wearableError) {
+            fillTile("snapshot-today", [{ text: "Could not load.", className: "error" }]);
+        } else if (!wearableConnected && !days.length) {
+            fillTile("snapshot-today", [{ text: "Connect a wearable to see daily summaries." }]);
+        } else if (!latestDay) {
+            fillTile("snapshot-today", [{ text: "No days yet.", className: "snapshot-title" }]);
+        } else {
+            const bits = [
+                metricText(latestDay, "steps", "Steps"),
+                metricText(latestDay, "resting_heart_rate", "Resting heart rate"),
+                metricText(latestDay, "sleep_duration", "Sleep"),
+                metricText(latestDay, "hrv", "HRV"),
+            ].filter(Boolean).join(" · ");
+            const shared = document.createElement("div");
+            shared.style.marginTop = "8px";
+            chip(shared, latestDay.released ? "Shared" : "Not shared", !!latestDay.released);
+            fillTile("snapshot-today", [
+                { text: latestDay.recorded_on || "Daily summary", className: "snapshot-title" },
+                { text: bits || "No values" },
+                { node: shared },
+            ]);
         }
 
-        renderHeader(name, clinic);
-        if (summary) add(card, "p", "", summary);
+        if (!clinicOpen) {
+            fillTile("snapshot-clinic", [{ text: "No clinic is connected." }]);
+        } else {
+            const item = clinicItems()[0];
+            const report = reportRows("assessment_reports")[0] || reportRows("trend_reports")[0];
+            if (item) {
+                fillTile("snapshot-clinic", [
+                    { text: item.title, className: "snapshot-title" },
+                    { text: item.recorded_on || item.kind },
+                ]);
+            } else if (report) {
+                fillTile("snapshot-clinic", [{ text: textOf(report.label), className: "snapshot-title" }]);
+            } else if (progressReleased()) {
+                fillTile("snapshot-clinic", [{ text: "Progress", className: "snapshot-title" }]);
+            } else {
+                fillTile("snapshot-clinic", [{ text: "Nothing has been released yet." }]);
+            }
+        }
 
-        const progress = (Array.isArray(view.progress_cards) ? view.progress_cards : [])
-            .map((item) => ({
-                label: textOf(item && item.label),
-                value: textOf(item && item.value),
-                detail: textOf(item && item.detail),
-            }))
-            .filter((item) => item.label || item.value || item.detail);
-        renderSection("Progress", progress);
+        if (notesError) {
+            fillTile("snapshot-notes", [{ text: "Could not load.", className: "error" }]);
+        } else if (!notes.length) {
+            fillTile("snapshot-notes", [{ text: "No notes yet." }]);
+        } else {
+            const note = newest(notes);
+            const shared = document.createElement("div");
+            shared.style.marginTop = "8px";
+            chip(shared, note.released ? "Shared" : "Not shared", !!note.released);
+            fillTile("snapshot-notes", [
+                { text: String(notes.length) + " notes", className: "snapshot-title" },
+                { text: textOf(note.title) || "Note" },
+                { node: shared },
+            ]);
+        }
 
-        const priorities = (Array.isArray(view.top_priorities) ? view.top_priorities : [])
-            .slice(0, 3)
-            .map((item) => ({
-                value: textOf(item && (item.title || item.category)),
-                detail: textOf(item && item.summary) || textOf(item && item.reason),
-            }))
-            .filter((item) => item.value || item.detail);
-        renderSection("Priorities", priorities);
+        if (labsError) {
+            fillTile("snapshot-labs", [{ text: "Could not load.", className: "error" }]);
+        } else if (!labs.length) {
+            fillTile("snapshot-labs", [{ text: "No lab panels yet." }]);
+        } else {
+            const panel = newest(labs);
+            const markers = (Array.isArray(panel.observations) ? panel.observations : []).slice(0, 3).map((marker) => {
+                const value = markerValue(marker);
+                const unit = textOf(marker.unit);
+                return textOf(marker.name) + (value ? " " + value : "") + (unit ? " " + unit : "");
+            }).filter(Boolean).join(" · ");
+            const shared = document.createElement("div");
+            shared.style.marginTop = "8px";
+            chip(shared, panel.released ? "Shared" : "Not shared", !!panel.released);
+            fillTile("snapshot-labs", [
+                { text: textOf(panel.title) || "Lab panel", className: "snapshot-title" },
+                { text: markers || textOf(panel.recorded_on) },
+                { node: shared },
+            ]);
+        }
 
-        const recommendations = (Array.isArray(view.recommendations) ? view.recommendations : [])
-            .slice(0, 5)
-            .map((item) => ({
-                value: textOf(item && item.name),
-                detail: textOf(item && item.summary),
-            }))
-            .filter((item) => item.value || item.detail);
-        renderSection("Recommendations", recommendations);
+        const points = clinicOpen && clinic.trend && Array.isArray(clinic.trend.health_index) ? clinic.trend.health_index : [];
+        if (!progressReleased()) {
+            fillTile("snapshot-progress", [{ text: clinicOpen ? EMPTY_SUMMARY : "No clinic is connected." }]);
+        } else {
+            const latest = points.length ? Number(points[points.length - 1].value) : NaN;
+            const first = points.length ? Number(points[0].value) : NaN;
+            let change = "—";
+            if (points.length > 1 && !Number.isNaN(latest) && !Number.isNaN(first)) {
+                const delta = latest - first;
+                change = (delta > 0 ? "+" : "") + delta.toFixed(1);
+            }
+            const chart = lineChart(points);
+            const lines = [
+                { text: "Health Index " + (Number.isNaN(latest) ? "—" : latest.toFixed(1)), className: "snapshot-title" },
+                { text: "Change " + change },
+            ];
+            if (chart) lines.push({ node: chart });
+            const shared = document.createElement("div");
+            shared.style.marginTop = "8px";
+            chip(shared, "Released to you", true);
+            lines.push({ node: shared });
+            fillTile("snapshot-progress", lines);
+        }
 
-        if (textOf(view.review_note)) add(card, "p", "muted", textOf(view.review_note));
-        renderReports(data);
-        renderSources(data);
+        const reports = reportRows("assessment_reports").concat(reportRows("trend_reports"));
+        if (!reports.length) {
+            fillTile("snapshot-reports", [{ text: clinicOpen ? "No reports have been released." : "No clinic is connected." }]);
+        } else {
+            fillTile("snapshot-reports", [
+                { text: String(reports.length) + " released", className: "snapshot-title" },
+                { text: textOf(reports[0].label) },
+            ]);
+        }
+    }
+
+    function releaseButton(parent, label, onClick) {
+        if (!clinicOpen) return;
+        const button = add(parent, "button", "release-btn", label);
+        button.type = "button";
+        button.addEventListener("click", onClick);
+    }
+
+    function renderToday() {
+        const section = document.getElementById("section-today");
+        clearNode(section);
+        add(section, "h2", "", "Today");
+        if (wearableError) {
+            add(section, "p", "error", "Could not load wearable days.");
+            return;
+        }
+        if (!wearableConnected) {
+            add(section, "p", "", "Connect a wearable to see daily summaries.");
+            if (!shelfId) return;
+            const form = add(section, "form");
+            const field = add(form, "div", "field");
+            const label = add(field, "label", "", "Wearable account");
+            label.htmlFor = "wearable-ref";
+            const input = add(field, "input");
+            input.id = "wearable-ref";
+            input.maxLength = 255;
+            input.required = true;
+            const button = add(form, "button", "primary-btn", "Connect");
+            button.type = "submit";
+            form.addEventListener("submit", connectWearable);
+        }
+        if (!days.length) {
+            if (wearableConnected) add(section, "p", "muted", "No days yet.");
+            return;
+        }
+        const recent = days.slice().sort((a, b) => String(a.recorded_on || "").localeCompare(String(b.recorded_on || ""))).slice(-7);
+        const max = Math.max.apply(null, recent.map((day) => {
+            const metric = day.steps;
+            const value = metric && metric.value !== null && metric.value !== undefined ? Number(metric.value) : 0;
+            return Number.isNaN(value) ? 0 : value;
+        }).concat([1]));
+        const bars = add(section, "div", "day-bars");
+        recent.forEach((day) => {
+            const metric = day.steps;
+            const value = metric && metric.value !== null && metric.value !== undefined ? Number(metric.value) : 0;
+            const bar = add(bars, "div", "day-bar");
+            bar.style.height = Math.max(4, Math.round(((Number.isNaN(value) ? 0 : value) / max) * 72)) + "px";
+            bar.title = (day.recorded_on || "") + " " + (Number.isNaN(value) ? "" : String(value));
+        });
+        days.forEach((day) => {
+            const article = add(section, "article", "record-row");
+            add(article, "strong", "", day.recorded_on || "Daily summary");
+            chip(article, day.released ? "Shared" : "Not shared", !!day.released);
+            [
+                metricText(day, "steps", "Steps"),
+                metricText(day, "resting_heart_rate", "Resting heart rate"),
+                metricText(day, "sleep_duration", "Sleep"),
+                metricText(day, "hrv", "HRV"),
+            ].filter(Boolean).forEach((line) => add(article, "div", "muted", line));
+            const key = "day:" + day.record_id;
+            releaseButton(article, busyKey === key ? "Saving…" : (day.released ? "Withdraw" : "Share"), () => {
+                setShare("/wearable/days/" + encodeURIComponent(day.record_id) + "/release", !day.released, key);
+            });
+        });
+    }
+
+    function renderClinic() {
+        const section = document.getElementById("section-clinic");
+        clearNode(section);
+        add(section, "h2", "", "From your clinic");
+        if (!clinicOpen) {
+            add(section, "p", "muted", "No clinic is connected.");
+            return;
+        }
+        const items = clinicItems();
+        if (!items.length) {
+            add(section, "p", "muted", "Nothing has been released yet.");
+            return;
+        }
+        const list = add(section, "div", "record-list");
+        items.forEach((item) => {
+            const row = add(list, "div", "record-row");
+            const link = add(row, "a", "text-link", item.title);
+            link.href = "/client/records/" + encodeURIComponent(pageId) + "/notes/" + encodeURIComponent(item.record_id);
+            if (item.recorded_on) add(row, "div", "muted", item.recorded_on);
+            add(row, "div", "muted", item.kind);
+        });
+    }
+
+    function renderOwned(sectionId, title, rows, errorText, emptyText, releasePath) {
+        const section = document.getElementById(sectionId);
+        clearNode(section);
+        add(section, "h2", "", title);
+        if (sectionId === "section-notes" && notesError || sectionId === "section-labs" && labsError) {
+            add(section, "p", "error", errorText);
+            return;
+        }
+        if (!rows.length) {
+            add(section, "p", "muted", emptyText);
+            return;
+        }
+        rows.forEach((item) => {
+            const article = add(section, "article", "record-row");
+            add(article, "strong", "", textOf(item.title) || title);
+            if (item.recorded_on) add(article, "div", "muted", textOf(item.recorded_on));
+            chip(article, item.released ? "Shared" : "Not shared", !!item.released);
+            if (sectionId === "section-notes" && textOf(item.text)) add(article, "p", "", textOf(item.text));
+            if (sectionId === "section-labs") {
+                (Array.isArray(item.observations) ? item.observations : []).forEach((marker) => {
+                    const value = markerValue(marker);
+                    const unit = textOf(marker.unit);
+                    add(article, "div", "", textOf(marker.name) + (value ? " " + value : "") + (unit ? " " + unit : ""));
+                });
+            }
+            const key = releasePath + ":" + item.record_id;
+            releaseButton(article, busyKey === key ? "Saving…" : (item.released ? "Withdraw" : "Share"), () => {
+                setShare("/" + releasePath + "/" + encodeURIComponent(item.record_id) + "/release", !item.released, key);
+            });
+        });
+    }
+
+    function renderProgress() {
+        const section = document.getElementById("section-progress");
+        clearNode(section);
+        add(section, "h2", "", "Progress");
+        if (!clinicOpen) {
+            add(section, "p", "muted", "No clinic is connected.");
+            return;
+        }
+        if (!progressReleased()) {
+            add(section, "p", "", EMPTY_SUMMARY);
+            add(section, "p", "muted", "When your clinic shares a progress view, it will appear here.");
+            return;
+        }
+        const view = clinic.trend.client_view || {};
+        const points = Array.isArray(clinic.trend.health_index) ? clinic.trend.health_index : [];
+        const chart = lineChart(points);
+        if (chart) section.appendChild(chart);
+        if (textOf(view.summary)) add(section, "p", "", textOf(view.summary));
+        (Array.isArray(view.progress_cards) ? view.progress_cards : []).forEach((card) => {
+            const article = add(section, "article", "record-row");
+            if (textOf(card && card.label)) add(article, "div", "muted", textOf(card.label));
+            if (textOf(card && card.value)) add(article, "strong", "", textOf(card.value));
+            if (textOf(card && card.detail)) add(article, "p", "muted", textOf(card.detail));
+        });
+        (Array.isArray(view.top_priorities) ? view.top_priorities : []).slice(0, 3).forEach((item) => {
+            const article = add(section, "article", "record-row");
+            add(article, "strong", "", textOf(item && (item.title || item.category)) || "Priority");
+            const detail = textOf(item && item.summary) || textOf(item && item.reason);
+            if (detail) add(article, "p", "muted", detail);
+        });
+        (Array.isArray(view.recommendations) ? view.recommendations : []).slice(0, 5).forEach((item) => {
+            const article = add(section, "article", "record-row");
+            if (textOf(item && item.name)) add(article, "strong", "", textOf(item.name));
+            if (textOf(item && item.summary)) add(article, "p", "muted", textOf(item.summary));
+        });
+        if (textOf(view.review_note)) add(section, "p", "muted", textOf(view.review_note));
+    }
+
+    function renderReports() {
+        const assessment = document.getElementById("assessment-reports");
+        const trend = document.getElementById("trend-reports");
+        clearNode(assessment);
+        clearNode(trend);
+        const groups = [
+            [assessment, reportRows("assessment_reports")],
+            [trend, reportRows("trend_reports")],
+        ];
+        groups.forEach(([list, rows]) => {
+            if (!rows.length) {
+                add(list, "p", "muted", clinicOpen ? "None released." : "No clinic is connected.");
+                return;
+            }
+            rows.forEach((item) => {
+                const link = add(list, "a", "text-link", textOf(item.label));
+                link.href = "/client/records/" + encodeURIComponent(pageId) + "/reports/" + encodeURIComponent(textOf(item.report_id));
+            });
+        });
+    }
+
+    function renderAll() {
+        renderSnapshot();
+        renderToday();
+        renderClinic();
+        renderOwned("section-notes", "Your notes", notes, "Could not load your notes.", "No notes yet.", "notes");
+        renderOwned("section-labs", "Your labs", labs, "Could not load your labs.", "No lab panels yet.", "labs");
+        renderProgress();
+        renderReports();
+    }
+
+    async function readJson(response) {
+        return response.json().catch(() => ({}));
+    }
+
+    async function loadShelf(id) {
+        const [connectionRes, daysRes] = await Promise.all([
+            fetch("/api/client/records/" + encodeURIComponent(id) + "/wearable", { credentials: "same-origin" }),
+            fetch("/api/client/records/" + encodeURIComponent(id) + "/wearable/days", { credentials: "same-origin" }),
+        ]);
+        if (!connectionRes.ok || !daysRes.ok) return null;
+        const connection = await readJson(connectionRes);
+        const dayData = await readJson(daysRes);
+        return {
+            connected: !!(connection && connection.connected),
+            days: Array.isArray(dayData.days) ? dayData.days : [],
+        };
+    }
+
+    async function loadOwned(id) {
+        const [notesRes, labsRes, shelf] = await Promise.all([
+            fetch("/api/client/records/" + encodeURIComponent(id) + "/notes", { credentials: "same-origin" }),
+            fetch("/api/client/records/" + encodeURIComponent(id) + "/labs", { credentials: "same-origin" }),
+            loadShelf(id),
+        ]);
+        notesError = !notesRes.ok && notesRes.status !== 404;
+        labsError = !labsRes.ok && labsRes.status !== 404;
+        const noteData = notesRes.ok ? await readJson(notesRes) : {};
+        const labData = labsRes.ok ? await readJson(labsRes) : {};
+        notes = Array.isArray(noteData.notes) ? noteData.notes : [];
+        labs = Array.isArray(labData.labs) ? labData.labs : [];
+        if (shelf) {
+            shelfId = id;
+            wearableConnected = shelf.connected;
+            days = shelf.days;
+            wearableError = false;
+        }
+        return shelf;
+    }
+
+    async function connectWearable(event) {
+        event.preventDefault();
+        const input = document.getElementById("wearable-ref");
+        const ref = input ? input.value.trim() : "";
+        if (!shelfId || !ref) return;
+        showError("");
+        showSuccess("");
+        const response = await fetch("/api/client/records/" + encodeURIComponent(shelfId) + "/wearable", {
+            method: "POST",
+            credentials: "same-origin",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ external_account_ref: ref }),
+        });
+        const data = await readJson(response);
+        if (!response.ok) {
+            showError(typeof data.detail === "string" ? data.detail : "Could not connect the wearable.");
+            return;
+        }
+        wearableConnected = true;
+        showSuccess("Wearable connected.");
+        renderAll();
+    }
+
+    async function setShare(path, released, key) {
+        if (!personalId && !shelfId) return;
+        if (!released && !window.confirm("Withdraw this from the clinic? Share links stay as they are.")) return;
+        const owner = path.indexOf("/wearable/") === 0 ? shelfId : personalId;
+        if (!owner) return;
+        busyKey = key;
+        showError("");
+        showSuccess("");
+        renderAll();
+        try {
+            const response = await fetch("/api/client/records/" + encodeURIComponent(owner) + path, {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ released: released }),
+            });
+            const data = await readJson(response);
+            busyKey = "";
+            if (!response.ok) {
+                showError(typeof data.detail === "string" ? data.detail : "Could not update sharing.");
+                renderAll();
+                return;
+            }
+            showSuccess(released ? "Shared with your clinic." : "Withdrawn.");
+            if (path.indexOf("/wearable/") === 0 && shelfId) {
+                const shelf = await loadShelf(shelfId);
+                if (shelf) {
+                    wearableConnected = shelf.connected;
+                    days = shelf.days;
+                }
+            } else if (personalId) {
+                const notesRes = await fetch("/api/client/records/" + encodeURIComponent(personalId) + "/notes", { credentials: "same-origin" });
+                const labsRes = await fetch("/api/client/records/" + encodeURIComponent(personalId) + "/labs", { credentials: "same-origin" });
+                const noteData = notesRes.ok ? await readJson(notesRes) : {};
+                const labData = labsRes.ok ? await readJson(labsRes) : {};
+                if (notesRes.ok) notes = Array.isArray(noteData.notes) ? noteData.notes : [];
+                if (labsRes.ok) labs = Array.isArray(labData.labs) ? labData.labs : [];
+            }
+            renderAll();
+        } catch (err) {
+            busyKey = "";
+            showError("Could not update sharing.");
+            renderAll();
+        }
     }
 
     async function loadRecord() {
-        const patientId = recordId();
-        if (!patientId) {
-            showMessage("Record not found.", true);
+        if (!pageId) {
+            showError("Record not found.");
             return;
         }
         try {
@@ -197,33 +772,71 @@
                 }
             }
 
-            const response = await fetch("/api/client/records/" + encodeURIComponent(patientId), {
-                credentials: "same-origin",
-            });
-            const data = await response.json().catch(() => ({}));
-            if (response.status === 401) {
+            const [recordRes, personalRes] = await Promise.all([
+                fetch("/api/client/records/" + encodeURIComponent(pageId), { credentials: "same-origin" }),
+                fetch("/auth/record", { credentials: "same-origin" }),
+            ]);
+            if (recordRes.status === 401 || personalRes.status === 401) {
                 window.location.href = "/login";
                 return;
             }
-            if (response.status === 403) {
-                const detail = String(data.detail || "");
+            const recordData = await readJson(recordRes);
+            if (recordRes.status === 403) {
+                const detail = String(recordData.detail || "");
                 window.location.href = detail.toLowerCase().includes("verify") ? "/login" : "/app";
                 return;
             }
-            if (response.status === 404) {
-                showMessage("Record not found.", true);
+            const personalData = personalRes.ok ? await readJson(personalRes) : {};
+            personalId = textOf(personalData.patient_id);
+            if (!recordRes.ok && recordRes.status !== 404) {
+                showError("Could not load your record.");
                 return;
             }
-            if (!response.ok) {
-                showMessage("Could not load your record.", true);
+            if (recordRes.status === 404 && personalId !== pageId) {
+                showError("Record not found.");
                 return;
             }
+            clinicOpen = recordRes.ok;
+            clinic = clinicOpen ? recordData : null;
+            const patient = clinic && clinic.patient ? clinic.patient : {};
+            const tenant = clinic && clinic.tenant ? clinic.tenant : {};
+            document.getElementById("record-name").textContent = textOf(patient.display_name) || textOf(personalData.full_name) || "Your record";
+            document.getElementById("record-meta").textContent = clinicOpen
+                ? (textOf(tenant.tenant_name) || "Connected")
+                : "No clinic is connected.";
 
-            renderRecord(data);
+            if (personalId) await loadOwned(personalId);
+            if ((!wearableConnected && !days.length) && pageId !== personalId) {
+                const clinicShelf = await loadShelf(pageId);
+                if (clinicShelf && (clinicShelf.connected || clinicShelf.days.length)) {
+                    shelfId = pageId;
+                    wearableConnected = clinicShelf.connected;
+                    days = clinicShelf.days;
+                    wearableError = false;
+                }
+            }
+            if (!shelfId && personalId) shelfId = personalId;
+            renderAll();
         } catch (err) {
-            showMessage("Could not load your record.", true);
+            showError("Could not load your record.");
         }
     }
+
+    document.getElementById("section-chips").addEventListener("click", (event) => {
+        const chipButton = event.target.closest(".section-chip");
+        if (chipButton) openSection(chipButton.dataset.section, true);
+    });
+    document.getElementById("snapshot-grid").addEventListener("click", (event) => {
+        const tile = event.target.closest(".snapshot-tile");
+        if (tile) openSection(tile.dataset.open, true);
+    });
+    document.getElementById("snapshot-more").addEventListener("click", () => {
+        const grid = document.getElementById("snapshot-grid");
+        const expanded = grid.classList.toggle("is-expanded");
+        const button = document.getElementById("snapshot-more");
+        button.setAttribute("aria-expanded", expanded ? "true" : "false");
+        button.textContent = expanded ? "Fewer on this record" : "More on this record";
+    });
 
     loadRecord();
 </script>
