@@ -290,42 +290,32 @@ def _laboratory_source(db: Session, patient: Patient, source_id: UUID) -> Patien
     return source
 
 
-def create_lab_panel(
-    db: Session,
-    patient: Patient,
-    source_id: UUID,
-    *,
-    title: str,
-    recorded_on: date,
-    specimen: str,
-    laboratory_name: str,
-    client_summary: str,
-    observations: list[dict],
-    created_by_user_id: UUID,
-) -> dict:
-    """Save a private lab panel. Does not release it or create a share link."""
-    if not 1 <= len(observations) <= MAX_OBSERVATIONS:
-        raise HTTPException(status_code=422, detail="A panel needs between 1 and 100 markers.")
-    source = _laboratory_source(db, patient, source_id)
+def _lab_panel(db: Session, patient: Patient, source: PatientSource, record_id: UUID) -> SourceRecord:
+    record = (
+        db.query(SourceRecord)
+        .filter(
+            SourceRecord.id == record_id,
+            SourceRecord.patient_source_id == source.id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.is_archived.is_(False),
+        )
+        .first()
+    )
+    if record is None:
+        raise HTTPException(status_code=404, detail="Panel not found")
+    return record
+
+
+def _laboratory_payload(specimen: str, laboratory_name: str) -> dict:
     payload = {"kind": "laboratory"}
     if specimen:
         payload["specimen"] = specimen
     if laboratory_name:
         payload["laboratory_name"] = laboratory_name
-    record = SourceRecord(
-        patient_source_id=source.id,
-        patient_id=patient.id,
-        recorded_at=datetime.combine(recorded_on, time.min, tzinfo=timezone.utc),
-        title=title,
-        status="ready",
-        payload_json=payload,
-        client_summary=client_summary,
-        is_archived=False,
-        created_by_user_id=created_by_user_id,
-        created_at=datetime.now(timezone.utc),
-    )
-    db.add(record)
-    db.flush()
+    return payload
+
+
+def _append_observations(db: Session, record: SourceRecord, patient: Patient, observations: list[dict]) -> None:
     now = datetime.now(timezone.utc)
     for position, item in enumerate(observations, start=1):
         db.add(SourceObservation(
@@ -343,10 +333,86 @@ def create_lab_panel(
             interpretation=item.get("interpretation") or None,
             created_at=now,
         ))
+
+
+def _require_markers(observations: list[dict]) -> None:
+    if not 1 <= len(observations) <= MAX_OBSERVATIONS:
+        raise HTTPException(status_code=422, detail="A panel needs between 1 and 100 markers.")
+
+
+def create_lab_panel(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    *,
+    title: str,
+    recorded_on: date,
+    specimen: str,
+    laboratory_name: str,
+    client_summary: str,
+    observations: list[dict],
+    created_by_user_id: UUID,
+) -> dict:
+    """Save a private lab panel. Does not release it or create a share link."""
+    _require_markers(observations)
+    source = _laboratory_source(db, patient, source_id)
+    record = SourceRecord(
+        patient_source_id=source.id,
+        patient_id=patient.id,
+        recorded_at=datetime.combine(recorded_on, time.min, tzinfo=timezone.utc),
+        title=title,
+        status="ready",
+        payload_json=_laboratory_payload(specimen, laboratory_name),
+        client_summary=client_summary,
+        is_archived=False,
+        created_by_user_id=created_by_user_id,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(record)
+    db.flush()
+    _append_observations(db, record, patient, observations)
     db.commit()
     db.refresh(record)
     rows = _observations_for(db, [record]).get(str(record.id), [])
     return _panel_payload(record, rows, released=False)
+
+
+def update_lab_panel(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    record_id: UUID,
+    changes: dict,
+) -> dict:
+    """Change only the fields that were sent. Markers and the client summary stay independent.
+
+    Does not release the panel or create a share link.
+    """
+    if "observations" in changes:
+        _require_markers(list(changes["observations"] or []))
+    source = _laboratory_source(db, patient, source_id)
+    record = _lab_panel(db, patient, source, record_id)
+    if "title" in changes:
+        record.title = changes["title"]
+    if "recorded_on" in changes:
+        record.recorded_at = datetime.combine(changes["recorded_on"], time.min, tzinfo=timezone.utc)
+    if "specimen" in changes or "laboratory_name" in changes:
+        current_specimen, current_laboratory = _panel_meta(record)
+        specimen = changes["specimen"] if "specimen" in changes else current_specimen
+        laboratory_name = changes["laboratory_name"] if "laboratory_name" in changes else current_laboratory
+        record.payload_json = _laboratory_payload(specimen, laboratory_name)
+    if "client_summary" in changes:
+        record.client_summary = changes["client_summary"]
+    if "observations" in changes:
+        record.observations.clear()
+        db.flush()
+        _append_observations(db, record, patient, changes["observations"])
+    record.updated_at = datetime.now(timezone.utc)
+    db.commit()
+    db.refresh(record)
+    rows = _observations_for(db, [record]).get(str(record.id), [])
+    released = record_source_key(record.id) in _released_record_keys(db, patient, [record])
+    return _panel_payload(record, rows, released=released)
 
 
 def create_clinic_note(

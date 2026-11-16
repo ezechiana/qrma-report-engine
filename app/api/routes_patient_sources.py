@@ -17,6 +17,7 @@ from app.services.patient_source_service import (
     list_patient_sources,
     set_clinic_note_release,
     update_clinic_note,
+    update_lab_panel,
 )
 
 router = APIRouter(prefix="/api/patients", tags=["patients"])
@@ -102,6 +103,39 @@ class LabPanelCreate(BaseModel):
     @classmethod
     def clean_panel_text(cls, value: str) -> str:
         return value.strip()
+
+
+class LabPanelUpdate(BaseModel):
+    title: str | None = Field(default=None, max_length=255)
+    recorded_on: date | None = None
+    specimen: str | None = Field(default=None, max_length=255)
+    laboratory_name: str | None = Field(default=None, max_length=255)
+    client_summary: str | None = Field(default=None, max_length=20000)
+    observations: list[LabObservationCreate] | None = None
+
+    @field_validator("title")
+    @classmethod
+    def required_title_when_sent(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
+
+    @field_validator("specimen", "laboratory_name", "client_summary")
+    @classmethod
+    def clean_sent_text(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        return value.strip()
+
+    @field_validator("observations")
+    @classmethod
+    def markers_when_sent(cls, value: list[LabObservationCreate] | None):
+        if value is not None and not 1 <= len(value) <= 100:
+            raise ValueError("A panel needs between 1 and 100 markers.")
+        return value
 
 
 class ClinicNoteReleaseUpdate(BaseModel):
@@ -204,6 +238,32 @@ def post_lab_panel(
         observations=[item.model_dump() for item in payload.observations],
         created_by_user_id=current_user.id,
     )
+
+
+@router.patch("/{patient_id}/sources/{source_id}/panels/{record_id}")
+def patch_lab_panel(
+    patient_id: UUID,
+    source_id: UUID,
+    record_id: UUID,
+    payload: LabPanelUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Update a lab panel. Omitted fields stay as they are. This does not release the panel.
+
+    Handles patient identity and marker values. A share link is not created.
+    """
+    provided = payload.model_fields_set
+    if not provided:
+        raise HTTPException(status_code=422, detail="Nothing to update.")
+    patient = _owned_patient(db, patient_id, current_user)
+    changes = {}
+    for field in provided:
+        value = getattr(payload, field)
+        if field == "observations" and value is not None:
+            value = [item.model_dump() for item in value]
+        changes[field] = value
+    return update_lab_panel(db, patient, source_id, record_id, changes)
 
 
 @router.patch("/{patient_id}/sources/{source_id}/records/{record_id}")

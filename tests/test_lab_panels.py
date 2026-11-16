@@ -228,8 +228,86 @@ def test_practitioner_can_add_a_private_lab_panel(monkeypatch):
         assert haemoglobin.value_numeric == Decimal("140")
         assert haemoglobin.unit == "g/L"
         assert db.query(ContentRelease).filter(ContentRelease.source_key == f"record:{record_id}").count() == 0
+        original_ids = {row.id for row in stored}
+        panel_url = f"/api/patients/{patient.id}/sources/{source_id}/panels/{record_id}"
+
+        changed_summary = http.patch(panel_url, json={"client_summary": "Updated wording for the client"})
+        assert changed_summary.status_code == 200
+        assert changed_summary.json()["client_summary"] == "Updated wording for the client"
+        assert changed_summary.json()["released"] is False
+        assert [item["name"] for item in changed_summary.json()["observations"]] == [
+            "Haemoglobin",
+            "H. pylori antigen",
+        ]
+        kept = db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).all()
+        assert {row.id for row in kept} == original_ids
+
+        replaced = http.patch(panel_url, json={
+            "observations": [{
+                "name": "ALT",
+                "value_numeric": 42,
+                "value_text": "42",
+                "unit": "U/L",
+                "reference_low": 7,
+                "reference_high": 56,
+            }],
+        })
+        assert replaced.status_code == 200
+        assert replaced.json()["client_summary"] == "Updated wording for the client"
+        assert replaced.json()["released"] is False
+        assert replaced.json()["title"] == "June bloods"
+        assert replaced.json()["observations"][0]["name"] == "ALT"
+        assert replaced.json()["observations"][0]["value_numeric"] == 42
+        new_rows = db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).all()
+        assert len(new_rows) == 1
+        assert {row.id for row in new_rows}.isdisjoint(original_ids)
+
+        details = http.patch(panel_url, json={
+            "title": "June bloods revised",
+            "recorded_on": "2026-07-01",
+            "specimen": "Urine",
+            "laboratory_name": "South Lab",
+        })
+        assert details.status_code == 200
+        assert details.json()["title"] == "June bloods revised"
+        assert details.json()["recorded_on"] == "2026-07-01"
+        assert details.json()["specimen"] == "Urine"
+        assert details.json()["laboratory_name"] == "South Lab"
+        assert details.json()["client_summary"] == "Updated wording for the client"
+        assert details.json()["observations"][0]["value_numeric"] == 42
+        assert details.json()["released"] is False
+
+        cleared_lab = http.patch(panel_url, json={"laboratory_name": ""})
+        assert cleared_lab.status_code == 200
+        assert cleared_lab.json()["laboratory_name"] == ""
+        assert cleared_lab.json()["specimen"] == "Urine"
+        assert cleared_lab.json()["observations"][0]["name"] == "ALT"
+
+        assert http.patch(panel_url, json={}).status_code == 422
+        assert http.patch(panel_url, json={"title": " "}).status_code == 422
+        assert http.patch(panel_url, json={"observations": []}).status_code == 422
+        assert http.patch(panel_url, json={
+            "observations": [{
+                "name": "ALT",
+                "value_numeric": 20,
+                "reference_low": 40,
+                "reference_high": 10,
+            }],
+        }).status_code == 422
+        assert http.patch(panel_url, json={"observations": [{"name": "ALT"}]}).status_code == 422
+        still = db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).one()
+        assert still.name == "ALT"
+        assert float(still.value_numeric) == 42
 
         note_source = sources[0]["source_id"]
+        assert http.patch(
+            f"/api/patients/{patient.id}/sources/{note_source}/panels/{record_id}",
+            json={"client_summary": "No"},
+        ).status_code == 404
+        assert http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels/{uuid.uuid4()}",
+            json={"title": "Missing"},
+        ).status_code == 404
         wrong_source = http.post(
             f"/api/patients/{patient.id}/sources/{note_source}/panels",
             json={
@@ -282,6 +360,7 @@ def test_practitioner_can_add_a_private_lab_panel(monkeypatch):
         assert too_many.status_code == 422
 
         holder["user"] = other
+        assert http.patch(panel_url, json={"client_summary": "Hidden"}).status_code == 404
         assert http.post(
             f"/api/patients/{patient.id}/sources/{source_id}/panels",
             json={
@@ -303,7 +382,11 @@ def test_practitioner_can_add_a_private_lab_panel(monkeypatch):
             "Positive",
             "June bloods",
             "The blood count is ready to discuss.",
+            "Updated wording for the client",
             "North Lab",
+            "South Lab",
+            "ALT",
+            "Urine",
         ):
             assert hidden not in portal.text
 
@@ -316,6 +399,44 @@ def test_practitioner_can_add_a_private_lab_panel(monkeypatch):
         assert link.is_active is True
         assert db.query(ShareLink).count() == 1
         assert db.query(ContentRelease).count() == release_count
+        released_at = datetime.now(timezone.utc)
+        release_row = ContentRelease(
+            id=uuid.uuid4(),
+            patient_id=patient.id,
+            practitioner_user_id=practitioner.id,
+            source_key=f"record:{record_id}",
+            direction="clinic_to_client",
+            released=True,
+            released_at=released_at,
+            created_at=released_at,
+        )
+        db.add(release_row)
+        db.commit()
+        kept_marker_id = still.id
+        after_release = http.patch(panel_url, json={"observations": [{
+            "name": "Ferritin",
+            "value_text": "Low",
+        }]})
+        assert after_release.status_code == 200
+        assert after_release.json()["released"] is True
+        assert after_release.json()["client_summary"] == "Updated wording for the client"
+        assert after_release.json()["observations"][0]["value_text"] == "Low"
+        db.refresh(release_row)
+        assert release_row.released is True
+        assert release_row.withdrawn_at is None
+        marker = db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).one()
+        assert marker.id != kept_marker_id
+        assert marker.name == "Ferritin"
+        summary_only = http.patch(panel_url, json={"client_summary": "Wording after the flag"})
+        assert summary_only.status_code == 200
+        assert summary_only.json()["released"] is True
+        assert summary_only.json()["observations"][0]["name"] == "Ferritin"
+        assert db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).one().id == marker.id
+        db.refresh(release_row)
+        assert release_row.released is True
+        assert db.query(ShareLink).count() == 1
+        assert http.get(f"/api/patients/{patient.id}/progress-release").json()["released"] is True
+        assert http.get(f"/api/patients/{patient.id}/report-releases").json()["assessment_reports"][0]["released"] is False
         db.close()
     finally:
         for column, kind in originals:

@@ -649,9 +649,11 @@ button.link {
                 <div class="muted" style="margin-top:4px;">You can leave the summary blank. Marker values are not released.</div>
             </div>
             <div id="lab-marker-rows"></div>
+            <p class="muted" id="lab-panel-editing" style="display:none;">Editing this panel.</p>
             <div class="btn-row">
                 <button class="btn secondary" type="button" id="lab-add-marker">Add marker</button>
                 <button class="btn" type="submit" id="lab-panel-save">Save panel</button>
+                <button class="btn secondary" type="button" id="lab-panel-cancel" style="display:none;">Cancel</button>
             </div>
         </form>
     </div>
@@ -2078,6 +2080,8 @@ button.link {
 
     let clinicNoteSourceId = null;
     let labSourceId = null;
+    let labPanelRecordId = null;
+    let labPanels = [];
     let clinicNoteRecordId = null;
     let clinicNotes = [];
 
@@ -2175,6 +2179,34 @@ button.link {
         host.appendChild(labMarkerFields());
     }
 
+    function labPanelSaveLabel() {
+        return labPanelRecordId ? "Save changes" : "Save panel";
+    }
+
+    function resetLabPanelForm() {
+        const form = document.getElementById("lab-panel-form");
+        if (form) form.reset();
+        labPanelRecordId = null;
+        resetLabMarkers();
+        const editing = document.getElementById("lab-panel-editing");
+        const cancel = document.getElementById("lab-panel-cancel");
+        const button = document.getElementById("lab-panel-save");
+        if (editing) editing.style.display = "none";
+        if (cancel) cancel.style.display = "none";
+        if (button) button.textContent = labPanelSaveLabel();
+    }
+
+    function fillLabMarker(row, marker) {
+        const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
+        row.querySelector(".lab-marker-name").value = marker.name || "";
+        row.querySelector(".lab-marker-value").value = value;
+        row.querySelector(".lab-marker-unit").value = marker.unit || "";
+        row.querySelector(".lab-marker-low").value = marker.reference_low !== null && marker.reference_low !== undefined ? String(marker.reference_low) : "";
+        row.querySelector(".lab-marker-high").value = marker.reference_high !== null && marker.reference_high !== undefined ? String(marker.reference_high) : "";
+        row.querySelector(".lab-marker-range").value = marker.reference_text || "";
+        row.querySelector(".lab-marker-interpretation").value = marker.interpretation || "";
+    }
+
     function markerNumber(value) {
         const text = String(value || "").trim();
         if (!text) return null;
@@ -2185,7 +2217,8 @@ button.link {
     function renderLabPanels(records) {
         const body = document.getElementById("lab-panels-body");
         if (!body) return;
-        const panels = Array.isArray(records) ? records : [];
+        labPanels = Array.isArray(records) ? records : [];
+        const panels = labPanels;
         if (!panels.length) {
             body.innerHTML = `<div class="muted">No lab panels yet.</div>`;
             return;
@@ -2214,9 +2247,41 @@ button.link {
                     ${laboratoryName}
                     ${markers}
                     <p><span class="muted">Client summary:</span> ${summary}</p>
+                    <div class="btn-row" style="margin-top:8px;">
+                        <button class="btn secondary lab-panel-edit" type="button" data-record-id="${safeText(item.record_id)}">Edit</button>
+                    </div>
                 </div>
             `;
         }).join("");
+    }
+
+    function beginLabPanelEdit(recordId) {
+        const item = labPanels.find(panel => String(panel.record_id) === String(recordId));
+        if (!item) return;
+        labPanelRecordId = item.record_id;
+        document.getElementById("lab-panel-title").value = item.title || "";
+        document.getElementById("lab-panel-date").value = item.recorded_on || "";
+        document.getElementById("lab-panel-specimen").value = item.specimen || "";
+        document.getElementById("lab-panel-laboratory").value = item.laboratory_name || "";
+        document.getElementById("lab-panel-summary").value = item.client_summary || "";
+        const host = document.getElementById("lab-marker-rows");
+        if (host) {
+            host.textContent = "";
+            const markers = Array.isArray(item.observations) && item.observations.length ? item.observations : [{}];
+            markers.forEach(marker => {
+                const row = labMarkerFields();
+                fillLabMarker(row, marker);
+                host.appendChild(row);
+            });
+        }
+        const editing = document.getElementById("lab-panel-editing");
+        const cancel = document.getElementById("lab-panel-cancel");
+        const button = document.getElementById("lab-panel-save");
+        if (editing) editing.style.display = "block";
+        if (cancel) cancel.style.display = "inline-block";
+        if (button) button.textContent = labPanelSaveLabel();
+        const form = document.getElementById("lab-panel-form");
+        if (form) form.scrollIntoView({ behavior: "smooth", block: "nearest" });
     }
 
     async function saveLabPanel(event) {
@@ -2267,8 +2332,13 @@ button.link {
         clearPatientError();
         clearPatientSuccess();
         try {
-            const response = await apiFetch(`/api/patients/${patientId}/sources/${labSourceId}/panels`, {
-                method: "POST",
+            const editingId = labPanelRecordId;
+            const response = await apiFetch(
+                editingId
+                    ? `/api/patients/${patientId}/sources/${labSourceId}/panels/${editingId}`
+                    : `/api/patients/${patientId}/sources/${labSourceId}/panels`,
+                {
+                method: editingId ? "PATCH" : "POST",
                 body: JSON.stringify({
                     title: document.getElementById("lab-panel-title").value,
                     recorded_on: document.getElementById("lab-panel-date").value,
@@ -2284,9 +2354,8 @@ button.link {
                 showPatientError(typeof detail === "string" ? detail : "Could not save the lab panel.");
                 return;
             }
-            document.getElementById("lab-panel-form").reset();
-            resetLabMarkers();
-            showPatientSuccess("Lab panel saved.");
+            resetLabPanelForm();
+            showPatientSuccess(editingId ? "Lab panel updated." : "Lab panel saved.");
             await loadClinicNotes();
         } catch (err) {
             console.error(err);
@@ -2294,7 +2363,7 @@ button.link {
         } finally {
             if (button) {
                 button.disabled = false;
-                button.textContent = "Save panel";
+                button.textContent = labPanelSaveLabel();
             }
         }
     }
@@ -2746,6 +2815,16 @@ button.link {
         labAddMarker.addEventListener("click", () => {
             const host = document.getElementById("lab-marker-rows");
             if (host) host.appendChild(labMarkerFields());
+        });
+    }
+    const labPanelCancel = document.getElementById("lab-panel-cancel");
+    if (labPanelCancel) labPanelCancel.addEventListener("click", resetLabPanelForm);
+    const labPanelsBody = document.getElementById("lab-panels-body");
+    if (labPanelsBody) {
+        labPanelsBody.addEventListener("click", (event) => {
+            const button = event.target && event.target.closest ? event.target.closest(".lab-panel-edit") : null;
+            if (!button) return;
+            beginLabPanelEdit(button.dataset.recordId);
         });
     }
     const clinicNoteCancel = document.getElementById("clinic-note-cancel");
