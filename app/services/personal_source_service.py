@@ -6,13 +6,13 @@ is created. A clinic source list does not receive these rows.
 
 from __future__ import annotations
 
-from datetime import date
+from datetime import date, datetime, timezone
 from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import Patient, PatientSource, SourceObservation, SourceRecord, User
+from app.db.models import ContentRelease, Patient, PatientSource, SourceObservation, SourceRecord, User
 from app.services.patient_source_service import (
     LABORATORY,
     MANUAL,
@@ -20,6 +20,7 @@ from app.services.patient_source_service import (
     create_lab_panel,
     ensure_laboratory_source,
     ensure_manual_source,
+    record_source_key,
 )
 
 
@@ -68,13 +69,33 @@ def _records(db: Session, patient: Patient, source: PatientSource | None) -> lis
     )
 
 
-def _note_view(record: SourceRecord) -> dict:
+def _shared(db: Session, patient: Patient, record: SourceRecord) -> bool:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None:
+        return False
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == practitioner_id,
+            ContentRelease.source_key == record_source_key(record.id),
+            ContentRelease.direction == "client_to_clinic",
+            ContentRelease.released.is_(True),
+        )
+        .first()
+    )
+    return row is not None
+
+
+def _note_view(db: Session, patient: Patient, record: SourceRecord) -> dict:
     return {
         "record_id": str(record.id),
         "title": record.title,
         "recorded_on": _recorded_on(record),
         "text": _note_text(record),
-        "released": False,
+        "released": _shared(db, patient, record),
     }
 
 
@@ -92,7 +113,7 @@ def _marker_view(row: SourceObservation) -> dict:
     }
 
 
-def _lab_view(db: Session, record: SourceRecord) -> dict:
+def _lab_view(db: Session, patient: Patient, record: SourceRecord) -> dict:
     rows = (
         db.query(SourceObservation)
         .filter(SourceObservation.source_record_id == record.id)
@@ -103,7 +124,7 @@ def _lab_view(db: Session, record: SourceRecord) -> dict:
         "record_id": str(record.id),
         "title": record.title,
         "recorded_on": _recorded_on(record),
-        "released": False,
+        "released": _shared(db, patient, record),
         "observations": [_marker_view(row) for row in rows],
     }
 
@@ -144,7 +165,7 @@ def list_personal_notes(db: Session, patient: Patient, user: User) -> dict:
     _require_owner(patient, user)
     records = _records(db, patient, _source(db, patient, MANUAL))
     notes = [
-        _note_view(record)
+        _note_view(db, patient, record)
         for record in records
         if isinstance(record.payload_json, dict) and record.payload_json.get("kind") == "note"
     ]
@@ -197,17 +218,24 @@ def list_personal_labs(db: Session, patient: Patient, user: User) -> dict:
     _require_owner(patient, user)
     records = _records(db, patient, _source(db, patient, LABORATORY))
     panels = [
-        _lab_view(db, record)
+        _lab_view(db, patient, record)
         for record in records
         if isinstance(record.payload_json, dict) and record.payload_json.get("kind") == "laboratory"
     ]
     return {"labs": panels}
 
 
-def refuse_personal_share(db: Session, patient: Patient, user: User, record_id: UUID) -> None:
-    """Refuse sharing while this record has no clinic connection.
+def set_personal_share(
+    db: Session,
+    patient: Patient,
+    user: User,
+    record_id: UUID,
+    released: bool,
+) -> dict:
+    """Release or withdraw one personal note or lab panel.
 
-    The saved text and marker values are not returned. No release row is written.
+    Handles patient identity. The saved text and marker values are not returned.
+    Does not create a share link.
     """
     _require_owner(patient, user)
     record = (
@@ -221,7 +249,44 @@ def refuse_personal_share(db: Session, patient: Patient, user: User, record_id: 
     )
     if record is None:
         raise HTTPException(status_code=404, detail="Record not found")
-    raise HTTPException(
-        status_code=403,
-        detail="A clinic connection is required before this can be shared.",
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="A clinic connection is required before this can be shared.",
+        )
+    now = datetime.now(timezone.utc)
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == practitioner_id,
+            ContentRelease.source_key == record_source_key(record.id),
+            ContentRelease.direction == "client_to_clinic",
+        )
+        .first()
     )
+    if released:
+        if row is None:
+            row = ContentRelease(
+                patient_id=patient.id,
+                practitioner_user_id=practitioner_id,
+                source_key=record_source_key(record.id),
+                direction="client_to_clinic",
+                released=True,
+                released_at=now,
+                created_at=now,
+            )
+            db.add(row)
+        else:
+            row.released = True
+            row.released_at = now
+    else:
+        if row is None:
+            raise HTTPException(status_code=404, detail="Record not found")
+        row.released = False
+        row.withdrawn_at = now
+    db.commit()
+    return {"record_id": str(record.id), "released": bool(row.released)}

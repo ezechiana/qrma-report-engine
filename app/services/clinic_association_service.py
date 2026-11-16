@@ -10,6 +10,7 @@ from __future__ import annotations
 from datetime import datetime, timezone
 
 from fastapi import HTTPException
+from sqlalchemy import inspect, or_
 from sqlalchemy.orm import Session
 
 from app.db.models import ClinicAssociation, Patient, User, UserCapability
@@ -297,3 +298,92 @@ def cancel_person_request(db: Session, person: User, request_id) -> dict:
     row.ended_by = PERSON
     db.commit()
     return {"request_id": str(row.id), "status": ENDED}
+
+
+def _association_table(db: Session) -> bool:
+    bind = db.get_bind()
+    if bind is None:
+        return False
+    return inspect(bind).has_table(ClinicAssociation.__tablename__)
+
+
+def _associations_touching(db: Session, patient_id) -> list[ClinicAssociation]:
+    if not _association_table(db):
+        return []
+    return (
+        db.query(ClinicAssociation)
+        .filter(
+            or_(
+                ClinicAssociation.personal_patient_id == patient_id,
+                ClinicAssociation.clinic_patient_id == patient_id,
+            )
+        )
+        .all()
+    )
+
+
+def sharing_practitioner_id(db: Session, patient: Patient):
+    """Practitioner who may share this chart, or None when sharing is closed.
+
+    An active association is the authority. When no association row exists, a
+    claimed clinic chart still shares with its practitioner.
+    """
+    rows = _associations_touching(db, patient.id)
+    active = [row for row in rows if row.status == ACTIVE]
+    if active:
+        for row in active:
+            if row.clinic_patient_id == patient.id and row.practitioner_user_id == patient.user_id:
+                return row.practitioner_user_id
+        for row in active:
+            if row.personal_patient_id == patient.id:
+                return row.practitioner_user_id
+        return active[0].practitioner_user_id
+    if rows:
+        return None
+    if patient.claimed_by_user_id is not None:
+        return patient.user_id
+    return None
+
+
+def linked_personal_chart(db: Session, clinic: Patient) -> tuple[Patient, object] | None:
+    """The other record linked to this clinic chart, when the association is active."""
+    if not _association_table(db):
+        return None
+    row = (
+        db.query(ClinicAssociation)
+        .filter(
+            ClinicAssociation.clinic_patient_id == clinic.id,
+            ClinicAssociation.personal_patient_id != clinic.id,
+            ClinicAssociation.status == ACTIVE,
+        )
+        .first()
+    )
+    if row is None:
+        return None
+    personal = db.query(Patient).filter(Patient.id == row.personal_patient_id).first()
+    if personal is None:
+        return None
+    return personal, row.practitioner_user_id
+
+
+def clinic_chart_for_subject(db: Session, subject: User, clinic_patient_id) -> Patient | None:
+    """The clinic chart this person may read while the association is active."""
+    if not _association_table(db):
+        return None
+    from app.services.personal_record_service import personal_record_for
+
+    personal = personal_record_for(db, subject)
+    if personal is None:
+        return None
+    row = (
+        db.query(ClinicAssociation)
+        .filter(
+            ClinicAssociation.personal_patient_id == personal.id,
+            ClinicAssociation.clinic_patient_id == clinic_patient_id,
+            ClinicAssociation.status == ACTIVE,
+        )
+        .first()
+    )
+    if row is None:
+        return None
+    return db.query(Patient).filter(Patient.id == clinic_patient_id).first()

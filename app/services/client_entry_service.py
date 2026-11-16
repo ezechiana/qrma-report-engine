@@ -95,14 +95,17 @@ def _client_source(db: Session, patient: Patient) -> PatientSource:
 
 
 def _released_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
-    if patient.claimed_by_user_id is None or not records:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None or not records:
         return set()
     keys = [client_entry_source_key(record.id) for record in records]
     rows = (
         db.query(ContentRelease.source_key)
         .filter(
             ContentRelease.patient_id == patient.id,
-            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.practitioner_user_id == practitioner_id,
             ContentRelease.direction == CLIENT_TO_CLINIC,
             ContentRelease.source_key.in_(keys),
             ContentRelease.released.is_(True),
@@ -140,6 +143,14 @@ def submit_client_entry(
     Does not create a share link or change a clinic-to-client release.
     """
     _require_claimed(patient, client)
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="A clinic connection is required before this can be shared.",
+        )
     title = _required_text(title, TITLE_MAX)
     text = _required_text(text, TEXT_MAX)
     reference = _optional_text(reference, REFERENCE_MAX)
@@ -165,7 +176,7 @@ def submit_client_entry(
     db.add(
         ContentRelease(
             patient_id=patient.id,
-            practitioner_user_id=patient.user_id,
+            practitioner_user_id=practitioner_id,
             source_key=client_entry_source_key(record.id),
             direction=CLIENT_TO_CLINIC,
             released=True,
@@ -272,12 +283,20 @@ def set_client_entry_release(
     stays as it is. Does not create a share link or change a clinic-to-client release.
     """
     record = _own_entry(db, patient, client, record_id)
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="A clinic connection is required before this can be shared.",
+        )
     now = _now()
     row = (
         db.query(ContentRelease)
         .filter(
             ContentRelease.patient_id == patient.id,
-            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.practitioner_user_id == practitioner_id,
             ContentRelease.source_key == client_entry_source_key(record.id),
             ContentRelease.direction == CLIENT_TO_CLINIC,
         )

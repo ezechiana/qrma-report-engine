@@ -29,7 +29,7 @@ from app.services.personal_source_service import (
     add_personal_note,
     list_personal_labs,
     list_personal_notes,
-    refuse_personal_share,
+    set_personal_share,
 )
 from app.services.patient_source_service import client_released_note
 from app.services.wearable_connection_service import (
@@ -438,12 +438,12 @@ def post_personal_note_release(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Refuse to share a personal note while no clinic is connected.
+    """Release or withdraw one personal note while a clinic connection is active.
 
-    Handles patient identity. The note text is not returned.
+    Handles patient identity. The note text is not returned. No share link is created.
     """
     patient = open_unclaimed_personal_record(db, current_user, patient_id)
-    refuse_personal_share(db, patient, current_user, record_id)
+    return set_personal_share(db, patient, current_user, record_id, body.released)
 
 
 @router.get("/records/{patient_id}/labs")
@@ -490,12 +490,12 @@ def post_personal_lab_release(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Refuse to share a personal lab panel while no clinic is connected.
+    """Release or withdraw one personal lab panel while a clinic connection is active.
 
-    Handles patient identity. Marker values are not returned.
+    Handles patient identity. Marker values are not returned. No share link is created.
     """
     patient = open_unclaimed_personal_record(db, current_user, patient_id)
-    refuse_personal_share(db, patient, current_user, record_id)
+    return set_personal_share(db, patient, current_user, record_id, body.released)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

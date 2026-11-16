@@ -191,14 +191,17 @@ def _upsert_day(
 
 
 def _released_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
-    if patient.claimed_by_user_id is None or not records:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None or not records:
         return set()
     keys = [wearable_day_source_key(record.id) for record in records]
     rows = (
         db.query(ContentRelease.source_key)
         .filter(
             ContentRelease.patient_id == patient.id,
-            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.practitioner_user_id == practitioner_id,
             ContentRelease.direction == CLIENT_TO_CLINIC,
             ContentRelease.source_key.in_(keys),
             ContentRelease.released.is_(True),
@@ -293,7 +296,10 @@ def set_wearable_day_release(
     values stay as they are. Does not create a share link.
     """
     record = _own_day(db, patient, client, record_id)
-    if patient.claimed_by_user_id is None:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None:
         raise HTTPException(
             status_code=403,
             detail="A clinic connection is required before this day can be shared.",
@@ -303,7 +309,7 @@ def set_wearable_day_release(
         db.query(ContentRelease)
         .filter(
             ContentRelease.patient_id == patient.id,
-            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.practitioner_user_id == practitioner_id,
             ContentRelease.source_key == wearable_day_source_key(record.id),
             ContentRelease.direction == CLIENT_TO_CLINIC,
         )
@@ -313,7 +319,7 @@ def set_wearable_day_release(
         if row is None:
             row = ContentRelease(
                 patient_id=patient.id,
-                practitioner_user_id=patient.user_id,
+                practitioner_user_id=practitioner_id,
                 source_key=wearable_day_source_key(record.id),
                 direction=CLIENT_TO_CLINIC,
                 released=True,

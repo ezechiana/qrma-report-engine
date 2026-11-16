@@ -34,12 +34,44 @@ def _clinic_name(practitioner: User | None) -> str:
 
 
 def claimed_patients(db: Session, client: User) -> list[Patient]:
-    return (
+    rows = (
         db.query(Patient)
         .filter(Patient.claimed_by_user_id == client.id)
         .order_by(Patient.full_name.asc())
         .all()
     )
+    from app.services.clinic_association_service import _association_table
+    from app.services.personal_record_service import personal_record_for
+    from app.db.models import ClinicAssociation
+
+    if not _association_table(db):
+        return rows
+    personal = personal_record_for(db, client)
+    if personal is None:
+        return rows
+    linked_ids = [
+        row.clinic_patient_id
+        for row in db.query(ClinicAssociation)
+        .filter(
+            ClinicAssociation.personal_patient_id == personal.id,
+            ClinicAssociation.status == "active",
+            ClinicAssociation.clinic_patient_id.is_not(None),
+            ClinicAssociation.clinic_patient_id != personal.id,
+        )
+        .all()
+        if row.clinic_patient_id is not None
+    ]
+    if not linked_ids:
+        return rows
+    known = {row.id for row in rows}
+    extra = (
+        db.query(Patient)
+        .filter(Patient.id.in_(linked_ids))
+        .all()
+    )
+    combined = rows + [row for row in extra if row.id not in known]
+    combined.sort(key=lambda row: (row.full_name or "").lower())
+    return combined
 
 
 def _project_client_trend(payload: dict) -> dict:
@@ -106,9 +138,14 @@ def require_claimed_patient(db: Session, client: User, patient_id: UUID) -> Pati
         .filter(Patient.id == patient_id, Patient.claimed_by_user_id == client.id)
         .first()
     )
-    if patient is None:
+    if patient is not None:
+        return patient
+    from app.services.clinic_association_service import clinic_chart_for_subject
+
+    linked = clinic_chart_for_subject(db, client, patient_id)
+    if linked is None:
         raise HTTPException(status_code=404, detail="Record not found")
-    return patient
+    return linked
 
 
 def _narrative(value) -> str:

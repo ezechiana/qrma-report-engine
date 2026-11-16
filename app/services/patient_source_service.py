@@ -47,14 +47,17 @@ def _record_payload(record: SourceRecord, released: bool = False) -> dict:
 
 
 def _released_record_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
-    if patient.claimed_by_user_id is None or not records:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, patient)
+    if practitioner_id is None or not records:
         return set()
     keys = [record_source_key(record.id) for record in records]
     rows = (
         db.query(ContentRelease.source_key)
         .filter(
             ContentRelease.patient_id == patient.id,
-            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.practitioner_user_id == practitioner_id,
             ContentRelease.direction == CLINIC_TO_CLIENT,
             ContentRelease.source_key.in_(keys),
             ContentRelease.released.is_(True),
@@ -180,7 +183,105 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
     wearable_source = released_clinic_wearable_source(db, patient)
     if wearable_source is not None:
         payloads.append(wearable_source)
+    payloads.extend(_released_linked_personal_sources(db, patient, payloads))
     return {"patient_id": str(patient.id), "sources": payloads}
+
+
+def _released_linked_personal_sources(db: Session, clinic: Patient, existing: list[dict]) -> list[dict]:
+    """Released items stored on the linked personal record.
+
+    Unreleased notes, labs, days, and entries are omitted. Nothing is copied.
+    """
+    from app.services.clinic_association_service import linked_personal_chart
+
+    linked = linked_personal_chart(db, clinic)
+    if linked is None:
+        return []
+    personal, _practitioner_id = linked
+    names = {group.get("display_name") for group in existing}
+    groups = []
+    note_group = _released_personal_group(db, personal, MANUAL, "Personal notes", "note")
+    if note_group is not None:
+        groups.append(note_group)
+    lab_group = _released_personal_group(db, personal, LABORATORY, "Personal labs", "laboratory")
+    if lab_group is not None:
+        groups.append(lab_group)
+    if "From the client" not in names:
+        client_source = released_clinic_client_source(db, personal)
+        if client_source is not None:
+            groups.append(client_source)
+    if "Wearables" not in names:
+        wearable_source = released_clinic_wearable_source(db, personal)
+        if wearable_source is not None:
+            groups.append(wearable_source)
+    return groups
+
+
+def _released_personal_group(
+    db: Session,
+    personal: Patient,
+    source_type: str,
+    display_name: str,
+    kind: str,
+) -> dict | None:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    practitioner_id = sharing_practitioner_id(db, personal)
+    if practitioner_id is None:
+        return None
+    source = (
+        db.query(PatientSource)
+        .filter(
+            PatientSource.patient_id == personal.id,
+            PatientSource.source_type == source_type,
+            PatientSource.status == "active",
+        )
+        .first()
+    )
+    if source is None:
+        return None
+    records = [
+        record
+        for record in _source_records(db, personal, source)
+        if isinstance(record.payload_json, dict) and record.payload_json.get("kind") == kind
+    ]
+    if not records:
+        return None
+    keys = [record_source_key(record.id) for record in records]
+    released_rows = (
+        db.query(ContentRelease.source_key)
+        .filter(
+            ContentRelease.patient_id == personal.id,
+            ContentRelease.practitioner_user_id == practitioner_id,
+            ContentRelease.direction == "client_to_clinic",
+            ContentRelease.source_key.in_(keys),
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    )
+    released = {row[0] for row in released_rows}
+    visible = [record for record in records if record_source_key(record.id) in released]
+    if not visible:
+        return None
+    if source_type == LABORATORY:
+        payloads = []
+        observations = _observations_for(db, visible)
+        for record in visible:
+            payloads.append(_panel_payload(record, observations.get(str(record.id), []), released=True))
+        return {
+            "source_id": str(source.id),
+            "source_type": source_type,
+            "display_name": display_name,
+            "status": source.status,
+            "records": payloads,
+        }
+    return {
+        "source_id": str(source.id),
+        "source_type": source_type,
+        "display_name": display_name,
+        "status": source.status,
+        "records": [_record_payload(record, released=True) for record in visible],
+    }
 
 
 def _manual_source(db: Session, patient: Patient, source_id: UUID) -> PatientSource:
@@ -454,7 +555,9 @@ def set_lab_panel_release(
 
     Does not create a share link or change a report release.
     """
-    if patient.claimed_by_user_id is None:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    if sharing_practitioner_id(db, patient) is None:
         raise HTTPException(
             status_code=409,
             detail="A client must claim this record before a panel can be released.",
@@ -568,7 +671,9 @@ def set_clinic_note_release(
     released: bool,
 ) -> dict:
     """Release or withdraw one note. Does not create a share link or change a report."""
-    if patient.claimed_by_user_id is None:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    if sharing_practitioner_id(db, patient) is None:
         raise HTTPException(
             status_code=409,
             detail="A client must claim this record before a note can be released.",

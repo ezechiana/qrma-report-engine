@@ -34,10 +34,16 @@ def _progress_row(db: Session, patient: Patient) -> ContentRelease | None:
     )
 
 
+def _sharing_open(db: Session, patient: Patient) -> bool:
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    return sharing_practitioner_id(db, patient) is not None
+
+
 def progress_release_state(db: Session, patient: Patient) -> dict:
     """Clinic-facing release flag. The client account id is not included."""
     row = _progress_row(db, patient)
-    available = patient.claimed_by_user_id is not None
+    available = _sharing_open(db, patient)
     return {
         "patient_id": patient.id,
         "source": PROGRESS_VIEW,
@@ -58,7 +64,7 @@ def clear_progress_release(db: Session, patient: Patient, now: datetime | None =
 
 def set_progress_release(db: Session, patient: Patient, released: bool) -> dict:
     """Release or withdraw the progress view for the client who claimed this record."""
-    if patient.claimed_by_user_id is None:
+    if not _sharing_open(db, patient):
         raise HTTPException(
             status_code=409,
             detail="A client must claim this record before the progress view can be released.",
@@ -142,7 +148,7 @@ def report_release_state(db: Session, patient: Patient) -> dict:
     Handles patient identity through the report label the practitioner already
     sees. The report body and the client account id are not included.
     """
-    available = patient.claimed_by_user_id is not None
+    available = _sharing_open(db, patient)
     assessment_reports = []
     trend_reports = []
     if available:
@@ -203,7 +209,7 @@ def clear_report_releases(db: Session, patient: Patient, now: datetime | None = 
 
 def set_report_release(db: Session, patient: Patient, report_id: UUID, released: bool) -> dict:
     """Release or withdraw one ready report. Does not create a share link."""
-    if patient.claimed_by_user_id is None:
+    if not _sharing_open(db, patient):
         raise HTTPException(
             status_code=409,
             detail="A client must claim this record before a report can be released.",
@@ -257,6 +263,6 @@ def set_report_release(db: Session, patient: Patient, report_id: UUID, released:
         "patient_id": patient.id,
         "report_id": source_key,
         "report_type": report.report_type,
-        "released": bool(row.released and patient.claimed_by_user_id is not None),
-        "available": patient.claimed_by_user_id is not None,
+        "released": bool(row.released and _sharing_open(db, patient)),
+        "available": _sharing_open(db, patient),
     }
