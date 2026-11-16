@@ -19,6 +19,7 @@ MANUAL_NAME = "Clinic notes"
 LABORATORY = "laboratory"
 LABORATORY_NAME = "Lab results"
 RECORD_PREFIX = "record:"
+MARKERS_PREFIX = "markers:"
 MAX_OBSERVATIONS = 100
 
 
@@ -31,6 +32,11 @@ def _note_text(record: SourceRecord) -> str:
 def record_source_key(record_id: UUID) -> str:
     """Portal key for one note. A bare record id would look like a report release."""
     return f"{RECORD_PREFIX}{record_id}"
+
+
+def marker_source_key(record_id: UUID) -> str:
+    """Portal key for one panel's marker values. It is not the summary release."""
+    return f"{MARKERS_PREFIX}{record_id}"
 
 
 def _record_payload(record: SourceRecord, released: bool = False) -> dict:
@@ -46,13 +52,12 @@ def _record_payload(record: SourceRecord, released: bool = False) -> dict:
     }
 
 
-def _released_record_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
+def _released_source_keys(db: Session, patient: Patient, keys: list[str]) -> set[str]:
     from app.services.clinic_association_service import sharing_practitioner_id
 
     practitioner_id = sharing_practitioner_id(db, patient)
-    if practitioner_id is None or not records:
+    if practitioner_id is None or not keys:
         return set()
-    keys = [record_source_key(record.id) for record in records]
     rows = (
         db.query(ContentRelease.source_key)
         .filter(
@@ -65,6 +70,14 @@ def _released_record_keys(db: Session, patient: Patient, records: list[SourceRec
         .all()
     )
     return {row[0] for row in rows}
+
+
+def _released_record_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
+    return _released_source_keys(db, patient, [record_source_key(record.id) for record in records])
+
+
+def _released_marker_keys(db: Session, patient: Patient, records: list[SourceRecord]) -> set[str]:
+    return _released_source_keys(db, patient, [marker_source_key(record.id) for record in records])
 
 
 def _source_payload(source: PatientSource, records: list[SourceRecord], released_keys: set[str]) -> dict:
@@ -174,7 +187,7 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
         records = _records_for_clinic(patient, _source_records(db, patient, source))
         released_keys = _released_record_keys(db, patient, records)
         if source.source_type == LABORATORY:
-            payloads.append(_lab_source_payload(db, source, records, released_keys))
+            payloads.append(_lab_source_payload(db, patient, source, records, released_keys))
         else:
             payloads.append(_source_payload(source, records, released_keys))
     client_source = released_clinic_client_source(db, patient)
@@ -349,7 +362,12 @@ def _panel_meta(record: SourceRecord) -> tuple[str, str]:
     return payload.get("specimen") or "", payload.get("laboratory_name") or ""
 
 
-def _panel_payload(record: SourceRecord, observations: list[SourceObservation], released: bool = False) -> dict:
+def _panel_payload(
+    record: SourceRecord,
+    observations: list[SourceObservation],
+    released: bool = False,
+    markers_released: bool = False,
+) -> dict:
     recorded = record.recorded_at
     recorded_on = recorded.date().isoformat() if isinstance(recorded, datetime) else None
     specimen, laboratory_name = _panel_meta(record)
@@ -359,6 +377,7 @@ def _panel_payload(record: SourceRecord, observations: list[SourceObservation], 
         "recorded_on": recorded_on,
         "client_summary": record.client_summary or "",
         "released": released,
+        "markers_released": markers_released,
         "specimen": specimen,
         "laboratory_name": laboratory_name,
         "observations": [_observation_payload(row) for row in observations],
@@ -382,11 +401,13 @@ def _observations_for(db: Session, records: list[SourceRecord]) -> dict[UUID, li
 
 def _lab_source_payload(
     db: Session,
+    patient: Patient,
     source: PatientSource,
     records: list[SourceRecord],
     released_keys: set[str],
 ) -> dict:
     grouped = _observations_for(db, records)
+    marker_keys = _released_marker_keys(db, patient, records)
     return {
         "source_id": str(source.id),
         "source_type": source.source_type,
@@ -397,6 +418,7 @@ def _lab_source_payload(
                 record,
                 grouped.get(str(record.id), []),
                 released=record_source_key(record.id) in released_keys,
+                markers_released=marker_source_key(record.id) in marker_keys,
             )
             for record in records
         ],
@@ -541,7 +563,8 @@ def update_lab_panel(
     db.refresh(record)
     rows = _observations_for(db, [record]).get(str(record.id), [])
     released = record_source_key(record.id) in _released_record_keys(db, patient, [record])
-    return _panel_payload(record, rows, released=released)
+    markers_released = marker_source_key(record.id) in _released_marker_keys(db, patient, [record])
+    return _panel_payload(record, rows, released=released, markers_released=markers_released)
 
 
 def set_lab_panel_release(
@@ -572,6 +595,71 @@ def set_lab_panel_release(
         )
     now = datetime.now(timezone.utc)
     source_key = record_source_key(record.id)
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.source_key == source_key,
+            ContentRelease.direction == CLINIC_TO_CLIENT,
+        )
+        .first()
+    )
+    if row is None:
+        row = ContentRelease(
+            patient_id=patient.id,
+            practitioner_user_id=patient.user_id,
+            source_key=source_key,
+            direction=CLINIC_TO_CLIENT,
+            released=False,
+            created_at=now,
+        )
+        db.add(row)
+    if released:
+        row.released = True
+        row.released_at = now
+    else:
+        row.released = False
+        row.withdrawn_at = now
+    db.commit()
+    return {
+        "patient_id": str(patient.id),
+        "record_id": str(record.id),
+        "released": bool(row.released),
+        "available": True,
+    }
+
+
+def set_marker_release(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    record_id: UUID,
+    released: bool,
+) -> dict:
+    """Release or withdraw marker values for one lab panel.
+
+    Handles patient identity. The summary release must already be on before
+    marker values can be released. Turning markers off leaves that summary
+    release on. Marker values are not returned, and a share link is not created.
+    """
+    from app.services.clinic_association_service import sharing_practitioner_id
+
+    if sharing_practitioner_id(db, patient) is None:
+        raise HTTPException(
+            status_code=409,
+            detail="A client must claim this record before a panel can be released.",
+        )
+    source = _laboratory_source(db, patient, source_id)
+    record = _lab_panel(db, patient, source, record_id)
+    summary_on = record_source_key(record.id) in _released_record_keys(db, patient, [record])
+    if released and not summary_on:
+        raise HTTPException(
+            status_code=409,
+            detail="Release the panel before releasing marker values.",
+        )
+    now = datetime.now(timezone.utc)
+    source_key = marker_source_key(record.id)
     row = (
         db.query(ContentRelease)
         .filter(

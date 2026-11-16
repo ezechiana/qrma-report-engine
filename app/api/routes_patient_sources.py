@@ -17,6 +17,7 @@ from app.services.patient_source_service import (
     list_patient_sources,
     set_clinic_note_release,
     set_lab_panel_release,
+    set_marker_release,
     update_clinic_note,
     update_lab_panel,
 )
@@ -285,6 +286,24 @@ def post_lab_panel_release(
     """
     patient = _owned_patient(db, patient_id, current_user)
     return set_lab_panel_release(db, patient, source_id, record_id, payload.released)
+
+
+@router.post("/{patient_id}/sources/{source_id}/panels/{record_id}/marker-release")
+def post_marker_release(
+    patient_id: UUID,
+    source_id: UUID,
+    record_id: UUID,
+    payload: ClinicNoteReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Release or withdraw marker values for one lab panel.
+
+    Handles patient identity. Marker values are not returned. The summary
+    release is left on when markers are withdrawn. A share link is not created.
+    """
+    patient = _owned_patient(db, patient_id, current_user)
+    return set_marker_release(db, patient, source_id, record_id, payload.released)
 
 
 @router.patch("/{patient_id}/sources/{source_id}/records/{record_id}")
