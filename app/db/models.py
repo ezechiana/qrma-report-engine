@@ -15,6 +15,7 @@ from sqlalchemy import (
     Float,
     ForeignKey,
     Integer,
+    Numeric,
     String,
     Text,
     UniqueConstraint,
@@ -623,3 +624,51 @@ class SourceRecord(Base):
     )
 
     source: Mapped["PatientSource"] = relationship(back_populates="records")
+    observations: Mapped[list["SourceObservation"]] = relationship(
+        back_populates="record",
+        cascade="all, delete-orphan",
+    )
+
+
+class SourceObservation(Base):
+    """One marker or measurement on a source record. Values stay in the clinic record."""
+
+    __tablename__ = "source_observations"
+    __table_args__ = (
+        UniqueConstraint(
+            "source_record_id",
+            "position",
+            name="uq_source_observations_record_position",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    source_record_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("source_records.id", ondelete="CASCADE"),
+        index=True,
+    )
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+    )
+    position: Mapped[int] = mapped_column(Integer, nullable=False)
+    code: Mapped[Optional[str]] = mapped_column(String(64), nullable=True)
+    name: Mapped[str] = mapped_column(String(255), nullable=False)
+    value_text: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    value_numeric: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
+    unit: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    reference_low: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
+    reference_high: Mapped[Optional[float]] = mapped_column(Numeric(18, 6), nullable=True)
+    reference_text: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    interpretation: Mapped[Optional[str]] = mapped_column(String(40), nullable=True)
+    observed_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime(timezone=True),
+        server_default=func.now(),
+        onupdate=func.now(),
+    )
+
+    record: Mapped["SourceRecord"] = relationship(back_populates="observations")

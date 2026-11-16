@@ -4,13 +4,16 @@ from datetime import date
 from uuid import UUID
 
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel, Field, field_validator
+from typing import Literal
+
+from pydantic import BaseModel, Field, field_validator, model_validator
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import Patient, User
 from app.services.patient_source_service import (
     create_clinic_note,
+    create_lab_panel,
     list_patient_sources,
     set_clinic_note_release,
     update_clinic_note,
@@ -36,6 +39,68 @@ class ClinicNoteCreate(BaseModel):
     @field_validator("client_summary")
     @classmethod
     def clean_summary(cls, value: str) -> str:
+        return value.strip()
+
+
+class LabObservationCreate(BaseModel):
+    name: str = Field(max_length=255)
+    value_text: str | None = Field(default=None, max_length=255)
+    value_numeric: float | None = None
+    unit: str | None = Field(default=None, max_length=40)
+    reference_low: float | None = None
+    reference_high: float | None = None
+    reference_text: str | None = Field(default=None, max_length=255)
+    interpretation: Literal["normal", "low", "high", "abnormal"] | None = None
+    code: str | None = Field(default=None, max_length=64)
+
+    @field_validator("name")
+    @classmethod
+    def required_name(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("A marker name is required.")
+        return cleaned
+
+    @field_validator("value_text", "unit", "reference_text", "code")
+    @classmethod
+    def clean_optional(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        cleaned = value.strip()
+        return cleaned or None
+
+    @model_validator(mode="after")
+    def marker_is_usable(self):
+        if self.value_numeric is None and not self.value_text:
+            raise ValueError("A marker needs a value.")
+        if (
+            self.reference_low is not None
+            and self.reference_high is not None
+            and self.reference_low > self.reference_high
+        ):
+            raise ValueError("The reference low cannot be above the high.")
+        return self
+
+
+class LabPanelCreate(BaseModel):
+    title: str = Field(max_length=255)
+    recorded_on: date
+    specimen: str = Field(default="", max_length=255)
+    laboratory_name: str = Field(default="", max_length=255)
+    client_summary: str = Field(default="", max_length=20000)
+    observations: list[LabObservationCreate] = Field(min_length=1, max_length=100)
+
+    @field_validator("title")
+    @classmethod
+    def required_title(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("This field is required.")
+        return cleaned
+
+    @field_validator("specimen", "laboratory_name", "client_summary")
+    @classmethod
+    def clean_panel_text(cls, value: str) -> str:
         return value.strip()
 
 
@@ -84,9 +149,9 @@ def get_patient_sources(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List clinic notes for a patient the practitioner owns.
+    """List clinic notes and lab panels for a patient the practitioner owns.
 
-    Handles patient identity and note text. Share links are not included.
+    Handles patient identity, note text, and marker values. Share links are not included.
     """
     patient = _owned_patient(db, patient_id, current_user)
     return list_patient_sources(db, patient)
@@ -110,6 +175,33 @@ def post_clinic_note(
         recorded_on=payload.recorded_on,
         text=payload.text,
         client_summary=payload.client_summary,
+        created_by_user_id=current_user.id,
+    )
+
+
+@router.post("/{patient_id}/sources/{source_id}/panels")
+def post_lab_panel(
+    patient_id: UUID,
+    source_id: UUID,
+    payload: LabPanelCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Save a lab panel. It is not released to the client.
+
+    Handles patient identity and marker values. A share link is not created.
+    """
+    patient = _owned_patient(db, patient_id, current_user)
+    return create_lab_panel(
+        db,
+        patient,
+        source_id,
+        title=payload.title,
+        recorded_on=payload.recorded_on,
+        specimen=payload.specimen,
+        laboratory_name=payload.laboratory_name,
+        client_summary=payload.client_summary,
+        observations=[item.model_dump() for item in payload.observations],
         created_by_user_id=current_user.id,
     )
 

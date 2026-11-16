@@ -3,17 +3,21 @@
 from __future__ import annotations
 
 from datetime import date, datetime, time, timezone
+from decimal import Decimal
 from uuid import UUID
 
 from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
-from app.db.models import ContentRelease, Patient, PatientSource, SourceRecord
+from app.db.models import ContentRelease, Patient, PatientSource, SourceObservation, SourceRecord
 from app.services.content_release_service import CLINIC_TO_CLIENT
 
 MANUAL = "manual"
 MANUAL_NAME = "Clinic notes"
+LABORATORY = "laboratory"
+LABORATORY_NAME = "Lab results"
 RECORD_PREFIX = "record:"
+MAX_OBSERVATIONS = 100
 
 
 def _note_text(record: SourceRecord) -> str:
@@ -97,10 +101,34 @@ def ensure_manual_source(db: Session, patient: Patient) -> PatientSource:
     return source
 
 
-def list_patient_sources(db: Session, patient: Patient) -> dict:
-    """Clinic-facing sources and notes. The raw note text stays in this response."""
-    source = ensure_manual_source(db, patient)
-    records = (
+def ensure_laboratory_source(db: Session, patient: Patient) -> PatientSource:
+    """Return the patient's one laboratory source, creating it when missing."""
+    source = (
+        db.query(PatientSource)
+        .filter(
+            PatientSource.patient_id == patient.id,
+            PatientSource.source_type == LABORATORY,
+        )
+        .first()
+    )
+    if source is not None:
+        return source
+    source = PatientSource(
+        patient_id=patient.id,
+        practitioner_user_id=patient.user_id,
+        source_type=LABORATORY,
+        display_name=LABORATORY_NAME,
+        status="active",
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(source)
+    db.commit()
+    db.refresh(source)
+    return source
+
+
+def _source_records(db: Session, patient: Patient, source: PatientSource) -> list[SourceRecord]:
+    return (
         db.query(SourceRecord)
         .filter(
             SourceRecord.patient_source_id == source.id,
@@ -110,8 +138,21 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
         .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
         .all()
     )
-    released_keys = _released_record_keys(db, patient, records)
-    return {"patient_id": str(patient.id), "sources": [_source_payload(source, records, released_keys)]}
+
+
+def list_patient_sources(db: Session, patient: Patient) -> dict:
+    """Clinic-facing sources. Note text and marker values stay in this response."""
+    manual = ensure_manual_source(db, patient)
+    laboratory = ensure_laboratory_source(db, patient)
+    payloads = []
+    for source in (manual, laboratory):
+        records = _source_records(db, patient, source)
+        released_keys = _released_record_keys(db, patient, records)
+        if source.source_type == LABORATORY:
+            payloads.append(_lab_source_payload(db, source, records, released_keys))
+        else:
+            payloads.append(_source_payload(source, records, released_keys))
+    return {"patient_id": str(patient.id), "sources": payloads}
 
 
 def _manual_source(db: Session, patient: Patient, source_id: UUID) -> PatientSource:
@@ -144,6 +185,168 @@ def _clinic_note(db: Session, patient: Patient, source: PatientSource, record_id
     if record is None:
         raise HTTPException(status_code=404, detail="Note not found")
     return record
+
+
+def _public_number(value: Decimal | None):
+    if value is None:
+        return None
+    number = Decimal(value).normalize()
+    if number == number.to_integral():
+        return int(number)
+    return float(number)
+
+
+def _stored_number(value) -> Decimal | None:
+    if value is None or value == "":
+        return None
+    return Decimal(str(value))
+
+
+def _observation_payload(row: SourceObservation) -> dict:
+    return {
+        "name": row.name,
+        "value_text": row.value_text or "",
+        "value_numeric": _public_number(row.value_numeric),
+        "unit": row.unit or "",
+        "reference_low": _public_number(row.reference_low),
+        "reference_high": _public_number(row.reference_high),
+        "reference_text": row.reference_text or "",
+        "interpretation": row.interpretation or "",
+    }
+
+
+def _panel_meta(record: SourceRecord) -> tuple[str, str]:
+    payload = record.payload_json if isinstance(record.payload_json, dict) else {}
+    return payload.get("specimen") or "", payload.get("laboratory_name") or ""
+
+
+def _panel_payload(record: SourceRecord, observations: list[SourceObservation], released: bool = False) -> dict:
+    recorded = record.recorded_at
+    recorded_on = recorded.date().isoformat() if isinstance(recorded, datetime) else None
+    specimen, laboratory_name = _panel_meta(record)
+    return {
+        "record_id": str(record.id),
+        "title": record.title,
+        "recorded_on": recorded_on,
+        "client_summary": record.client_summary or "",
+        "released": released,
+        "specimen": specimen,
+        "laboratory_name": laboratory_name,
+        "observations": [_observation_payload(row) for row in observations],
+    }
+
+
+def _observations_for(db: Session, records: list[SourceRecord]) -> dict[UUID, list[SourceObservation]]:
+    if not records:
+        return {}
+    rows = (
+        db.query(SourceObservation)
+        .filter(SourceObservation.source_record_id.in_([record.id for record in records]))
+        .order_by(SourceObservation.position.asc())
+        .all()
+    )
+    grouped: dict[str, list[SourceObservation]] = {}
+    for row in rows:
+        grouped.setdefault(str(row.source_record_id), []).append(row)
+    return grouped
+
+
+def _lab_source_payload(
+    db: Session,
+    source: PatientSource,
+    records: list[SourceRecord],
+    released_keys: set[str],
+) -> dict:
+    grouped = _observations_for(db, records)
+    return {
+        "source_id": str(source.id),
+        "source_type": source.source_type,
+        "display_name": source.display_name,
+        "status": source.status,
+        "records": [
+            _panel_payload(
+                record,
+                grouped.get(str(record.id), []),
+                released=record_source_key(record.id) in released_keys,
+            )
+            for record in records
+        ],
+    }
+
+
+def _laboratory_source(db: Session, patient: Patient, source_id: UUID) -> PatientSource:
+    source = (
+        db.query(PatientSource)
+        .filter(
+            PatientSource.id == source_id,
+            PatientSource.patient_id == patient.id,
+            PatientSource.practitioner_user_id == patient.user_id,
+            PatientSource.source_type == LABORATORY,
+        )
+        .first()
+    )
+    if source is None:
+        raise HTTPException(status_code=404, detail="Source not found")
+    return source
+
+
+def create_lab_panel(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    *,
+    title: str,
+    recorded_on: date,
+    specimen: str,
+    laboratory_name: str,
+    client_summary: str,
+    observations: list[dict],
+    created_by_user_id: UUID,
+) -> dict:
+    """Save a private lab panel. Does not release it or create a share link."""
+    if not 1 <= len(observations) <= MAX_OBSERVATIONS:
+        raise HTTPException(status_code=422, detail="A panel needs between 1 and 100 markers.")
+    source = _laboratory_source(db, patient, source_id)
+    payload = {"kind": "laboratory"}
+    if specimen:
+        payload["specimen"] = specimen
+    if laboratory_name:
+        payload["laboratory_name"] = laboratory_name
+    record = SourceRecord(
+        patient_source_id=source.id,
+        patient_id=patient.id,
+        recorded_at=datetime.combine(recorded_on, time.min, tzinfo=timezone.utc),
+        title=title,
+        status="ready",
+        payload_json=payload,
+        client_summary=client_summary,
+        is_archived=False,
+        created_by_user_id=created_by_user_id,
+        created_at=datetime.now(timezone.utc),
+    )
+    db.add(record)
+    db.flush()
+    now = datetime.now(timezone.utc)
+    for position, item in enumerate(observations, start=1):
+        db.add(SourceObservation(
+            source_record_id=record.id,
+            patient_id=patient.id,
+            position=position,
+            code=item.get("code") or None,
+            name=item["name"],
+            value_text=item.get("value_text") or None,
+            value_numeric=_stored_number(item.get("value_numeric")),
+            unit=item.get("unit") or None,
+            reference_low=_stored_number(item.get("reference_low")),
+            reference_high=_stored_number(item.get("reference_high")),
+            reference_text=item.get("reference_text") or None,
+            interpretation=item.get("interpretation") or None,
+            created_at=now,
+        ))
+    db.commit()
+    db.refresh(record)
+    rows = _observations_for(db, [record]).get(str(record.id), [])
+    return _panel_payload(record, rows, released=False)
 
 
 def create_clinic_note(
