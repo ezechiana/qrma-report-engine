@@ -91,10 +91,10 @@ def get_client_note(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return the client summary of one note this clinic has released.
+    """Return the client summary of one released note or lab panel.
 
-    Handles patient identity. The raw note text is not included. An unreleased
-    note, or a note with no client summary, is not found.
+    Handles patient identity. Note text and marker values are not included.
+    An unreleased record, or one with no client summary, is not found.
     """
     client = _require_client(current_user)
     patient = require_claimed_patient(db, client, patient_id)

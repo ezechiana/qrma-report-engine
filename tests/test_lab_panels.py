@@ -634,6 +634,34 @@ def test_practitioner_can_release_and_withdraw_one_lab_panel(monkeypatch):
         marker = db.query(SourceObservation).filter(SourceObservation.source_record_id == uuid.UUID(record_id)).one()
         assert db.query(ContentRelease).filter(ContentRelease.source_key == str(marker.id)).count() == 0
 
+        note_source = sources[0]["source_id"]
+        note = http.post(
+            f"/api/patients/{patient.id}/sources/{note_source}/records",
+            json={
+                "title": "Visit note",
+                "recorded_on": "2026-11-01",
+                "text": "Private clinic wording",
+                "client_summary": "A short note for the client",
+            },
+        )
+        assert note.status_code == 200
+        note_id = note.json()["record_id"]
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{note_source}/records/{note_id}/release",
+            json={"released": True},
+        ).status_code == 200
+        unreleased = http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "Unreleased bloods",
+                "recorded_on": "2026-06-20",
+                "client_summary": "Not ready for the client",
+                "observations": [{"name": "Ferritin", "value_text": "Low"}],
+            },
+        )
+        assert unreleased.status_code == 200
+        unreleased_id = unreleased.json()["record_id"]
+
         listed = http.get(f"/api/patients/{patient.id}/sources").json()["sources"][1]["records"]
         by_id = {item["record_id"]: item for item in listed}
         assert by_id[record_id]["released"] is True
@@ -644,24 +672,68 @@ def test_practitioner_can_release_and_withdraw_one_lab_panel(monkeypatch):
         holder["user"] = client_user
         portal = http.get(f"/api/client/records/{patient.id}")
         assert portal.status_code == 200
-        assert portal.json()["sources"] == []
+        assert portal.json()["trend"]["client_view"]["summary"] == "Progress is ready to review."
+        assert portal.json()["reports"]["assessment_reports"] == []
+        assert portal.json()["sources"] == [
+            {
+                "display_name": "Clinic notes",
+                "records": [{
+                    "record_id": note_id,
+                    "title": "Visit note",
+                    "recorded_on": "2026-11-01",
+                }],
+            },
+            {
+                "display_name": "Lab results",
+                "records": [{
+                    "record_id": record_id,
+                    "title": "June bloods",
+                    "recorded_on": "2026-06-12",
+                }],
+            },
+        ]
+        for item in portal.json()["sources"][1]["records"]:
+            assert set(item) == {"record_id", "title", "recorded_on"}
         opened = http.get(f"/api/client/records/{patient.id}/notes/{record_id}")
-        assert opened.status_code == 404
+        assert opened.status_code == 200
+        panel = opened.json()
+        assert set(panel) == {"record_id", "title", "recorded_on", "client_summary", "source_name"}
+        assert panel["title"] == "June bloods"
+        assert panel["recorded_on"] == "2026-06-12"
+        assert panel["client_summary"] == "The blood count is ready to discuss."
+        assert panel["source_name"] == "Lab results"
+        assert http.get(f"/api/client/records/{patient.id}/notes/{blank_id}").status_code == 404
+        assert http.get(f"/api/client/records/{patient.id}/notes/{unreleased_id}").status_code == 404
         for hidden in (
             "Haemoglobin",
-            "140",
             "g/L",
             "115",
             "150",
-            "June bloods",
-            "The blood count is ready to discuss.",
             "North Lab",
             "Blood",
             "ALT",
             "Internal bloods",
+            "Ferritin",
+            "Low",
+            "Unreleased bloods",
+            "Not ready for the client",
+            "Private clinic wording",
+            "observations",
+            "value_numeric",
+            "payload_json",
+            "interpretation",
         ):
             assert hidden not in portal.text
             assert hidden not in opened.text
+        assert "The blood count is ready to discuss." not in portal.text
+        record_page = open("app/templates/client_record.html", encoding="utf-8").read()
+        note_page = open("app/templates/client_note.html", encoding="utf-8").read()
+        assert "Lab results" not in record_page
+        assert "value_numeric" not in record_page
+        assert "payload_json" not in record_page
+        assert "client_summary" in note_page
+        assert "value_numeric" not in note_page
+        assert "payload_json" not in note_page
 
         holder["user"] = practitioner
         withdrawn = http.post(release_url, json={"released": False})
@@ -685,7 +757,22 @@ def test_practitioner_can_release_and_withdraw_one_lab_panel(monkeypatch):
         assert link.token == "panel-release-token"
         assert link.is_active is True
         assert db.query(ShareLink).count() == 1
-        assert db.query(ContentRelease).count() == progress_count + 1
+        assert db.query(ContentRelease).count() == progress_count + 2
+        holder["user"] = client_user
+        after = http.get(f"/api/client/records/{patient.id}")
+        assert after.json()["sources"] == [{
+            "display_name": "Clinic notes",
+            "records": [{
+                "record_id": note_id,
+                "title": "Visit note",
+                "recorded_on": "2026-11-01",
+            }],
+        }]
+        assert "June bloods" not in after.text
+        assert "Haemoglobin" not in after.text
+        assert after.json()["trend"]["client_view"]["summary"] == "Progress is ready to review."
+        assert http.get(f"/api/client/records/{patient.id}/notes/{record_id}").status_code == 404
+        holder["user"] = practitioner
         assert http.post(
             f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}/release",
             json={"released": True},

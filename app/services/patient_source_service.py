@@ -620,10 +620,10 @@ def _recorded_on(record: SourceRecord) -> str | None:
 
 
 def released_client_sources(db: Session, patient: Patient) -> list[dict]:
-    """Released clinic notes for the claimed client, grouped by source name.
+    """Released clinic notes and lab panels, grouped by source name.
 
-    A note is included only when it is released and its client summary has text.
-    Lab panels are left out of this list. The raw note text is not included.
+    A record is included only when it is released and its client summary has text.
+    The list is title and date. Note text and marker values are not included.
     """
     rows = (
         db.query(SourceRecord, PatientSource)
@@ -633,7 +633,7 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
             PatientSource.patient_id == patient.id,
             PatientSource.practitioner_user_id == patient.user_id,
             PatientSource.status == "active",
-            PatientSource.source_type == MANUAL,
+            PatientSource.source_type.in_((MANUAL, LABORATORY)),
             SourceRecord.is_archived.is_(False),
         )
         .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
@@ -659,7 +659,10 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
 
 
 def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict:
-    """The client summary of one released clinic note. The raw note text is not included."""
+    """The client summary of one released note or lab panel.
+
+    Note text and marker values are not included.
+    """
     record = (
         db.query(SourceRecord)
         .filter(
@@ -685,7 +688,7 @@ def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict
     released = (
         record is not None
         and source is not None
-        and source.source_type == MANUAL
+        and source.source_type in (MANUAL, LABORATORY)
         and bool(summary)
         and record_source_key(record.id) in _released_record_keys(db, patient, [record])
     )
