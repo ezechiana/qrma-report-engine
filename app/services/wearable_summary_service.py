@@ -15,7 +15,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.models import ContentRelease, Patient, PatientSource, SourceObservation, SourceRecord, User
-from app.services.wearable_connection_service import _require_claimed, _wearable_source
+from app.services.wearable_connection_service import WEARABLE, _require_claimed, _wearable_source
 
 DAY_KIND = "wearable_day"
 DAY_TITLE = "Daily summary"
@@ -251,6 +251,136 @@ def _payloads(db: Session, patient: Patient, records: list[SourceRecord]) -> lis
         _day_payload(record, observations.get(record.id, {}), released_keys)
         for record in records
     ]
+
+
+def _own_day(db: Session, patient: Patient, client: User, record_id: UUID) -> SourceRecord:
+    _require_claimed(patient, client)
+    record = (
+        db.query(SourceRecord)
+        .join(PatientSource, PatientSource.id == SourceRecord.patient_source_id)
+        .filter(
+            SourceRecord.id == record_id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.created_by_user_id == client.id,
+            SourceRecord.is_archived.is_(False),
+            PatientSource.patient_id == patient.id,
+            PatientSource.practitioner_user_id == patient.user_id,
+            PatientSource.source_type == WEARABLE,
+            PatientSource.status == "active",
+        )
+        .first()
+    )
+    payload = record.payload_json if record is not None and isinstance(record.payload_json, dict) else {}
+    if record is None or payload.get("kind") != DAY_KIND:
+        raise HTTPException(status_code=404, detail="Day not found")
+    return record
+
+
+def set_wearable_day_release(
+    db: Session,
+    patient: Patient,
+    client: User,
+    record_id: UUID,
+    released: bool,
+) -> dict:
+    """Release or withdraw one wearable day for the owning clinic.
+
+    Handles patient identity. The daily values are not returned. The saved
+    values stay as they are. Does not create a share link.
+    """
+    record = _own_day(db, patient, client, record_id)
+    now = _now()
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.source_key == wearable_day_source_key(record.id),
+            ContentRelease.direction == CLIENT_TO_CLINIC,
+        )
+        .first()
+    )
+    if released:
+        if row is None:
+            row = ContentRelease(
+                patient_id=patient.id,
+                practitioner_user_id=patient.user_id,
+                source_key=wearable_day_source_key(record.id),
+                direction=CLIENT_TO_CLINIC,
+                released=True,
+                released_at=now,
+                created_at=now,
+            )
+            db.add(row)
+        else:
+            row.released = True
+            row.released_at = now
+    else:
+        if row is None:
+            raise HTTPException(status_code=404, detail="Day not found")
+        row.released = False
+        row.withdrawn_at = now
+    db.commit()
+    return {"record_id": str(record.id), "released": bool(row.released)}
+
+
+def released_clinic_wearable_source(db: Session, patient: Patient) -> dict | None:
+    """Released wearable days for the practitioner who owns this record.
+
+    The group is omitted when nothing is currently released. Unreleased days
+    and the release flag are not included.
+    """
+    source = (
+        db.query(PatientSource)
+        .filter(
+            PatientSource.patient_id == patient.id,
+            PatientSource.practitioner_user_id == patient.user_id,
+            PatientSource.source_type == WEARABLE,
+            PatientSource.status == "active",
+        )
+        .first()
+    )
+    if source is None:
+        return None
+    rows = (
+        db.query(SourceRecord)
+        .filter(
+            SourceRecord.patient_source_id == source.id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.is_archived.is_(False),
+        )
+        .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
+        .all()
+    )
+    days = [
+        record
+        for record in rows
+        if isinstance(record.payload_json, dict) and record.payload_json.get("kind") == DAY_KIND
+    ]
+    released = _released_keys(db, patient, days)
+    visible = [record for record in days if wearable_day_source_key(record.id) in released]
+    if not visible:
+        return None
+    observations = _observations(db, visible)
+    records = []
+    for record in visible:
+        observed = observations.get(record.id, {})
+        recorded = record.recorded_at
+        item = {
+            "record_id": str(record.id),
+            "title": record.title,
+            "recorded_on": recorded.date().isoformat() if isinstance(recorded, datetime) else None,
+        }
+        for code, _name, unit, _position in METRICS:
+            item[code] = _metric_value(observed.get(code), unit)
+        records.append(item)
+    return {
+        "source_id": str(source.id),
+        "source_type": WEARABLE,
+        "display_name": source.display_name,
+        "status": source.status,
+        "records": records,
+    }
 
 
 def list_wearable_days(db: Session, patient: Patient, client: User) -> dict:

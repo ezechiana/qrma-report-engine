@@ -519,7 +519,7 @@ class ContentRelease(Base):
 
     Share-link tables are not used. clinic_to_client covers the progress view,
     reports, clinic notes, and lab panels. client_to_clinic covers a plain-text
-    entry the client sends to the clinic.
+    entry the client sends to the clinic and a wearable day the client releases.
     """
 
     __tablename__ = "content_releases"

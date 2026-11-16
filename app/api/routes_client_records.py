@@ -25,7 +25,11 @@ from app.services.client_record_service import (
 from app.services.patient_claim_service import claim_access_state, end_claim_access
 from app.services.patient_source_service import client_released_note
 from app.services.wearable_connection_service import connect_wearable, wearable_connection
-from app.services.wearable_summary_service import list_wearable_days, sync_wearable_days
+from app.services.wearable_summary_service import (
+    list_wearable_days,
+    set_wearable_day_release,
+    sync_wearable_days,
+)
 
 router = APIRouter(prefix="/api/client", tags=["client-record"])
 
@@ -89,6 +93,10 @@ class WearableDayInput(BaseModel):
 
 class WearableDaySync(BaseModel):
     days: list[WearableDayInput] = Field(max_length=366)
+
+
+class WearableDayReleaseUpdate(BaseModel):
+    released: bool
 
 
 def _require_client(current_user: User) -> User:
@@ -300,6 +308,24 @@ def post_wearable_days(
         client,
         [day.model_dump() for day in body.days],
     )
+
+
+@router.post("/records/{patient_id}/wearable/days/{record_id}/release")
+def post_wearable_day_release(
+    patient_id: UUID,
+    record_id: UUID,
+    body: WearableDayReleaseUpdate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Release or withdraw one wearable day for this claimed record.
+
+    Handles patient identity. The daily values are not returned. Share links
+    are not created or changed.
+    """
+    client = _require_client(current_user)
+    patient = require_claimed_patient(db, client, patient_id)
+    return set_wearable_day_release(db, patient, client, record_id, body.released)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)

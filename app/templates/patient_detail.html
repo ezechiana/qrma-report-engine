@@ -670,6 +670,11 @@ button.link {
         <p class="muted">Shared by the client. This clinic cannot change them here.</p>
         <div id="client-entries-body"></div>
     </div>
+    <div id="wearable-days-section" style="margin-top:28px; display:none;">
+        <h3 style="margin:0;">Wearables</h3>
+        <p class="muted">Shared by the client. This clinic cannot change them here.</p>
+        <div id="wearable-days-body"></div>
+    </div>
 </div>
 
 <div class="card">
@@ -2458,6 +2463,42 @@ button.link {
         }).join("");
     }
 
+    function renderWearableDays(records) {
+        const section = document.getElementById("wearable-days-section");
+        const body = document.getElementById("wearable-days-body");
+        const items = Array.isArray(records) ? records : [];
+        if (!section || !body) return;
+        if (!items.length) {
+            section.style.display = "none";
+            body.textContent = "";
+            return;
+        }
+        section.style.display = "block";
+        const labels = [
+            ["steps", "Steps"],
+            ["resting_heart_rate", "Resting heart rate"],
+            ["sleep_duration", "Sleep duration"],
+            ["hrv", "Heart rate variability"],
+        ];
+        body.innerHTML = items.map((item) => {
+            const lines = labels.map(([key, label]) => {
+                const metric = item && item[key];
+                const missing = !metric || metric.value === null || metric.value === undefined || metric.value === "";
+                const shown = missing
+                    ? ""
+                    : `${metric.value}${metric.unit ? " " + metric.unit : ""}`;
+                return `<div>${escapeHtml(label)}: ${escapeHtml(shown)}</div>`;
+            }).join("");
+            return `
+                <div class="clinic-note">
+                    <strong>${escapeHtml(item && item.title || "Daily summary")}</strong>
+                    <div class="muted">${escapeHtml(item && item.recorded_on || "")}</div>
+                    ${lines}
+                </div>
+            `;
+        }).join("");
+    }
+
     async function loadClinicNotes() {
         const body = document.getElementById("clinic-notes-body");
         const labBody = document.getElementById("lab-panels-body");
@@ -2470,6 +2511,7 @@ button.link {
                 if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
                 if (labBody) labBody.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
                 renderClientEntries([]);
+                renderWearableDays([]);
                 showPatientError(typeof data.detail === "string" ? data.detail : "Could not load clinic notes.");
                 return;
             }
@@ -2477,6 +2519,7 @@ button.link {
             const source = sources.find(item => item.source_type === "manual") || null;
             const laboratory = sources.find(item => item.source_type === "laboratory") || null;
             const clientSource = sources.find(item => item.source_type === "client") || null;
+            const wearableSource = sources.find(item => item.source_type === "wearable") || null;
             clinicNoteSourceId = source && source.source_id ? source.source_id : null;
             labSourceId = laboratory && laboratory.source_id ? laboratory.source_id : null;
             const name = document.getElementById("clinic-source-name");
@@ -2484,11 +2527,13 @@ button.link {
             renderClinicNotes(source ? source.records : []);
             renderLabPanels(laboratory ? laboratory.records : []);
             renderClientEntries(clientSource ? clientSource.records : []);
+            renderWearableDays(wearableSource ? wearableSource.records : []);
         } catch (err) {
             console.error(err);
             if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
             if (labBody) labBody.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
             renderClientEntries([]);
+            renderWearableDays([]);
             showPatientError("Unexpected error while loading clinic notes.");
         }
     }

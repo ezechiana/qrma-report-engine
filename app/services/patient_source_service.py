@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import ContentRelease, Patient, PatientSource, SourceObservation, SourceRecord
 from app.services.client_entry_service import released_clinic_client_source
+from app.services.wearable_summary_service import released_clinic_wearable_source
 from app.services.content_release_service import CLINIC_TO_CLIENT
 
 MANUAL = "manual"
@@ -145,7 +146,7 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
     """Clinic-facing sources. Note text and marker values stay in this response.
 
     A From the client group is added only when that client has a released entry.
-    The Wearables shelf is left out of this list.
+    A Wearables group is added only when a wearable day is currently released.
     """
     manual = ensure_manual_source(db, patient)
     laboratory = ensure_laboratory_source(db, patient)
@@ -160,6 +161,9 @@ def list_patient_sources(db: Session, patient: Patient) -> dict:
     client_source = released_clinic_client_source(db, patient)
     if client_source is not None:
         payloads.append(client_source)
+    wearable_source = released_clinic_wearable_source(db, patient)
+    if wearable_source is not None:
+        payloads.append(wearable_source)
     return {"patient_id": str(patient.id), "sources": payloads}
 
 
