@@ -19,6 +19,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Patient, PatientClaimInvite, RecommendationMode, User
 from app.services.content_release_service import clear_progress_release, clear_report_releases
+from app.services.patient_source_service import clear_clinic_note_releases
 from app.services.email_service import send_email, send_verification_email
 from app.utils.security import hash_password
 
@@ -322,7 +323,9 @@ def claim_access_state(patient: Patient) -> dict:
 def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
     """Remove a client's account access without deleting the clinical record.
 
-    Pending invites for this patient stop working. Share links are left as they are.
+    Pending invites for this patient stop working. Progress, report, and clinic-note
+    releases are withdrawn in this same save. The notes stay. Share links are left
+    as they are.
     """
     if ended_by not in {"practitioner", "client"}:
         raise HTTPException(status_code=400, detail="Access can only be ended by the clinic or the client.")
@@ -345,6 +348,7 @@ def end_claim_access(db: Session, patient: Patient, ended_by: str) -> Patient:
         invite.cancelled_at = now
     clear_progress_release(db, patient, now)
     clear_report_releases(db, patient, now)
+    clear_clinic_note_releases(db, patient, now)
     db.commit()
     db.refresh(patient)
     return patient

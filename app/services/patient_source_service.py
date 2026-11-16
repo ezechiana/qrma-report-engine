@@ -260,6 +260,28 @@ def set_clinic_note_release(
     }
 
 
+def clear_clinic_note_releases(db: Session, patient: Patient, now: datetime | None = None) -> None:
+    """Turn released clinic notes off without committing. Used when a claim ends.
+
+    The note rows stay. Share links are not changed.
+    """
+    moment = now or datetime.now(timezone.utc)
+    rows = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.direction == CLINIC_TO_CLIENT,
+            ContentRelease.source_key.startswith(RECORD_PREFIX),
+            ContentRelease.released.is_(True),
+        )
+        .all()
+    )
+    for row in rows:
+        row.released = False
+        row.withdrawn_at = moment
+
+
 def _recorded_on(record: SourceRecord) -> str | None:
     recorded = record.recorded_at
     if isinstance(recorded, datetime):

@@ -116,7 +116,10 @@ def unlink_claim_access(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Remove the claimed client from this record. Cases, reports, and share links stay."""
+    """Remove the claimed client from this record.
+
+    Cases, reports, clinic notes, and share links stay. Portal releases are withdrawn.
+    """
     patient = _owned_patient(db, patient_id, current_user)
     patient = end_claim_access(db, patient, "practitioner")
     return claim_access_state(patient)
