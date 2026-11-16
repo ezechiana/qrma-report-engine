@@ -415,6 +415,67 @@ def update_lab_panel(
     return _panel_payload(record, rows, released=released)
 
 
+def set_lab_panel_release(
+    db: Session,
+    patient: Patient,
+    source_id: UUID,
+    record_id: UUID,
+    released: bool,
+) -> dict:
+    """Release or withdraw one lab panel. Markers stay in the clinic record.
+
+    Does not create a share link or change a report release.
+    """
+    if patient.claimed_by_user_id is None:
+        raise HTTPException(
+            status_code=409,
+            detail="A client must claim this record before a panel can be released.",
+        )
+    source = _laboratory_source(db, patient, source_id)
+    record = _lab_panel(db, patient, source, record_id)
+    summary = (record.client_summary or "").strip()
+    if released and not summary:
+        raise HTTPException(
+            status_code=422,
+            detail="Add a client summary before releasing this panel.",
+        )
+    now = datetime.now(timezone.utc)
+    source_key = record_source_key(record.id)
+    row = (
+        db.query(ContentRelease)
+        .filter(
+            ContentRelease.patient_id == patient.id,
+            ContentRelease.practitioner_user_id == patient.user_id,
+            ContentRelease.source_key == source_key,
+            ContentRelease.direction == CLINIC_TO_CLIENT,
+        )
+        .first()
+    )
+    if row is None:
+        row = ContentRelease(
+            patient_id=patient.id,
+            practitioner_user_id=patient.user_id,
+            source_key=source_key,
+            direction=CLINIC_TO_CLIENT,
+            released=False,
+            created_at=now,
+        )
+        db.add(row)
+    if released:
+        row.released = True
+        row.released_at = now
+    else:
+        row.released = False
+        row.withdrawn_at = now
+    db.commit()
+    return {
+        "patient_id": str(patient.id),
+        "record_id": str(record.id),
+        "released": bool(row.released),
+        "available": True,
+    }
+
+
 def create_clinic_note(
     db: Session,
     patient: Patient,
@@ -559,10 +620,10 @@ def _recorded_on(record: SourceRecord) -> str | None:
 
 
 def released_client_sources(db: Session, patient: Patient) -> list[dict]:
-    """Released notes for the claimed client, grouped by source name.
+    """Released clinic notes for the claimed client, grouped by source name.
 
     A note is included only when it is released and its client summary has text.
-    The raw note text is not included.
+    Lab panels are left out of this list. The raw note text is not included.
     """
     rows = (
         db.query(SourceRecord, PatientSource)
@@ -572,6 +633,7 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
             PatientSource.patient_id == patient.id,
             PatientSource.practitioner_user_id == patient.user_id,
             PatientSource.status == "active",
+            PatientSource.source_type == MANUAL,
             SourceRecord.is_archived.is_(False),
         )
         .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
@@ -597,7 +659,7 @@ def released_client_sources(db: Session, patient: Patient) -> list[dict]:
 
 
 def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict:
-    """The client summary of one released note. The raw note text is not included."""
+    """The client summary of one released clinic note. The raw note text is not included."""
     record = (
         db.query(SourceRecord)
         .filter(
@@ -623,6 +685,7 @@ def client_released_note(db: Session, patient: Patient, record_id: UUID) -> dict
     released = (
         record is not None
         and source is not None
+        and source.source_type == MANUAL
         and bool(summary)
         and record_source_key(record.id) in _released_record_keys(db, patient, [record])
     )

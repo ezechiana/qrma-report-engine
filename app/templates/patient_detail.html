@@ -2214,6 +2214,29 @@ button.link {
         return Number(text);
     }
 
+    function labPanelReleaseBusy(recordId) {
+        return typeof claimBusy === "string"
+            && claimBusy.indexOf("panel:") === 0
+            && String(claimBusy.slice(6)) === String(recordId);
+    }
+
+    function labPanelReleaseControls(item) {
+        if (!claimLoaded || claimLoadError || !claimAccess || !claimAccess.claimed) return "";
+        const summary = String(item.client_summary || "").trim();
+        const released = !!item.released;
+        if (!released && !summary) {
+            return `<p class="muted" style="margin:8px 0 0;">Add a client summary before this panel can be released.</p>`;
+        }
+        const busy = labPanelReleaseBusy(item.record_id);
+        const button = released
+            ? `<button class="btn secondary lab-panel-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+            : `<button class="btn secondary lab-panel-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+        const status = released
+            ? `<span class="report-type-pill report-type-assessment">Released</span>`
+            : "";
+        return `<div class="clinic-note-release-state">${status}<div>${button}</div></div>`;
+    }
+
     function renderLabPanels(records) {
         const body = document.getElementById("lab-panels-body");
         if (!body) return;
@@ -2247,6 +2270,7 @@ button.link {
                     ${laboratoryName}
                     ${markers}
                     <p><span class="muted">Client summary:</span> ${summary}</p>
+                    ${labPanelReleaseControls(item)}
                     <div class="btn-row" style="margin-top:8px;">
                         <button class="btn secondary lab-panel-edit" type="button" data-record-id="${safeText(item.record_id)}">Edit</button>
                     </div>
@@ -2459,6 +2483,47 @@ button.link {
         if (button) button.textContent = clinicNoteSaveLabel();
         const form = document.getElementById("clinic-note-form");
         if (form) form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+    }
+
+    async function setLabPanelRelease(recordId, released) {
+        if (!recordId || !labSourceId || claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw this panel? Share links and the progress view stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = `panel:${recordId}`;
+        clearPatientError();
+        clearPatientSuccess();
+        renderLabPanels(labPanels);
+        try {
+            const response = await apiFetch(
+                `/api/patients/${patientId}/sources/${labSourceId}/panels/${recordId}/release`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ released: released }),
+                }
+            );
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the lab panel release."));
+                if (response.status === 409) {
+                    claimAccess = { claimed: false };
+                    renderClaimCard();
+                }
+                renderLabPanels(labPanels);
+                return;
+            }
+            const match = labPanels.find(panel => String(panel.record_id) === String(recordId));
+            if (match) match.released = !!data.released;
+            showPatientSuccess(released ? "Lab panel released." : "Lab panel withdrawn.");
+            renderLabPanels(labPanels);
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the lab panel release.");
+            renderLabPanels(labPanels);
+        }
     }
 
     async function setClinicNoteRelease(recordId, released) {
@@ -2820,8 +2885,14 @@ button.link {
     const labPanelCancel = document.getElementById("lab-panel-cancel");
     if (labPanelCancel) labPanelCancel.addEventListener("click", resetLabPanelForm);
     const labPanelsBody = document.getElementById("lab-panels-body");
-    if (labPanelsBody) {
+        if (labPanelsBody) {
         labPanelsBody.addEventListener("click", (event) => {
+            const releaseButton = event.target && event.target.closest ? event.target.closest(".lab-panel-release") : null;
+            if (releaseButton) {
+                if (claimBusy) return;
+                setLabPanelRelease(releaseButton.dataset.recordId, releaseButton.dataset.released !== "true");
+                return;
+            }
             const button = event.target && event.target.closest ? event.target.closest(".lab-panel-edit") : null;
             if (!button) return;
             beginLabPanelEdit(button.dataset.recordId);

@@ -54,6 +54,7 @@ def test_clinic_note_routes_stay_off_the_client_portal():
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources") is True
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources/2/panels") is True
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources/2/panels/3") is True
+    assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources/2/panels/3/release") is True
     assert _client_blocked_from_practitioner_path(client, "/api/patients/1/sources/2/records/3/release") is True
     page = open("app/templates/patient_detail.html", encoding="utf-8").read()
     assert 'id="sources-section"' in page
@@ -62,6 +63,9 @@ def test_clinic_note_routes_stay_off_the_client_portal():
     assert "Save panel" in page
     assert "lab-panel-edit" in page
     assert "Editing this panel." in page
+    assert "lab-panel-release" in page
+    assert "Withdraw this panel? Share links and the progress view stay as they are." in page
+    assert "Add a client summary before this panel can be released." in page
     assert "Client summary" in page
     assert "Save note" in page
     assert "Save changes" in page
