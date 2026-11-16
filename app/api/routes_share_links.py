@@ -11,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.api.share_helpers import _ensure_share_link_events_table
+from app.api.share_helpers import DEFAULT_SHARE_PRICE_CURRENCY, _ensure_share_link_events_table
 from app.db.models import Case, ReportVersion, ShareLink, User
 from app.schemas.share import ShareLinkCreate, ShareLinkRead
 from app.services.audit_service import log_action

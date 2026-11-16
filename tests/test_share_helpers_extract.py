@@ -87,6 +87,28 @@ def test_share_link_management_routes_moved_with_same_paths():
     assert routes_share_links._ensure_share_link_events_table is share_helpers._ensure_share_link_events_table
 
 
+def test_share_list_uses_the_default_price_currency(monkeypatch):
+    monkeypatch.setattr(routes_share_links, "_ensure_share_link_events_table", lambda db: None)
+    captured = []
+
+    class Rows:
+        def mappings(self):
+            return self
+
+        def all(self):
+            return []
+
+    class DB:
+        def execute(self, statement, params):
+            captured.append(params)
+            return Rows()
+
+    payload = routes_share_links.list_share_links(db=DB(), user=SimpleNamespace(id="user-1"))
+    assert payload["items"] == []
+    assert captured[0]["default_currency"] == share_helpers.DEFAULT_SHARE_PRICE_CURRENCY
+    assert captured[1]["default_currency"] == share_helpers.DEFAULT_SHARE_PRICE_CURRENCY
+
+
 def test_revoke_share_still_deactivates_the_link():
     calls = {}
 
