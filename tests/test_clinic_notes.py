@@ -60,6 +60,11 @@ def test_clinic_note_routes_stay_off_the_client_portal():
     assert 'id="sources-section"' in page
     assert "Clinic notes" in page
     assert "Lab results" in page
+    assert 'id="client-entries-section"' in page
+    assert "From the client" in page
+    assert "This clinic cannot change them here." in page
+    assert "client-entry-edit" not in page
+    assert "client-entry-release" not in page
     assert "Save panel" in page
     assert "Collection date" in page
     assert "Reference range" in page

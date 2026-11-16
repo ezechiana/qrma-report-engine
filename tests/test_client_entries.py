@@ -16,7 +16,7 @@ from sqlalchemy.pool import StaticPool
 from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_client_records, routes_content_releases, routes_patient_sources
-from app.api.deps import get_current_user, get_db
+from app.api.deps import _client_blocked_from_practitioner_path, get_current_user, get_db
 from app.db.models import (
     Case,
     ContentRelease,
@@ -214,6 +214,7 @@ def test_claimed_client_can_send_an_entry_to_the_clinic(monkeypatch):
             json={"released": True},
         ).status_code == 200
         clinic_sources = http.get(f"/api/patients/{patient.id}/sources").json()
+        assert [item["display_name"] for item in clinic_sources["sources"]] == ["Clinic notes", "Lab results"]
         progress = http.get(f"/api/patients/{patient.id}/progress-release").json()
         reports = http.get(f"/api/patients/{patient.id}/report-releases").json()
         clinic_release_count = (
@@ -344,7 +345,68 @@ def test_claimed_client_can_send_an_entry_to_the_clinic(monkeypatch):
         assert denied.status_code == 403
         assert db.query(SourceRecord).count() == record_count
 
-        assert http.get(f"/api/patients/{patient.id}/sources").json() == clinic_sources
+        clinic = http.get(f"/api/patients/{patient.id}/sources")
+        assert clinic.status_code == 200
+        clinic_body = clinic.json()
+        assert [item["display_name"] for item in clinic_body["sources"]] == [
+            "Clinic notes",
+            "Lab results",
+            "From the client",
+        ]
+        assert clinic_body["sources"][0] == clinic_sources["sources"][0]
+        assert clinic_body["sources"][1] == clinic_sources["sources"][1]
+        group = clinic_body["sources"][2]
+        assert group["source_type"] == "client"
+        assert group["display_name"] == "From the client"
+        assert [item["title"] for item in group["records"]] == ["Sleep note", "Earlier day"]
+        assert set(group["records"][0]) == {"record_id", "title", "recorded_on", "text", "reference"}
+        assert group["records"][0]["record_id"] == record_id
+        assert group["records"][0]["recorded_on"] == "2026-11-02"
+        assert group["records"][0]["text"] == "I slept poorly."
+        assert group["records"][0]["reference"] == "home-sleep-note.pdf"
+        assert set(group["records"][1]) == {"record_id", "title", "recorded_on", "text"}
+        assert group["records"][1]["text"] == "No reference here"
+        source_id = group["source_id"]
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/records",
+            json={"title": "Changed", "recorded_on": "2026-11-04", "text": "Edited", "client_summary": ""},
+        ).status_code == 404
+        assert http.patch(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}",
+            json={"title": "Changed"},
+        ).status_code == 404
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/records/{record_id}/release",
+            json={"released": False},
+        ).status_code == 404
+        assert http.post(
+            f"/api/patients/{patient.id}/sources/{source_id}/panels",
+            json={
+                "title": "Changed",
+                "recorded_on": "2026-11-04",
+                "observations": [{"name": "ALT", "value_text": "High"}],
+            },
+        ).status_code == 404
+        holder["user"] = client_user
+        assert _client_blocked_from_practitioner_path(client_user, f"/api/patients/{patient.id}/sources") is True
+        blocked = http.get(f"/api/patients/{patient.id}/sources")
+        assert blocked.status_code == 404
+        assert "I slept poorly." not in blocked.text
+        holder["user"] = practitioner
+        for row in db.query(ContentRelease).filter(ContentRelease.direction == "client_to_clinic"):
+            row.released = False
+        db.commit()
+        hidden = http.get(f"/api/patients/{patient.id}/sources")
+        assert [item["display_name"] for item in hidden.json()["sources"]] == ["Clinic notes", "Lab results"]
+        assert "I slept poorly." not in hidden.text
+        assert "home-sleep-note.pdf" not in hidden.text
+        assert "No reference here" not in hidden.text
+        holder["user"] = client_user
+        own = http.get(f"/api/client/records/{patient.id}/entries")
+        assert own.status_code == 200
+        assert own.json()["entries"][0]["text"] == "I slept poorly."
+        assert own.json()["entries"][0]["released"] is False
+        holder["user"] = practitioner
         assert http.get(f"/api/patients/{patient.id}/progress-release").json()["released"] is True
         assert progress["released"] is True
         assert http.get(f"/api/patients/{patient.id}/report-releases").json() == reports

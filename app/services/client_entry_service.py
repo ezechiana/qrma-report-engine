@@ -183,6 +183,60 @@ def submit_client_entry(
     }
 
 
+def released_clinic_client_source(db: Session, patient: Patient) -> dict | None:
+    """Released entries for the practitioner who owns this record.
+
+    The group is omitted when nothing is currently released. Unreleased text,
+    marker values, and the release flag are not included.
+    """
+    source = (
+        db.query(PatientSource)
+        .filter(
+            PatientSource.patient_id == patient.id,
+            PatientSource.practitioner_user_id == patient.user_id,
+            PatientSource.source_type == CLIENT,
+            PatientSource.status == "active",
+        )
+        .first()
+    )
+    if source is None:
+        return None
+    rows = (
+        db.query(SourceRecord)
+        .filter(
+            SourceRecord.patient_source_id == source.id,
+            SourceRecord.patient_id == patient.id,
+            SourceRecord.is_archived.is_(False),
+        )
+        .order_by(SourceRecord.recorded_at.desc(), SourceRecord.created_at.desc())
+        .all()
+    )
+    released = _released_keys(db, patient, rows)
+    records = []
+    for record in rows:
+        if client_entry_source_key(record.id) not in released:
+            continue
+        text, reference = _entry_parts(record)
+        item = {
+            "record_id": str(record.id),
+            "title": record.title,
+            "recorded_on": _recorded_on(record),
+            "text": text,
+        }
+        if reference:
+            item["reference"] = reference
+        records.append(item)
+    if not records:
+        return None
+    return {
+        "source_id": str(source.id),
+        "source_type": CLIENT,
+        "display_name": source.display_name,
+        "status": source.status,
+        "records": records,
+    }
+
+
 def list_client_entries(db: Session, patient: Patient, client: User) -> dict:
     """Entries this client sent on one claimed record, including ones they withdrew.
 
