@@ -77,6 +77,14 @@
     color: #64748b;
 }
 
+button.link {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
+}
+
 .empty-state {
     padding: 24px;
     text-align: center;
@@ -286,7 +294,7 @@
     .patient-hero-text h2 { font-size: 30px; }
     .patient-hero .btn-row { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
     .patient-hero .btn-row .btn { width: 100%; }
-    .patient-hero .btn-row .btn:nth-child(3) { grid-column: 1 / -1; }
+    .patient-hero .btn-row .btn:nth-child(n+3) { grid-column: 1 / -1; }
     .summary-grid { grid-template-columns: 1fr; gap: 12px; }
     .section-toolbar { align-items: flex-start; }
     .trend-summary-panel,
@@ -326,6 +334,7 @@
         <div class="btn-row">
             <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
             <a class="btn" href="/app/cases/new?patient_id={{ patient_id }}">New case</a>
+            <button class="btn secondary" type="button" id="invite-client-claim-btn">Invite client to claim</button>
             <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
         </div>
     </div>
@@ -350,6 +359,15 @@
     <div class="summary-card">
         <div class="summary-label">Data sources</div>
         <div class="summary-value" id="patient-data-sources" style="font-size:18px;">—</div>
+    </div>
+</div>
+
+<div class="card" id="client-claim-card">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Client claim</h3>
+    </div>
+    <div id="client-claim-body">
+        <div class="muted">Loading claim status…</div>
     </div>
 </div>
 
@@ -1403,14 +1421,446 @@
     }
 
 
+    let suppressClaim = false;
+    let claimLoaded = false;
+    let claimLoadError = false;
+    let claimAccess = null;
+    let claimInvites = [];
+    let claimShowSendForm = false;
+    let claimEmailDraft = null;
+    let claimBusy = false;
+    let progressRelease = null;
+    let progressReleaseError = false;
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function claimHtml(value, fallback = "—") {
+        return escapeHtml(safeText(value, fallback));
+    }
+
+    function claimErrorDetail(data, fallback) {
+        if (data && typeof data.detail === "string" && data.detail.trim()) return data.detail;
+        return fallback;
+    }
+
+    function claimStatusText(status) {
+        if (status === "pending") return "Pending";
+        if (status === "accepted") return "Accepted";
+        if (status === "expired") return "Expired";
+        if (status === "cancelled") return "Cancelled";
+        return safeText(status);
+    }
+
+    function pickInvite(item) {
+        return {
+            id: item.id,
+            email: item.email,
+            status: item.status,
+            created_at: item.created_at,
+            expires_at: item.expires_at,
+            cancelled_at: item.cancelled_at,
+            accepted_at: item.accepted_at,
+        };
+    }
+
+    function currentPendingInvite() {
+        if (claimAccess && claimAccess.claimed) return null;
+        const newest = claimInvites[0];
+        if (newest && newest.status === "pending") return newest;
+        return null;
+    }
+
+    function clearClaimBody() {
+        const body = document.getElementById("client-claim-body");
+        if (body) body.textContent = "";
+    }
+
+    function claimSendForm(value) {
+        const busy = claimBusy === "send";
+        return `
+            <div class="field">
+                <label for="claim-email">Client email</label>
+                <input id="claim-email" type="email" autocomplete="off" value="${claimHtml(value, "")}" ${busy ? "disabled" : ""}>
+            </div>
+            <button class="btn" type="button" id="claim-send-btn" ${busy ? "disabled" : ""}>${busy ? "Sending…" : "Send invite"}</button>
+        `;
+    }
+
+    function claimStatusBlock() {
+        const claimed = !!(claimAccess && claimAccess.claimed);
+        const newest = claimInvites[0] || null;
+
+        if (claimed) {
+            const accepted = claimInvites.find(item => item.status === "accepted" && item.accepted_at)
+                || claimInvites.find(item => item.accepted_at);
+            let line = "This record is claimed.";
+            if (accepted && accepted.accepted_at) {
+                line += ` Accepted ${formatDate(accepted.accepted_at)}.`;
+            }
+            return `<p id="client-claim-status" style="margin:0 0 8px;">${claimHtml(line)}</p>`;
+        }
+
+        if (!newest) {
+            return `
+                <p id="client-claim-status" style="margin:0 0 8px;">No claim invite has been sent.</p>
+                <p class="muted" style="margin:0 0 12px;">Send a one-time link so this client can open their own record. The link expires in 7 days.</p>
+            `;
+        }
+
+        if (newest.status === "pending") {
+            const line = `Pending — sent to ${newest.email || "—"}, expires ${formatDate(newest.expires_at)}.`;
+            return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+        }
+
+        if (newest.status === "expired") {
+            const line = `This invite expired on ${formatDate(newest.expires_at)}.`;
+            return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+        }
+
+        if (newest.status === "cancelled") {
+            const line = `This invite was cancelled on ${formatDate(newest.cancelled_at)}.`;
+            return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+        }
+
+        const line = `Accepted ${formatDate(newest.accepted_at)}.`;
+        return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+    }
+
+    function claimActionBlock() {
+        const claimed = !!(claimAccess && claimAccess.claimed);
+        const newest = claimInvites[0] || null;
+        if (claimed) return "";
+
+        if (!newest) {
+            return claimSendForm(claimEmailDraft === null ? "" : claimEmailDraft);
+        }
+
+        if (newest.status === "pending") {
+            const busy = claimBusy === "cancel";
+            let html = `<button class="btn secondary" type="button" id="claim-cancel-btn" ${busy ? "disabled" : ""}>${busy ? "Cancelling…" : "Cancel invite"}</button>`;
+            html += ` <button type="button" class="link" id="claim-reveal-send">Send a new invite</button>`;
+            if (claimShowSendForm) {
+                html += claimSendForm(claimEmailDraft === null ? "" : claimEmailDraft);
+            }
+            return html;
+        }
+
+        if (newest.status === "expired") {
+            return claimSendForm(claimEmailDraft === null ? (newest.email || "") : claimEmailDraft);
+        }
+
+        return claimSendForm(claimEmailDraft === null ? "" : claimEmailDraft);
+    }
+
+    function progressReleaseBlock() {
+        if (!(claimAccess && claimAccess.claimed)) return "";
+        if (progressReleaseError) {
+            return `<p class="error">Could not load the progress view release.</p>`;
+        }
+        if (!progressRelease) return "";
+        const released = !!progressRelease.released;
+        const busy = claimBusy === "release";
+        const line = released
+            ? "Progress view is released to the client."
+            : "Progress view is not released to the client.";
+        const button = released
+            ? `<button class="btn secondary" type="button" id="claim-withdraw-release-btn" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw progress view"}</button>`
+            : `<button class="btn secondary" type="button" id="claim-release-btn" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release progress view"}</button>`;
+        return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div>`;
+    }
+
+    function claimHistoryTable() {
+        const pending = currentPendingInvite();
+        const rows = claimInvites.length
+            ? claimInvites.map(item => {
+                const showCancel = pending && String(item.id) === String(pending.id);
+                const busy = claimBusy === "cancel";
+                const cancel = showCancel
+                    ? ` <button class="btn secondary claim-row-cancel" type="button" data-invite-id="${claimHtml(item.id)}" ${busy ? "disabled" : ""}>${busy ? "Cancelling…" : "Cancel invite"}</button>`
+                    : "";
+                return `
+                    <tr>
+                        <td>${claimHtml(formatDate(item.created_at))}</td>
+                        <td>${claimHtml(item.email)}</td>
+                        <td>${claimHtml(claimStatusText(item.status))}</td>
+                        <td>${claimHtml(formatDate(item.expires_at))}${cancel}</td>
+                    </tr>
+                `;
+            }).join("")
+            : `<tr><td colspan="4" class="muted">No invites yet.</td></tr>`;
+
+        return `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Sent</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Expires</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    function renderClaimCard() {
+        if (suppressClaim) {
+            clearClaimBody();
+            return;
+        }
+
+        const body = document.getElementById("client-claim-body");
+        if (!body) return;
+
+        if (!claimLoaded) {
+            body.innerHTML = `<div class="muted">Loading claim status…</div>`;
+            return;
+        }
+
+        if (claimLoadError) {
+            body.innerHTML = `<div class="error">Could not load claim invites.</div>`;
+            return;
+        }
+
+        body.innerHTML = `
+            ${claimStatusBlock()}
+            ${progressReleaseBlock()}
+            <div id="client-claim-actions">${claimActionBlock()}</div>
+            ${claimHistoryTable()}
+        `;
+    }
+
+    async function fetchClaimData() {
+        try {
+            const [accessRes, invitesRes, releaseRes] = await Promise.all([
+                apiFetch(`/api/patients/${patientId}/claim-access`),
+                apiFetch(`/api/patients/${patientId}/claim-invites`),
+                apiFetch(`/api/patients/${patientId}/progress-release`),
+            ]);
+            if (suppressClaim) return;
+
+            if (!accessRes.ok || !invitesRes.ok) {
+                claimLoadError = true;
+                claimLoaded = true;
+                return;
+            }
+
+            const accessData = await accessRes.json().catch(() => ({}));
+            const invitesData = await invitesRes.json().catch(() => ([]));
+            const releaseData = releaseRes.ok ? await releaseRes.json().catch(() => ({})) : null;
+            if (suppressClaim) return;
+
+            claimAccess = { claimed: !!(accessData && accessData.claimed) };
+            claimInvites = (Array.isArray(invitesData) ? invitesData : []).map(pickInvite);
+            if (releaseData) {
+                progressRelease = {
+                    released: !!releaseData.released,
+                    available: !!releaseData.available,
+                };
+                progressReleaseError = false;
+            } else if (claimAccess.claimed) {
+                progressRelease = null;
+                progressReleaseError = true;
+            } else {
+                progressRelease = null;
+                progressReleaseError = false;
+            }
+            claimLoaded = true;
+            claimLoadError = false;
+        } catch (err) {
+            console.error(err);
+            if (suppressClaim) return;
+            claimLoadError = true;
+            claimLoaded = true;
+        }
+    }
+
+    async function reloadClaimCard() {
+        claimLoaded = false;
+        claimLoadError = false;
+        await fetchClaimData();
+        if (!suppressClaim) renderClaimCard();
+    }
+
+    async function sendClaimInvite() {
+        const input = document.getElementById("claim-email");
+        const email = ((input && input.value) || "").trim();
+        if (!email) {
+            showPatientError("Client email is required.");
+            return;
+        }
+
+        const pending = currentPendingInvite();
+        if (pending) {
+            const confirmed = window.confirm(`Send a new invite to ${email}? The current pending invite will be cancelled.`);
+            if (!confirmed) return;
+        }
+
+        claimEmailDraft = email;
+        claimBusy = "send";
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/claim-invites`, {
+                method: "POST",
+                body: JSON.stringify({ email }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                claimBusy = false;
+                if (response.status === 502) {
+                    showPatientError("The invite email could not be sent. No invite was saved.");
+                } else {
+                    showPatientError(claimErrorDetail(data, "Could not send the invite."));
+                }
+                renderClaimCard();
+                return;
+            }
+
+            claimBusy = false;
+            claimShowSendForm = false;
+            claimEmailDraft = null;
+            if (data && data.id) {
+                claimInvites = [pickInvite(data)].concat(
+                    claimInvites.filter(item => String(item.id) !== String(data.id) && item.status !== "pending")
+                );
+                claimLoaded = true;
+                claimLoadError = false;
+                renderClaimCard();
+            }
+            if (data && data.email_sent === false) {
+                showPatientSuccess("The invite was saved, but the email may not have been delivered. Cancel it and send again.");
+            } else {
+                showPatientSuccess(`Invite sent to ${email}.`);
+            }
+            await reloadClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while sending the invite.");
+            renderClaimCard();
+        }
+    }
+
+    async function cancelClaimInvite(inviteId) {
+        if (!inviteId || claimBusy) return;
+
+        const confirmed = window.confirm("Cancel this invite? The link will stop working. Cases, reports, and share links stay as they are.");
+        if (!confirmed) return;
+
+        claimBusy = "cancel";
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/claim-invites/${inviteId}/cancel`, {
+                method: "POST",
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                claimBusy = false;
+                showPatientError(claimErrorDetail(data, "Could not cancel the invite."));
+                if (response.status === 409) {
+                    claimShowSendForm = false;
+                    claimEmailDraft = null;
+                    await reloadClaimCard();
+                } else {
+                    renderClaimCard();
+                }
+                return;
+            }
+
+            claimBusy = false;
+            claimShowSendForm = false;
+            claimEmailDraft = null;
+            if (data && data.id) {
+                claimInvites = claimInvites.map(item => String(item.id) === String(data.id) ? pickInvite(data) : item);
+                claimLoaded = true;
+                claimLoadError = false;
+                renderClaimCard();
+            }
+            showPatientSuccess("Invite cancelled. The link no longer works.");
+            await reloadClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while cancelling the invite.");
+            renderClaimCard();
+        }
+    }
+
+    async function setProgressRelease(released) {
+        if (claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw the progress view? Share links stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = "release";
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/progress-release`, {
+                method: "POST",
+                body: JSON.stringify({ released: released }),
+            });
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the progress view release."));
+                renderClaimCard();
+                return;
+            }
+            progressRelease = {
+                released: !!data.released,
+                available: !!data.available,
+            };
+            progressReleaseError = false;
+            showPatientSuccess(released
+                ? "Progress view released to the client."
+                : "Progress view withdrawn.");
+            renderClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the progress view release.");
+            renderClaimCard();
+        }
+    }
+
     async function loadPatientDetail() {
         clearPatientError();
         clearPatientSuccess();
+        suppressClaim = false;
+        claimLoaded = false;
+        claimLoadError = false;
+        claimAccess = null;
+        claimInvites = [];
+        claimShowSendForm = false;
+        claimEmailDraft = null;
+        claimBusy = false;
+        progressRelease = null;
+        progressReleaseError = false;
+        renderClaimCard();
 
         const authed = await requireAuthOrRedirect();
         if (!authed) return;
 
         try {
+            const claimTask = fetchClaimData();
             const [patientRes, casesRes, reportsRes, trendsRes] = await Promise.all([
                 apiFetch(`/api/patients/${patientId}`),
                 apiFetch(`/api/patients/${patientId}/cases`),
@@ -1431,7 +1881,9 @@
             }));
 
             if (!patientRes.ok) {
+                suppressClaim = true;
                 showPatientError(patientData.detail || "Could not load patient.");
+                clearClaimBody();
                 return;
             }
 
@@ -1445,9 +1897,13 @@
             renderReports(currentReports);
             renderTimeline();
             renderTrends(trendsData);
+            await claimTask;
+            if (!suppressClaim) renderClaimCard();
 
         } catch (err) {
             console.error(err);
+            suppressClaim = true;
+            clearClaimBody();
             showPatientError("Unexpected error while loading patient detail.");
         }
     }
@@ -1626,6 +2082,58 @@
     if (trendReportModal) {
         trendReportModal.addEventListener("click", (event) => {
             if (event.target === trendReportModal) closeTrendReportModal();
+        });
+    }
+
+    const inviteClientBtn = document.getElementById("invite-client-claim-btn");
+    if (inviteClientBtn) {
+        inviteClientBtn.addEventListener("click", () => {
+            const card = document.getElementById("client-claim-card");
+            if (card) card.scrollIntoView({ behavior: "smooth", block: "start" });
+            const email = document.getElementById("claim-email");
+            if (email && !email.disabled) email.focus();
+        });
+    }
+
+    const claimCard = document.getElementById("client-claim-card");
+    if (claimCard) {
+        claimCard.addEventListener("input", (event) => {
+            if (event.target && event.target.id === "claim-email") {
+                claimEmailDraft = event.target.value;
+            }
+        });
+
+        claimCard.addEventListener("click", (event) => {
+            const target = event.target && event.target.closest ? event.target.closest("button") : null;
+            if (!target || claimBusy) return;
+
+            if (target.id === "claim-reveal-send") {
+                claimShowSendForm = true;
+                renderClaimCard();
+                const email = document.getElementById("claim-email");
+                if (email) email.focus();
+                return;
+            }
+
+            if (target.id === "claim-send-btn") {
+                sendClaimInvite();
+                return;
+            }
+
+            if (target.id === "claim-cancel-btn" || target.classList.contains("claim-row-cancel")) {
+                const pending = currentPendingInvite();
+                cancelClaimInvite(target.dataset.inviteId || (pending && pending.id));
+                return;
+            }
+
+            if (target.id === "claim-release-btn") {
+                setProgressRelease(true);
+                return;
+            }
+
+            if (target.id === "claim-withdraw-release-btn") {
+                setProgressRelease(false);
+            }
         });
     }
 

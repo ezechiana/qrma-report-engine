@@ -511,3 +511,38 @@ class PatientClaimInvite(Base):
         nullable=True,
         index=True,
     )
+
+class ContentRelease(Base):
+    """Whether one kind of information is released between a clinic and a claimed client.
+
+    Share-link tables are not used. Version 1 has one source: the progress view,
+    released from the clinic to the client.
+    """
+
+    __tablename__ = "content_releases"
+    __table_args__ = (
+        UniqueConstraint(
+            "patient_id",
+            "source_key",
+            "direction",
+            name="uq_content_releases_patient_source_direction",
+        ),
+    )
+
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    patient_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("patients.id", ondelete="CASCADE"),
+        index=True,
+    )
+    practitioner_user_id: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True),
+        ForeignKey("users.id", ondelete="CASCADE"),
+        index=True,
+    )
+    source_key: Mapped[str] = mapped_column(String(40), nullable=False)
+    direction: Mapped[str] = mapped_column(String(40), nullable=False)
+    released: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    released_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    withdrawn_at: Mapped[Optional[datetime]] = mapped_column(DateTime(timezone=True), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
