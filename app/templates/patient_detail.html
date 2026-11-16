@@ -1109,6 +1109,12 @@ button.link {
         if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    function openSectionFromHash() {
+        const name = (window.location.hash || "").replace("#", "");
+        const known = ["progress", "reports", "notes", "labs", "client", "wearables", "activity"];
+        if (known.includes(name)) openPatientSection(name, true);
+    }
+
     function renderCases(casesData) {
         const casesBody = document.getElementById("patient-cases-body");
         const caseRows = Array.isArray(casesData) ? casesData : (casesData.items || []);
@@ -3096,6 +3102,7 @@ button.link {
                 renderReports(currentReports);
                 renderClinicNotes(clinicNotes);
             }
+            openSectionFromHash();
 
         } catch (err) {
             console.error(err);

@@ -24,6 +24,7 @@ from app.services.client_record_service import (
     latest_item_summary,
     require_claimed_patient,
 )
+from app.services.today_service import client_today
 from app.services.patient_claim_service import claim_access_state, end_claim_access
 from app.services.personal_record_service import open_unclaimed_personal_record
 from app.services.personal_source_service import (
@@ -196,6 +197,20 @@ def get_client_connection(
     """
     client = _require_client(current_user)
     return {"status": client_connection_status(db, client)}
+
+
+@router.get("/today")
+def get_client_today(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Today tile for the signed-in person.
+
+    Wearable numbers are this person's own. Clinic items are released titles
+    and dates from the last 30 days. Unreleased titles are omitted.
+    """
+    client = _require_client(current_user)
+    return client_today(db, client)
 
 
 @router.get("/records")

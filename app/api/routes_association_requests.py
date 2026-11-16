@@ -7,7 +7,7 @@ does not copy or release the personal record.
 
 from uuid import UUID
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field, field_validator
 from sqlalchemy.orm import Session
 
@@ -19,9 +19,11 @@ from app.services.clinic_association_service import (
     decline_person_request,
     end_association_for_clinic,
     end_association_for_person,
+    is_practitioner_account,
     list_person_requests,
     request_practitioner_by_email,
 )
+from app.services.today_service import practitioner_attention
 
 router = APIRouter(tags=["association-requests"])
 
@@ -62,6 +64,29 @@ def get_association_requests(
     Each item is the requester's name and email. Health data is omitted.
     """
     return list_person_requests(db, current_user)
+
+
+@router.get("/api/dashboard/attention")
+def get_dashboard_attention(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Attention row for the clinic dashboard.
+
+    Requests are name and email. Released personal items are name, type, and
+    date. Finished reports not in the portal are patient and report title.
+    """
+    if not current_user.email_verified_at:
+        raise HTTPException(status_code=403, detail="Verify your email before opening requests.")
+    if not is_practitioner_account(db, current_user):
+        raise HTTPException(status_code=403, detail="Practitioner account required.")
+    waiting = list_person_requests(db, current_user)
+    attention = practitioner_attention(db, current_user)
+    return {
+        "requests": waiting["requests"],
+        "released_items": attention["released_items"],
+        "unreleased_reports": attention["unreleased_reports"],
+    }
 
 
 @router.post("/api/association-requests/{request_id}/accept")

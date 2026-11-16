@@ -28,6 +28,9 @@
         .record-card h2 { margin: 0 0 6px; font-size: 18px; }
         .record-card a.card-link { color: inherit; text-decoration: none; display: block; }
         .record-card .latest { margin: 8px 0 0; }
+        .connection-line { margin: 0 0 14px; font-weight: 700; }
+        .today-block { margin-bottom: 16px; }
+        .metric-line { margin: 6px 0 0; }
         @media (max-width: 900px) {
             .record-cards { grid-template-columns: 1fr; }
         }
@@ -80,6 +83,8 @@
     let records = [];
     let personal = null;
     let connection = "none";
+    let today = null;
+    let todayFailed = false;
     let confirmingId = null;
     let closingId = null;
     let successText = "";
@@ -107,6 +112,9 @@
         card.textContent = "";
         add(card, "h1", "", "Your records");
         add(card, "p", "error", "Could not load your records.");
+        const retry = add(card, "button", "text-button", "Retry");
+        retry.type = "button";
+        retry.addEventListener("click", () => loadRecords());
     }
 
     function renderEmpty() {
@@ -185,12 +193,98 @@
         });
     }
 
+    function shortDate(value) {
+        const when = typeof value === "string" ? value.trim() : "";
+        if (!when) return "";
+        const date = new Date(when.slice(0, 10) + "T00:00:00");
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
+    }
+
+    function connectionLine() {
+        if (connection === "connected") {
+            const fromToday = today && typeof today.clinic_name === "string" ? today.clinic_name.trim() : "";
+            const fromRecord = records.find((item) => item && typeof item.clinic_name === "string" && item.clinic_name.trim());
+            return fromToday || (fromRecord ? fromRecord.clinic_name.trim() : "") || "Connected";
+        }
+        if (connection === "pending") return "Pending";
+        return "No clinic is connected.";
+    }
+
+    function metricLine(label, metric) {
+        if (!metric || metric.value === null || metric.value === undefined || metric.value === "") return "";
+        const unit = typeof metric.unit === "string" && metric.unit.trim() ? " " + metric.unit.trim() : "";
+        return label + " " + String(metric.value) + unit;
+    }
+
+    function renderWearable(tile) {
+        const wearable = today && today.wearable && typeof today.wearable === "object" ? today.wearable : null;
+        const lines = wearable ? [
+            metricLine("Steps", wearable.steps),
+            metricLine("Resting heart rate", wearable.resting_heart_rate),
+            metricLine("Sleep", wearable.sleep_duration),
+            metricLine("HRV", wearable.hrv),
+        ].filter(Boolean) : [];
+        const personalId = personal && personal.patient_id ? String(personal.patient_id) : "";
+        if (!lines.length) {
+            if (personalId) {
+                const link = add(tile, "a", "text-link", "Connect a wearable to see daily summaries");
+                link.href = "/client/records/" + encodeURIComponent(personalId);
+            } else {
+                add(tile, "p", "muted", "Connect a wearable to see daily summaries");
+            }
+            return;
+        }
+        const when = shortDate(wearable.recorded_on);
+        if (when) add(tile, "p", "muted", when);
+        lines.forEach((line) => add(tile, "p", "metric-line", line));
+    }
+
+    function renderFromClinic(tile) {
+        const items = today && Array.isArray(today.from_clinic) ? today.from_clinic : [];
+        const visible = items.filter((item) => item && typeof item.title === "string" && item.title.trim());
+        if (!visible.length) {
+            add(tile, "p", "muted", "Nothing new from your clinic.");
+            return;
+        }
+        visible.forEach((item) => {
+            const when = shortDate(item.recorded_on);
+            const line = when ? item.title.trim() + " · " + when : item.title.trim();
+            const patientId = item.patient_id ? String(item.patient_id) : "";
+            if (!patientId) {
+                add(tile, "p", "", line);
+                return;
+            }
+            const link = add(tile, "a", "text-link", line);
+            link.href = "/client/records/" + encodeURIComponent(patientId);
+        });
+    }
+
+    function renderToday() {
+        const block = add(card, "div", "today-block");
+        add(block, "p", "connection-line", connectionLine());
+        if (todayFailed) {
+            add(block, "p", "error", "Today could not be loaded.");
+            const retry = add(block, "button", "text-button", "Retry");
+            retry.type = "button";
+            retry.addEventListener("click", () => loadRecords());
+        }
+        const grid = add(block, "div", "record-cards");
+        const wearable = add(grid, "article", "record-card");
+        add(wearable, "h2", "", "Wearable");
+        renderWearable(wearable);
+        const clinic = add(grid, "article", "record-card");
+        add(clinic, "h2", "", "New from your clinic");
+        renderFromClinic(clinic);
+    }
+
     function render() {
         card.textContent = "";
         add(card, "h1", "", "Today");
         add(card, "p", "muted", intro);
         if (successText) add(card, "div", "success", successText);
         if (noticeText) add(card, "p", "muted", noticeText);
+        renderToday();
         const personalId = personal && personal.patient_id ? String(personal.patient_id) : "";
         const sameRecord = personalId ? records.find((item) => recordKey(item) === personalId) : null;
         const clinics = records.filter((item) => recordKey(item) && recordKey(item) !== personalId);
@@ -291,12 +385,14 @@
         const user = await requireClient();
         if (!user) return;
         try {
-            const [response, connectionResponse] = await Promise.all([
+            const [response, connectionResponse, todayResponse] = await Promise.all([
                 fetch("/api/client/records", { credentials: "same-origin" }),
                 fetch("/api/client/connection", { credentials: "same-origin" }),
+                fetch("/api/client/today", { credentials: "same-origin" }),
             ]);
             const data = await response.json().catch(() => ({}));
             const connectionData = await connectionResponse.json().catch(() => ({}));
+            const todayData = await todayResponse.json().catch(() => ({}));
             if (response.status === 401) {
                 window.location.href = "/login";
                 return;
@@ -313,6 +409,8 @@
             records = Array.isArray(data.records) ? data.records : [];
             personal = data.personal && typeof data.personal === "object" ? data.personal : null;
             connection = typeof connectionData.status === "string" ? connectionData.status : "none";
+            todayFailed = !todayResponse.ok;
+            today = todayFailed || !todayData || typeof todayData !== "object" ? null : todayData;
             render();
         } catch (err) {
             showLoadError();
