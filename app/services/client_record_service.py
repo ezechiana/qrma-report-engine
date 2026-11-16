@@ -7,6 +7,7 @@ decide what this portal shows, and opening one does not change the release.
 
 from __future__ import annotations
 
+from datetime import date, datetime
 from types import SimpleNamespace
 from uuid import UUID
 
@@ -110,6 +111,31 @@ _ITEM_LABELS = {
 }
 
 
+def _as_moment(value) -> datetime | None:
+    """Turn a driver timestamp into a naive datetime.
+
+    SQLite often returns DateTime values as text. A text value must not be
+    asked for .date(), and it must not be compared with a real datetime.
+    """
+    if isinstance(value, datetime):
+        moment = value
+    elif isinstance(value, date):
+        moment = datetime(value.year, value.month, value.day)
+    elif isinstance(value, str):
+        text = value.strip().replace("Z", "+00:00")
+        if len(text) >= 11 and text[10] == " ":
+            text = text[:10] + "T" + text[11:]
+        try:
+            moment = datetime.fromisoformat(text)
+        except ValueError:
+            return None
+    else:
+        return None
+    if moment.tzinfo is not None:
+        return moment.replace(tzinfo=None)
+    return moment
+
+
 def latest_item_summary(db: Session, patient: Patient, *, audience: str) -> dict:
     """Newest item type and date for a list card.
 
@@ -119,13 +145,11 @@ def latest_item_summary(db: Session, patient: Patient, *, audience: str) -> dict
     found = _newest_item(db, patient, audience)
     if found is None:
         return {"latest_type": None, "latest_on": None}
-    label, moment = found
+    moment, label = found
     return {"latest_type": label, "latest_on": moment.date().isoformat()}
 
 
 def _newest_item(db: Session, patient: Patient, audience: str):
-    from datetime import datetime
-
     from sqlalchemy import inspect
 
     from app.db.models import Case, ContentRelease, PatientSource, ReportVersion, SourceRecord
@@ -141,12 +165,11 @@ def _newest_item(db: Session, patient: Patient, audience: str):
 
     def consider(moment, label: str) -> None:
         nonlocal best
-        if moment is None or not label:
+        parsed = _as_moment(moment)
+        if parsed is None or not label:
             return
-        if getattr(moment, "tzinfo", None) is not None:
-            moment = moment.replace(tzinfo=None)
-        if best is None or moment > best[0]:
-            best = (moment, label)
+        if best is None or parsed > best[0]:
+            best = (parsed, label)
 
     def release_keys(patient_id, practitioner_id, direction: str) -> set[str]:
         if not has_releases or practitioner_id is None:
