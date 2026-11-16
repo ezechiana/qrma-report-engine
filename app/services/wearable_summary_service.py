@@ -1,4 +1,8 @@
-"""Daily wearable summaries for a claimed client.
+"""Daily wearable summaries for a record the person can open.
+
+A claimed client uses the clinic chart. The subject of a personal record can
+read and store days before a clinic is connected. Sharing a day requires that
+connection.
 
 Open Health Sync is not called. A sync stores one day on the Wearables shelf
 and updates that same day when it arrives again. Days stay unreleased.
@@ -15,7 +19,7 @@ from fastapi import HTTPException
 from sqlalchemy.orm import Session
 
 from app.db.models import ContentRelease, Patient, PatientSource, SourceObservation, SourceRecord, User
-from app.services.wearable_connection_service import WEARABLE, _require_claimed, _wearable_source
+from app.services.wearable_connection_service import WEARABLE, _require_wearable_owner, _wearable_source
 
 DAY_KIND = "wearable_day"
 DAY_TITLE = "Daily summary"
@@ -254,7 +258,7 @@ def _payloads(db: Session, patient: Patient, records: list[SourceRecord]) -> lis
 
 
 def _own_day(db: Session, patient: Patient, client: User, record_id: UUID) -> SourceRecord:
-    _require_claimed(patient, client)
+    _require_wearable_owner(patient, client)
     record = (
         db.query(SourceRecord)
         .join(PatientSource, PatientSource.id == SourceRecord.patient_source_id)
@@ -289,6 +293,11 @@ def set_wearable_day_release(
     values stay as they are. Does not create a share link.
     """
     record = _own_day(db, patient, client, record_id)
+    if patient.claimed_by_user_id is None:
+        raise HTTPException(
+            status_code=403,
+            detail="A clinic connection is required before this day can be shared.",
+        )
     now = _now()
     row = (
         db.query(ContentRelease)
@@ -411,7 +420,7 @@ def list_wearable_days(db: Session, patient: Patient, client: User) -> dict:
 
     Handles patient identity. Only the four daily values are included.
     """
-    _require_claimed(patient, client)
+    _require_wearable_owner(patient, client)
     source = _connected_source(db, patient)
     if source is None:
         return {"days": []}
@@ -439,7 +448,7 @@ def sync_wearable_days(db: Session, patient: Patient, client: User, days: list[d
     Handles patient identity. The same calendar day updates the existing summary.
     New days are not released to the clinic. Does not create a share link.
     """
-    _require_claimed(patient, client)
+    _require_wearable_owner(patient, client)
     if len(days) > MAX_DAYS:
         raise HTTPException(status_code=422, detail="Too many days.")
     source = _require_connected(db, patient)

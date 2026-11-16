@@ -24,7 +24,11 @@ from app.services.client_record_service import (
 )
 from app.services.patient_claim_service import claim_access_state, end_claim_access
 from app.services.patient_source_service import client_released_note
-from app.services.wearable_connection_service import connect_wearable, wearable_connection
+from app.services.wearable_connection_service import (
+    connect_wearable,
+    open_wearable_record,
+    wearable_connection,
+)
 from app.services.wearable_summary_service import (
     list_wearable_days,
     set_wearable_day_release,
@@ -244,14 +248,13 @@ def get_wearable_connection(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Return whether this claimed client has connected a wearable.
+    """Return whether this person has connected a wearable on this record.
 
     Handles patient identity. The Open Health Sync user id is included only
-    for this client. Daily summaries are not included.
+    for this person. Daily summaries are not included.
     """
-    client = _require_client(current_user)
-    patient = require_claimed_patient(db, client, patient_id)
-    return wearable_connection(db, patient, client)
+    patient = open_wearable_record(db, current_user, patient_id)
+    return wearable_connection(db, patient, current_user)
 
 
 @router.post("/records/{patient_id}/wearable")
@@ -261,15 +264,14 @@ def post_wearable_connection(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Connect one wearable account for this claimed record.
+    """Connect one wearable account on this record.
 
     Handles patient identity. The Open Health Sync user id is stored on the
     Wearables shelf. A later connection uses the same shelf. Daily summaries
     and share links are not created.
     """
-    client = _require_client(current_user)
-    patient = require_claimed_patient(db, client, patient_id)
-    return connect_wearable(db, patient, client, body.external_account_ref)
+    patient = open_wearable_record(db, current_user, patient_id)
+    return connect_wearable(db, patient, current_user, body.external_account_ref)
 
 
 @router.get("/records/{patient_id}/wearable/days")
@@ -278,14 +280,13 @@ def get_wearable_days(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """List wearable days for this claimed client, including unshared days.
+    """List wearable days for this person, including days that are not shared.
 
-    Handles patient identity. Each day includes the date and the four daily
-    values. The clinic source list is not used.
+    Handles patient identity. Each day includes the date, the four daily
+    values, and whether that day is shared. The clinic source list is not used.
     """
-    client = _require_client(current_user)
-    patient = require_claimed_patient(db, client, patient_id)
-    return list_wearable_days(db, patient, client)
+    patient = open_wearable_record(db, current_user, patient_id)
+    return list_wearable_days(db, patient, current_user)
 
 
 @router.post("/records/{patient_id}/wearable/days")
@@ -295,17 +296,16 @@ def post_wearable_days(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Store one wearable summary per calendar day for this claimed client.
+    """Store one wearable summary per calendar day for this person.
 
     Handles patient identity. A later sync of the same day updates that day.
-    Days are not released to the clinic, and no share link is created.
+    Days are not released to a clinic, and no share link is created.
     """
-    client = _require_client(current_user)
-    patient = require_claimed_patient(db, client, patient_id)
+    patient = open_wearable_record(db, current_user, patient_id)
     return sync_wearable_days(
         db,
         patient,
-        client,
+        current_user,
         [day.model_dump() for day in body.days],
     )
 
@@ -318,14 +318,13 @@ def post_wearable_day_release(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    """Release or withdraw one wearable day for this claimed record.
+    """Release or withdraw one wearable day when a clinic is connected.
 
-    Handles patient identity. The daily values are not returned. Share links
-    are not created or changed.
+    Handles patient identity. The daily values are not returned. A personal
+    record with no clinic connection is refused. Share links are not created.
     """
-    client = _require_client(current_user)
-    patient = require_claimed_patient(db, client, patient_id)
-    return set_wearable_day_release(db, patient, client, record_id, body.released)
+    patient = open_wearable_record(db, current_user, patient_id)
+    return set_wearable_day_release(db, patient, current_user, record_id, body.released)
 
 
 @router.post("/records/{patient_id}/close-access", response_model=ClaimAccessRead)
