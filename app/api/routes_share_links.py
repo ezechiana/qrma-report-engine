@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.api.share_helpers import DEFAULT_SHARE_PRICE_CURRENCY, _ensure_share_link_events_table
 from app.db.models import Case, ReportVersion, ShareLink, User
-from app.schemas.share import ShareLinkCreate, ShareLinkRead
+from app.schemas.share import ReportShareLinkCreate, ShareLinkRead
 from app.services.audit_service import log_action
 from app.services.share_link_service import create_share_link
 from app.services.subscription_service import require_subscription_feature
@@ -24,7 +24,7 @@ router = APIRouter(tags=["share"])
 @router.post("/api/reports/{report_version_id}/share-links", response_model=ShareLinkRead)
 def create_report_share_link(
     report_version_id: UUID,
-    payload: ShareLinkCreate,
+    payload: ReportShareLinkCreate,
     request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
@@ -44,6 +44,7 @@ def create_report_share_link(
         db,
         report_version=report,
         password=payload.password,
+        expires_days=payload.expires_in_days,
         expires_at=payload.expires_at,
     )
 
