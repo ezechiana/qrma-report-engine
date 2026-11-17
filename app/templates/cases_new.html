@@ -314,6 +314,7 @@
         <div class="btn-row">
             <button type="submit" class="btn" data-requires-subscription data-subscription-context="create this case and report">Create case</button>
             <button type="button" class="btn secondary" id="create-and-generate" data-requires-subscription data-subscription-context="create and open this report">Create and open report</button>
+            <span id="import-assessment-quota" class="muted" role="status"></span>
         </div>
     </form>
 </div>
@@ -346,6 +347,10 @@
             return value;
         }
     }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        void refreshAssessmentQuota(document.getElementById("import-assessment-quota"));
+    });
 
     function unwrapErrorPayload(msg) {
         // Handles:
@@ -931,6 +936,11 @@
             if (!response.ok) {
                 const detail = unwrapErrorPayload(data);
 
+                if (detail?.code === "assessment_quota_exhausted" && detail.case_id) {
+                    hideProcessingPanel();
+                    window.location.href = "/app/cases/" + detail.case_id;
+                    return;
+                }
                 if (detail && typeof detail === "object" && detail.code === "report_generation_failed" && detail.case_id) {
                     hideProcessingPanel();
                     showSuccess("Case was created. Opening the case workspace so you can retry report generation.");

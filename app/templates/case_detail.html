@@ -15,6 +15,7 @@
         <button class="btn" id="generate-report-btn" type="button">Generate report</button>
         <button class="btn secondary" id="refresh-case-btn" type="button">Refresh case</button>
     </div>
+    <p id="assessment-quota" class="muted" role="status"></p>
 </div>
 
 <div class="card">
@@ -67,6 +68,7 @@
 
         const authed = await requireAuthOrRedirect();
         if (!authed) return;
+        void refreshAssessmentQuota(document.getElementById("assessment-quota"));
 
         try {
             const caseResponse = await apiFetch(`/api/cases/${caseId}`);
@@ -107,16 +109,22 @@
         clearSuccess();
 
         try {
-            const response = await apiFetch(`/api/cases/${caseId}/generate-report`, {
-                method: "POST"
+            const keyStorage = "go360:assessment-request:" + caseId;
+            const requestKey = sessionStorage.getItem(keyStorage) || crypto.randomUUID();
+            sessionStorage.setItem(keyStorage, requestKey);
+            const response = await apiFetch("/api/cases/" + caseId + "/generate-report", {
+                method: "POST",
+                headers: { "Idempotency-Key": requestKey },
             });
             const data = await response.json().catch(() => ({}));
 
             if (!response.ok) {
-                setError(data.detail || "Could not generate report.");
+                setError(data.detail?.message || data.detail || "Could not generate report.");
+                void refreshAssessmentQuota(document.getElementById("assessment-quota"));
                 return;
             }
 
+            sessionStorage.removeItem(keyStorage);
             latestReportId = data.report_version_id;
             setSuccess(`Report generated successfully${data.version_number ? ` (v${data.version_number})` : ""}.`);
             await loadCase();

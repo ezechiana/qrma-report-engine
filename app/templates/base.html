@@ -1225,6 +1225,26 @@
             });
         }
 
+        async function refreshAssessmentQuota(element) {
+            if (!element) return;
+            try {
+                const response = await apiFetch("/api/cases/assessment-quota");
+                if (!response.ok) return;
+                const quota = await response.json();
+                const reset = new Date(quota.resets_at).toLocaleDateString(undefined, {
+                    timeZone: "UTC", month: "long", day: "numeric",
+                });
+                const inProgress = quota.reserved ? " · " + quota.reserved + " in progress" : "";
+                const count = quota.limit === null
+                    ? quota.used + " Assessments this month · Unlimited"
+                    : quota.used + " of " + quota.limit + " Assessments used · " + quota.remaining + " remaining";
+                element.textContent = count + inProgress + " · Resets " + reset + ", 00:00 UTC";
+                element.classList.toggle("notice", quota.remaining === 1 || quota.remaining === 0);
+            } catch (error) {
+                console.warn("Could not refresh Assessment allowance", error);
+            }
+        }
+
         async function ensureSubscriptionCanCreate(contextLabel, feature = "report_generation") {
             if (!AppState.subscription) {
                 await refreshSubscriptionState();
