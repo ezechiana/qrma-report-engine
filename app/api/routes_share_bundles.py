@@ -17,7 +17,8 @@ from app.api.deps import get_current_user, get_db
 from app.db.models import Case, ReportVersion, ShareBundle, ShareBundleItem, ShareLink, User
 from app.services.revenue_model import calculate_revenue_split
 from app.services.share_analytics import log_share_event
-from app.services.subscription_service import require_subscription_feature
+from app.services.share_commission import commission_metadata, share_commission
+from app.services.subscription_service import latest_subscription_for_user, require_subscription_feature
 from app.services.referral_service import record_referral_revenue
 from app.utils.security import generate_token, hash_password
 
@@ -30,8 +31,6 @@ STRIPE_WEBHOOK_SECRET = os.getenv("STRIPE_WEBHOOK_SECRET")
 
 STRIPE_CONNECT_ENABLED = os.getenv("STRIPE_CONNECT_ENABLED", "true").lower() == "true"
 STRIPE_CONNECT_FALLBACK_TO_PLATFORM = os.getenv("STRIPE_CONNECT_FALLBACK_TO_PLATFORM", "true").lower() == "true"
-STRIPE_PLATFORM_FEE_PERCENT = float(os.getenv("STRIPE_PLATFORM_FEE_PERCENT", "15"))
-STRIPE_PLATFORM_FEE_FIXED_AMOUNT = int(os.getenv("STRIPE_PLATFORM_FEE_FIXED_AMOUNT", "0"))
 
 if STRIPE_SECRET_KEY:
     stripe.api_key = STRIPE_SECRET_KEY
@@ -205,12 +204,6 @@ def _get_bundle_by_token_or_404(db: Session, token: str) -> ShareBundle:
     return bundle
 
 
-def _calculate_platform_fee(amount_minor: int) -> int:
-    percent_fee = int(round(amount_minor * (STRIPE_PLATFORM_FEE_PERCENT / 100.0)))
-    fee = percent_fee + int(STRIPE_PLATFORM_FEE_FIXED_AMOUNT or 0)
-    return max(0, min(fee, amount_minor))
-
-
 def _get_practitioner_connect_state(db: Session, user_id) -> dict:
     row = db.execute(
         text(
@@ -258,7 +251,7 @@ def _get_practitioner_connect_state(db: Session, user_id) -> dict:
 
 def _connect_destination_for_bundle(db: Session, bundle: ShareBundle) -> dict:
     if not STRIPE_CONNECT_ENABLED:
-        return {"mode": "platform", "account_id": None, "reason": "connect_disabled", "platform_fee_amount": 0}
+        return {"mode": "platform", "account_id": None, "reason": "connect_disabled"}
 
     owner_id = getattr(bundle, "created_by_user_id", None)
     if not owner_id:
@@ -266,8 +259,6 @@ def _connect_destination_for_bundle(db: Session, bundle: ShareBundle) -> dict:
 
     state = _get_practitioner_connect_state(db, owner_id)
     account_id = state.get("account_id")
-
-    platform_fee = _calculate_platform_fee(int(bundle.price_amount or 0))
 
     # Only route directly when onboarding is fully complete. A partially created
     # Connect account must not be treated as payout-ready.
@@ -281,7 +272,6 @@ def _connect_destination_for_bundle(db: Session, bundle: ShareBundle) -> dict:
             "mode": "destination_charge",
             "account_id": account_id,
             "reason": "connect_ready",
-            "platform_fee_amount": platform_fee,
         }
 
     if STRIPE_CONNECT_FALLBACK_TO_PLATFORM:
@@ -289,9 +279,6 @@ def _connect_destination_for_bundle(db: Session, bundle: ShareBundle) -> dict:
             "mode": "platform_fallback",
             "account_id": account_id,
             "reason": "connect_not_ready",
-            # Keep platform commission even when Stripe Connect is incomplete.
-            # The platform collected the gross payment and must manually reconcile
-            # practitioner payable later.
             "platform_fee_amount": platform_fee,
         }
 
@@ -391,7 +378,7 @@ def _record_checkout_routing(
                 platform_fee_currency = :platform_fee_currency,
                 practitioner_payout_amount = :practitioner_payout_amount,
                 updated_at = NOW()
-            WHERE id = :bundle_id
+            WHERE id = :bundle_id AND payment_status IS DISTINCT FROM 'paid'
             """
         ),
         {
@@ -501,7 +488,7 @@ def _mark_bundle_paid(
     )
     practitioner_payout = split["practitioner_payout_minor"] if gross else None
 
-    db.execute(
+    result = db.execute(
         text(
             """
             UPDATE share_bundles
@@ -520,6 +507,9 @@ def _mark_bundle_paid(
                 paid_at = COALESCE(paid_at, NOW()),
                 updated_at = NOW()
             WHERE id = :bundle_id
+              AND (payment_status IS DISTINCT FROM 'paid'
+                   OR stripe_session_id = :session_id
+                   OR stripe_payment_intent_id = :payment_intent_id)
             """
         ),
         {
@@ -791,6 +781,12 @@ def create_bundle_checkout_session(token: str, request: Request, db: Session = D
     cancel_url = f"{BASE_URL.rstrip('/')}/share/bundle/{token}"
 
     destination = _connect_destination_for_bundle(db, bundle)
+    owner_id = bundle.created_by_user_id
+    if not owner_id:
+        raise HTTPException(status_code=409, detail="Bundle payment owner is unavailable.")
+    commission = share_commission(db, latest_subscription_for_user(db, owner_id))
+    fee_metadata = commission_metadata(commission, int(bundle.price_amount))
+    platform_fee_amount = int(fee_metadata["platform_fee_amount"])
 
     payment_intent_metadata = {
         "kind": "share_bundle",
@@ -798,13 +794,13 @@ def create_bundle_checkout_session(token: str, request: Request, db: Session = D
         "bundle_token": bundle.token,
         "connect_mode": destination["mode"],
         "stripe_connect_account_id": destination.get("account_id") or "",
-        "platform_fee_amount": str(destination.get("platform_fee_amount") or 0),
+        **fee_metadata,
     }
 
     payment_intent_data = {"metadata": payment_intent_metadata}
 
     if destination["mode"] == "destination_charge":
-        payment_intent_data["application_fee_amount"] = int(destination["platform_fee_amount"] or 0)
+        payment_intent_data["application_fee_amount"] = platform_fee_amount
         payment_intent_data["transfer_data"] = {"destination": destination["account_id"]}
 
     session = stripe.checkout.Session.create(
@@ -835,7 +831,7 @@ def create_bundle_checkout_session(token: str, request: Request, db: Session = D
         session_id=session.id,
         connect_mode=destination["mode"],
         connect_account_id=destination.get("account_id"),
-        platform_fee_amount=int(destination.get("platform_fee_amount") or 0),
+        platform_fee_amount=platform_fee_amount,
         platform_fee_currency=(bundle.price_currency or "gbp").lower(),
     )
     _track_share_event(db, token, "payment_started", {

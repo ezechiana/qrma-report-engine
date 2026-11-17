@@ -18,6 +18,7 @@ from fastapi.templating import Jinja2Templates
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
+from app.services.share_commission import commission_amount
 from app.db.models import Case, Patient, PractitionerSettings, ReportVersion, ShareLink, User, ReportStatus
 from app.services.share_analytics import log_share_event
 
@@ -81,8 +82,6 @@ DEFAULT_SHARE_PRICE_CURRENCY = os.getenv("DEFAULT_SHARE_PRICE_CURRENCY", "gbp").
 STRIPE_CONNECT_ENABLED = os.getenv("STRIPE_CONNECT_ENABLED", "true").lower() == "true"
 STRIPE_CONNECT_COUNTRY = os.getenv("STRIPE_CONNECT_COUNTRY", "GB").strip().upper()
 STRIPE_CONNECT_ACCOUNT_TYPE = os.getenv("STRIPE_CONNECT_ACCOUNT_TYPE", "express").strip().lower()
-STRIPE_PLATFORM_FEE_PERCENT = float(os.getenv("STRIPE_PLATFORM_FEE_PERCENT", "15"))
-STRIPE_PLATFORM_FEE_FIXED_AMOUNT = int(os.getenv("STRIPE_PLATFORM_FEE_FIXED_AMOUNT", "0"))
 STRIPE_CONNECT_FALLBACK_TO_PLATFORM = os.getenv("STRIPE_CONNECT_FALLBACK_TO_PLATFORM", "true").lower() == "true"
 
 
@@ -210,7 +209,7 @@ def _mark_share_paid(
                 platform_fee_amount = :platform_fee_amount,
                 platform_fee_currency = :platform_fee_currency,
                 paid_at = NOW()
-            WHERE id = :id
+            WHERE id = :id AND payment_status IS DISTINCT FROM 'paid'
             """
         ),
         {
@@ -384,10 +383,8 @@ def _sync_connect_account_status(db: Session, user_id, account_id: str) -> dict:
     }
 
 
-def _calculate_platform_fee(amount: int) -> int:
-    percent_fee = int(round(amount * (STRIPE_PLATFORM_FEE_PERCENT / 100.0)))
-    fee = percent_fee + int(STRIPE_PLATFORM_FEE_FIXED_AMOUNT or 0)
-    return max(0, min(fee, amount))
+def _calculate_platform_fee(amount: int, commission: dict) -> int:
+    return commission_amount(amount, commission)
 
 
 def _connect_destination_for_report(db: Session, report: ReportVersion) -> dict:

@@ -223,7 +223,21 @@ function updateCurrencyPlaceholder() {
     const hint = document.getElementById("share-price-hint");
     const symbol = currencySymbols[currency] || currency.toUpperCase();
     input.placeholder = `${symbol}25.00`;
-    hint.textContent = `Enter amount in ${currency.toUpperCase()} as a normal price, for example 25.00. The system stores the Stripe amount internally.`;
+    const commission = AppState.subscription?.share_commission;
+    const amount = convertToMinorUnits(input.value, currency);
+    if (!commission) {
+        hint.textContent = "Enter the client price in " + currency.toUpperCase() + ".";
+        return;
+    }
+    const rate = commission.percent + "%";
+    const fixed = Number(commission.fixed_minor);
+    const divisor = zeroDecimalCurrencies.has(currency) ? 1 : 100;
+    const format = minor => new Intl.NumberFormat(undefined, {style: "currency", currency}).format(minor / divisor);
+    const fees = rate + (fixed ? " + " + format(fixed) : "");
+    const charge = Math.min(amount, Math.round(amount * Number(commission.percent) / 100) + fixed);
+    hint.textContent = amount
+        ? "Estimated GO360 commission: " + format(charge) + " (" + fees + "). Estimated proceeds before processing: " + format(amount - charge) + ". The rate is set at checkout."
+        : "GO360 commission: " + fees + ". The rate is set at checkout.";
 }
 
 function showReportsError(message) {
@@ -643,12 +657,14 @@ function renderBundlePricing(state) {
     document.getElementById("share-price-amount").disabled = !canSell;
     document.getElementById("share-price-currency").disabled = !canSell;
     if (!canSell) document.getElementById("share-price-amount").value = "";
+    if (canSell) updateCurrencyPlaceholder();
 }
 AppBus.on("subscription:updated", renderBundlePricing);
 AppBus.on("subscription:error", () => renderBundlePricing(null));
 document.getElementById("close-share-modal-btn").addEventListener("click", closeShareModal);
 document.getElementById("create-share-bundle-btn").addEventListener("click", createShareBundle);
 document.getElementById("share-price-currency").addEventListener("change", updateCurrencyPlaceholder);
+document.getElementById("share-price-amount").addEventListener("input", updateCurrencyPlaceholder);
 document.getElementById("reports-body").addEventListener("click", (event) => {
     const button = event.target && event.target.closest ? event.target.closest(".portal-release-btn") : null;
     if (!button || releaseBusy) return;
