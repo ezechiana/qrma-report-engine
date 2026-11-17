@@ -35,6 +35,7 @@
 .field input, .field select { width:100%; }
 .currency-row { display:grid; grid-template-columns:1.2fr .8fr; gap:12px; }
 .success-box { border:1px solid #bbf7d0; background:#f0fdf4; color:#166534; border-radius:14px; padding:12px; margin-top:12px; display:none; }
+.currency-row[hidden] { display:none; }
 @media(max-width:900px){ .modal-grid,.currency-row{grid-template-columns:1fr;} }
 /* reports mobile responsive consolidation */
 
@@ -91,7 +92,7 @@
         </div>
         <div class="btn-row">
             <button class="btn secondary" type="button" id="clear-selection-btn">Clear selection</button>
-            <button class="btn" type="button" id="open-share-modal-btn" data-requires-subscription data-subscription-context="create a client share bundle" disabled>Share selected</button>
+            <button class="btn" type="button" id="open-share-modal-btn" disabled>Share selected</button>
         </div>
     </div>
 
@@ -166,7 +167,7 @@
             </div>
         </div>
 
-        <div class="currency-row" style="margin-top:12px;">
+        <div id="bundle-pricing" class="currency-row" style="margin-top:12px;" hidden>
             <div class="field">
                 <label>Price (optional)</label>
                 <input id="share-price-amount" type="number" min="0" step="0.01" placeholder="£25.00">
@@ -543,7 +544,8 @@ async function createShareBundle() {
 
     try {
         const expiresRaw = document.getElementById("share-expires-days").value;
-        const priceRaw = document.getElementById("share-price-amount").value;
+        const canSell = AppState.subscription?.features?.includes("sell_shares");
+        const priceRaw = canSell ? document.getElementById("share-price-amount").value : "";
         const currency = document.getElementById("share-price-currency").value || "gbp";
         const amountMajor = priceRaw === "" ? null : Number(priceRaw);
         const amountMinor = amountMajor ? convertToMinorUnits(amountMajor, currency) : null;
@@ -558,8 +560,7 @@ async function createShareBundle() {
             title: document.getElementById("share-title").value || null,
             expires_days: expiresRaw === "" ? null : Number(expiresRaw),
             password: document.getElementById("share-password").value || null,
-            price_amount: amountMinor,
-            price_currency: currency,
+            ...(canSell ? { price_amount: amountMinor, price_currency: currency } : {}),
         };
 
         const res = await apiFetch("/api/share-bundles", {
@@ -569,14 +570,9 @@ async function createShareBundle() {
 
         const data = await res.json().catch(() => ({}));
 
-        if (!res.ok && res.status === 402) {
-            if (window.handleSubscriptionRequiredResponse) {
-                await window.handleSubscriptionRequiredResponse(res, "create a client share bundle");
-            } else if (window.ensureSubscriptionCanCreate) {
-                await window.ensureSubscriptionCanCreate("create a client share bundle");
-            } else {
-                showReportsError(data.detail || "Subscription required to create share bundles.");
-            }
+        if (res.status === 402) {
+            const action = amountMinor ? "charge for this bundle" : "create this bundle";
+            showReportsError(`Your current plan does not allow you to ${action}.`);
             return;
         }
 
@@ -635,11 +631,21 @@ document.getElementById("clear-selection-btn").addEventListener("click", () => {
 document.getElementById("open-share-modal-btn").addEventListener("click", async (event) => {
     event.preventDefault();
     if (window.ensureSubscriptionCanCreate) {
-        const ok = await window.ensureSubscriptionCanCreate("create a client share bundle");
+        const ok = await window.ensureSubscriptionCanCreate("create a client share bundle", "share_bundle");
         if (!ok) return;
     }
+    renderBundlePricing(AppState.subscription);
     openShareModal();
 });
+function renderBundlePricing(state) {
+    const canSell = Boolean(state?.features?.includes("sell_shares"));
+    document.getElementById("bundle-pricing").hidden = !canSell;
+    document.getElementById("share-price-amount").disabled = !canSell;
+    document.getElementById("share-price-currency").disabled = !canSell;
+    if (!canSell) document.getElementById("share-price-amount").value = "";
+}
+AppBus.on("subscription:updated", renderBundlePricing);
+AppBus.on("subscription:error", () => renderBundlePricing(null));
 document.getElementById("close-share-modal-btn").addEventListener("click", closeShareModal);
 document.getElementById("create-share-bundle-btn").addEventListener("click", createShareBundle);
 document.getElementById("share-price-currency").addEventListener("change", updateCurrencyPlaceholder);

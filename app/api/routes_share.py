@@ -263,6 +263,8 @@ def create_patient_trend_share_link(
     current_user: User = Depends(get_current_user),
 ):
     require_subscription_feature(db, current_user, "share_link")
+    if requires_payment:
+        require_subscription_feature(db, current_user, "sell_shares")
 
     patient = (
         db.query(Patient)
@@ -411,6 +413,9 @@ def update_share_link_payment_settings(
 
     if not case or case.user_id != current_user.id:
         raise HTTPException(status_code=404, detail="Share link not found")
+
+    if payload.get("requires_payment"):
+        require_subscription_feature(db, current_user, "sell_shares")
 
     _set_share_payment_config(
         db,
@@ -643,6 +648,8 @@ def create_share_bundle(
     current_user: User = Depends(get_current_user),
 ):
     require_subscription_feature(db, current_user, "share_bundle")
+    if payload.requires_payment:
+        require_subscription_feature(db, current_user, "sell_shares")
 
     reports = (
         db.query(ReportVersion)

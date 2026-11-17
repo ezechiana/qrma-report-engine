@@ -174,8 +174,8 @@
         <h4>Users</h4>
         <div class="table-wrap">
           <table class="platform-user-table">
-            <thead><tr><th>User</th><th>Access level</th><th>Source</th><th>Status</th><th>Created</th><th>Support</th><th>Admin actions</th></tr></thead>
-            <tbody id="platform-users-body"><tr><td colspan="7" class="platform-muted">Loading users…</td></tr></tbody>
+            <thead><tr><th>User</th><th>Access level</th><th>Source</th><th>Account status</th><th>Plan</th><th>Created</th><th>Last sign-in</th><th>Support</th><th>Admin actions</th></tr></thead>
+            <tbody id="platform-users-body"><tr><td colspan="9" class="platform-muted">Loading users…</td></tr></tbody>
           </table>
         </div>
       </div>
@@ -206,6 +206,18 @@
       <div class="platform-field"><label>Price label</label><input id="subscription_price_label"></div>
       <div class="platform-field"><label>Promotion codes</label><select id="subscription_allow_promotion_codes"><option value="true">Allowed</option><option value="false">Not allowed</option></select></div>
       <div class="platform-field"><label>Subscription required</label><select id="subscription_required"><option value="true">Required</option><option value="false">Not required</option></select></div>
+    </div>
+  </div>
+
+  <div class="platform-card">
+    <h3>Free practitioner permissions</h3>
+    <p>These settings apply to Free practitioners when subscription enforcement is enabled. Charging for a new share also requires permission to create that type of share. Existing paid offers remain available.</p>
+    <div class="platform-feature-grid">
+      <div class="platform-feature-toggle"><label><input type="checkbox" id="free_report_generation" data-free-feature> Generate Assessment reports</label></div>
+      <div class="platform-feature-toggle"><label><input type="checkbox" id="free_trend_report_generation" data-free-feature> Generate Trend reports</label></div>
+      <div class="platform-feature-toggle"><label><input type="checkbox" id="free_share_link" data-free-feature> Create individual share links</label></div>
+      <div class="platform-feature-toggle"><label><input type="checkbox" id="free_share_bundle" data-free-feature> Create report bundles</label></div>
+      <div class="platform-feature-toggle"><label><input type="checkbox" id="free_sell_shares" data-free-feature> Charge for supported shares</label></div>
     </div>
   </div>
 
@@ -415,6 +427,7 @@ async function loadPlatformSettings(){ const res=await apiFetch('/api/platform-s
   fillSelect('revenue_fee_model',data.revenue?.fee_model); fillSelect('revenue_default_currency',data.revenue?.default_currency); fillInput('revenue_default_monthly_goal',minorToMajor(data.revenue?.default_monthly_goal_minor,data.revenue?.default_currency));
   fillInput('fx_provider_url',data.fx?.provider_url); fillInput('fx_update_schedule_label',data.fx?.update_schedule_label); fillInput('fx_provider_timeout_seconds',data.fx?.provider_timeout_seconds); fillInput('fx_default_rates_json',data.fx?.default_rates_json); renderFxSnapshot(data.fx?.latest_snapshot);
   fillSelect('referral_enabled',Boolean(data.referral?.enabled)); fillInput('referral_reward_months',data.referral?.reward_months); fillInput('referral_trigger',data.referral?.trigger);
+  for (const feature of Array.from(document.querySelectorAll('input[data-free-feature]'), input => input.id.slice(5))) fillCheckbox('free_' + feature, data.subscription?.free_features?.[feature]);
   fillInput('subscription_trial_days',data.subscription?.trial_days); fillInput('subscription_plan_code',data.subscription?.plan_code); fillInput('subscription_plan_name',data.subscription?.plan_name); fillInput('subscription_price_label',data.subscription?.price_label); fillSelect('subscription_allow_promotion_codes',Boolean(data.subscription?.allow_promotion_codes)); fillSelect('subscription_required',Boolean(data.subscription?.subscription_required));
   fillInput('share_default_price',minorToMajor(data.share?.default_share_price_amount,data.share?.default_share_price_currency)); fillInput('share_default_currency',data.share?.default_share_price_currency); fillInput('share_cookie_max_age',data.share?.share_access_cookie_max_age);
   fillSelect('stripe_connect_enabled',Boolean(data.stripe_connect?.enabled)); fillInput('stripe_connect_account_type',data.stripe_connect?.account_type); fillInput('stripe_connect_country',data.stripe_connect?.country); fillSelect('stripe_connect_fallback',Boolean(data.stripe_connect?.fallback_to_platform)); fillInput('stripe_platform_fee_percent',data.stripe_connect?.platform_fee_percent); fillInput('stripe_platform_fee_fixed',data.stripe_connect?.platform_fee_fixed_amount);
@@ -426,7 +439,7 @@ function collectPlatformSettings(){ const defaultCurrency=document.getElementByI
   revenue:{fee_model:document.getElementById('revenue_fee_model').value,default_currency:defaultCurrency,default_monthly_goal_minor:majorToMinor(document.getElementById('revenue_default_monthly_goal').value,defaultCurrency)},
   fx:{provider_url:document.getElementById('fx_provider_url').value,update_schedule_label:document.getElementById('fx_update_schedule_label').value,provider_timeout_seconds:Number(document.getElementById('fx_provider_timeout_seconds').value||6),default_rates_json:document.getElementById('fx_default_rates_json').value},
   referral:{enabled:asBool(document.getElementById('referral_enabled').value),reward_type:'free_months',reward_months:Number(document.getElementById('referral_reward_months').value||1),trigger:document.getElementById('referral_trigger').value||'referred_user_becomes_paid'},
-  subscription:{trial_days:Number(document.getElementById('subscription_trial_days').value||30),plan_code:document.getElementById('subscription_plan_code').value,plan_name:document.getElementById('subscription_plan_name').value,price_label:document.getElementById('subscription_price_label').value,allow_promotion_codes:asBool(document.getElementById('subscription_allow_promotion_codes').value),subscription_required:asBool(document.getElementById('subscription_required').value)},
+  subscription:{free_features:Object.fromEntries(Array.from(document.querySelectorAll('input[data-free-feature]'), input => input.id.slice(5)).map(feature => [feature, readCheckbox('free_' + feature)])),trial_days:Number(document.getElementById('subscription_trial_days').value||30),plan_code:document.getElementById('subscription_plan_code').value,plan_name:document.getElementById('subscription_plan_name').value,price_label:document.getElementById('subscription_price_label').value,allow_promotion_codes:asBool(document.getElementById('subscription_allow_promotion_codes').value),subscription_required:asBool(document.getElementById('subscription_required').value)},
   share:{default_share_price_amount:majorToMinor(document.getElementById('share_default_price').value,shareCurrency),default_share_price_currency:shareCurrency,share_access_cookie_max_age:Number(document.getElementById('share_cookie_max_age').value||43200)},
   stripe_connect:{enabled:asBool(document.getElementById('stripe_connect_enabled').value),account_type:document.getElementById('stripe_connect_account_type').value,country:document.getElementById('stripe_connect_country').value,fallback_to_platform:asBool(document.getElementById('stripe_connect_fallback').value),platform_fee_percent:Number(document.getElementById('stripe_platform_fee_percent').value||0),platform_fee_fixed_amount:Number(document.getElementById('stripe_platform_fee_fixed').value||0)},
   report:{recommendation_mode:document.getElementById('report_recommendation_mode').value,tone:document.getElementById('report_tone').value,max_sections:Number(document.getElementById('report_max_sections').value||6),max_markers_per_section:Number(document.getElementById('report_max_markers').value||3),include_product_recommendations:asBool(document.getElementById('report_include_products').value),include_appendix:asBool(document.getElementById('report_include_appendix').value)}
@@ -445,8 +458,8 @@ function platformUserDate(value) {
 function getPlatformUserEmail() { return (document.getElementById("platform-user-email")?.value || "").trim(); }
 function platformAccessPill(user) {
   const effective = String(user.effective_role || user.role || "practitioner").toLowerCase();
-  const label = effective === "admin" ? "Platform admin" : "Practitioner";
-  const dbRole = user.role && user.role !== effective ? `<div class="platform-db-role">DB role: ${escapePlatformUser(user.role)}</div>` : "";
+  const label = effective === "admin" ? "Platform admin" : user.role === "client" ? "Client" : "Practitioner";
+  const dbRole = effective === "admin" && user.role && user.role !== effective ? `<div class="platform-db-role">DB role: ${escapePlatformUser(user.role)}</div>` : "";
   return `<div class="platform-access-wrap"><span class="platform-access-pill ${effective}">${label}</span>${dbRole}</div>`;
 }
 function adminSourcePill(user) {
@@ -456,6 +469,13 @@ function adminSourcePill(user) {
   if (source === "db_role") return `<span class="platform-source-badge db_role">Database role</span>`;
   if (source === "allowlist") return `<span class="platform-source-badge allowlist">Admin emails allowlist</span>`;
   return `<span class="platform-source-badge">${escapePlatformUser(source)}</span>`;
+}
+function platformPlan(user) {
+  const labels = { free: "Free", pro: "Pro", internal_admin: "Internal admin" };
+  const label = labels[user.plan_tier] || "&mdash;";
+  if (user.billing_status !== "trialing" || !user.trial_ends_at || user.plan_tier === "internal_admin" || !user.plan_tier) return label;
+  const trialLabel = user.plan_tier === "pro" ? "Trial ends" : "Trial ended";
+  return `${label}<div class="platform-muted">${trialLabel} ${escapePlatformUser(platformUserDate(user.trial_ends_at))}</div>`;
 }
 function statusPill(active) { return `<span class="platform-status-pill ${active ? "active" : "inactive"}">${active ? "Active" : "Inactive"}</span>`; }
 function renderPlatformUserSummary(summary) {
@@ -474,17 +494,17 @@ function currentUserEmailLower() {
 }
 async function loadPlatformUsers() {
   const body=document.getElementById("platform-users-body"); if(!body) return;
-  body.innerHTML=`<tr><td colspan="7" class="platform-muted">Loading users…</td></tr>`;
+  body.innerHTML=`<tr><td colspan="9" class="platform-muted">Loading users…</td></tr>`;
   try {
     const q=getPlatformUserEmail();
     const role=document.getElementById("platform-user-role-filter")?.value || "all";
     const status=document.getElementById("platform-user-status-filter")?.value || "all";
     const res=await apiFetch(`/api/platform-users?q=${encodeURIComponent(q)}&role=${encodeURIComponent(role)}&status=${encodeURIComponent(status)}&limit=75`);
     const data=await res.json().catch(()=>({}));
-    if(!res.ok){ body.innerHTML=`<tr><td colspan="7" class="platform-muted">Could not load users.</td></tr>`; return; }
+    if(!res.ok){ body.innerHTML=`<tr><td colspan="9" class="platform-muted">Could not load users.</td></tr>`; return; }
     renderPlatformUserSummary(data.summary || {});
     const rows=Array.isArray(data.items)?data.items:[];
-    if(!rows.length){ body.innerHTML=`<tr><td colspan="7" class="platform-muted">No users found. Try clearing the search or using All roles / All statuses.</td></tr>`; return; }
+    if(!rows.length){ body.innerHTML=`<tr><td colspan="9" class="platform-muted">No users found. Try clearing the search or using All roles / All statuses.</td></tr>`; return; }
     const selfEmail=currentUserEmailLower();
     body.innerHTML=rows.map(user=>{
       const email=String(user.email||"");
@@ -504,14 +524,16 @@ async function loadPlatformUsers() {
         <td>${platformAccessPill(user)}</td>
         <td>${adminSourcePill(user)}</td>
         <td>${statusPill(active)}</td>
+        <td>${platformPlan(user)}</td>
         <td>${platformUserDate(user.created_at)}</td>
+        <td>${user.last_login_at ? escapePlatformUser(new Date(user.last_login_at).toLocaleString(undefined,{dateStyle:"medium",timeStyle:"short"})) : "No sign-in recorded"}</td>
         <td><div class="platform-row-actions">${impersonate}</div></td>
         <td><div class="platform-row-actions">${roleAction}${statusAction}</div></td>
       </tr>`;
     }).join("");
   } catch(err) {
     console.error("Platform users failed to load",err);
-    body.innerHTML=`<tr><td colspan="7" class="platform-muted">Could not load users.</td></tr>`;
+    body.innerHTML=`<tr><td colspan="9" class="platform-muted">Could not load users.</td></tr>`;
   }
 }
 async function loadPlatformAuditLog() {

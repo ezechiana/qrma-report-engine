@@ -66,10 +66,6 @@
 
     <div class="share-grid">
         <div class="field">
-            <label>Price (£)</label>
-            <input id="share-price-gbp" type="number" min="0" step="0.01" placeholder="Leave empty for free" />
-        </div>
-        <div class="field">
             <label>Expires in days</label>
             <input id="share-expires-days" type="number" min="1" step="1" value="7" />
         </div>
@@ -80,8 +76,9 @@
     </div>
 
     <div class="btn-row">
-        <button class="btn" id="create-share-link-btn" type="button">Create share link</button>
+        <button class="btn" id="create-share-link-btn" type="button" disabled aria-describedby="share-feedback">Create share link</button>
     </div>
+    <p id="share-feedback" class="muted" role="status">Checking sharing permissions…</p>
     <div id="share-result" class="muted" style="margin-top:12px;"></div>
 </div>
 
@@ -448,11 +445,9 @@ async function createShareLink() {
 
     try {
         const expiresDays = Number(document.getElementById("share-expires-days").value || 7);
-        const priceValue = document.getElementById("share-price-gbp").value;
         const payload = {
             password: document.getElementById("share-password").value || null,
             expires_in_days: Number.isFinite(expiresDays) ? expiresDays : 7,
-            price_gbp: priceValue === "" ? null : Number(priceValue),
             share_type: isTrend(currentReport) ? "trend" : "assessment",
         };
 
@@ -461,22 +456,39 @@ async function createShareLink() {
             body: JSON.stringify(payload),
         });
 
-        if (await maybeHandleSubscription(response, "share this report with your client")) return;
-
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
-            setError(data.detail || "Could not create share link. Use bundle sharing if this endpoint is not enabled for this report type.");
+            if (response.status === 402 && data.detail?.code === "subscription_required") {
+                renderSharePermission(false);
+            } else {
+                document.getElementById("share-feedback").textContent = typeof data.detail === "string" ? data.detail : "Could not create share link. Try again.";
+            }
             return;
         }
+        document.getElementById("share-feedback").textContent = "";
 
         const finalShareUrl = isTrend(currentReport) ? `${data.share_url}/trend` : data.share_url;
         renderShareResult(finalShareUrl);
         setSuccess("Share link created. You can now copy, preview, or send it to your client.");
     } catch (err) {
         console.error(err);
-        setError(`Unexpected error while creating share link${err && err.message ? `: ${err.message}` : "."}`);
+        document.getElementById("share-feedback").textContent = "Could not create share link. Try again.";
     }
 }
+
+function renderSharePermission(allowed) {
+    for (const id of ["create-share-link-btn", "share-expires-days", "share-password"]) {
+        document.getElementById(id).disabled = !allowed;
+    }
+    document.getElementById("share-feedback").textContent = allowed ? "" : "Your current plan does not include individual share links.";
+}
+
+AppBus.on("subscription:updated", state => renderSharePermission(state.features?.includes("share_link")));
+AppBus.on("subscription:error", () => {
+    renderSharePermission(false);
+    document.getElementById("share-feedback").textContent = "Could not check sharing permissions. Reload the page to try again.";
+});
+if (AppState.subscription) renderSharePermission(AppState.subscription.features?.includes("share_link"));
 
 document.getElementById("create-share-link-btn").addEventListener("click", createShareLink);
 document.getElementById("actions-grid").addEventListener("click", (event) => {

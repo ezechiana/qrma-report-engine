@@ -12,7 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.api.share_helpers import DEFAULT_SHARE_PRICE_CURRENCY, _ensure_share_link_events_table
-from app.db.models import Case, ReportVersion, ShareLink, User
+from app.db.models import Case, Patient, ReportVersion, ShareLink, User
 from app.schemas.share import ReportShareLinkCreate, ShareLinkRead
 from app.services.audit_service import log_action
 from app.services.share_link_service import create_share_link
@@ -67,11 +67,30 @@ def create_report_share_link(
 @router.post("/api/share/create")
 def create_share(payload: dict, db: Session = Depends(get_db), user=Depends(get_current_user)):
     require_subscription_feature(db, user, "share_link")
+    if payload.get("price"):
+        require_subscription_feature(db, user, "sell_shares")
+
+    try:
+        report_id = UUID(str(payload.get("report_version_id")))
+        patient_id = UUID(str(payload["patient_id"])) if payload.get("patient_id") else None
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail="Invalid report or patient ID") from exc
+
+    report = (
+        db.query(ReportVersion)
+        .join(Case, Case.id == ReportVersion.case_id)
+        .filter(ReportVersion.id == report_id, Case.user_id == user.id)
+        .first()
+    )
+    if report is None:
+        raise HTTPException(status_code=404, detail="Report not found")
+    if patient_id and not db.query(Patient.id).filter(Patient.id == patient_id, Patient.user_id == user.id).first():
+        raise HTTPException(status_code=404, detail="Patient not found")
 
     share = create_share_link(
         db=db,
-        report_version_id=payload.get("report_version_id"),
-        patient_id=payload.get("patient_id"),
+        report_version=report,
+        patient_id=patient_id,
         share_type=payload.get("share_type", "report"),
         price=payload.get("price"),
         expires_days=payload.get("expires_days"),

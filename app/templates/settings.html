@@ -650,6 +650,11 @@
                 }
                 return;
             }
+        if (status === "free") {
+            box.textContent = data.access_message;
+            return;
+        }
+
 
             renderSubscriptionStatus(data);
         } catch (err) {

@@ -11,6 +11,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_db, require_platform_admin
 from app.db.models import User
 from app.services.platform_settings_service import is_platform_admin_email
+from app.services.subscription_service import plan_access
 
 router = APIRouter(tags=["platform-users"])
 
@@ -141,21 +142,43 @@ def _all_users(db: Session, *, q: str = "", limit: int = 500) -> list[dict[str, 
     params: dict[str, Any] = {"limit": limit}
     where = ""
     if q.strip():
-        where = "WHERE email ILIKE :search OR full_name ILIKE :search"
+        where = "WHERE u.email ILIKE :search OR u.full_name ILIKE :search"
         params["search"] = f"%{q.strip()}%"
     rows = db.execute(
         text(
             f"""
-            SELECT id, email, full_name, role, is_active, created_at, updated_at
-            FROM users
+            SELECT u.id, u.email, u.full_name, u.role, u.is_active, u.created_at,
+                   u.updated_at, u.last_login_at, s.status AS billing_status,
+                   s.current_period_end, s.trial_ends_at
+            FROM users u
+            LEFT JOIN LATERAL (
+                SELECT status, current_period_end,
+                       (to_jsonb(sub)->>'trial_ends_at')::timestamptz AS trial_ends_at
+                FROM subscriptions sub
+                WHERE sub.user_id = u.id
+                ORDER BY sub.created_at DESC
+                LIMIT 1
+            ) s ON true
             {where}
-            ORDER BY created_at DESC
+            ORDER BY u.created_at DESC
             LIMIT :limit
             """
         ),
         params,
     ).mappings().all()
-    return [_normalise_user(db, dict(row)) for row in rows]
+    users = []
+    for row in rows:
+        user = _normalise_user(db, dict(row))
+        access = plan_access(
+            {"status": row["billing_status"], "current_period_end": row["current_period_end"], "trial_ends_at": row["trial_ends_at"]},
+            platform_admin=user["is_platform_admin"],
+        )
+        user["plan_tier"] = None if user["role"] == "client" and not user["is_platform_admin"] else access["tier"]
+        user["trial_ends_at"] = access["trial_ends_at"]
+        user["billing_status"] = access["billing_status"]
+        user["last_login_at"] = row["last_login_at"].isoformat() if row["last_login_at"] else None
+        users.append(user)
+    return users
 
 
 def _active_admin_count(db: Session) -> int:

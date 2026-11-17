@@ -1124,12 +1124,6 @@
             return isAccessActiveStatus(sub.status);
         }
 
-        function subscriptionRequiresUpgrade() {
-            const sub = AppState.subscription;
-            if (!sub) return false;
-            return !isAccessActiveStatus(sub.status);
-        }
-
         function showAppBanner(config) {
             const region = document.getElementById("app-banner-region");
             if (!region || !config) return null;
@@ -1220,10 +1214,9 @@
         function showSubscriptionGateModal(contextLabel) {
             const label = contextLabel || "continue";
             showAppModal({
-                title: "Subscription required",
+                title: "Plan permission required",
                 body: `
-                    <p>Your trial or subscription is not active, so ${label} is currently paused.</p>
-                    <p>You can still view existing reports, shares, and revenue. Upgrade to resume creating new reports and paid bundles.</p>
+                    <p>Your current plan does not allow you to ${label}.</p><p>Upgrade to Pro to use this feature.</p>
                 `,
                 actions: [
                     { label: "Not now", variant: "secondary", onClick: closeAppModal },
@@ -1232,12 +1225,12 @@
             });
         }
 
-        async function ensureSubscriptionCanCreate(contextLabel) {
+        async function ensureSubscriptionCanCreate(contextLabel, feature = "report_generation") {
             if (!AppState.subscription) {
                 await refreshSubscriptionState();
             }
 
-            if (subscriptionRequiresUpgrade()) {
+            if (AppState.subscription && !AppState.subscription.features?.includes(feature)) {
                 showSubscriptionGateModal(contextLabel || "this action");
                 return false;
             }
@@ -1250,7 +1243,7 @@
                 const target = event.target.closest("[data-requires-subscription]");
                 if (!target) return;
 
-                const ok = await ensureSubscriptionCanCreate(target.dataset.subscriptionContext || "this action");
+                const ok = await ensureSubscriptionCanCreate(target.dataset.subscriptionContext || "this action", target.dataset.subscriptionFeature);
                 if (!ok) {
                     event.preventDefault();
                     event.stopPropagation();
@@ -1302,14 +1295,13 @@
 
             showAppBanner({
                 id: "subscription-global-banner",
-                variant: "danger",
-                icon: "!",
-                title: "Subscription inactive",
-                body: "Creating new reports and paid bundles is paused. Existing reports, shares, and revenue remain viewable.",
+                variant: "info",
+                title: "Free plan",
+                body: "Your Free plan permissions determine which reports and shares you can create.",
                 dismissible: false,
                 actions: [
                     {
-                        label: "Upgrade to continue",
+                        label: "Upgrade to Pro",
                         variant: "primary",
                         onClick: () => startSubscriptionCheckout().catch(err => alert(err.message)),
                     },

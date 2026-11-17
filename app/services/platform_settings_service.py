@@ -4,6 +4,7 @@ import json
 import os
 from typing import Any
 
+from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
@@ -12,6 +13,7 @@ REFERRAL_CONFIG_KEY = "referral_config"
 REVENUE_CONFIG_KEY = "revenue_config"
 FX_CONFIG_KEY = "fx_config"
 SUBSCRIPTION_CONFIG_KEY = "subscription_config"
+FREE_PLAN_FEATURES = ("report_generation", "trend_report_generation", "share_link", "share_bundle", "sell_shares")
 SHARE_CONFIG_KEY = "share_config"
 STRIPE_CONNECT_CONFIG_KEY = "stripe_connect_config"
 REPORT_CONFIG_KEY = "report_config"
@@ -108,6 +110,7 @@ def default_platform_settings() -> dict[str, Any]:
             "trigger": "referred_user_becomes_paid",
         },
         "subscription": {
+            "free_features": dict.fromkeys(FREE_PLAN_FEATURES, False),
             "trial_days": _int_env("SUBSCRIPTION_TRIAL_DAYS", 30),
             "plan_code": os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly")),
             "plan_name": os.getenv("SUBSCRIPTION_PLAN_NAME", "go360 Practitioner"),
@@ -177,6 +180,14 @@ def get_platform_settings(db: Session) -> dict[str, Any]:
 
 def save_platform_settings(db: Session, payload: dict[str, Any]) -> dict[str, Any]:
     current = get_platform_settings(db)
+    subscription = payload.get("subscription")
+    if isinstance(subscription, dict) and "free_features" in subscription:
+        free_features = subscription["free_features"]
+        if not isinstance(free_features, dict) or any(
+            key not in FREE_PLAN_FEATURES or type(value) is not bool
+            for key, value in free_features.items()
+        ):
+            raise HTTPException(status_code=422, detail="Free plan features must be known feature names with boolean values.")
     key_map = {
         "platform": PLATFORM_CONFIG_KEY,
         "revenue": REVENUE_CONFIG_KEY,
@@ -193,6 +204,8 @@ def save_platform_settings(db: Session, payload: dict[str, Any]) -> dict[str, An
         if not isinstance(incoming, dict):
             continue
         merged = dict(current.get(section) or {})
+        if section == "subscription" and "free_features" in incoming:
+            incoming = {**incoming, "free_features": {**(merged.get("free_features") or {}), **incoming["free_features"]}}
         merged.update(incoming)
         save_json_setting(db, key, merged)
     return get_platform_settings(db)

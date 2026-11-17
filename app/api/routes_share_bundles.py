@@ -567,13 +567,15 @@ def create_share_bundle(
     current_user: User = Depends(get_current_user),
 ):
     require_subscription_feature(db, current_user, "share_bundle")
+    requires_payment = bool(payload.price_amount and payload.price_amount > 0)
+    if requires_payment:
+        require_subscription_feature(db, current_user, "sell_shares")
 
     reports = _owned_reports(db, current_user, payload.report_version_ids)
     patient_ids = {str(r.case.patient_id) for r in reports if getattr(r, "case", None)}
     patient_id = reports[0].case.patient_id if len(patient_ids) == 1 else None
 
     expires_at = datetime.now(timezone.utc) + timedelta(days=int(payload.expires_days or 7)) if payload.expires_days else None
-    requires_payment = bool(payload.price_amount and payload.price_amount > 0)
     password_hash = hash_password(_safe_password_for_bcrypt(payload.password)) if payload.password else None
 
     title = payload.title

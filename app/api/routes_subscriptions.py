@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any, Optional
 
 import stripe
@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
+from app.services.subscription_service import DEFAULT_PLAN_CODE, configured_free_features, latest_subscription, plan_access
 
 router = APIRouter(tags=["subscriptions"])
 
@@ -21,8 +22,6 @@ STRIPE_SUBSCRIPTION_WEBHOOK_SECRET = os.getenv("STRIPE_SUBSCRIPTION_WEBHOOK_SECR
 STRIPE_SUBSCRIPTION_PRICE_ID = os.getenv("STRIPE_SUBSCRIPTION_PRICE_ID")
 STRIPE_ALLOW_PROMOTION_CODES = os.getenv("STRIPE_ALLOW_PROMOTION_CODES", "true").lower() == "true"
 SUBSCRIPTION_PORTAL_RETURN_PATH = os.getenv("SUBSCRIPTION_PORTAL_RETURN_PATH", "/app/settings")
-DEFAULT_PLAN_CODE = os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", "practitioner_monthly")
-TRIAL_DAYS = int(os.getenv("SUBSCRIPTION_TRIAL_DAYS", "30"))
 _STRIPE_PRICE_NAME_CACHE: dict[str, str] = {}
 
 if STRIPE_SECRET_KEY:
@@ -35,17 +34,6 @@ class SubscriptionCheckoutRequest(BaseModel):
 
 def _now() -> datetime:
     return datetime.now(timezone.utc)
-
-
-def _dt_to_iso(value: Any) -> str | None:
-    if not value:
-        return None
-    if isinstance(value, str):
-        return value
-    try:
-        return value.isoformat()
-    except Exception:
-        return str(value)
 
 
 def _timestamp_to_dt(ts) -> datetime | None:
@@ -70,49 +58,11 @@ def _row_to_dict(row) -> dict[str, Any] | None:
     return dict(row._mapping) if row else None
 
 
-def _is_subscription_usable(sub: dict[str, Any] | None) -> bool:
-    if not sub:
-        return False
-    status = (sub.get("status") or "").lower()
-    if status in {"active", "trialing"}:
-        end = sub.get("current_period_end")
-        if not end:
-            return True
-        if isinstance(end, str):
-            try:
-                end = datetime.fromisoformat(end.replace("Z", "+00:00"))
-            except Exception:
-                return True
-        if end.tzinfo is None:
-            end = end.replace(tzinfo=timezone.utc)
-        return end > _now()
-    return False
+def _ensure_checkout_record(db: Session, current_user: User) -> dict[str, Any]:
+    existing = latest_subscription(db, current_user)
+    if existing:
+        return existing
 
-
-def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, Any]:
-    """
-    SQL-only subscription bootstrap.
-
-    This avoids relying on an ORM Subscription import, so routes_subscriptions.py keeps
-    working even if the model class is not imported or the table has recently changed.
-    """
-    row = db.execute(
-        text(
-            """
-            SELECT *
-            FROM subscriptions
-            WHERE user_id = :user_id
-            ORDER BY created_at DESC
-            LIMIT 1
-            """
-        ),
-        {"user_id": current_user.id},
-    ).mappings().first()
-
-    if row:
-        return dict(row)
-
-    trial_end = _now() + timedelta(days=TRIAL_DAYS)
     row = db.execute(
         text(
             """
@@ -121,7 +71,6 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
                 user_id,
                 plan_code,
                 status,
-                current_period_end,
                 cancel_at_period_end,
                 created_at,
                 updated_at
@@ -129,8 +78,7 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
                 gen_random_uuid(),
                 :user_id,
                 :plan_code,
-                'trialing',
-                :trial_end,
+                'incomplete',
                 false,
                 NOW(),
                 NOW()
@@ -141,7 +89,6 @@ def _ensure_subscription_record(db: Session, current_user: User) -> dict[str, An
         {
             "user_id": current_user.id,
             "plan_code": DEFAULT_PLAN_CODE,
-            "trial_end": trial_end,
         },
     ).mappings().first()
     db.commit()
@@ -202,17 +149,11 @@ def _stripe_display_plan_name(price_id: str | None = None) -> str:
 
     return fallback
 
-def _subscription_payload(sub: dict[str, Any], *, stripe_connect: dict[str, Any] | None = None) -> dict[str, Any]:
-    status = sub.get("status") or "incomplete"
-    usable = _is_subscription_usable(sub)
-    end = sub.get("current_period_end")
-    trial_end = sub.get("current_period_end") if status == "trialing" else None
-    days_remaining = _days_remaining(end)
-
-    if status == "trialing" and days_remaining is not None and days_remaining <= 0:
-        usable = False
-        status = "expired"
-        trial_end = None
+def _subscription_payload(sub: dict[str, Any], *, free_features: frozenset[str], stripe_connect: dict[str, Any] | None = None) -> dict[str, Any]:
+    access = plan_access(sub, free_features=free_features)
+    status = access["status"]
+    usable = access["is_active"]
+    days_remaining = _days_remaining(access["trial_ends_at"] if status == "trialing" else access["current_period_end"]) if usable else None
 
     if usable and status == "active":
         access_message = "Subscription active."
@@ -236,7 +177,7 @@ def _subscription_payload(sub: dict[str, Any], *, stripe_connect: dict[str, Any]
             "message": "Add billing now so your reporting workflow continues uninterrupted after the trial.",
         }
     else:
-        access_message = "Subscription required to create new reports and share bundles."
+        access_message = "Free plan. Existing reports remain available. Feature availability depends on your plan settings."
         trial_banner = None
         upgrade_nudge = {
             "show": True,
@@ -257,18 +198,8 @@ def _subscription_payload(sub: dict[str, Any], *, stripe_connect: dict[str, Any]
     return {
         "id": str(sub.get("id")) if sub.get("id") else None,
         "subscription_id": str(sub.get("id")) if sub.get("id") else None,
-        "plan_code": sub.get("plan_code") or DEFAULT_PLAN_CODE,
-        "display_plan_name": _stripe_display_plan_name(sub.get("stripe_price_id")),
-        "status": status,
-        "effective_status": status,
-        "is_active": usable,
-        "can_create_reports": usable,
-        "can_create_shares": usable,
-        "can_create_bundles": usable,
-        "can_create_share_bundles": usable,
-        "can_view_existing": True,
-        "current_period_end": _dt_to_iso(end),
-        "trial_ends_at": _dt_to_iso(trial_end),
+        **access,
+        "display_plan_name": _stripe_display_plan_name(sub.get("stripe_price_id")) if usable else "Free",
         "days_remaining": days_remaining,
         "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
         "stripe_customer_id": sub.get("stripe_customer_id"),
@@ -459,18 +390,8 @@ def get_subscription_status(
         return {
             "id": None,
             "subscription_id": None,
-            "plan_code": "internal_admin",
+            **plan_access({}, platform_admin=True),
             "display_plan_name": "Platform Admin",
-            "status": "platform_admin",
-            "effective_status": "platform_admin",
-            "is_active": True,
-            "can_create_reports": True,
-            "can_create_shares": True,
-            "can_create_bundles": True,
-            "can_create_share_bundles": True,
-            "can_view_existing": True,
-            "current_period_end": None,
-            "trial_ends_at": None,
             "days_remaining": None,
             "cancel_at_period_end": False,
             "stripe_customer_id": None,
@@ -484,9 +405,9 @@ def get_subscription_status(
             "stripe_connect_reminder": {"show": False},
         }
 
-    sub = _ensure_subscription_record(db, current_user)
+    sub = latest_subscription(db, current_user)
     stripe_connect = _get_stripe_connect_status(db, current_user)
-    return _subscription_payload(sub, stripe_connect=stripe_connect)
+    return _subscription_payload(sub, free_features=configured_free_features(db), stripe_connect=stripe_connect)
 
 
 @router.post("/api/subscription/checkout")
@@ -522,7 +443,7 @@ def create_subscription_checkout(
             detail="An active subscription already exists. Please manage your billing instead.",
         )
 
-    sub = _ensure_subscription_record(db, current_user)
+    sub = _ensure_checkout_record(db, current_user)
     customer_id = sub.get("stripe_customer_id")
 
     if not customer_id:
@@ -609,7 +530,7 @@ def create_subscription_customer_portal(
     if not STRIPE_SECRET_KEY:
         raise HTTPException(status_code=500, detail="Stripe is not configured. Set STRIPE_SECRET_KEY.")
 
-    sub = _ensure_subscription_record(db, current_user)
+    sub = latest_subscription(db, current_user)
     customer_id = sub.get("stripe_customer_id")
     if not customer_id:
         raise HTTPException(status_code=409, detail="No Stripe customer exists yet. Start a subscription checkout first.")
