@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services.platform_settings_service import FREE_PLAN_FEATURES, SUBSCRIPTION_CONFIG_KEY, _load_json_setting
+from app.services.platform_settings_service import FREE_PLAN_FEATURES, SUBSCRIPTION_CONFIG_KEY, _load_json_setting, free_feature_settings
 
 DEFAULT_PLAN_CODE = os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly"))
 SUBSCRIPTION_REQUIRED = os.getenv("SUBSCRIPTION_REQUIRED", "true").lower() == "true"
@@ -19,16 +19,17 @@ PRO_FEATURES = FREE_FEATURES | set(FREE_PLAN_FEATURES)
 
 def configured_free_features(db: Session) -> frozenset[str]:
     config = _load_json_setting(db, SUBSCRIPTION_CONFIG_KEY)
-    toggles = config.get("free_features")
-    if not isinstance(toggles, dict):
-        return FREE_FEATURES
-    return FREE_FEATURES | {feature for feature in FREE_PLAN_FEATURES if toggles.get(feature) is True}
+    return FREE_FEATURES | {feature for feature, enabled in free_feature_settings(config).items() if enabled}
 
 
 def latest_subscription(db: Session, user) -> dict[str, Any]:
+    return latest_subscription_for_user(db, user.id)
+
+
+def latest_subscription_for_user(db: Session, user_id) -> dict[str, Any]:
     row = db.execute(
         text("SELECT * FROM subscriptions WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 1"),
-        {"user_id": user.id},
+        {"user_id": user_id},
     ).mappings().first()
     return dict(row) if row else {}
 

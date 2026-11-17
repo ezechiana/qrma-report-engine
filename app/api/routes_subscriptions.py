@@ -12,6 +12,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
+from app.services.share_commission import share_commission
 from app.services.subscription_service import DEFAULT_PLAN_CODE, configured_free_features, latest_subscription, plan_access
 
 router = APIRouter(tags=["subscriptions"])
@@ -386,8 +387,11 @@ def get_subscription_status(
 ):
     from app.services.platform_settings_service import is_platform_admin_user
 
+    sub = latest_subscription(db, current_user)
+    commission = share_commission(db, sub)
     if is_platform_admin_user(db, current_user):
         return {
+            "share_commission": commission,
             "id": None,
             "subscription_id": None,
             **plan_access({}, platform_admin=True),
@@ -405,9 +409,8 @@ def get_subscription_status(
             "stripe_connect_reminder": {"show": False},
         }
 
-    sub = latest_subscription(db, current_user)
     stripe_connect = _get_stripe_connect_status(db, current_user)
-    return _subscription_payload(sub, free_features=configured_free_features(db), stripe_connect=stripe_connect)
+    return {**_subscription_payload(sub, free_features=configured_free_features(db), stripe_connect=stripe_connect), "share_commission": commission}
 
 
 @router.post("/api/subscription/checkout")

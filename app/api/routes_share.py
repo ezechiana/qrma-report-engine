@@ -17,6 +17,7 @@ from app.api.share_helpers import (
     DEFAULT_SHARE_PRICE_AMOUNT,
     DEFAULT_SHARE_PRICE_CURRENCY,
     _calculate_platform_fee,
+    _report_owner_user_id,
     _clear_share_cookie,
     _connect_destination_for_report,
     _enforce_password_gate,
@@ -44,7 +45,8 @@ from app.services.share_link_service import (
     create_share_link,
     validate_share_link_password,
 )
-from app.services.subscription_service import require_subscription_feature
+from app.services.share_commission import commission_metadata, share_commission
+from app.services.subscription_service import latest_subscription_for_user, require_subscription_feature
 
 router = APIRouter(tags=["share"])
 templates = Jinja2Templates(directory="app/templates")
@@ -452,7 +454,12 @@ def create_share_checkout_session(
     connect = _connect_destination_for_report(db, report)
     connect_mode = connect.get("mode") or "platform"
     destination_account = connect.get("account_id") if connect_mode == "destination_charge" else None
-    platform_fee_amount = _calculate_platform_fee(amount) if destination_account else None
+    seller_id = _report_owner_user_id(report)
+    if not seller_id:
+        raise HTTPException(status_code=409, detail="Share payment owner is unavailable.")
+    commission = share_commission(db, latest_subscription_for_user(db, seller_id))
+    platform_fee_amount = _calculate_platform_fee(amount, commission)
+    fee_metadata = commission_metadata(commission, amount)
 
     checkout_payload = {
         "mode": "payment",
@@ -463,6 +470,8 @@ def create_share_checkout_session(
         "metadata[share_link_id]": str(link.id),
         "metadata[report_version_id]": str(report.id),
         "metadata[stripe_connect_mode]": connect_mode,
+        **{f"metadata[{key}]": value for key, value in fee_metadata.items()},
+        **{f"payment_intent_data[metadata][{key}]": value for key, value in fee_metadata.items()},
         "line_items[0][quantity]": "1",
         "line_items[0][price_data][currency]": currency,
         "line_items[0][price_data][unit_amount]": str(amount),
@@ -472,7 +481,6 @@ def create_share_checkout_session(
     if destination_account:
         checkout_payload.update({
             "metadata[destination_account]": destination_account,
-            "metadata[platform_fee_amount]": str(platform_fee_amount or 0),
             "payment_intent_data[application_fee_amount]": str(platform_fee_amount or 0),
             "payment_intent_data[transfer_data][destination]": destination_account,
             "payment_intent_data[metadata][token]": token,
@@ -492,7 +500,7 @@ def create_share_checkout_session(
                 stripe_connect_mode = :stripe_connect_mode,
                 platform_fee_amount = :platform_fee_amount,
                 platform_fee_currency = :platform_fee_currency
-            WHERE id = :id
+            WHERE id = :id AND payment_status IS DISTINCT FROM 'paid'
             """
         ),
         {
@@ -540,7 +548,7 @@ def confirm_share_payment_success(
         payment_intent_id = session.get("payment_intent")
 
         try:
-            platform_fee_amount = int(metadata.get("platform_fee_amount") or 0) if destination_account else None
+            platform_fee_amount = int(metadata["platform_fee_amount"]) if "platform_fee_amount" in metadata else (0 if destination_account else None)
         except Exception:
             platform_fee_amount = None
 
