@@ -162,25 +162,6 @@ def _normalise_sex(value):
     return mapping.get(v, None)
 
 
-def _ensure_report_source_hash_schema(db: Session) -> None:
-    """
-    Defensive safeguard for older local databases.
-
-    report_service.py uses report_versions.source_hash for report-generation
-    idempotency. The formal migration should still exist, but this prevents
-    desktop/laptop schema drift from crashing imports.
-    """
-    db.execute(text("""
-        ALTER TABLE report_versions
-        ADD COLUMN IF NOT EXISTS source_hash TEXT
-    """))
-    db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_report_versions_case_source_hash
-        ON report_versions (case_id, source_hash)
-    """))
-    db.commit()
-
-
 def _enum_value(value) -> str:
     return value.value if hasattr(value, "value") else str(value)
 
@@ -537,7 +518,6 @@ async def create_from_import(
     # - The detailed error is returned for debugging, but no red "failed" banner
     #   is shown on the import page for an otherwise-created case.
     try:
-        _ensure_report_source_hash_schema(db)
 
         case = _get_owned_case(db, current_user, case.id)
         if not case:
@@ -620,7 +600,6 @@ async def generate_report(
         )
 
     try:
-        _ensure_report_source_hash_schema(db)
         case = _get_owned_case(db, current_user, case_id)
         request_key = f"browser:{idempotency_key}" if idempotency_key else None
         report = await generate_report_version(db, case, current_user, request_key=request_key)
