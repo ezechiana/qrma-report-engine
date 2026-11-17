@@ -21,6 +21,15 @@
     line-height: 1.6;
 }
 
+.patient-hero .btn[disabled],
+.patient-hero .btn[disabled]:hover {
+    opacity: 0.65;
+    cursor: not-allowed;
+    background: white;
+    color: var(--text);
+    border: 1px solid var(--line);
+}
+
 .summary-grid {
     display: grid;
     grid-template-columns: repeat(4, minmax(0, 1fr));
@@ -75,6 +84,14 @@
 .timeline-meta {
     font-size: 13px;
     color: #64748b;
+}
+
+button.link {
+    background: none;
+    border: 0;
+    padding: 0;
+    cursor: pointer;
+    font: inherit;
 }
 
 .empty-state {
@@ -226,6 +243,28 @@
     color: #3730a3;
     border-color: #c7d2fe;
 }
+.portal-release-cell .report-type-pill + div .btn {
+    margin-top: 6px;
+}
+.clinic-note {
+    border: 1px solid #e5e7eb;
+    border-radius: 12px;
+    padding: 10px 12px;
+    margin-bottom: 8px;
+    background: #fff;
+}
+.clinic-note p { margin: 6px 0 0; white-space: pre-wrap; }
+.lab-marker { display: grid; gap: 8px; margin-bottom: 12px; }
+.lab-marker label { display: flex; flex-direction: column; gap: 4px; font-size: 13px; color: var(--muted); }
+.lab-marker-remove { align-self: end; color: var(--muted); }
+.lab-marker-table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+.lab-marker-table th, .lab-marker-table td { text-align: left; padding: 4px 10px 4px 0; vertical-align: top; }
+.lab-marker-table th { font-size: 12px; font-weight: 600; color: var(--muted); }
+@media (min-width: 960px) {
+    .lab-marker { grid-template-columns: 1.3fr 1fr 0.7fr 0.8fr 0.8fr 1fr 1fr auto; align-items: end; }
+}
+.clinic-note-release-state { margin-top: 8px; }
+.clinic-note-release-state .report-type-pill + div .btn { margin-top: 6px; }
 .modal-backdrop {
     position: fixed;
     inset: 0;
@@ -286,7 +325,7 @@
     .patient-hero-text h2 { font-size: 30px; }
     .patient-hero .btn-row { display: grid; grid-template-columns: 1fr 1fr; width: 100%; }
     .patient-hero .btn-row .btn { width: 100%; }
-    .patient-hero .btn-row .btn:nth-child(3) { grid-column: 1 / -1; }
+    .patient-hero .btn-row .btn:nth-child(n+3) { grid-column: 1 / -1; }
     .summary-grid { grid-template-columns: 1fr; gap: 12px; }
     .section-toolbar { align-items: flex-start; }
     .trend-summary-panel,
@@ -311,6 +350,80 @@
  .trend-summary-panel table.table{min-width:680px}
 }
 
+.patient-meta-row { color: #64748b; line-height: 1.5; }
+.patient-manage { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.snapshot-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.snapshot-tile {
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: #fff;
+    border: 1px solid #e2e8f0;
+    border-radius: 16px;
+    padding: 16px;
+    cursor: pointer;
+    color: inherit;
+    font: inherit;
+}
+.snapshot-tile:hover { border-color: #bfdbfe; }
+.snapshot-label {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: .03em;
+    text-transform: uppercase;
+    color: #64748b;
+    margin-bottom: 8px;
+}
+.snapshot-title { font-size: 16px; font-weight: 700; color: #0f172a; }
+.snapshot-meta { color: #64748b; font-size: 13px; margin-top: 4px; }
+.snapshot-chart { width: 100%; height: 120px; display: block; margin-top: 8px; }
+.snapshot-more { display: none; margin-bottom: 12px; }
+.section-chips {
+    position: sticky;
+    top: 64px;
+    z-index: 30;
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding: 8px 0 12px;
+    background: var(--bg);
+}
+.section-chip {
+    border: 1px solid #dbe7f3;
+    background: #fff;
+    border-radius: 999px;
+    padding: 7px 12px;
+    font-weight: 700;
+    color: #475569;
+    cursor: pointer;
+    white-space: nowrap;
+}
+.section-chip.is-active {
+    background: #dbeafe;
+    color: #1e3a8a;
+    border-color: #93c5fd;
+}
+.patient-section { display: none; }
+.patient-section.is-open { display: block; }
+.patient-section[data-section="reports"].is-open {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+}
+@media (max-width: 900px) {
+    .snapshot-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 760px) {
+    .snapshot-tile.is-extra { display: none; }
+    .snapshot-grid.is-expanded .snapshot-tile.is-extra { display: block; }
+    .snapshot-more { display: inline-flex; }
+}
+
 </style>
 
 <div id="patient-error" class="error" style="display:none;"></div>
@@ -324,39 +437,69 @@
         </div>
 
         <div class="btn-row">
-            <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
             <a class="btn" href="/app/cases/new?patient_id={{ patient_id }}">New case</a>
-            <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
+            <button class="btn secondary" type="button" id="manage-patient-btn" aria-expanded="false" aria-controls="patient-manage">Manage</button>
         </div>
     </div>
-</div>
-
-<div class="summary-grid">
-    <div class="summary-card">
-        <div class="summary-label">Cases</div>
-        <div class="summary-value" id="patient-case-count">—</div>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-label">Reports</div>
-        <div class="summary-value" id="patient-report-count">—</div>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-label">Last activity</div>
-        <div class="summary-value" id="patient-last-activity" style="font-size:18px;">—</div>
-    </div>
-
-    <div class="summary-card">
-        <div class="summary-label">Data sources</div>
-        <div class="summary-value" id="patient-data-sources" style="font-size:18px;">—</div>
+    <div id="patient-manage" class="patient-manage" hidden>
+        <button class="btn secondary" type="button" id="edit-patient-toggle-btn">Edit patient</button>
+        <button class="btn secondary" type="button" id="invite-client-claim-btn">Invite client to claim</button>
+        <button class="btn secondary" type="button" id="delete-patient-btn">Delete patient</button>
     </div>
 </div>
 
-<div class="card">
+<div class="snapshot-grid" id="snapshot-grid">
+    <button class="snapshot-tile" type="button" data-open="progress">
+        <div class="snapshot-label">Progress</div>
+        <div id="snapshot-progress">Loading…</div>
+    </button>
+    <button class="snapshot-tile" type="button" data-open="reports">
+        <div class="snapshot-label">Latest report</div>
+        <div id="snapshot-report">Loading…</div>
+    </button>
+    <button class="snapshot-tile is-extra" type="button" data-open="notes">
+        <div class="snapshot-label">Latest clinic note</div>
+        <div id="snapshot-note">Loading…</div>
+    </button>
+    <button class="snapshot-tile is-extra" type="button" data-open="labs">
+        <div class="snapshot-label">Latest lab panel</div>
+        <div id="snapshot-lab">Loading…</div>
+    </button>
+    <button class="snapshot-tile is-extra" type="button" data-open="client">
+        <div class="snapshot-label">From the client</div>
+        <div id="snapshot-client">Loading…</div>
+    </button>
+    <button class="snapshot-tile" type="button" data-open="wearables">
+        <div class="snapshot-label">Wearables</div>
+        <div id="snapshot-wearable">Loading…</div>
+    </button>
+</div>
+<button class="btn secondary snapshot-more" type="button" id="snapshot-more" aria-expanded="false">More on this record</button>
+
+<div class="section-chips" id="section-chips" role="tablist" aria-label="Patient sections">
+    <button class="section-chip is-active" type="button" role="tab" aria-selected="true" data-section="progress">Progress</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="reports">Reports</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="notes">Notes</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="labs">Labs</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="client">From the client</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="wearables">Wearables</button>
+    <button class="section-chip" type="button" role="tab" aria-selected="false" data-section="activity">Activity</button>
+</div>
+
+<div class="card" id="client-claim-card" style="display:none;">
     <div class="section-toolbar">
-        <h3 style="margin:0;">Trend overview</h3>
+        <h3 style="margin:0;">Client claim</h3>
     </div>
+    <div id="client-claim-body">
+        <div class="muted">Loading claim status…</div>
+    </div>
+</div>
+
+<div class="card patient-section is-open" data-section="progress" id="section-progress">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Progress</h3>
+    </div>
+    <div id="progress-release-host"></div>
 
     <div class="trend-summary-panel">
         <div class="section-toolbar">
@@ -501,32 +644,13 @@
     </div>
 </div>
 
-<div class="card">
-    <div class="section-toolbar">
-        <h3 style="margin:0;">Cases</h3>
-        <a class="btn secondary" href="/app/cases">View all cases</a>
-    </div>
-
-    <table class="table">
-        <thead>
-            <tr>
-                <th>Case</th>
-                <th>Status</th>
-                <th>Created</th>
-                <th></th>
-            </tr>
-        </thead>
-        <tbody id="patient-cases-body">
-            <tr><td colspan="4" class="muted">Loading…</td></tr>
-        </tbody>
-    </table>
-</div>
-
+<div class="patient-section" data-section="reports" id="section-reports">
 <div class="card" id="reports-content-section">
     <div class="section-toolbar">
         <div>
             <h3 style="margin:0;">Reports</h3>
             <div class="muted" style="margin-top:4px;">Assessment reports are single QRMA scans. Trend reports are generated from two or more assessment reports.</div>
+            <div class="muted" style="margin-top:4px;">Released reports appear in the client's portal. This does not create a share link.</div>
         </div>
         <div class="report-bulk-actions">
             <button class="btn secondary" type="button" id="create-trend-report-btn">Create Trend Report</button>
@@ -542,16 +666,131 @@
                 <th>Report</th>
                 <th>Version</th>
                 <th>Generated</th>
+                <th>Client portal</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="patient-reports-body">
-            <tr><td colspan="6" class="muted">Loading…</td></tr>
+            <tr><td colspan="7" class="muted">Loading…</td></tr>
         </tbody>
     </table>
 </div>
+<div class="card" id="patient-cases-card">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Cases</h3>
+        <a class="btn secondary" href="/app/cases">View all cases</a>
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Case</th>
+                <th>Status</th>
+                <th>Created</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody id="patient-cases-body">
+            <tr><td colspan="4" class="muted">Loading…</td></tr>
+        </tbody>
+    </table>
+</div>
+</div>
 
-<div class="card">
+<div class="card patient-section" data-section="notes" id="section-notes">
+    <div class="section-toolbar">
+        <div>
+            <h3 style="margin:0;">Notes</h3>
+            <div class="muted" id="clinic-source-name" style="margin-top:4px;">Clinic notes</div>
+        </div>
+        <button class="btn secondary" type="button" id="show-clinic-note-form">Add note</button>
+    </div>
+    <p class="muted" style="margin-top:0;">A new note is not released. Release uses the client summary only and does not create a share link.</p>
+    <div id="clinic-notes-body">
+        <div class="muted">Loading clinic notes…</div>
+    </div>
+    <form id="clinic-note-form" hidden>
+        <div class="field">
+            <label for="clinic-note-title">Title</label>
+            <input id="clinic-note-title" maxlength="255" required>
+        </div>
+        <div class="field">
+            <label for="clinic-note-date">Date</label>
+            <input id="clinic-note-date" type="date" required>
+        </div>
+        <div class="field">
+            <label for="clinic-note-text">Note text</label>
+            <textarea id="clinic-note-text" rows="4" maxlength="20000" required></textarea>
+        </div>
+        <div class="field">
+            <label for="clinic-note-summary">Client summary</label>
+            <textarea id="clinic-note-summary" rows="3" maxlength="20000"></textarea>
+            <div class="muted" style="margin-top:4px;">Only this summary can be released to the client later. The note text stays in the clinic record. You can leave the summary blank.</div>
+        </div>
+        <p class="muted" id="clinic-note-editing" style="display:none;">Editing this note.</p>
+        <div class="btn-row">
+            <button class="btn" type="submit" id="clinic-note-save">Save note</button>
+            <button class="btn secondary" type="button" id="clinic-note-cancel" style="display:none;">Cancel</button>
+        </div>
+    </form>
+</div>
+<div class="card patient-section" data-section="labs" id="section-labs">
+    <div class="section-toolbar">
+        <h3 style="margin:0;">Labs</h3>
+        <button class="btn secondary" type="button" id="show-lab-panel-form">Add panel</button>
+    </div>
+    <div id="lab-results-section">
+        <p class="muted">A new panel is not released. Marker values stay in the clinic record. Only a client summary can be released later.</p>
+        <div id="lab-panels-body">
+            <div class="muted">Loading lab results…</div>
+        </div>
+        <form id="lab-panel-form" hidden>
+            <div class="field">
+                <label for="lab-panel-title">Title</label>
+                <input id="lab-panel-title" maxlength="255" required>
+            </div>
+            <div class="field">
+                <label for="lab-panel-date">Collection date</label>
+                <input id="lab-panel-date" type="date" required>
+            </div>
+            <div class="field">
+                <label for="lab-panel-specimen">Specimen</label>
+                <input id="lab-panel-specimen" maxlength="255" placeholder="Blood, urine, or stool">
+            </div>
+            <div class="field">
+                <label for="lab-panel-laboratory">Laboratory name</label>
+                <input id="lab-panel-laboratory" maxlength="255">
+            </div>
+            <div class="field">
+                <label for="lab-panel-summary">Client summary</label>
+                <textarea id="lab-panel-summary" rows="3" maxlength="20000"></textarea>
+                <div class="muted" style="margin-top:4px;">You can leave the summary blank. Marker values are not released.</div>
+            </div>
+            <div id="lab-marker-rows"></div>
+            <p class="muted" id="lab-panel-editing" style="display:none;">Editing this panel.</p>
+            <div class="btn-row">
+                <button class="btn secondary" type="button" id="lab-add-marker">Add marker</button>
+                <button class="btn" type="submit" id="lab-panel-save">Save panel</button>
+                <button class="btn secondary" type="button" id="lab-panel-cancel" style="display:none;">Cancel</button>
+            </div>
+        </form>
+    </div>
+</div>
+<div class="card patient-section" data-section="client" id="section-client">
+    <div id="client-entries-section">
+        <h3 style="margin:0;">From the client</h3>
+        <p class="muted">Shared by the client. This clinic cannot change them here.</p>
+        <div id="client-entries-body"><div class="muted">Nothing shared yet.</div></div>
+    </div>
+</div>
+<div class="card patient-section" data-section="wearables" id="section-wearables">
+    <div id="wearable-days-section">
+        <h3 style="margin:0;">Wearables</h3>
+        <p class="muted">Shared by the client. This clinic cannot change them here.</p>
+        <div id="wearable-days-body"><div class="muted">No shared days.</div></div>
+    </div>
+</div>
+
+<div class="card patient-section" data-section="activity" id="section-activity">
     <div class="section-toolbar">
         <h3 style="margin:0;">Activity timeline</h3>
     </div>
@@ -678,22 +917,202 @@
         updateAgePreview();
     }
 
+    function connectionLabel() {
+        if (!claimLoaded) return "Loading…";
+        if (claimAccess && claimAccess.claimed) return "Connected";
+        const newest = claimInvites[0];
+        if (newest && newest.status === "pending") return "Pending";
+        return "Not connected";
+    }
+
     function renderPatientSummary(patient) {
         document.getElementById("patient-name").textContent = patientName(patient);
-        document.getElementById("patient-summary").innerHTML = `
-            Sex: ${safeText(patient.sex)}<br>
-            Date of birth: ${safeText(patient.date_of_birth)}<br>
-            Height: ${safeText(patient.height_cm)}${patient.height_cm ? " cm" : ""}<br>
-            Weight: ${safeText(patient.weight_kg)}${patient.weight_kg ? " kg" : ""}
+        const age = calculateAgeFromDob(patient.date_of_birth);
+        const sources = (patient.data_sources && patient.data_sources.length)
+            ? patient.data_sources.join(", ")
+            : "—";
+        document.getElementById("patient-summary").textContent = [
+            age === null ? "Age —" : `Age ${age}`,
+            `Sex ${safeText(patient.sex)}`,
+            `Last activity ${formatDate(patient.last_activity_at)}`,
+            connectionLabel(),
+            `Cases ${patient.case_count || 0}`,
+            `Reports ${patient.report_count || 0}`,
+            `Sources ${sources}`,
+        ].join(" · ");
+        renderSnapshot();
+    }
+
+    function snapshotChip(text, released) {
+        const kind = released ? "report-type-pill report-type-assessment" : "report-type-pill";
+        return `<span class="${kind}">${escapeHtml(text)}</span>`;
+    }
+
+    function firstSummaryLine(value) {
+        const line = String(value || "").split(/\r?\n/).map(part => part.trim()).find(Boolean) || "";
+        if (!line) return "";
+        return line.length > 120 ? `${line.slice(0, 117)}…` : line;
+    }
+
+    function newestRecord(items, field) {
+        const rows = Array.isArray(items) ? items.slice() : [];
+        rows.sort((a, b) => String((b && b[field]) || "").localeCompare(String((a && a[field]) || "")));
+        return rows[0] || null;
+    }
+
+    function renderSnapshotChart(points) {
+        const values = (points || []).map(point => Number(point.value)).filter(value => !Number.isNaN(value));
+        if (values.length < 2) return "";
+        const width = 320;
+        const height = 120;
+        const pad = 8;
+        let min = Math.min(...values);
+        let max = Math.max(...values);
+        if (min === max) {
+            min -= 1;
+            max += 1;
+        }
+        const coords = values.map((value, index) => {
+            const x = pad + (index / (values.length - 1)) * (width - pad * 2);
+            const y = pad + (1 - ((value - min) / (max - min))) * (height - pad * 2);
+            return `${x.toFixed(1)},${y.toFixed(1)}`;
+        }).join(" ");
+        return `<svg class="snapshot-chart" viewBox="0 0 ${width} ${height}" role="img" aria-label="Health Index"><polyline points="${coords}" fill="none" stroke="#1d4ed8" stroke-width="2"></polyline></svg>`;
+    }
+
+    function renderSnapshot() {
+        const progress = document.getElementById("snapshot-progress");
+        const report = document.getElementById("snapshot-report");
+        const note = document.getElementById("snapshot-note");
+        const lab = document.getElementById("snapshot-lab");
+        const client = document.getElementById("snapshot-client");
+        const wearable = document.getElementById("snapshot-wearable");
+        if (!progress || !report || !note || !lab || !client || !wearable) return;
+
+        const points = (currentTrends && currentTrends.health_index) || [];
+        const latestPoint = points.length ? points[points.length - 1] : null;
+        const firstPoint = points.length ? points[0] : null;
+        let change = "—";
+        if (points.length > 1 && latestPoint && firstPoint) {
+            const delta = Number(latestPoint.value) - Number(firstPoint.value);
+            if (!Number.isNaN(delta)) change = `${delta > 0 ? "+" : ""}${delta.toFixed(1)}`;
+        }
+        const latestValue = latestPoint && !Number.isNaN(Number(latestPoint.value)) ? Number(latestPoint.value).toFixed(1) : "—";
+        const firstValue = !firstPoint ? "—" : (points.length < 2 ? "Baseline" : Number(firstPoint.value).toFixed(1));
+        const progressReleased = !!(progressRelease && progressRelease.released);
+        const progressState = progressReleaseError
+            ? snapshotChip("Could not load", false)
+            : snapshotChip(progressReleased ? "Released to client" : "Not released", progressReleased);
+        progress.innerHTML = `
+            <div class="snapshot-title">Health Index ${escapeHtml(latestValue)}</div>
+            <div class="snapshot-meta">First ${escapeHtml(firstValue)} · Latest ${escapeHtml(latestValue)} · Change ${escapeHtml(change)}</div>
+            ${renderSnapshotChart(points)}
+            <div style="margin-top:8px;">${progressState}</div>
         `;
 
-        document.getElementById("patient-case-count").textContent = safeText(patient.case_count || 0);
-        document.getElementById("patient-report-count").textContent = safeText(patient.report_count || 0);
-        document.getElementById("patient-last-activity").textContent = formatDate(patient.last_activity_at);
-        document.getElementById("patient-data-sources").textContent =
-            (patient.data_sources && patient.data_sources.length)
-                ? patient.data_sources.join(", ")
-                : "—";
+        const reportRow = newestRecord(currentReports, "generated_at");
+        if (!reportRow) {
+            report.innerHTML = `<div class="muted">No reports yet.</div>`;
+        } else {
+            const inPortal = releasedFlagFor(reportRow.id);
+            report.innerHTML = `
+                <div><span class="report-type-pill ${reportTypeClass(reportRow)}">${escapeHtml(reportTypeLabel(reportRow))}</span></div>
+                <div class="snapshot-title">${escapeHtml(reportRow.display_name || reportRow.case_title || "Report")}</div>
+                <div class="snapshot-meta">${escapeHtml(formatDate(reportRow.generated_at))}</div>
+                <div style="margin-top:8px;">${snapshotChip(inPortal ? "In portal" : "Clinic only", inPortal)}</div>
+            `;
+        }
+
+        if (sourcesLoadError) {
+            const failed = `<div class="error">Could not load.</div>`;
+            note.innerHTML = failed;
+            lab.innerHTML = failed;
+            client.innerHTML = failed;
+            wearable.innerHTML = failed;
+            return;
+        }
+
+        const noteRow = newestRecord(clinicNotes, "recorded_on");
+        if (!noteRow) {
+            note.innerHTML = `<div class="muted">No clinic notes yet.</div>`;
+        } else {
+            const summary = firstSummaryLine(noteRow.client_summary);
+            note.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(noteRow.title || "Clinic note")}</div>
+                <div class="snapshot-meta">${escapeHtml(noteRow.recorded_on || "")}</div>
+                <div class="snapshot-meta">Client summary ${summary ? escapeHtml(summary) : "—"}</div>
+                <div style="margin-top:8px;">${snapshotChip(noteRow.released ? "Released" : "Not released", !!noteRow.released)}</div>
+            `;
+        }
+
+        const labRow = newestRecord(labPanels, "recorded_on");
+        if (!labRow) {
+            lab.innerHTML = `<div class="muted">No lab panels yet.</div>`;
+        } else {
+            const markers = (Array.isArray(labRow.observations) ? labRow.observations : []).slice(0, 3).map(marker => {
+                const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
+                const unit = marker.unit ? ` ${marker.unit}` : "";
+                return `${escapeHtml(marker.name || "Marker")} ${escapeHtml(String(value))}${escapeHtml(unit)}`;
+            }).join("<br>");
+            lab.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(labRow.title || "Lab panel")}</div>
+                <div class="snapshot-meta">${escapeHtml(labRow.recorded_on || "")}</div>
+                <div class="snapshot-meta">${markers || "No markers"}</div>
+                <div style="margin-top:8px;">${snapshotChip(labRow.released ? "Released" : "Not released", !!labRow.released)}</div>
+            `;
+        }
+
+        const sharedClosed = connectionLabel() !== "Connected";
+        if (!clientEntries.length) {
+            client.innerHTML = `<div class="muted">${sharedClosed ? "Nothing currently shared" : "Nothing shared yet."}</div>`;
+        } else {
+            const entry = newestRecord(clientEntries, "recorded_on");
+            client.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(String(clientEntries.length))} released</div>
+                <div class="snapshot-meta">${escapeHtml(entry && entry.title || "Client entry")}</div>
+                <div class="snapshot-meta">${escapeHtml(entry && entry.recorded_on || "")}</div>
+            `;
+        }
+
+        if (!wearableDays.length) {
+            wearable.innerHTML = `<div class="muted">${sharedClosed ? "Nothing currently shared" : "No shared days."}</div>`;
+        } else {
+            const day = newestRecord(wearableDays, "recorded_on") || {};
+            const bits = [
+                ["steps", "Steps"],
+                ["resting_heart_rate", "Resting heart rate"],
+                ["sleep_duration", "Sleep"],
+                ["hrv", "HRV"],
+            ].map(([key, label]) => {
+                const metric = day[key];
+                if (!metric || metric.value === null || metric.value === undefined || metric.value === "") return "";
+                return `${escapeHtml(label)} ${escapeHtml(String(metric.value))}${metric.unit ? ` ${escapeHtml(metric.unit)}` : ""}`;
+            }).filter(Boolean).join(" · ");
+            wearable.innerHTML = `
+                <div class="snapshot-title">${escapeHtml(day.recorded_on || "Daily summary")}</div>
+                <div class="snapshot-meta">${bits || "No values"}</div>
+            `;
+        }
+    }
+
+    function openPatientSection(name, scroll) {
+        document.querySelectorAll(".patient-section").forEach(section => {
+            section.classList.toggle("is-open", section.dataset.section === name);
+        });
+        document.querySelectorAll(".section-chip").forEach(chip => {
+            const selected = chip.dataset.section === name;
+            chip.classList.toggle("is-active", selected);
+            chip.setAttribute("aria-selected", selected ? "true" : "false");
+        });
+        if (!scroll) return;
+        const section = document.querySelector(`.patient-section[data-section="${name}"]`);
+        if (section) section.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+
+    function openSectionFromHash() {
+        const name = (window.location.hash || "").replace("#", "");
+        const known = ["progress", "reports", "notes", "labs", "client", "wearables", "activity"];
+        if (known.includes(name)) openPatientSection(name, true);
     }
 
     function renderCases(casesData) {
@@ -735,13 +1154,63 @@
         return (currentReports || []).filter(report => ids.has(String(report.id)));
     }
 
+    function sameReportId(left, right) {
+        return String(left || "").replace(/-/g, "").toLowerCase() === String(right || "").replace(/-/g, "").toLowerCase();
+    }
+
+    function reportIsReleasable(report) {
+        const type = (report && report.report_type) || "assessment";
+        const status = String((report && report.status) || "").toLowerCase();
+        if (!report || report.is_archived) return false;
+        if (status !== "ready") return false;
+        return type === "assessment" || type === "trend";
+    }
+
+    function reportReleaseBusy(reportId) {
+        return typeof claimBusy === "string"
+            && claimBusy.indexOf("report:") === 0
+            && sameReportId(claimBusy.slice(7), reportId);
+    }
+
+    function releasedFlagFor(reportId) {
+        const rows = []
+            .concat((reportReleases && reportReleases.assessment_reports) || [])
+            .concat((reportReleases && reportReleases.trend_reports) || []);
+        const match = rows.find(row => sameReportId(row.report_id, reportId));
+        return !!(match && match.released);
+    }
+
+    function portalReleaseCell(report) {
+        if (!reportIsReleasable(report)) {
+            return `<td class="muted">—</td>`;
+        }
+        if (!claimLoaded || claimLoadError || !claimAccess) {
+            return `<td class="muted">${claimLoaded ? "Could not load" : "Loading…"}</td>`;
+        }
+        if (!claimAccess.claimed) {
+            return `<td class="muted">Not claimed</td>`;
+        }
+        if (reportReleaseError || !reportReleases) {
+            return `<td class="muted">Could not load</td>`;
+        }
+        const released = releasedFlagFor(report.id);
+        const busy = reportReleaseBusy(report.id);
+        const button = released
+            ? `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+            : `<button class="btn secondary portal-release-btn" type="button" data-report-id="${safeText(report.id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+        const status = released
+            ? `<span class="report-type-pill report-type-assessment">Released</span>`
+            : "";
+        return `<td class="portal-release-cell">${status}<div>${button}</div></td>`;
+    }
+
     function renderReports(reportsData) {
         const reportsBody = document.getElementById("patient-reports-body");
         const selectAll = document.getElementById("select-all-assessment-reports");
         const reportRows = Array.isArray(reportsData) ? reportsData : (reportsData.items || []);
 
         if (!reportRows.length) {
-            reportsBody.innerHTML = `<tr><td colspan="6" class="muted">No reports yet.</td></tr>`;
+            reportsBody.innerHTML = `<tr><td colspan="7" class="muted">No reports yet.</td></tr>`;
             if (selectAll) selectAll.checked = false;
             return;
         }
@@ -763,6 +1232,7 @@
                     <td>${safeText(report.display_name || report.case_title || "Report")}${subText}</td>
                     <td>v${safeText(report.version_number || "1")}</td>
                     <td>${formatDate(report.generated_at)}</td>
+                    ${portalReleaseCell(report)}
                     <td><a class="link" href="/app/reports/${report.id}">Open</a></td>
                 </tr>
             `;
@@ -772,6 +1242,7 @@
             selectAll.checked = false;
             selectAll.disabled = !reportRows.some(report => (report.report_type || "assessment") === "assessment");
         }
+        renderSnapshot();
     }
 
     function openTrendReportModal() {
@@ -1254,6 +1725,7 @@
         renderSelectedTrend();
 
         renderSimpleLineChart("weight-chart", "weight-empty", currentTrends.weight_kg || [], null, null);
+        renderSnapshot();
     }
 
 
@@ -1403,14 +1875,1190 @@
     }
 
 
+    let suppressClaim = false;
+    let claimLoaded = false;
+    let claimLoadError = false;
+    let claimAccess = null;
+    let claimInvites = [];
+    let claimShowSendForm = false;
+    let claimEmailDraft = null;
+    let claimBusy = false;
+    let progressRelease = null;
+    let progressReleaseError = false;
+    let reportReleases = null;
+    let reportReleaseError = false;
+
+    function escapeHtml(value) {
+        return String(value)
+            .replaceAll("&", "&amp;")
+            .replaceAll("<", "&lt;")
+            .replaceAll(">", "&gt;")
+            .replaceAll('"', "&quot;")
+            .replaceAll("'", "&#39;");
+    }
+
+    function claimHtml(value, fallback = "—") {
+        return escapeHtml(safeText(value, fallback));
+    }
+
+    function claimErrorDetail(data, fallback) {
+        if (data && typeof data.detail === "string" && data.detail.trim()) return data.detail;
+        return fallback;
+    }
+
+    function claimStatusText(status) {
+        if (status === "pending") return "Pending";
+        if (status === "accepted") return "Accepted";
+        if (status === "expired") return "Expired";
+        if (status === "cancelled") return "Cancelled";
+        return safeText(status);
+    }
+
+    function pickInvite(item) {
+        return {
+            id: item.id,
+            email: item.email,
+            status: item.status,
+            created_at: item.created_at,
+            expires_at: item.expires_at,
+            cancelled_at: item.cancelled_at,
+            accepted_at: item.accepted_at,
+        };
+    }
+
+    function currentPendingInvite() {
+        if (claimAccess && claimAccess.claimed) return null;
+        const newest = claimInvites[0];
+        if (newest && newest.status === "pending") return newest;
+        return null;
+    }
+
+    function clearClaimBody() {
+        const body = document.getElementById("client-claim-body");
+        if (body) body.textContent = "";
+    }
+
+    function claimSendForm(value) {
+        const busy = claimBusy === "send";
+        return `
+            <div class="field">
+                <label for="claim-email">Client email</label>
+                <input id="claim-email" type="email" autocomplete="off" value="${claimHtml(value, "")}" ${busy ? "disabled" : ""}>
+            </div>
+            <button class="btn" type="button" id="claim-send-btn" ${busy ? "disabled" : ""}>${busy ? "Sending…" : "Send invite"}</button>
+        `;
+    }
+
+    function claimStatusBlock() {
+        const claimed = !!(claimAccess && claimAccess.claimed);
+        const newest = claimInvites[0] || null;
+
+        if (claimed) {
+            const accepted = claimInvites.find(item => item.status === "accepted" && item.accepted_at)
+                || claimInvites.find(item => item.accepted_at);
+            const when = accepted && accepted.accepted_at ? ` on ${formatDate(accepted.accepted_at)}` : "";
+            const line = `Accepted${when}. This client has claimed this record.`;
+            return `
+                <p id="client-claim-status" style="margin:0 0 8px;">${claimHtml(line)}</p>
+                <p class="muted" style="margin:0 0 8px;">A new invite cannot be sent while this claim is active.</p>
+            `;
+        }
+
+        if (!newest) {
+            return `
+                <p id="client-claim-status" style="margin:0 0 8px;">No claim invite has been sent.</p>
+                <p class="muted" style="margin:0 0 12px;">Send a one-time link so this client can open their own record. The link expires in 7 days.</p>
+            `;
+        }
+
+        if (newest.status === "pending") {
+            const line = `Pending — sent to ${newest.email || "—"}, expires ${formatDate(newest.expires_at)}.`;
+            return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+        }
+
+        if (newest.status === "expired") {
+            const line = `This invite expired on ${formatDate(newest.expires_at)}.`;
+            return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+        }
+
+        if (newest.status === "cancelled") {
+            const line = `This invite was cancelled on ${formatDate(newest.cancelled_at)}.`;
+            return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+        }
+
+        const line = `Accepted ${formatDate(newest.accepted_at)}.`;
+        return `<p id="client-claim-status" style="margin:0 0 12px;">${claimHtml(line)}</p>`;
+    }
+
+    function claimActionBlock() {
+        const claimed = !!(claimAccess && claimAccess.claimed);
+        const newest = claimInvites[0] || null;
+        if (claimed) return "";
+
+        if (!newest) {
+            return claimSendForm(claimEmailDraft === null ? "" : claimEmailDraft);
+        }
+
+        if (newest.status === "pending") {
+            const busy = claimBusy === "cancel";
+            let html = `<button class="btn secondary" type="button" id="claim-cancel-btn" ${busy ? "disabled" : ""}>${busy ? "Cancelling…" : "Cancel invite"}</button>`;
+            html += ` <button type="button" class="link" id="claim-reveal-send">Send a new invite</button>`;
+            if (claimShowSendForm) {
+                html += claimSendForm(claimEmailDraft === null ? "" : claimEmailDraft);
+            }
+            return html;
+        }
+
+        if (newest.status === "expired") {
+            return claimSendForm(claimEmailDraft === null ? (newest.email || "") : claimEmailDraft);
+        }
+
+        return claimSendForm(claimEmailDraft === null ? "" : claimEmailDraft);
+    }
+
+    function progressReleaseBlock() {
+        if (!(claimAccess && claimAccess.claimed)) return "";
+        if (progressReleaseError) {
+            return `<p class="error">Could not load the progress view release.</p>`;
+        }
+        if (!progressRelease) return "";
+        const released = !!progressRelease.released;
+        const busy = claimBusy === "release";
+        const line = released
+            ? "Progress view is released to the client."
+            : "Progress view is not released to the client.";
+        const button = released
+            ? `<button class="btn secondary" type="button" id="claim-withdraw-release-btn" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw progress view"}</button>`
+            : `<button class="btn secondary" type="button" id="claim-release-btn" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release progress view"}</button>`;
+        return `<p style="margin:12px 0 8px;">${claimHtml(line)}</p><div class="btn-row">${button}</div><p class="muted" style="margin:8px 0 0;">Release individual reports from the Reports section.</p>`;
+    }
+
+    function pickReportRelease(item) {
+        return {
+            report_id: item && typeof item.report_id === "string" ? item.report_id : "",
+            label: item && typeof item.label === "string" && item.label.trim() ? item.label.trim() : "Report",
+            released: !!(item && item.released),
+        };
+    }
+
+    function claimHistoryTable() {
+        const pending = currentPendingInvite();
+        const rows = claimInvites.length
+            ? claimInvites.map(item => {
+                const showCancel = pending && String(item.id) === String(pending.id);
+                const busy = claimBusy === "cancel";
+                const cancel = showCancel
+                    ? ` <button class="btn secondary claim-row-cancel" type="button" data-invite-id="${claimHtml(item.id)}" ${busy ? "disabled" : ""}>${busy ? "Cancelling…" : "Cancel invite"}</button>`
+                    : "";
+                return `
+                    <tr>
+                        <td>${claimHtml(formatDate(item.created_at))}</td>
+                        <td>${claimHtml(item.email)}</td>
+                        <td>${claimHtml(claimStatusText(item.status))}</td>
+                        <td>${claimHtml(formatDate(item.expires_at))}${cancel}</td>
+                    </tr>
+                `;
+            }).join("")
+            : `<tr><td colspan="4" class="muted">No invites yet.</td></tr>`;
+
+        return `
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Sent</th>
+                        <th>Email</th>
+                        <th>Status</th>
+                        <th>Expires</th>
+                    </tr>
+                </thead>
+                <tbody>${rows}</tbody>
+            </table>
+        `;
+    }
+
+    function renderClaimCard() {
+        if (suppressClaim) {
+            clearClaimBody();
+            syncInviteClaimButton();
+            return;
+        }
+
+        const body = document.getElementById("client-claim-body");
+        if (!body) return;
+
+        if (!claimLoaded) {
+            body.innerHTML = `<div class="muted">Loading claim status…</div>`;
+            return;
+        }
+
+        if (claimLoadError) {
+            body.innerHTML = `<div class="error">Could not load claim invites.</div>`;
+            syncInviteClaimButton();
+            return;
+        }
+
+        body.innerHTML = `
+            ${claimStatusBlock()}
+            <div id="client-claim-actions">${claimActionBlock()}</div>
+            ${claimHistoryTable()}
+        `;
+        const progressHost = document.getElementById("progress-release-host");
+        if (progressHost) progressHost.innerHTML = progressReleaseBlock();
+        syncInviteClaimButton();
+        if (currentPatient) renderPatientSummary(currentPatient);
+    }
+
+    function syncInviteClaimButton() {
+        const button = document.getElementById("invite-client-claim-btn");
+        if (!button) return;
+        const claimed = !!(claimAccess && claimAccess.claimed);
+        button.disabled = claimed;
+        button.textContent = claimed ? "Claimed" : "Invite client to claim";
+        if (claimed) {
+            button.setAttribute("aria-disabled", "true");
+            button.title = "This client has claimed this record.";
+            return;
+        }
+        button.removeAttribute("aria-disabled");
+        button.removeAttribute("title");
+    }
+
+    async function fetchClaimData() {
+        try {
+            const [accessRes, invitesRes, releaseRes, reportRes] = await Promise.all([
+                apiFetch(`/api/patients/${patientId}/claim-access`),
+                apiFetch(`/api/patients/${patientId}/claim-invites`),
+                apiFetch(`/api/patients/${patientId}/progress-release`),
+                apiFetch(`/api/patients/${patientId}/report-releases`),
+            ]);
+            if (suppressClaim) return;
+
+            if (!accessRes.ok || !invitesRes.ok) {
+                claimLoadError = true;
+                claimLoaded = true;
+                return;
+            }
+
+            const accessData = await accessRes.json().catch(() => ({}));
+            const invitesData = await invitesRes.json().catch(() => ([]));
+            const releaseData = releaseRes.ok ? await releaseRes.json().catch(() => ({})) : null;
+            const reportData = reportRes.ok ? await reportRes.json().catch(() => ({})) : null;
+            if (suppressClaim) return;
+
+            claimAccess = { claimed: !!(accessData && accessData.claimed) };
+            claimInvites = (Array.isArray(invitesData) ? invitesData : []).map(pickInvite);
+            if (releaseData) {
+                progressRelease = {
+                    released: !!releaseData.released,
+                    available: !!releaseData.available,
+                };
+                progressReleaseError = false;
+            } else if (claimAccess.claimed) {
+                progressRelease = null;
+                progressReleaseError = true;
+            } else {
+                progressRelease = null;
+                progressReleaseError = false;
+            }
+            if (reportData) {
+                reportReleases = {
+                    assessment_reports: (Array.isArray(reportData.assessment_reports) ? reportData.assessment_reports : []).map(pickReportRelease),
+                    trend_reports: (Array.isArray(reportData.trend_reports) ? reportData.trend_reports : []).map(pickReportRelease),
+                };
+                reportReleaseError = false;
+            } else if (claimAccess.claimed) {
+                reportReleases = null;
+                reportReleaseError = true;
+            } else {
+                reportReleases = null;
+                reportReleaseError = false;
+            }
+            claimLoaded = true;
+            claimLoadError = false;
+            if (claimAccess && claimAccess.claimed && reportReleaseError) {
+                showPatientError("Could not load report releases.");
+            }
+        } catch (err) {
+            console.error(err);
+            if (suppressClaim) return;
+            claimLoadError = true;
+            claimLoaded = true;
+        }
+    }
+
+    async function reloadClaimCard() {
+        claimLoaded = false;
+        claimLoadError = false;
+        await fetchClaimData();
+        if (!suppressClaim) {
+            renderClaimCard();
+            renderReports(currentReports);
+            renderClinicNotes(clinicNotes);
+        }
+    }
+
+    async function sendClaimInvite() {
+        if (claimAccess && claimAccess.claimed) {
+            showPatientError("This record is already claimed. A new invite cannot be sent.");
+            return;
+        }
+
+        const input = document.getElementById("claim-email");
+        const email = ((input && input.value) || "").trim();
+        if (!email) {
+            showPatientError("Client email is required.");
+            return;
+        }
+
+        const pending = currentPendingInvite();
+        if (pending) {
+            const confirmed = window.confirm(`Send a new invite to ${email}? The current pending invite will be cancelled.`);
+            if (!confirmed) return;
+        }
+
+        claimEmailDraft = email;
+        claimBusy = "send";
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/claim-invites`, {
+                method: "POST",
+                body: JSON.stringify({ email }),
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                claimBusy = false;
+                if (response.status === 502) {
+                    showPatientError("The invite email could not be sent. No invite was saved.");
+                } else {
+                    showPatientError(claimErrorDetail(data, "Could not send the invite."));
+                }
+                renderClaimCard();
+                return;
+            }
+
+            claimBusy = false;
+            claimShowSendForm = false;
+            claimEmailDraft = null;
+            if (data && data.id) {
+                claimInvites = [pickInvite(data)].concat(
+                    claimInvites.filter(item => String(item.id) !== String(data.id) && item.status !== "pending")
+                );
+                claimLoaded = true;
+                claimLoadError = false;
+                renderClaimCard();
+            }
+            if (data && data.email_sent === false) {
+                showPatientSuccess("The invite was saved, but the email may not have been delivered. Cancel it and send again.");
+            } else {
+                showPatientSuccess(`Invite sent to ${email}.`);
+            }
+            await reloadClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while sending the invite.");
+            renderClaimCard();
+        }
+    }
+
+    async function cancelClaimInvite(inviteId) {
+        if (!inviteId || claimBusy) return;
+
+        const confirmed = window.confirm("Cancel this invite? The link will stop working. Cases, reports, and share links stay as they are.");
+        if (!confirmed) return;
+
+        claimBusy = "cancel";
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/claim-invites/${inviteId}/cancel`, {
+                method: "POST",
+            });
+            const data = await response.json().catch(() => ({}));
+
+            if (!response.ok) {
+                claimBusy = false;
+                showPatientError(claimErrorDetail(data, "Could not cancel the invite."));
+                if (response.status === 409) {
+                    claimShowSendForm = false;
+                    claimEmailDraft = null;
+                    await reloadClaimCard();
+                } else {
+                    renderClaimCard();
+                }
+                return;
+            }
+
+            claimBusy = false;
+            claimShowSendForm = false;
+            claimEmailDraft = null;
+            if (data && data.id) {
+                claimInvites = claimInvites.map(item => String(item.id) === String(data.id) ? pickInvite(data) : item);
+                claimLoaded = true;
+                claimLoadError = false;
+                renderClaimCard();
+            }
+            showPatientSuccess("Invite cancelled. The link no longer works.");
+            await reloadClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while cancelling the invite.");
+            renderClaimCard();
+        }
+    }
+
+    async function setProgressRelease(released) {
+        if (claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw the progress view? Share links stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = "release";
+        clearPatientError();
+        clearPatientSuccess();
+        renderClaimCard();
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/progress-release`, {
+                method: "POST",
+                body: JSON.stringify({ released: released }),
+            });
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the progress view release."));
+                renderClaimCard();
+                return;
+            }
+            progressRelease = {
+                released: !!data.released,
+                available: !!data.available,
+            };
+            progressReleaseError = false;
+            showPatientSuccess(released
+                ? "Progress view released to the client."
+                : "Progress view withdrawn.");
+            renderClaimCard();
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the progress view release.");
+            renderClaimCard();
+        }
+    }
+
+    function rememberReportRelease(reportId, released, reportType) {
+        const apply = (rows) => {
+            let found = false;
+            const next = (rows || []).map(row => {
+                if (!sameReportId(row.report_id, reportId)) return row;
+                found = true;
+                return { ...row, released: released };
+            });
+            return { next, found };
+        };
+        if (!reportReleases) {
+            reportReleases = { assessment_reports: [], trend_reports: [] };
+        }
+        const assessment = apply(reportReleases.assessment_reports);
+        const trend = apply(reportReleases.trend_reports);
+        if (!assessment.found && !trend.found) {
+            const item = { report_id: String(reportId), label: "Report", released: released };
+            if (reportType === "trend") trend.next.push(item);
+            else assessment.next.push(item);
+        }
+        reportReleases = {
+            assessment_reports: assessment.next,
+            trend_reports: trend.next,
+        };
+    }
+
+    async function setReportRelease(reportId, released) {
+        if (!reportId || claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw this report? Share links and the progress view stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = `report:${reportId}`;
+        clearPatientError();
+        clearPatientSuccess();
+        renderReports(currentReports);
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/report-releases/${reportId}`, {
+                method: "POST",
+                body: JSON.stringify({ released: released }),
+            });
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the report release."));
+                if (response.status === 409) {
+                    claimAccess = { claimed: false };
+                    renderClaimCard();
+                }
+                renderReports(currentReports);
+                return;
+            }
+            rememberReportRelease(reportId, !!data.released, data.report_type);
+            reportReleaseError = false;
+            showPatientSuccess(released ? "Report released to the client." : "Report withdrawn.");
+            renderReports(currentReports);
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the report release.");
+            renderReports(currentReports);
+        }
+    }
+
+    let clinicNoteSourceId = null;
+    let labSourceId = null;
+    let labPanelRecordId = null;
+    let labPanels = [];
+    let clinicNoteRecordId = null;
+    let clinicNotes = [];
+    let clientEntries = [];
+    let wearableDays = [];
+    let sourcesLoadError = false;
+
+    function clinicNoteSaveLabel() {
+        return clinicNoteRecordId ? "Save changes" : "Save note";
+    }
+
+    function resetClinicNoteForm() {
+        const form = document.getElementById("clinic-note-form");
+        if (form) form.reset();
+        clinicNoteRecordId = null;
+        const editing = document.getElementById("clinic-note-editing");
+        const cancel = document.getElementById("clinic-note-cancel");
+        const button = document.getElementById("clinic-note-save");
+        if (editing) editing.style.display = "none";
+        if (cancel) cancel.style.display = "none";
+        if (button) button.textContent = clinicNoteSaveLabel();
+        if (form) form.hidden = true;
+    }
+
+    function clinicNoteReleaseBusy(recordId) {
+        return typeof claimBusy === "string"
+            && claimBusy.indexOf("note:") === 0
+            && String(claimBusy.slice(5)) === String(recordId);
+    }
+
+    function clinicNoteReleaseControls(item) {
+        if (!claimLoaded || claimLoadError || !claimAccess || !claimAccess.claimed) return "";
+        const summary = String(item.client_summary || "").trim();
+        const released = !!item.released;
+        if (!released && !summary) {
+            return `<p class="muted" style="margin:8px 0 0;">Add a client summary before this note can be released.</p>`;
+        }
+        const busy = clinicNoteReleaseBusy(item.record_id);
+        const button = released
+            ? `<button class="btn secondary clinic-note-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+            : `<button class="btn secondary clinic-note-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+        const status = released
+            ? `<span class="report-type-pill report-type-assessment">Released</span>`
+            : "";
+        return `<div class="clinic-note-release-state">${status}<div>${button}</div></div>`;
+    }
+
+    function renderClinicNotes(records) {
+        const body = document.getElementById("clinic-notes-body");
+        if (!body) return;
+        clinicNotes = Array.isArray(records) ? records : [];
+        if (!clinicNotes.length) {
+            body.innerHTML = `<div class="muted">No clinic notes yet.</div>`;
+            renderSnapshot();
+            return;
+        }
+        body.innerHTML = clinicNotes.map(item => {
+            const summary = item.client_summary
+                ? safeText(item.client_summary)
+                : `<span class="muted">No client summary yet.</span>`;
+            return `
+                <div class="clinic-note">
+                    <strong>${safeText(item.title || "Clinic note")}</strong>
+                    <div class="muted">${safeText(item.recorded_on || "")}</div>
+                    <p>${safeText(item.text || "")}</p>
+                    <p><span class="muted">Client summary:</span> ${summary}</p>
+                    ${clinicNoteReleaseControls(item)}
+                    <div class="btn-row" style="margin-top:8px;">
+                        <button class="btn secondary clinic-note-edit" type="button" data-record-id="${safeText(item.record_id)}">Edit</button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+        renderSnapshot();
+    }
+
+    function labMarkerFields() {
+        const row = document.createElement("div");
+        row.className = "lab-marker";
+        row.innerHTML = `
+            <label>Marker <input class="lab-marker-name" maxlength="255"></label>
+            <label>Value <input class="lab-marker-value" maxlength="255"></label>
+            <label>Unit <input class="lab-marker-unit" maxlength="40"></label>
+            <label>Range low <input class="lab-marker-low" inputmode="decimal"></label>
+            <label>Range high <input class="lab-marker-high" inputmode="decimal"></label>
+            <label>Range text <input class="lab-marker-range" maxlength="255"></label>
+            <label>Interpretation
+                <select class="lab-marker-interpretation">
+                    <option value="">Interpretation</option>
+                    <option value="normal">Normal</option>
+                    <option value="low">Low</option>
+                    <option value="high">High</option>
+                    <option value="abnormal">Abnormal</option>
+                </select>
+            </label>
+            <button class="link lab-marker-remove" type="button" hidden>Remove</button>
+        `;
+        return row;
+    }
+
+    function syncLabMarkerRemove() {
+        const rows = Array.from(document.querySelectorAll("#lab-marker-rows .lab-marker"));
+        rows.forEach(row => {
+            const button = row.querySelector(".lab-marker-remove");
+            if (button) button.hidden = rows.length < 2;
+        });
+    }
+
+    function resetLabMarkers() {
+        const host = document.getElementById("lab-marker-rows");
+        if (!host) return;
+        host.textContent = "";
+        host.appendChild(labMarkerFields());
+        syncLabMarkerRemove();
+    }
+
+    function labPanelSaveLabel() {
+        return labPanelRecordId ? "Save changes" : "Save panel";
+    }
+
+    function resetLabPanelForm() {
+        const form = document.getElementById("lab-panel-form");
+        if (form) form.reset();
+        labPanelRecordId = null;
+        resetLabMarkers();
+        const editing = document.getElementById("lab-panel-editing");
+        const cancel = document.getElementById("lab-panel-cancel");
+        const button = document.getElementById("lab-panel-save");
+        if (editing) editing.style.display = "none";
+        if (cancel) cancel.style.display = "none";
+        if (button) button.textContent = labPanelSaveLabel();
+        if (form) form.hidden = true;
+    }
+
+    function fillLabMarker(row, marker) {
+        const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
+        row.querySelector(".lab-marker-name").value = marker.name || "";
+        row.querySelector(".lab-marker-value").value = value;
+        row.querySelector(".lab-marker-unit").value = marker.unit || "";
+        row.querySelector(".lab-marker-low").value = marker.reference_low !== null && marker.reference_low !== undefined ? String(marker.reference_low) : "";
+        row.querySelector(".lab-marker-high").value = marker.reference_high !== null && marker.reference_high !== undefined ? String(marker.reference_high) : "";
+        row.querySelector(".lab-marker-range").value = marker.reference_text || "";
+        row.querySelector(".lab-marker-interpretation").value = marker.interpretation || "";
+    }
+
+    function markerNumber(value) {
+        const text = String(value || "").trim();
+        if (!text) return null;
+        if (!/^-?\d+(\.\d+)?$/.test(text)) return undefined;
+        return Number(text);
+    }
+
+    function labPanelReleaseBusy(recordId) {
+        return typeof claimBusy === "string"
+            && claimBusy.indexOf("panel:") === 0
+            && String(claimBusy.slice(6)) === String(recordId);
+    }
+
+    function labPanelReleaseControls(item) {
+        if (!claimLoaded || claimLoadError || !claimAccess || !claimAccess.claimed) return "";
+        const summary = String(item.client_summary || "").trim();
+        const released = !!item.released;
+        if (!released && !summary) {
+            return `<p class="muted" style="margin:8px 0 0;">Add a client summary before this panel can be released.</p>`;
+        }
+        const busy = labPanelReleaseBusy(item.record_id);
+        const button = released
+            ? `<button class="btn secondary lab-panel-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="true" ${busy ? "disabled" : ""}>${busy ? "Withdrawing…" : "Withdraw"}</button>`
+            : `<button class="btn secondary lab-panel-release" type="button" data-record-id="${safeText(item.record_id)}" data-released="false" ${busy ? "disabled" : ""}>${busy ? "Releasing…" : "Release"}</button>`;
+        const status = released
+            ? `<span class="report-type-pill report-type-assessment">Released</span>`
+            : "";
+        return `<div class="clinic-note-release-state">${status}<div>${button}</div></div>`;
+    }
+
+    function labInterpretationLabel(value) {
+        const labels = { normal: "Normal", low: "Low", high: "High", abnormal: "Abnormal" };
+        return labels[String(value || "")] || "";
+    }
+
+    function labRangeLabel(marker) {
+        const text = String(marker.reference_text || "").trim();
+        if (text) return text;
+        const low = marker.reference_low !== null && marker.reference_low !== undefined ? String(marker.reference_low) : "";
+        const high = marker.reference_high !== null && marker.reference_high !== undefined ? String(marker.reference_high) : "";
+        if (low && high) return `${low}–${high}`;
+        return low || high;
+    }
+
+    function labMarkerTable(observations) {
+        const rows = (Array.isArray(observations) ? observations : []).map(marker => {
+            const value = marker.value_text || (marker.value_numeric !== null && marker.value_numeric !== undefined ? String(marker.value_numeric) : "");
+            return `<tr><td>${safeText(marker.name)}</td><td>${safeText(value)}</td><td>${safeText(marker.unit || "")}</td><td>${safeText(labRangeLabel(marker))}</td><td>${safeText(labInterpretationLabel(marker.interpretation))}</td></tr>`;
+        }).join("");
+        if (!rows) return "";
+        return `<table class="lab-marker-table"><thead><tr><th>Marker</th><th>Value</th><th>Unit</th><th>Reference range</th><th>Interpretation</th></tr></thead><tbody>${rows}</tbody></table>`;
+    }
+
+    function renderLabPanels(records) {
+        const body = document.getElementById("lab-panels-body");
+        if (!body) return;
+        labPanels = Array.isArray(records) ? records : [];
+        const panels = labPanels;
+        if (!panels.length) {
+            body.innerHTML = `<div class="muted">No lab panels yet.</div>`;
+            renderSnapshot();
+            return;
+        }
+        body.innerHTML = panels.map(item => {
+            const summary = item.client_summary
+                ? safeText(item.client_summary)
+                : `<span class="muted">No client summary yet.</span>`;
+            const specimen = item.specimen ? `<div class="muted">${safeText(item.specimen)}</div>` : "";
+            const laboratoryName = item.laboratory_name ? `<div class="muted">${safeText(item.laboratory_name)}</div>` : "";
+            return `
+                <div class="clinic-note">
+                    <strong>${safeText(item.title || "Lab panel")}</strong>
+                    <div class="muted">${safeText(item.recorded_on || "")}</div>
+                    ${specimen}
+                    ${laboratoryName}
+                    ${labMarkerTable(item.observations)}
+                    <p><span class="muted">Client summary:</span> ${summary}</p>
+                    ${labPanelReleaseControls(item)}
+                    <div class="btn-row" style="margin-top:8px;">
+                        <button class="btn secondary lab-panel-edit" type="button" data-record-id="${safeText(item.record_id)}">Edit</button>
+                    </div>
+                </div>
+            `;
+        }).join("");
+        renderSnapshot();
+    }
+
+    function beginLabPanelEdit(recordId) {
+        const item = labPanels.find(panel => String(panel.record_id) === String(recordId));
+        if (!item) return;
+        labPanelRecordId = item.record_id;
+        document.getElementById("lab-panel-title").value = item.title || "";
+        document.getElementById("lab-panel-date").value = item.recorded_on || "";
+        document.getElementById("lab-panel-specimen").value = item.specimen || "";
+        document.getElementById("lab-panel-laboratory").value = item.laboratory_name || "";
+        document.getElementById("lab-panel-summary").value = item.client_summary || "";
+        const host = document.getElementById("lab-marker-rows");
+        if (host) {
+            host.textContent = "";
+            const markers = Array.isArray(item.observations) && item.observations.length ? item.observations : [{}];
+            markers.forEach(marker => {
+                const row = labMarkerFields();
+                fillLabMarker(row, marker);
+                host.appendChild(row);
+            });
+            syncLabMarkerRemove();
+        }
+        const editing = document.getElementById("lab-panel-editing");
+        const cancel = document.getElementById("lab-panel-cancel");
+        const button = document.getElementById("lab-panel-save");
+        if (editing) editing.style.display = "block";
+        if (cancel) cancel.style.display = "inline-block";
+        if (button) button.textContent = labPanelSaveLabel();
+        const form = document.getElementById("lab-panel-form");
+        if (form) {
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+    }
+
+    async function saveLabPanel(event) {
+        event.preventDefault();
+        if (!labSourceId) {
+            showPatientError("Lab results are still loading.");
+            return;
+        }
+        const rows = Array.from(document.querySelectorAll("#lab-marker-rows .lab-marker"));
+        const observations = [];
+        for (const row of rows) {
+            const name = row.querySelector(".lab-marker-name").value.trim();
+            const rawValue = row.querySelector(".lab-marker-value").value.trim();
+            const unit = row.querySelector(".lab-marker-unit").value.trim();
+            const low = markerNumber(row.querySelector(".lab-marker-low").value);
+            const high = markerNumber(row.querySelector(".lab-marker-high").value);
+            const rangeText = row.querySelector(".lab-marker-range").value.trim();
+            const interpretation = row.querySelector(".lab-marker-interpretation").value;
+            const empty = !name && !rawValue && !unit && low === null && high === null && !rangeText && !interpretation;
+            if (empty) continue;
+            if (low === undefined || high === undefined) {
+                showPatientError("Reference low and high need to be numbers.");
+                return;
+            }
+            const numeric = markerNumber(rawValue);
+            const observation = { name: name };
+            if (numeric === undefined) observation.value_text = rawValue;
+            else if (numeric !== null) {
+                observation.value_numeric = numeric;
+                observation.value_text = rawValue;
+            }
+            if (unit) observation.unit = unit;
+            if (low !== null) observation.reference_low = low;
+            if (high !== null) observation.reference_high = high;
+            if (rangeText) observation.reference_text = rangeText;
+            if (interpretation) observation.interpretation = interpretation;
+            observations.push(observation);
+        }
+        if (!observations.length) {
+            showPatientError("Add at least one marker.");
+            return;
+        }
+        const button = document.getElementById("lab-panel-save");
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Saving…";
+        }
+        clearPatientError();
+        clearPatientSuccess();
+        try {
+            const editingId = labPanelRecordId;
+            const response = await apiFetch(
+                editingId
+                    ? `/api/patients/${patientId}/sources/${labSourceId}/panels/${editingId}`
+                    : `/api/patients/${patientId}/sources/${labSourceId}/panels`,
+                {
+                method: editingId ? "PATCH" : "POST",
+                body: JSON.stringify({
+                    title: document.getElementById("lab-panel-title").value,
+                    recorded_on: document.getElementById("lab-panel-date").value,
+                    specimen: document.getElementById("lab-panel-specimen").value,
+                    laboratory_name: document.getElementById("lab-panel-laboratory").value,
+                    client_summary: document.getElementById("lab-panel-summary").value,
+                    observations: observations,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const detail = Array.isArray(data.detail) ? "Check the panel title, date, and markers." : data.detail;
+                showPatientError(typeof detail === "string" ? detail : "Could not save the lab panel.");
+                return;
+            }
+            resetLabPanelForm();
+            showPatientSuccess(editingId ? "Lab panel updated." : "Lab panel saved.");
+            await loadClinicNotes();
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while saving the lab panel.");
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = labPanelSaveLabel();
+            }
+        }
+    }
+
+    function renderClientEntries(records) {
+        const section = document.getElementById("client-entries-section");
+        const body = document.getElementById("client-entries-body");
+        const items = Array.isArray(records) ? records : [];
+        if (!section || !body) return;
+        clientEntries = items;
+        section.style.display = "block";
+        if (!items.length) {
+            body.innerHTML = `<div class="muted">Nothing shared yet.</div>`;
+            renderSnapshot();
+            return;
+        }
+        body.innerHTML = items.map((item) => {
+            const reference = String(item && item.reference || "").trim();
+            const referenceLine = reference
+                ? `<div class="muted">${escapeHtml(reference)}</div>`
+                : "";
+            return `
+                <div class="clinic-note">
+                    <strong>${escapeHtml(item && item.title || "Client entry")}</strong>
+                    <div class="muted">${escapeHtml(item && item.recorded_on || "")}</div>
+                    <p style="margin:8px 0 0; white-space:pre-wrap;">${escapeHtml(item && item.text || "")}</p>
+                    ${referenceLine}
+                </div>
+            `;
+        }).join("");
+        renderSnapshot();
+    }
+
+    function renderWearableDays(records) {
+        const section = document.getElementById("wearable-days-section");
+        const body = document.getElementById("wearable-days-body");
+        const items = Array.isArray(records) ? records : [];
+        if (!section || !body) return;
+        wearableDays = items;
+        section.style.display = "block";
+        if (!items.length) {
+            body.innerHTML = `<div class="muted">No shared days.</div>`;
+            renderSnapshot();
+            return;
+        }
+        const labels = [
+            ["steps", "Steps"],
+            ["resting_heart_rate", "Resting heart rate"],
+            ["sleep_duration", "Sleep duration"],
+            ["hrv", "Heart rate variability"],
+        ];
+        body.innerHTML = items.map((item) => {
+            const lines = labels.map(([key, label]) => {
+                const metric = item && item[key];
+                const missing = !metric || metric.value === null || metric.value === undefined || metric.value === "";
+                const shown = missing
+                    ? ""
+                    : `${metric.value}${metric.unit ? " " + metric.unit : ""}`;
+                return `<div>${escapeHtml(label)}: ${escapeHtml(shown)}</div>`;
+            }).join("");
+            return `
+                <div class="clinic-note">
+                    <strong>${escapeHtml(item && item.title || "Daily summary")}</strong>
+                    <div class="muted">${escapeHtml(item && item.recorded_on || "")}</div>
+                    ${lines}
+                </div>
+            `;
+        }).join("");
+        renderSnapshot();
+    }
+
+    async function loadClinicNotes() {
+        const body = document.getElementById("clinic-notes-body");
+        const labBody = document.getElementById("lab-panels-body");
+        if (body) body.innerHTML = `<div class="muted">Loading clinic notes…</div>`;
+        if (labBody) labBody.innerHTML = `<div class="muted">Loading lab results…</div>`;
+        try {
+            const response = await apiFetch(`/api/patients/${patientId}/sources`);
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                sourcesLoadError = true;
+                clientEntries = [];
+                wearableDays = [];
+                if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
+                if (labBody) labBody.innerHTML = `<div class="error">Could not load lab results.</div>`;
+                const clientBody = document.getElementById("client-entries-body");
+                const wearableBody = document.getElementById("wearable-days-body");
+                if (clientBody) clientBody.innerHTML = `<div class="error">Could not load.</div>`;
+                if (wearableBody) wearableBody.innerHTML = `<div class="error">Could not load.</div>`;
+                renderSnapshot();
+                return;
+            }
+            sourcesLoadError = false;
+            const sources = Array.isArray(data.sources) ? data.sources : [];
+            const source = sources.find(item => item.source_type === "manual") || null;
+            const laboratory = sources.find(item => item.source_type === "laboratory") || null;
+            const clientSource = sources.find(item => item.source_type === "client") || null;
+            const wearableSource = sources.find(item => item.source_type === "wearable") || null;
+            clinicNoteSourceId = source && source.source_id ? source.source_id : null;
+            labSourceId = laboratory && laboratory.source_id ? laboratory.source_id : null;
+            const name = document.getElementById("clinic-source-name");
+            if (name) name.textContent = source && source.display_name ? source.display_name : "Clinic notes";
+            renderClinicNotes(source ? source.records : []);
+            renderLabPanels(laboratory ? laboratory.records : []);
+            renderClientEntries(clientSource ? clientSource.records : []);
+            renderWearableDays(wearableSource ? wearableSource.records : []);
+        } catch (err) {
+            console.error(err);
+            sourcesLoadError = true;
+            clientEntries = [];
+            wearableDays = [];
+            if (body) body.innerHTML = `<div class="error">Could not load clinic notes.</div>`;
+            if (labBody) labBody.innerHTML = `<div class="error">Could not load lab results.</div>`;
+            const clientBody = document.getElementById("client-entries-body");
+            const wearableBody = document.getElementById("wearable-days-body");
+            if (clientBody) clientBody.innerHTML = `<div class="error">Could not load.</div>`;
+            if (wearableBody) wearableBody.innerHTML = `<div class="error">Could not load.</div>`;
+            renderSnapshot();
+        }
+    }
+
+    async function saveClinicNote(event) {
+        event.preventDefault();
+        if (!clinicNoteSourceId) {
+            showPatientError("Clinic notes are still loading.");
+            return;
+        }
+        const button = document.getElementById("clinic-note-save");
+        const editingId = clinicNoteRecordId;
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Saving…";
+        }
+        clearPatientError();
+        clearPatientSuccess();
+        const payload = {
+            title: document.getElementById("clinic-note-title").value,
+            recorded_on: document.getElementById("clinic-note-date").value,
+            text: document.getElementById("clinic-note-text").value,
+            client_summary: document.getElementById("clinic-note-summary").value,
+        };
+        const url = editingId
+            ? `/api/patients/${patientId}/sources/${clinicNoteSourceId}/records/${editingId}`
+            : `/api/patients/${patientId}/sources/${clinicNoteSourceId}/records`;
+        try {
+            const response = await apiFetch(url, {
+                method: editingId ? "PATCH" : "POST",
+                body: JSON.stringify(payload),
+            });
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                const detail = Array.isArray(data.detail) ? "Check the title, date, and note text." : data.detail;
+                showPatientError(typeof detail === "string" ? detail : "Could not save the clinic note.");
+                return;
+            }
+            resetClinicNoteForm();
+            showPatientSuccess(editingId ? "Clinic note updated." : "Clinic note saved.");
+            await loadClinicNotes();
+        } catch (err) {
+            console.error(err);
+            showPatientError("Unexpected error while saving the clinic note.");
+        } finally {
+            if (button) {
+                button.disabled = false;
+                button.textContent = clinicNoteSaveLabel();
+            }
+        }
+    }
+
+    function beginClinicNoteEdit(recordId) {
+        const item = clinicNotes.find(note => String(note.record_id) === String(recordId));
+        if (!item) return;
+        clinicNoteRecordId = item.record_id;
+        document.getElementById("clinic-note-title").value = item.title || "";
+        document.getElementById("clinic-note-date").value = item.recorded_on || "";
+        document.getElementById("clinic-note-text").value = item.text || "";
+        document.getElementById("clinic-note-summary").value = item.client_summary || "";
+        const editing = document.getElementById("clinic-note-editing");
+        const cancel = document.getElementById("clinic-note-cancel");
+        const button = document.getElementById("clinic-note-save");
+        if (editing) editing.style.display = "block";
+        if (cancel) cancel.style.display = "inline-block";
+        if (button) button.textContent = clinicNoteSaveLabel();
+        const form = document.getElementById("clinic-note-form");
+        if (form) {
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+    }
+
+    async function setLabPanelRelease(recordId, released) {
+        if (!recordId || !labSourceId || claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw this panel? Share links and the progress view stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = `panel:${recordId}`;
+        clearPatientError();
+        clearPatientSuccess();
+        renderLabPanels(labPanels);
+        try {
+            const response = await apiFetch(
+                `/api/patients/${patientId}/sources/${labSourceId}/panels/${recordId}/release`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ released: released }),
+                }
+            );
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the lab panel release."));
+                if (response.status === 409) {
+                    claimAccess = { claimed: false };
+                    renderClaimCard();
+                }
+                renderLabPanels(labPanels);
+                return;
+            }
+            const match = labPanels.find(panel => String(panel.record_id) === String(recordId));
+            if (match) match.released = !!data.released;
+            showPatientSuccess(released ? "Lab panel released." : "Lab panel withdrawn.");
+            renderLabPanels(labPanels);
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the lab panel release.");
+            renderLabPanels(labPanels);
+        }
+    }
+
+    async function setClinicNoteRelease(recordId, released) {
+        if (!recordId || !clinicNoteSourceId || claimBusy) return;
+        if (!released) {
+            const confirmed = window.confirm("Withdraw this note? Share links and the progress view stay as they are.");
+            if (!confirmed) return;
+        }
+        claimBusy = `note:${recordId}`;
+        clearPatientError();
+        clearPatientSuccess();
+        renderClinicNotes(clinicNotes);
+        try {
+            const response = await apiFetch(
+                `/api/patients/${patientId}/sources/${clinicNoteSourceId}/records/${recordId}/release`,
+                {
+                    method: "POST",
+                    body: JSON.stringify({ released: released }),
+                }
+            );
+            const data = await response.json().catch(() => ({}));
+            claimBusy = false;
+            if (!response.ok) {
+                showPatientError(claimErrorDetail(data, "Could not update the clinic note release."));
+                if (response.status === 409) {
+                    claimAccess = { claimed: false };
+                    renderClaimCard();
+                }
+                renderClinicNotes(clinicNotes);
+                return;
+            }
+            const match = clinicNotes.find(note => String(note.record_id) === String(recordId));
+            if (match) match.released = !!data.released;
+            showPatientSuccess(released ? "Clinic note released." : "Clinic note withdrawn.");
+            renderClinicNotes(clinicNotes);
+        } catch (err) {
+            console.error(err);
+            claimBusy = false;
+            showPatientError("Unexpected error while updating the clinic note release.");
+            renderClinicNotes(clinicNotes);
+        }
+    }
+
     async function loadPatientDetail() {
         clearPatientError();
         clearPatientSuccess();
+        suppressClaim = false;
+        claimLoaded = false;
+        claimLoadError = false;
+        claimAccess = null;
+        claimInvites = [];
+        claimShowSendForm = false;
+        claimEmailDraft = null;
+        claimBusy = false;
+        progressRelease = null;
+        progressReleaseError = false;
+        reportReleases = null;
+        reportReleaseError = false;
+        renderClaimCard();
 
         const authed = await requireAuthOrRedirect();
         if (!authed) return;
 
         try {
+            const claimTask = fetchClaimData();
             const [patientRes, casesRes, reportsRes, trendsRes] = await Promise.all([
                 apiFetch(`/api/patients/${patientId}`),
                 apiFetch(`/api/patients/${patientId}/cases`),
@@ -1431,7 +3079,9 @@
             }));
 
             if (!patientRes.ok) {
+                suppressClaim = true;
                 showPatientError(patientData.detail || "Could not load patient.");
+                clearClaimBody();
                 return;
             }
 
@@ -1445,9 +3095,19 @@
             renderReports(currentReports);
             renderTimeline();
             renderTrends(trendsData);
+            await loadClinicNotes();
+            await claimTask;
+            if (!suppressClaim) {
+                renderClaimCard();
+                renderReports(currentReports);
+                renderClinicNotes(clinicNotes);
+            }
+            openSectionFromHash();
 
         } catch (err) {
             console.error(err);
+            suppressClaim = true;
+            clearClaimBody();
             showPatientError("Unexpected error while loading patient detail.");
         }
     }
@@ -1626,6 +3286,189 @@
     if (trendReportModal) {
         trendReportModal.addEventListener("click", (event) => {
             if (event.target === trendReportModal) closeTrendReportModal();
+        });
+    }
+
+    const inviteClientBtn = document.getElementById("invite-client-claim-btn");
+    if (inviteClientBtn) {
+        inviteClientBtn.addEventListener("click", () => {
+            if (inviteClientBtn.disabled || (claimAccess && claimAccess.claimed)) return;
+            const card = document.getElementById("client-claim-card");
+            if (card) {
+                card.style.display = "block";
+                card.scrollIntoView({ behavior: "smooth", block: "start" });
+            }
+            const email = document.getElementById("claim-email");
+            if (email && !email.disabled) email.focus();
+        });
+    }
+
+    const claimCard = document.getElementById("client-claim-card");
+    if (claimCard) {
+        claimCard.addEventListener("input", (event) => {
+            if (event.target && event.target.id === "claim-email") {
+                claimEmailDraft = event.target.value;
+            }
+        });
+
+        claimCard.addEventListener("click", (event) => {
+            const target = event.target && event.target.closest ? event.target.closest("button") : null;
+            if (!target || claimBusy) return;
+
+            if (target.id === "claim-reveal-send") {
+                claimShowSendForm = true;
+                renderClaimCard();
+                const email = document.getElementById("claim-email");
+                if (email) email.focus();
+                return;
+            }
+
+            if (target.id === "claim-send-btn") {
+                sendClaimInvite();
+                return;
+            }
+
+            if (target.id === "claim-cancel-btn" || target.classList.contains("claim-row-cancel")) {
+                const pending = currentPendingInvite();
+                cancelClaimInvite(target.dataset.inviteId || (pending && pending.id));
+            }
+        });
+    }
+
+    const progressHost = document.getElementById("progress-release-host");
+    if (progressHost) {
+        progressHost.addEventListener("click", (event) => {
+            const target = event.target && event.target.closest ? event.target.closest("button") : null;
+            if (!target || claimBusy) return;
+            if (target.id === "claim-release-btn") setProgressRelease(true);
+            if (target.id === "claim-withdraw-release-btn") setProgressRelease(false);
+        });
+    }
+
+    const managePatientBtn = document.getElementById("manage-patient-btn");
+    if (managePatientBtn) {
+        managePatientBtn.addEventListener("click", () => {
+            const panel = document.getElementById("patient-manage");
+            if (!panel) return;
+            panel.hidden = !panel.hidden;
+            managePatientBtn.setAttribute("aria-expanded", panel.hidden ? "false" : "true");
+        });
+    }
+
+    const sectionChips = document.getElementById("section-chips");
+    if (sectionChips) {
+        sectionChips.addEventListener("click", (event) => {
+            const chip = event.target && event.target.closest ? event.target.closest(".section-chip") : null;
+            if (chip) openPatientSection(chip.dataset.section, true);
+        });
+    }
+
+    const snapshotGrid = document.getElementById("snapshot-grid");
+    if (snapshotGrid) {
+        snapshotGrid.addEventListener("click", (event) => {
+            const tile = event.target && event.target.closest ? event.target.closest(".snapshot-tile") : null;
+            if (tile) openPatientSection(tile.dataset.open, true);
+        });
+    }
+
+    const snapshotMore = document.getElementById("snapshot-more");
+    if (snapshotMore) {
+        snapshotMore.addEventListener("click", () => {
+            const grid = document.getElementById("snapshot-grid");
+            if (!grid) return;
+            const expanded = grid.classList.toggle("is-expanded");
+            snapshotMore.setAttribute("aria-expanded", expanded ? "true" : "false");
+            snapshotMore.textContent = expanded ? "Fewer on this record" : "More on this record";
+        });
+    }
+
+    const showClinicNoteForm = document.getElementById("show-clinic-note-form");
+    if (showClinicNoteForm) {
+        showClinicNoteForm.addEventListener("click", () => {
+            openPatientSection("notes", false);
+            resetClinicNoteForm();
+            const form = document.getElementById("clinic-note-form");
+            if (!form) return;
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+    }
+
+    const showLabPanelForm = document.getElementById("show-lab-panel-form");
+    if (showLabPanelForm) {
+        showLabPanelForm.addEventListener("click", () => {
+            openPatientSection("labs", false);
+            resetLabPanelForm();
+            const form = document.getElementById("lab-panel-form");
+            if (!form) return;
+            form.hidden = false;
+            form.scrollIntoView({ behavior: "smooth", block: "nearest" });
+        });
+    }
+
+    resetLabMarkers();
+    const clinicNoteForm = document.getElementById("clinic-note-form");
+    if (clinicNoteForm) clinicNoteForm.addEventListener("submit", saveClinicNote);
+    const labPanelForm = document.getElementById("lab-panel-form");
+    if (labPanelForm) labPanelForm.addEventListener("submit", saveLabPanel);
+    const labAddMarker = document.getElementById("lab-add-marker");
+    if (labAddMarker) {
+        labAddMarker.addEventListener("click", () => {
+            const host = document.getElementById("lab-marker-rows");
+            if (host) host.appendChild(labMarkerFields());
+            syncLabMarkerRemove();
+        });
+    }
+    const labMarkerRows = document.getElementById("lab-marker-rows");
+    if (labMarkerRows) {
+        labMarkerRows.addEventListener("click", (event) => {
+            const button = event.target && event.target.closest ? event.target.closest(".lab-marker-remove") : null;
+            if (!button) return;
+            if (labMarkerRows.querySelectorAll(".lab-marker").length < 2) return;
+            const row = button.closest(".lab-marker");
+            if (row) row.remove();
+            syncLabMarkerRemove();
+        });
+    }
+    const labPanelCancel = document.getElementById("lab-panel-cancel");
+    if (labPanelCancel) labPanelCancel.addEventListener("click", resetLabPanelForm);
+    const labPanelsBody = document.getElementById("lab-panels-body");
+        if (labPanelsBody) {
+        labPanelsBody.addEventListener("click", (event) => {
+            const releaseButton = event.target && event.target.closest ? event.target.closest(".lab-panel-release") : null;
+            if (releaseButton) {
+                if (claimBusy) return;
+                setLabPanelRelease(releaseButton.dataset.recordId, releaseButton.dataset.released !== "true");
+                return;
+            }
+            const button = event.target && event.target.closest ? event.target.closest(".lab-panel-edit") : null;
+            if (!button) return;
+            beginLabPanelEdit(button.dataset.recordId);
+        });
+    }
+    const clinicNoteCancel = document.getElementById("clinic-note-cancel");
+    if (clinicNoteCancel) clinicNoteCancel.addEventListener("click", resetClinicNoteForm);
+    const clinicNotesBody = document.getElementById("clinic-notes-body");
+    if (clinicNotesBody) {
+        clinicNotesBody.addEventListener("click", (event) => {
+            const releaseButton = event.target && event.target.closest ? event.target.closest(".clinic-note-release") : null;
+            if (releaseButton) {
+                if (claimBusy) return;
+                setClinicNoteRelease(releaseButton.dataset.recordId, releaseButton.dataset.released !== "true");
+                return;
+            }
+            const button = event.target && event.target.closest ? event.target.closest(".clinic-note-edit") : null;
+            if (!button) return;
+            beginClinicNoteEdit(button.dataset.recordId);
+        });
+    }
+
+    const reportsBody = document.getElementById("patient-reports-body");
+    if (reportsBody) {
+        reportsBody.addEventListener("click", (event) => {
+            const target = event.target && event.target.closest ? event.target.closest(".portal-release-btn") : null;
+            if (!target || claimBusy) return;
+            setReportRelease(target.dataset.reportId, target.dataset.released !== "true");
         });
     }
 

@@ -10,11 +10,17 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
-from app.api import routes_share
 from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router, pages_router as auth_pages_router
 from app.api.routes_cases import router as cases_router
 from app.api.routes_patients import router as patients_router
+from app.api.routes_patient_records import router as patient_records_router
+from app.api.routes_patient_claim_invites import router as patient_claim_invites_router
+from app.api.routes_patient_claims import router as patient_claims_router
+from app.api.routes_client_records import router as client_records_router
+from app.api.routes_association_requests import router as association_requests_router
+from app.api.routes_content_releases import router as content_releases_router
+from app.api.routes_patient_sources import router as patient_sources_router
 from app.api.routes_reports import router as reports_router
 from app.api.routes_share import router as share_router
 from app.api.routes_ui import router as ui_router
@@ -25,6 +31,8 @@ from app.api.routes_share_bundles import router as share_bundle_router
 from app.api.routes_share_dashboard import router as share_dashboard_router
 from app.api.routes_revenue import router as revenue_router
 from app.api.routes_share_pages import router as share_pages_router
+from app.api.routes_stripe_connect import router as stripe_connect_router
+from app.api.routes_share_links import router as share_links_router
 from app.api.routes_platform_settings import router as platform_settings_router
 from app.api.routes_referrals import router as referrals_router
 from app.api.routes_platform_monitoring import router as platform_monitoring_router
@@ -35,6 +43,7 @@ from app.api.routes_kb import router as kb_router
 from app.db import connector_models
 from app.db.base import Base
 from app.db.session import engine
+from app.db.migrate import run_migrations
 from app.middleware.domain_routing import DomainRoutingMiddleware
 from app.api.routes_webhooks import router as webhooks_router
 
@@ -56,15 +65,11 @@ async def lifespan(app: FastAPI):
     - Allows startup even if DB is temporarily unavailable during first boot.
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
-    # Release schemas are managed explicitly before application deployment.
-    if AUTO_CREATE_TABLES and APP_ENV in {"dev", "development", "local", "test"}:
-        try:
+    # Railway release schemas are applied explicitly before deployment.
+    if APP_ENV in {"dev", "development", "local", "test"}:
+        run_migrations(engine)
+        if AUTO_CREATE_TABLES:
             Base.metadata.create_all(bind=engine)
-            print("✅ Database connected and tables ensured.")
-        except Exception as exc:
-            print(f"⚠️ Database startup check failed: {exc}")
-            if APP_ENV != "production":
-                raise
 
     yield
 
@@ -138,7 +143,7 @@ def create_app() -> FastAPI:
 
         return response
 
-    # Registration, requests and auditing share one fail-closed release policy.
+    # Registration, requests and auditing share the controlled rollout policy.
     from app.services.connector_policy import enabled as connector_enabled
     if connector_enabled():
         from app.api.routes_connector import router as connector_router
@@ -151,6 +156,13 @@ def create_app() -> FastAPI:
     app.include_router(auth_router)
 
     # SaaS application routes
+    app.include_router(patient_records_router)
+    app.include_router(patient_claim_invites_router)
+    app.include_router(patient_claims_router)
+    app.include_router(content_releases_router)
+    app.include_router(patient_sources_router)
+    app.include_router(client_records_router)
+    app.include_router(association_requests_router)
     app.include_router(patients_router)
     app.include_router(cases_router)
     app.include_router(reports_router)
@@ -159,7 +171,8 @@ def create_app() -> FastAPI:
     app.include_router(subscriptions_router)
     app.include_router(webhooks_router)
     app.include_router(ui_router)
-    app.include_router(routes_share.router)
+    app.include_router(share_links_router)
+    app.include_router(stripe_connect_router)
     app.include_router(trend_reports_router)
     app.include_router(share_bundle_router)
     app.include_router(share_dashboard_router)
@@ -195,6 +208,7 @@ def create_app() -> FastAPI:
     def readiness():
         from fastapi.responses import JSONResponse
         from app.services.connector_readiness import ready
+
         healthy = ready(engine)
         return JSONResponse({"status": "ready" if healthy else "unavailable"},
                             status_code=200 if healthy else 503,

@@ -49,6 +49,13 @@
 .onboarding-step-title { font-weight:900; color:#0f172a; margin-bottom:4px; }
 .onboarding-step-text { color:#64748b; font-size:13px; line-height:1.45; }
 .onboarding-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:16px; }
+.attention-row { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:14px; }
+.attention-list { display:flex; flex-direction:column; gap:10px; margin-top:12px; }
+.attention-item { color:inherit; text-decoration:none; }
+.attention-item .action-title { font-size:14px; font-weight:850; color:#0f172a; }
+.attention-item .action-subtitle { color:#64748b; font-size:12px; line-height:1.35; margin-top:2px; }
+.attention-empty { color:#64748b; font-size:13px; margin-top:12px; }
+#dashboard-retry { margin-top:8px; }
 .kpi-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:14px; }
 .kpi-card {
   background:#fff;
@@ -129,7 +136,7 @@
 .dashboard-insight { background:#fff; border:1px solid #e2e8f0; border-radius:18px; padding:16px; display:flex; justify-content:space-between; align-items:center; gap:12px; flex-wrap:wrap; }
 .empty-state { color:#64748b; padding:10px 0; }
 @media(max-width:1280px){ .dashboard-shell,.hero-panel{grid-template-columns:1fr;} .kpi-grid{grid-template-columns:repeat(2,minmax(0,1fr));} }
-@media(max-width:900px){ .panel-grid,.onboarding-steps{grid-template-columns:1fr;} }
+@media(max-width:900px){ .panel-grid,.onboarding-steps,.attention-row{grid-template-columns:1fr;} }
 @media(max-width:700px){ .kpi-grid{grid-template-columns:1fr;} .hero-title{font-size:24px;} .funnel-row{grid-template-columns:90px 1fr 34px;} }
 
 /* === go360 dashboard lower-mobile overflow surgical fix v2 === */
@@ -321,6 +328,7 @@
 
 <div class="dashboard-v2">
   <div id="dashboard-error" class="error dashboard-error"></div>
+  <button type="button" class="btn secondary" id="dashboard-retry" style="display:none;">Retry</button>
 
   <section class="hero-panel">
     <div>
@@ -329,7 +337,7 @@
       <p class="hero-copy" id="hero-copy">Upload scans, share client-ready reports, follow up on unpaid bundles, and invite other QRMA practitioners from one command centre.</p>
       <div class="hero-actions">
         <a class="btn" href="/app/cases/new" data-requires-subscription data-subscription-context="upload a scan and generate a report">Upload scan</a>
-        <a class="btn secondary" href="/app/reports" data-requires-subscription data-subscription-context="create client share bundles">Share reports</a>
+        <a class="btn secondary" href="/app/reports" data-requires-subscription data-subscription-feature="share_bundle" data-subscription-context="create client share bundles">Share reports</a>
         <button class="btn secondary" type="button" id="hero-copy-referral-btn">Copy referral link — earn 1 month</button>
       </div>
     </div>
@@ -360,6 +368,24 @@
     </div>
     <div class="onboarding-actions"><a class="btn" href="/app/cases/new" data-requires-subscription data-subscription-context="upload a scan and generate a report">Start with a scan</a><a class="btn secondary" href="/app/cases/new#how-to-export">View QRMA export guide</a><a class="btn secondary" href="/app/settings">Set clinic branding</a></div>
   </div>
+
+  <section class="attention-row" id="attention-row" aria-label="Needs attention">
+    <article class="kpi-card">
+      <div class="kpi-label">Association requests</div>
+      <div class="kpi-value" id="attention-requests-count">—</div>
+      <div id="attention-requests" class="attention-list"><div class="attention-empty">Loading…</div></div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-label">Released since last visit</div>
+      <div class="kpi-value" id="attention-released-count">—</div>
+      <div id="attention-released" class="attention-list"><div class="attention-empty">Loading…</div></div>
+    </article>
+    <article class="kpi-card">
+      <div class="kpi-label">Not in the portal</div>
+      <div class="kpi-value" id="attention-reports-count">—</div>
+      <div id="attention-reports" class="attention-list"><div class="attention-empty">Loading…</div></div>
+    </article>
+  </section>
 
   <section class="kpi-grid">
     <div class="kpi-card"><div class="kpi-label">Paid bundle revenue</div><div class="kpi-value" id="paid-revenue">—</div><div class="kpi-sub" id="paid-revenue-sub">Confirmed Stripe payments</div><div class="kpi-tag" id="revenue-trend-tag">Monthly goal loading…</div></div>
@@ -395,7 +421,7 @@
       </div>
     </main>
     <aside>
-      <div class="dashboard-panel"><h3>Quick actions</h3><div class="quick-actions"><a class="btn" href="/app/cases/new" data-requires-subscription data-subscription-context="upload a scan and generate a report">Upload scan</a><a class="btn secondary" href="/app/reports" data-requires-subscription data-subscription-context="create client share bundles">Share report bundle</a><a class="btn secondary" href="/app/patients">Create trend report</a><button class="btn secondary" type="button" id="side-copy-referral-btn">Copy referral link</button><a class="btn secondary" href="/app/revenue">View revenue</a></div></div>
+      <div class="dashboard-panel"><h3>Quick actions</h3><div class="quick-actions"><a class="btn" href="/app/cases/new" data-requires-subscription data-subscription-context="upload a scan and generate a report">Upload scan</a><a class="btn secondary" href="/app/reports" data-requires-subscription data-subscription-feature="share_bundle" data-subscription-context="create client share bundles">Share report bundle</a><a class="btn secondary" href="/app/patients">Create trend report</a><button class="btn secondary" type="button" id="side-copy-referral-btn">Copy referral link</button><a class="btn secondary" href="/app/revenue">View revenue</a></div></div>
       <div class="dashboard-panel referral-mini"><h3>Referral growth</h3><div class="activity-meta" id="referral-growth-note">Refer 1 paying practitioner → get 1 month free.</div><div class="referral-link-row"><input id="dashboard-referral-link" readonly value="Loading…"><button class="btn secondary" type="button" id="copy-dashboard-referral-btn">Copy</button></div></div>
       <div class="dashboard-panel"><h3>Report pipeline</h3><div class="activity-list"><div class="activity-item"><div class="activity-title" id="pipeline-assessments">— assessments</div><div class="activity-meta">Single-scan reports in workspace</div></div><div class="activity-item"><div class="activity-title" id="pipeline-trends">— trend reports</div><div class="activity-meta">Progress views created</div></div><div class="activity-item"><div class="activity-title" id="pipeline-7d">— in last 7 days</div><div class="activity-meta">Recent report generation activity</div></div></div></div>
       <div class="dashboard-panel"><h3>Recent revenue activity</h3><div class="activity-list" id="revenue-activity-list"><div class="empty-state">Loading revenue activity…</div></div></div>
@@ -420,8 +446,8 @@ function reportTypeLabel(item){ return isTrend(item)?"Trend":"Assessment"; }
 function reportTypeClass(item){ return isTrend(item)?"report-type-trend":"report-type-assessment"; }
 function statusValue(item){ return String(item.status||"").toLowerCase(); }
 function isAttentionStatus(item){ return ["failed","draft","queued","processing"].includes(statusValue(item)); }
-function showDashboardError(message){ const box=document.getElementById("dashboard-error"); box.textContent=message; box.style.display="block"; }
-function clearDashboardError(){ const box=document.getElementById("dashboard-error"); box.textContent=""; box.style.display="none"; }
+function showDashboardError(message){ const box=document.getElementById("dashboard-error"); box.textContent=message; box.style.display="block"; const retry=document.getElementById("dashboard-retry"); if(retry) retry.style.display="inline-flex"; }
+function clearDashboardError(){ const box=document.getElementById("dashboard-error"); box.textContent=""; box.style.display="none"; const retry=document.getElementById("dashboard-retry"); if(retry) retry.style.display="none"; }
 function moneyFromMinor(minor,currency){ const code=String(currency||"usd").toLowerCase(); const amount=Number(minor||0); const symbols={gbp:"£",usd:"$",eur:"€",aed:"د.إ",jpy:"¥",krw:"₩"}; const symbol=symbols[code]||code.toUpperCase()+" "; const zeroDecimal=new Set(["jpy","krw"]); if(zeroDecimal.has(code)) return `${symbol}${Math.round(amount).toLocaleString()}`; return `${symbol}${(amount/100).toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2})}`; }
 function displayMoneyList(amountsByCurrency,emptyText="—"){ const entries=Object.entries(amountsByCurrency||{}).filter(([,v])=>Number(v||0)!==0); if(!entries.length) return emptyText; return entries.map(([c,m])=>moneyFromMinor(m,c)).join(" · "); }
 function addCurrency(target,currency,amount){ const key=String(currency||"gbp").toLowerCase(); target[key]=Number(target[key]||0)+Number(amount||0); }
@@ -519,12 +545,21 @@ function renderOnboardingState(){ const card=document.getElementById("onboarding
 function renderReportHealthCards(){ const ready=dashboardRows.filter(r=>["ready","final"].includes(statusValue(r))).length; const failed=dashboardRows.filter(r=>statusValue(r)==="failed").length; const stuck=dashboardRows.filter(r=>["draft","queued","processing"].includes(statusValue(r))).length; const attention=failed+stuck; document.getElementById("ready-reports").textContent=ready; document.getElementById("failed-reports").textContent=attention; const failedCard=document.getElementById("failed-report-card"); failedCard.classList.toggle("warning",attention>0); failedCard.classList.toggle("good",attention===0); }
 function renderDashboardRows(){ const tbody=document.getElementById("reports-table-body"); const query=(document.getElementById("dashboard-search").value||"").trim().toLowerCase(); updateDashboardTabs(); const filtered=dashboardRows.filter(item=>activeDashboardTab==="attention"?isAttentionStatus(item):(activeDashboardTab==="all"||reportType(item)===activeDashboardTab)).filter(item=>{ const hay=[item.display_name,item.patient_display_name,item.generated_at,item.scan_datetime_display,item.source_scan_range,item.status,reportTypeLabel(item)].join(" ").toLowerCase(); return !query||hay.includes(query); }); if(!filtered.length){ tbody.innerHTML=`<tr><td colspan="6">No matching reports.</td></tr>`; return; } tbody.innerHTML=filtered.slice(0,20).map(item=>{ const trend=isTrend(item); const sourceCount=item.source_count||(item.source_report_ids||[]).length||0; const basis=trend?`${safeTextLocal(sourceCount)} source assessment${Number(sourceCount)===1?"":"s"}`:safeTextLocal(item.scan_datetime_display||"—"); const health=trend&&item.health_index!==null&&item.health_index!==undefined?`<div class="report-secondary">Health Index: ${safeTextLocal(item.health_index)}${item.health_index_change!==null&&item.health_index_change!==undefined?` (${Number(item.health_index_change)>0?"+":""}${safeTextLocal(item.health_index_change)})`:""}</div>`:""; const status=statusValue(item); return `<tr><td><span class="report-type-pill ${reportTypeClass(item)}">${reportTypeLabel(item)}</span></td><td><span class="report-title-text">${safeTextLocal(item.display_name||"Untitled report")}</span><div class="report-secondary">${safeTextLocal(item.patient_display_name||"")}</div></td><td>${basis}${trend&&item.source_scan_range?`<div class="report-secondary">${safeTextLocal(item.source_scan_range)}</div>`:""}${health}</td><td><span class="status-pill status-${safeTextLocal(status)}">${safeTextLocal(item.status||"—")}</span></td><td>${formatDateLocal(item.generated_at)}</td><td><a class="link" href="${trend?`/trend-reports/${item.id}`:`/app/reports/${item.id}`}">Open</a></td></tr>`; }).join(""); }
 async function copyReferralLink(){ const link=document.getElementById("dashboard-referral-link")?.value||dashboardReferral?.referral_link||""; if(!link||link==="Loading…") return; try{ await navigator.clipboard.writeText(link); if(typeof showAppBanner==="function") showAppBanner({id:"dashboard-referral-copied",variant:"success",icon:"✓",title:"Referral link copied",body:"Send it to 2–3 QRMA practitioners you already know.",dismissible:true,compact:true}); } catch(e){ alert("Referral link copied: "+link); } }
-async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse,referralResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments"),apiFetch("/api/referrals/me")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); renderOnboardingState(); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(referralResponse.ok){ renderReferral(await referralResponse.json()); } else { renderReferral({counts:{total:0,signed_up:0,paid:0,rewarded:0},months_awarded:0}); } if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); renderRevenueChart([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } }
+const CLINIC_SEEN_KEY="go360-clinic-today-seen";
+function attentionDate(value){ if(!value) return ""; const date=new Date(String(value).slice(0,10)+"T00:00:00"); if(Number.isNaN(date.getTime())) return ""; return date.toLocaleDateString(undefined,{day:"numeric",month:"short"}); }
+function attentionEmpty(list,text){ list.innerHTML=`<div class="attention-empty">${safeTextLocal(text)}</div>`; }
+function renderAttentionList(listId,countId,rows,emptyText,draw){ const list=document.getElementById(listId); const count=document.getElementById(countId); count.textContent=String(rows.length); if(!rows.length){ attentionEmpty(list,emptyText); return; } list.innerHTML=rows.map(draw).join(""); }
+function releasedSinceLastVisit(items){ const previous=localStorage.getItem(CLINIC_SEEN_KEY); const since=previous?new Date(previous):new Date(Date.now()-(30*24*60*60*1000)); const sinceDay=new Date(since.getFullYear(),since.getMonth(),since.getDate()); return (items||[]).filter(item=>{ if(!item||!item.released_on) return false; const when=new Date(String(item.released_on).slice(0,10)+"T00:00:00"); return !Number.isNaN(when.getTime())&&when>=sinceDay; }); }
+function renderAttention(data){ const requests=Array.isArray(data.requests)?data.requests:[]; const released=releasedSinceLastVisit(data.released_items); const reports=Array.isArray(data.unreleased_reports)?data.unreleased_reports:[]; renderAttentionList("attention-requests","attention-requests-count",requests,"No requests waiting",item=>`<div class="attention-item"><div class="action-title">${safeTextLocal(item.requester_name||"Request")}</div><div class="action-subtitle">${safeTextLocal(item.requester_email||"")}</div></div>`); renderAttentionList("attention-released","attention-released-count",released,"Nothing new since your last visit",item=>{ const href=`/app/patients/${encodeURIComponent(item.patient_id||"")}#${encodeURIComponent(item.section||"activity")}`; const when=attentionDate(item.released_on); return `<a class="attention-item" href="${href}"><div class="action-title">${safeTextLocal(item.patient_name||"Patient")}</div><div class="action-subtitle">${safeTextLocal(item.item_type||"Item")}${when?` · ${safeTextLocal(when)}`:""}</div></a>`; }); renderAttentionList("attention-reports","attention-reports-count",reports,"Finished reports are in the portal",item=>{ const href=`/app/patients/${encodeURIComponent(item.patient_id||"")}#reports`; return `<a class="attention-item" href="${href}"><div class="action-title">${safeTextLocal(item.patient_name||"Patient")}</div><div class="action-subtitle">${safeTextLocal(item.report_title||"Report")}</div></a>`; }); }
+function attentionFailed(message){ ["attention-requests","attention-released","attention-reports"].forEach(id=>attentionEmpty(document.getElementById(id),message || "Could not load this list.")); ["attention-requests-count","attention-released-count","attention-reports-count"].forEach(id=>{ document.getElementById(id).textContent="—"; }); const box=document.getElementById("dashboard-error"); if(!message&&box&&!box.textContent) showDashboardError("Could not load what needs attention."); }
+async function loadAttention(){ try{ const response=await apiFetch("/api/dashboard/attention"); const data=await response.json().catch(()=>({})); if(!response.ok){ attentionFailed(response.status === 403 && typeof data.detail === "string" ? data.detail : null); return; } renderAttention(data); } catch(err){ console.error(err); attentionFailed(); } }
+async function loadDashboard(){ clearDashboardError(); const authed=await requireAuthOrRedirect(); if(!authed) return; const attentionTask=loadAttention(); try{ const [reportsResponse,revenueSummaryResponse,revenuePaymentsResponse,referralResponse]=await Promise.all([apiFetch("/api/reports?include_archived=false"),apiFetch("/api/revenue/summary"),apiFetch("/api/revenue/payments"),apiFetch("/api/referrals/me")]); if(!reportsResponse.ok){ const errorData=await reportsResponse.json().catch(()=>({})); showDashboardError(errorData.detail||"Could not load dashboard data."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Could not load reports.</td></tr>`; await attentionTask; return; } const reports=await reportsResponse.json(); dashboardRows=(Array.isArray(reports)?reports:(reports.items||[])).slice().sort((a,b)=>new Date(b.generated_at||0)-new Date(a.generated_at||0)); renderOnboardingState(); document.getElementById("total-reports").textContent=dashboardRows.length; document.getElementById("last-activity").textContent=dashboardRows.length&&dashboardRows[0].generated_at?formatDateLocal(dashboardRows[0].generated_at):"—"; renderReportHealthCards(); renderPipeline(); renderDashboardRows(); if(referralResponse.ok){ renderReferral(await referralResponse.json()); } else { renderReferral({counts:{total:0,signed_up:0,paid:0,rewarded:0},months_awarded:0}); } if(revenueSummaryResponse.ok&&revenuePaymentsResponse.ok){ renderRevenueSummary(await revenueSummaryResponse.json(),await revenuePaymentsResponse.json()); } else { document.getElementById("paid-revenue").textContent="—"; document.getElementById("practitioner-earnings").textContent="—"; document.getElementById("platform-net").textContent="—"; document.getElementById("pending-payments").textContent="—"; renderRevenueActivity([]); renderRevenueChart([]); } renderActionPanel(); } catch(err){ console.error(err); showDashboardError("Unexpected error while loading dashboard."); document.getElementById("reports-table-body").innerHTML=`<tr><td colspan="6">Unexpected error.</td></tr>`; } await attentionTask; window.addEventListener("pagehide",()=>localStorage.setItem(CLINIC_SEEN_KEY,new Date().toISOString()),{once:true}); }
 document.getElementById("dashboard-search")?.addEventListener("input",renderDashboardRows);
 document.querySelectorAll("[data-dashboard-tab]").forEach(btn=>{ btn.addEventListener("click",()=>{ activeDashboardTab=btn.dataset.dashboardTab; renderDashboardRows(); }); });
 document.getElementById("copy-dashboard-referral-btn")?.addEventListener("click",copyReferralLink);
 document.getElementById("side-copy-referral-btn")?.addEventListener("click",copyReferralLink);
 document.getElementById("hero-copy-referral-btn")?.addEventListener("click",copyReferralLink);
+document.getElementById("dashboard-retry")?.addEventListener("click",loadDashboard);
 loadDashboard();
 </script>
 {% endblock %}

@@ -168,3 +168,5 @@ class PatientRead(BaseModel):
     report_count: int = 0
     last_activity_at: Optional[datetime] = None
     data_sources: list[str] = []
+    latest_type: Optional[str] = None
+    latest_on: Optional[date] = None

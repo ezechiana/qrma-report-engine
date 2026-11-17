@@ -166,6 +166,8 @@ def verify_email_token(db: Session, token: str) -> User:
         user.updated_at = utcnow()
 
     db.execute(text("UPDATE email_verification_tokens SET used_at = NOW() WHERE token = :token"), {"token": token})
+    from app.services.patient_claim_service import complete_reserved_claim
+    complete_reserved_claim(db, user)
     db.commit()
     db.refresh(user)
     log_auth_event(db, event_type="email_verify", status="success", user=user, email=user.email)
@@ -305,6 +307,11 @@ def register_user(db: Session, payload: AuthRegisterRequest) -> User:
     db.add(user)
     db.commit()
     db.refresh(user)
+    from app.services.personal_record_service import ensure_personal_record
+    from app.services.user_capability_service import PRACTITIONER, grant_capability
+
+    ensure_personal_record(db, user)
+    grant_capability(db, user, PRACTITIONER)
     log_auth_event(db, event_type="register", status="success", user=user, email=user.email)
     return user
 
@@ -369,6 +376,11 @@ def get_or_create_social_user(
     db.add(user)
     db.commit()
     db.refresh(user)
+    from app.services.personal_record_service import ensure_personal_record
+    from app.services.user_capability_service import PRACTITIONER, grant_capability
+
+    ensure_personal_record(db, user)
+    grant_capability(db, user, PRACTITIONER)
 
     log_auth_event(
         db,

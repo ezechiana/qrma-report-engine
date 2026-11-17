@@ -1,138 +1,76 @@
 from __future__ import annotations
 
 import os
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
 from typing import Any
 
 from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-TRIAL_DAYS = int(os.getenv("SUBSCRIPTION_TRIAL_DAYS", "30"))
-DEFAULT_PLAN_CODE = os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly")
+from app.services.platform_settings_service import FREE_PLAN_FEATURES, SUBSCRIPTION_CONFIG_KEY, _load_json_setting
+
+DEFAULT_PLAN_CODE = os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly"))
 SUBSCRIPTION_REQUIRED = os.getenv("SUBSCRIPTION_REQUIRED", "true").lower() == "true"
 
-ACTIVE_STATUSES = {"trialing", "active"}
-SOFT_BLOCK_STATUSES = {"past_due", "incomplete"}
+FREE_FEATURES = frozenset({"view_existing"})
+PRO_FEATURES = FREE_FEATURES | set(FREE_PLAN_FEATURES)
 
 
-def _utcnow() -> datetime:
-    return datetime.now(timezone.utc)
+def configured_free_features(db: Session) -> frozenset[str]:
+    config = _load_json_setting(db, SUBSCRIPTION_CONFIG_KEY)
+    toggles = config.get("free_features")
+    if not isinstance(toggles, dict):
+        return FREE_FEATURES
+    return FREE_FEATURES | {feature for feature in FREE_PLAN_FEATURES if toggles.get(feature) is True}
 
 
-def _as_aware(dt: datetime | None) -> datetime | None:
-    if not dt:
-        return None
-    if dt.tzinfo is None:
-        return dt.replace(tzinfo=timezone.utc)
-    return dt
-
-
-def ensure_subscription_record(db: Session, user) -> dict[str, Any]:
-    """Ensure every practitioner has a local subscription row.
-
-    V1 policy: new users receive a full-access trial. Older users get a trial row
-    on first access if none exists. Existing Stripe subscription state is preserved.
-    """
+def latest_subscription(db: Session, user) -> dict[str, Any]:
     row = db.execute(
-        text(
-            """
-            SELECT *
-            FROM subscriptions
-            WHERE user_id = :user_id
-            ORDER BY created_at DESC
-            LIMIT 1
-            """
-        ),
+        text("SELECT * FROM subscriptions WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 1"),
         {"user_id": user.id},
     ).mappings().first()
-
-    if row:
-        return dict(row)
-
-    trial_end = _utcnow() + timedelta(days=TRIAL_DAYS)
-    inserted = db.execute(
-        text(
-            """
-            INSERT INTO subscriptions (
-                user_id,
-                plan_code,
-                status,
-                current_period_end,
-                trial_ends_at,
-                created_at,
-                updated_at
-            )
-            VALUES (
-                :user_id,
-                :plan_code,
-                'trialing',
-                :trial_end,
-                :trial_end,
-                NOW(),
-                NOW()
-            )
-            RETURNING *
-            """
-        ),
-        {"user_id": user.id, "plan_code": DEFAULT_PLAN_CODE, "trial_end": trial_end},
-    ).mappings().first()
-    db.commit()
-    return dict(inserted)
+    return dict(row) if row else {}
 
 
-def subscription_status(db: Session, user) -> dict[str, Any]:
-    from app.services.platform_settings_service import is_platform_admin_user
+def _deadline(value: datetime | None) -> datetime | None:
+    if value is not None and value.tzinfo is None:
+        return value.replace(tzinfo=timezone.utc)
+    return value
 
-    if is_platform_admin_user(db, user):
-        return {
-            "subscription_id": None,
-            "status": "platform_admin",
-            "effective_status": "platform_admin",
-            "plan_code": "internal_admin",
-            "trial_ends_at": None,
-            "current_period_end": None,
-            "days_remaining": None,
-            "can_create_reports": True,
-            "can_create_share_bundles": True,
-            "can_view_existing": True,
-            "stripe_customer_id": None,
-            "stripe_subscription_id": None,
-            "cancel_at_period_end": False,
-        }
 
-    sub = ensure_subscription_record(db, user)
-    status = str(sub.get("status") or "incomplete")
-    current_period_end = _as_aware(sub.get("current_period_end"))
-    trial_ends_at = _as_aware(sub.get("trial_ends_at"))
-    now = _utcnow()
+def plan_access(sub: dict[str, Any], *, free_features: frozenset[str] = FREE_FEATURES, platform_admin: bool = False) -> dict[str, Any]:
+    billing_status = sub.get("status")
+    end = _deadline(sub.get("current_period_end"))
+    trial_end = (_deadline(sub.get("trial_ends_at")) or end) if billing_status == "trialing" else None
+    now = datetime.now(timezone.utc)
+    if platform_admin:
+        status, tier = "platform_admin", "internal_admin"
+    elif billing_status == "trialing" and trial_end and trial_end > now:
+        status, tier = "trialing", "pro"
+    elif billing_status == "active" and (end is None or end > now):
+        status, tier = "active", "pro"
+    else:
+        status, tier = "free", "free"
 
-    effective_status = status
-    if status == "trialing" and current_period_end and current_period_end < now:
-        effective_status = "trial_expired"
-    elif status in {"active", "past_due", "incomplete"} and current_period_end and current_period_end < now and status != "active":
-        effective_status = "expired"
-
-    can_create = effective_status in ACTIVE_STATUSES
-    days_remaining = None
-    deadline = current_period_end or trial_ends_at
-    if deadline:
-        days_remaining = max(0, (deadline.date() - now.date()).days)
-
+    features = PRO_FEATURES if tier != "free" or not SUBSCRIPTION_REQUIRED else free_features
     return {
-        "subscription_id": str(sub.get("id")) if sub.get("id") else None,
+        "tier": tier,
         "status": status,
-        "effective_status": effective_status,
-        "plan_code": sub.get("plan_code") or DEFAULT_PLAN_CODE,
-        "trial_ends_at": trial_ends_at.isoformat() if trial_ends_at else None,
-        "current_period_end": current_period_end.isoformat() if current_period_end else None,
-        "days_remaining": days_remaining,
-        "can_create_reports": can_create,
-        "can_create_share_bundles": can_create,
-        "can_view_existing": True,
-        "stripe_customer_id": sub.get("stripe_customer_id"),
-        "stripe_subscription_id": sub.get("stripe_subscription_id"),
-        "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
+        "effective_status": status,
+        "billing_status": billing_status,
+        "plan_code": (sub.get("plan_code") or DEFAULT_PLAN_CODE) if tier == "pro" else tier,
+        "features": sorted(features),
+        "is_active": tier != "free",
+        "can_view_existing": "view_existing" in features,
+        "can_create_reports": "report_generation" in features,
+        "can_create_trend_reports": "trend_report_generation" in features,
+        "can_sell_shares": "sell_shares" in features,
+        "can_create_shares": "share_link" in features,
+        "can_create_bundles": "share_bundle" in features,
+        "can_create_share_bundles": "share_bundle" in features,
+        "current_period_end": end.isoformat() if end else None,
+        "trial_ends_at": trial_end.isoformat() if trial_end else None,
     }
 
 
@@ -141,26 +79,22 @@ def require_subscription_feature(db: Session, user, feature: str = "create") -> 
         return
 
     from app.services.platform_settings_service import is_platform_admin_user
+
     if is_platform_admin_user(db, user):
         return
 
-    state = subscription_status(db, user)
-    if feature == "report_generation" and state["can_create_reports"]:
-        return
-    if feature in {"share_bundle", "share_link"} and state["can_create_share_bundles"]:
-        return
-    if feature == "create" and (state["can_create_reports"] or state["can_create_share_bundles"]):
+    state = plan_access(latest_subscription(db, user), free_features=configured_free_features(db))
+    if feature in state["features"] or (feature == "create" and state["can_create_reports"]):
         return
 
     raise HTTPException(
         status_code=402,
         detail={
             "code": "subscription_required",
-            "message": "Your trial or subscription has expired. Upgrade to continue creating new reports or share bundles.",
+            "message": "Upgrade to Pro to create new reports or shares.",
             "subscription": state,
         },
     )
-
 
 
 def apply_subscription_credits(db: Session, user_id) -> bool:

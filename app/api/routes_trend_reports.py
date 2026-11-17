@@ -116,7 +116,7 @@ def create_trend_report(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    require_subscription_feature(db, current_user, "report_generation")
+    require_subscription_feature(db, current_user, "trend_report_generation")
 
     patient = (
         db.query(Patient)

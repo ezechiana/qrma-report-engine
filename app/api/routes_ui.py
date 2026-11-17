@@ -79,6 +79,33 @@ def login_page(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "title": "Login"})
 
 
+@router.get("/client/records/{patient_id}/reports/{report_id}", response_class=HTMLResponse)
+def client_report_page(request: Request, patient_id: str, report_id: str):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_report.html",
+        context={"request": request, "title": "Your report"},
+    )
+
+
+@router.get("/client/records/{patient_id}/notes/{record_id}", response_class=HTMLResponse)
+def client_note_page(request: Request, patient_id: str, record_id: str):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_note.html",
+        context={"request": request, "title": "Your note"},
+    )
+
+
+@router.get("/client/records/{patient_id}", response_class=HTMLResponse)
+def client_record_page(request: Request, patient_id: str):
+    return templates.TemplateResponse(
+        request=request,
+        name="client_record.html",
+        context={"request": request, "title": "Your record"},
+    )
+
+
 @router.get("/register")
 def register_page(request: Request):
     return templates.TemplateResponse(request=request, name="register.html", context={"request": request, "title": "Register"})

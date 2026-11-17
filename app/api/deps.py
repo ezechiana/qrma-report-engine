@@ -65,7 +65,31 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
+    if _client_blocked_from_practitioner_path(user, request.url.path):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Client accounts cannot use practitioner tools.",
+        )
+
     return user
+
+
+def _client_blocked_from_practitioner_path(user: User, path: str) -> bool:
+    """Keep a claimed client out of practitioner patient, report, and share tools."""
+    if str(getattr(user, "role", "") or "").lower() != "client":
+        return False
+    prefixes = (
+        "/api/patients",
+        "/api/cases",
+        "/api/reports",
+        "/api/share",
+        "/api/billing",
+        "/app",
+    )
+    for prefix in prefixes:
+        if path == prefix or path.startswith(prefix + "/") or path.startswith(prefix + "-"):
+            return True
+    return False
 
 
 

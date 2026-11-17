@@ -104,6 +104,7 @@ class AuthResponse(BaseModel):
 
 class AuthMeResponse(BaseModel):
     user: AuthUserResponse
+    capabilities: list[str] = []
 
 
 class PasswordChangeRequest(BaseModel):

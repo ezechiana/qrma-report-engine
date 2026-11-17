@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "shared/brand_head.html" %}
+    <title>Your note · go360</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        {% include "shared/public_card_styles.html" %}
+        #note-card { width: min(100%, 640px); }
+        #note-card p { white-space: pre-wrap; }
+    </style>
+</head>
+<body>
+<main class="public-page">
+    {% set portal_section = "records" %}
+    {% include "shared/client_portal_header.html" %}
+    <section class="card" id="note-card">
+        <p class="muted">Loading your note…</p>
+    </section>
+</main>
+<script>
+    const card = document.getElementById("note-card");
+
+    function pathParts() {
+        return window.location.pathname.split("/").filter(Boolean);
+    }
+
+    function recordId() {
+        const parts = pathParts();
+        if (parts[0] !== "client" || parts[1] !== "records" || !parts[2]) return "";
+        try {
+            return decodeURIComponent(parts[2]);
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function noteId() {
+        const parts = pathParts();
+        if (parts[3] !== "notes" || !parts[4]) return "";
+        try {
+            return decodeURIComponent(parts[4]);
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function add(parent, tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        parent.appendChild(node);
+        return node;
+    }
+
+    function showMessage(text, isError) {
+        card.textContent = "";
+        add(card, "p", isError ? "error" : "muted", text);
+    }
+
+    function textOf(value) {
+        if (typeof value !== "string") return "";
+        return value.trim();
+    }
+
+    function renderNote(data) {
+        card.textContent = "";
+        const back = add(card, "a", "text-link", "Back to your record");
+        back.href = "/client/records/" + encodeURIComponent(recordId());
+        add(card, "h1", "", textOf(data.title) || "Your note");
+        const when = textOf(data.recorded_on);
+        const source = textOf(data.source_name);
+        if (when || source) add(card, "p", "muted", [when, source].filter(Boolean).join(" · "));
+        const summary = textOf(data.client_summary);
+        if (summary) add(card, "p", "", summary);
+    }
+
+    async function loadNote() {
+        const patientId = recordId();
+        const openedId = noteId();
+        if (!patientId || !openedId) {
+            showMessage("Note not found.", true);
+            return;
+        }
+        try {
+            const me = await fetch("/auth/me", { credentials: "same-origin" });
+            if (me.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (me.ok) {
+                const meData = await me.json().catch(() => ({}));
+                const user = meData.user || {};
+                const role = String(user.role || "").toLowerCase();
+                if (role === "client" && !user.email_verified_at) {
+                    window.location.href = "/login";
+                    return;
+                }
+            }
+
+            const response = await fetch(
+                "/api/client/records/" + encodeURIComponent(patientId) + "/notes/" + encodeURIComponent(openedId),
+                { credentials: "same-origin" }
+            );
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (response.status === 403) {
+                const detail = String(data.detail || "");
+                window.location.href = detail.toLowerCase().includes("verify") ? "/login" : "/app";
+                return;
+            }
+            if (response.status === 404) {
+                showMessage("Note not found.", true);
+                return;
+            }
+            if (!response.ok) {
+                showMessage("Could not load your note.", true);
+                return;
+            }
+            renderNote(data);
+        } catch (err) {
+            showMessage("Could not load your note.", true);
+        }
+    }
+
+    loadNote();
+</script>
+</body>
+</html>

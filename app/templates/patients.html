@@ -48,9 +48,23 @@
 /* === go360 surgical patients mobile patch v1 === */
 @media (max-width:760px){
  .patients-toolbar,.patients-toolbar-left,.patients-toolbar-right{max-width:100%;min-width:0}
- .card:has(> table.table){overflow-x:auto!important;-webkit-overflow-scrolling:touch}
- table.table{min-width:680px}
  .grid-2{grid-template-columns:1fr!important}
+}
+
+.patient-cards { display: none; }
+.patient-card {
+    border: 1px solid var(--line, #e5e7eb);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 12px;
+    background: #fff;
+}
+.patient-card h3 { margin: 0 0 6px; font-size: 18px; }
+.patient-card p { margin: 0 0 6px; color: #64748b; }
+.patient-card a { font-weight: 700; }
+@media (max-width: 900px) {
+    .patients-table-wrap { display: none; }
+    .patient-cards { display: block; }
 }
 
 </style>
@@ -77,6 +91,7 @@
         </div>
     </div>
 
+    <div class="patients-table-wrap">
     <table class="table">
         <thead>
             <tr>
@@ -84,14 +99,17 @@
                 <th>Cases</th>
                 <th>Reports</th>
                 <th>Last activity</th>
+                <th>Latest</th>
                 <th>Source</th>
                 <th></th>
             </tr>
         </thead>
         <tbody id="patients-body">
-            <tr><td colspan="6" class="muted">Loading…</td></tr>
+            <tr><td colspan="7" class="muted">Loading…</td></tr>
         </tbody>
     </table>
+    </div>
+    <div class="patient-cards" id="patient-cards"></div>
 </div>
 
 <div class="card" id="new-patient-card" style="display:none;">
@@ -184,8 +202,12 @@
             rows.sort((a, b) => new Date(b.last_activity_at || b.updated_at || 0) - new Date(a.last_activity_at || a.updated_at || 0));
         }
 
+        const cards = document.getElementById("patient-cards");
+        const emptyCopy = allPatients.length ? "No patients found." : "No patients yet";
+
         if (!rows.length) {
-            tbody.innerHTML = `<tr><td colspan="6"><div class="empty-state">No patients found.</div></td></tr>`;
+            tbody.innerHTML = `<tr><td colspan="7"><div class="empty-state">${emptyCopy}</div></td></tr>`;
+            cards.innerHTML = `<div class="empty-state">${emptyCopy}</div>`;
             return;
         }
 
@@ -195,10 +217,34 @@
                 <td>${safeText(item.case_count || 0)}</td>
                 <td>${safeText(item.report_count || 0)}</td>
                 <td>${formatDate(item.last_activity_at)}</td>
+                <td>${safeText(latestText(item))}</td>
                 <td>${safeText((item.data_sources || []).join(", "), "—")}</td>
                 <td><a class="link" href="/app/patients/${item.id}">Open</a></td>
             </tr>
         `).join("");
+
+        cards.innerHTML = rows.map(item => `
+            <article class="patient-card">
+                <h3>${safeText(normalisePatientName(item))}</h3>
+                <p>${safeText(latestText(item))}</p>
+                <p>Last activity ${formatDate(item.last_activity_at)}</p>
+                <a class="link" href="/app/patients/${item.id}">Open</a>
+            </article>
+        `).join("");
+    }
+
+    function latestText(item) {
+        const type = item && item.latest_type ? String(item.latest_type) : "";
+        if (!type) return "—";
+        const when = item.latest_on ? formatLatestDate(item.latest_on) : "";
+        return when ? `${type} · ${when}` : type;
+    }
+
+    function formatLatestDate(value) {
+        const raw = String(value);
+        const date = new Date(raw.length === 10 ? raw + "T00:00:00" : raw);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString(undefined, { day: "numeric", month: "short" });
     }
 
     async function loadPatients() {

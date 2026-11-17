@@ -1,0 +1,157 @@
+"""Person-initiated clinic association requests.
+
+The person submits an email. The practitioner can accept or decline. The person
+can cancel while the request is pending. Accepting opens a clinic chart and
+does not copy or release the personal record.
+"""
+
+from uuid import UUID
+
+from fastapi import APIRouter, Depends, HTTPException
+from pydantic import BaseModel, Field, field_validator
+from sqlalchemy.orm import Session
+
+from app.api.deps import get_current_user, get_db
+from app.db.models import User
+from app.services.clinic_association_service import (
+    accept_person_request,
+    cancel_person_request,
+    decline_person_request,
+    end_association_for_clinic,
+    end_association_for_person,
+    is_practitioner_account,
+    list_person_requests,
+    request_practitioner_by_email,
+)
+from app.services.today_service import practitioner_attention
+
+router = APIRouter(tags=["association-requests"])
+
+
+class AssociationRequestCreate(BaseModel):
+    practitioner_email: str = Field(max_length=255)
+
+    @field_validator("practitioner_email")
+    @classmethod
+    def required_email(cls, value: str) -> str:
+        cleaned = value.strip()
+        if not cleaned:
+            raise ValueError("Enter the practitioner's email address.")
+        return cleaned
+
+
+@router.post("/api/client/association-requests")
+def create_association_request(
+    body: AssociationRequestCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Ask a practitioner to connect. Handles the person's identity.
+
+    The response does not say whether that email has an account. The stored
+    request has no notes, labs, or wearable values, and no share link is created.
+    """
+    return request_practitioner_by_email(db, current_user, body.practitioner_email)
+
+
+@router.get("/api/association-requests")
+def get_association_requests(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """List pending requests for this practitioner. Handles patient identity.
+
+    Each item is the requester's name and email. Health data is omitted.
+    """
+    return list_person_requests(db, current_user)
+
+
+@router.get("/api/dashboard/attention")
+def get_dashboard_attention(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Attention row for the clinic dashboard.
+
+    Requests are name and email. Released personal items are name, type, and
+    date. Finished reports not in the portal are patient and report title.
+    """
+    if not current_user.email_verified_at:
+        raise HTTPException(status_code=403, detail="Verify your email before opening requests.")
+    if not is_practitioner_account(db, current_user):
+        raise HTTPException(status_code=403, detail="Practitioner account required.")
+    waiting = list_person_requests(db, current_user)
+    attention = practitioner_attention(db, current_user)
+    return {
+        "requests": waiting["requests"],
+        "released_items": attention["released_items"],
+        "unreleased_reports": attention["unreleased_reports"],
+    }
+
+
+@router.post("/api/association-requests/{request_id}/accept")
+def accept_association_request(
+    request_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Accept a pending request. Handles patient identity.
+
+    Opens a clinic chart when needed. Personal notes, labs, wearable values,
+    and share links are left unchanged.
+    """
+    return accept_person_request(db, current_user, request_id)
+
+
+@router.post("/api/association-requests/{request_id}/decline")
+def decline_association_request(
+    request_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Decline a pending request. Handles patient identity.
+
+    The personal record stays with the person. No clinic chart is created.
+    """
+    return decline_person_request(db, current_user, request_id)
+
+
+@router.post("/api/client/association-requests/{request_id}/cancel")
+def cancel_association_request(
+    request_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """Cancel the caller's pending request. Handles patient identity.
+
+    The personal record stays available. No clinic chart is created.
+    """
+    return cancel_person_request(db, current_user, request_id)
+
+
+@router.post("/api/patients/{patient_id}/association/end")
+def end_clinic_association(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """End the active connection for this clinic chart. Handles patient identity.
+
+    Withdraws released items in both directions. The chart, the personal record,
+    and existing share links stay. The response has no clinical values.
+    """
+    return end_association_for_clinic(db, current_user, patient_id)
+
+
+@router.post("/api/client/records/{patient_id}/association/end")
+def end_personal_association(
+    patient_id: UUID,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_user),
+):
+    """End the caller's active connection. Handles patient identity.
+
+    The id may be the personal record or the clinic chart. Released items in
+    both directions are withdrawn. Records and share links stay.
+    """
+    return end_association_for_person(db, current_user, patient_id)

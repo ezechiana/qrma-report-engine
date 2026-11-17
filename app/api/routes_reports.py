@@ -180,6 +180,7 @@ def _serialise_report(report: ReportVersion, db: Session | None = None) -> dict:
     return {
         "id": str(report.id),
         "case_id": str(report.case_id),
+        "patient_id": str(case.patient_id) if case and getattr(case, "patient_id", None) else None,
         "version_number": report.version_number,
         "status": report.status.value if hasattr(report.status, "value") else str(report.status),
         "build_version": getattr(report, "build_version", None),

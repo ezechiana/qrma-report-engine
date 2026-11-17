@@ -17,13 +17,20 @@ def guard(request):
     except ValueError:
         if not (host == 'testclient' and os.environ.get('GO360_ENV') == 'test'):
             raise HTTPException(404)
+def registries():
+    family,bundles=ROOT/'input_family_registry.json',ROOT/'input_bundle_registry.json'
+    if not family.is_file() or not bundles.is_file():
+        raise HTTPException(404)
+    try:
+        return json.loads(family.read_text(encoding='utf-8')),json.loads(bundles.read_text(encoding='utf-8'))
+    except json.JSONDecodeError:
+        raise HTTPException(404)
 @router.get('/review',include_in_schema=False)
 def review(request:Request,market:str='gb',language:str='en'):
     guard(request)
     if (market,language) not in {('gb','en'),('us','en'),('us-es','es'),('ca','en'),('ca-fr','fr'),('pl','pl'),('au','en'),('nz','en')}:
         raise HTTPException(400,'Unsupported edition')
-    registry=json.loads((ROOT/'input_family_registry.json').read_text(encoding='utf-8'))
-    bundles=json.loads((ROOT/'input_bundle_registry.json').read_text(encoding='utf-8'))
+    registry,bundles=registries()
     products=[]
     for p in registry['parents']:
         variants=[{'sku':o['sku'],'name':o['storefront_product_name'],'variant':o.get('variant'),'status':'UK_STOREFRONT_OBSERVED','approved':False} for o in p.get('uk_storefront_observations',[]) if o['market']==market and o['language']==language]

@@ -1,4 +1,4 @@
-# app/services/insight_engine.py
+# legacy/insight_engine.py
 
 from __future__ import annotations
 
