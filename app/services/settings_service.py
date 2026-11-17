@@ -6,7 +6,7 @@ from app.config.product_recommendation_settings import normalize_recommendation_
 from app.db.models import PractitionerSettings, RecommendationMode, User
 
 
-def get_or_create_settings(db: Session, user: User) -> PractitionerSettings:
+def get_or_create_settings(db: Session, user: User, *, commit: bool = True) -> PractitionerSettings:
     settings = (
         db.query(PractitionerSettings)
         .filter(PractitionerSettings.user_id == user.id)
@@ -35,8 +35,11 @@ def get_or_create_settings(db: Session, user: User) -> PractitionerSettings:
         recommendation_mode_default=RecommendationMode.natural_approaches_clinical,
     )
     db.add(settings)
-    db.commit()
-    db.refresh(settings)
+    if commit:
+        db.commit()
+        db.refresh(settings)
+    else:
+        db.flush()
     return settings
 
 

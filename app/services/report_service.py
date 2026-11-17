@@ -333,7 +333,7 @@ def create_report_version(
         return existing
 
     version_number = get_next_version_number(db, case.id)
-    settings = get_or_create_settings(db, user)
+    settings = get_or_create_settings(db, user, commit=False)
     effective_mode = settings.recommendation_mode_default or case.recommendation_mode
 
     report = ReportVersion(
