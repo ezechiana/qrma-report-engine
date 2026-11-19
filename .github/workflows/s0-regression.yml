@@ -1,0 +1,50 @@
+name: S0 foundation regression
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  s0-regression:
+    runs-on: ubuntu-22.04
+    timeout-minutes: 20
+    env:
+      DATABASE_URL: postgresql://localhost/s0_synthetic
+      S3_BUCKET: synthetic-s0-tests
+      AWS_ACCESS_KEY_ID: synthetic
+      AWS_SECRET_ACCESS_KEY: synthetic
+      AWS_DEFAULT_REGION: eu-west-2
+      AWS_EC2_METADATA_DISABLED: "true"
+      OPENAI_API_KEY: ""
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.10"
+          cache: pip
+      - run: pip install -r requirements.txt
+      - run: python -m playwright install --with-deps chromium
+      - name: Verify fixtures and QRMA artifacts
+        run: |
+          mkdir -p artifacts
+          python -m pytest tests/s0 -q -o junit_family=xunit1 --junitxml=artifacts/s0.xml
+      - name: Verify the incorrect clinic fixture fails
+        shell: bash
+        run: |
+          set +e
+          GO360_S0_INJECT_WRONG_CLINIC=1 python -m pytest tests/s0/test_practice_isolation.py -k owner_lists -q > artifacts/incorrect-clinic.txt 2>&1
+          result=$?
+          set -e
+          cat artifacts/incorrect-clinic.txt
+          test "$result" -eq 1
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: s0-regression-evidence
+          path: artifacts/
+          retention-days: 14

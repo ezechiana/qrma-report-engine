@@ -1,0 +1,30 @@
+{
+  "committed_1548a40": {
+    "source_files": {
+      "app/parser/html_parser.py": "36e651f6850bb3e8d927bceab00744c87c32cfacc07143c6813c7143cad61a50",
+      "app/services/pdf_service.py": "4046302d7044f6c8429dc0216cade2faeee2b53665341b382f8e252fd094eba8",
+      "app/services/report_builder.py": "d70b52f9a027fffea50b8ea35487ca18e4c623df4f9ac6bdc89d01e9f17266e9",
+      "app/templates/report.html": "895f0c22f4c882d580857eb81c7bb327ca4b4e80736287c9bb048c92696d3903"
+    },
+    "outputs": {
+      "source_sha256": "8c0bdcb469ee4c2a7334ead1a3923141f7c5f772fbce402c35169d8c14be15eb",
+      "parsed_sha256": "119db5203cc1e4b5802fb46d600f72636ce3ba83fb953f60a0c97eaed5a40733",
+      "viewer_sha256": "465ab2b688c30f9948dba84a402e9c5d9ffa217bcabfd0b31d0df98c759e5420",
+      "html_sha256": "df84f73a0b7ec5a0d78675ad7eae8af8fcaa82c5802f703086e1ba304c644cce"
+    }
+  },
+  "working_2026_11_19": {
+    "source_files": {
+      "app/parser/html_parser.py": "15297be54e549da2e4c187010526b17673123ff5c4c29426451966c91dcbbe30",
+      "app/services/pdf_service.py": "53eed01398a45d508b7e10bf2a36aedac9091c337fd002e29a6d54c35746b200",
+      "app/services/report_builder.py": "91bef60acdc234101e2f8818f506ac66b042d78b50988aef63e068150d1ce4ea",
+      "app/templates/report.html": "89291027b404037735a6844fe4eb961e9d1c0847703dfc162da4e275c5124db7"
+    },
+    "outputs": {
+      "source_sha256": "8c0bdcb469ee4c2a7334ead1a3923141f7c5f772fbce402c35169d8c14be15eb",
+      "parsed_sha256": "0cc2b708cd7a90d1d53419ed68576d76ae440557db4af728773a20999bf4c83a",
+      "viewer_sha256": "701a70902bc579496625698329400f4eed734e5defd8fc9f2dc1b3d1c87c3d14",
+      "html_sha256": "6b61a58589677770878db4d970c28c3c4679903c17f56d8fbef32c68f9abcd5d"
+    }
+  }
+}
