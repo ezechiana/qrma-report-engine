@@ -5,15 +5,27 @@ import os
 from fastapi import APIRouter, Depends
 from sqlalchemy.orm import Session
 
-from app.api.deps import get_db
-from app.schemas.patient_claims import ClaimAccountCreate, ClaimAccountStarted, ClaimInvitePreview
+from app.api.deps import get_current_user, get_db
+from app.db.models import User
+from app.schemas.patient_claims import ClaimAccountCreate, ClaimAccountStarted, ClaimInvitePreview, ClaimInviteAccept
 from app.services.email_service import verification_url
-from app.services.patient_claim_service import begin_client_claim, preview_claim_invite
+from app.services.patient_claim_service import accept_claim_invite, begin_client_claim, preview_claim_invite
 
 router = APIRouter(tags=["client-claim"])
 
 
-@router.get("/claim/{token}", response_model=ClaimInvitePreview)
+@router.post("/api/claim/{token}/accept")
+def accept_patient_claim(
+    token: str,
+    payload: ClaimInviteAccept,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+):
+    invite = accept_claim_invite(db, user, token, payload.consent)
+    return {"ok": True, "patient_id": str(invite.patient_id)}
+
+
+@router.get("/api/claim/{token}", response_model=ClaimInvitePreview)
 def preview_patient_claim(
     token: str,
     db: Session = Depends(get_db),

@@ -1,0 +1,14 @@
+{
+  "issue": "GO3-188",
+  "browser_version": "145.0.7632.6",
+  "checks": [
+    "Session storage supports exact synthetic intent round-trip",
+    "Same-tab reload preserves the original pending key/payload",
+    "Same-origin opener-created tab can copy the pending intent unchanged",
+    "Clearing the opener does NOT clear its copied tab: explicit cross-tab invalidation is needed",
+    "A fresh browser context has no pending journal"
+  ],
+  "count": 5,
+  "tuple_sha256": "709e5be11eb584e8540fb7716a66f694c18ca83278caf47416a263ab89fe7d8d",
+  "limits": "Native browser storage primitives only. No production helper, authentication, authority or privacy sign-off is asserted."
+}

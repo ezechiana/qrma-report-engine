@@ -1,0 +1,78 @@
+{
+  "date": "2026-11-19",
+  "inventory": {
+    "total": 271,
+    "blueprint": 153,
+    "missing": [],
+    "duplicates": [],
+    "badLabels": []
+  },
+  "verification": {
+    "sourceDependencyEdges": 260,
+    "missingSourceEdges": [],
+    "missingTaskEdges": [],
+    "parentErrors": [],
+    "cyclesIncludingCompletion": [],
+    "legacyRoleCoverageMissing": [],
+    "s0UniqueSubtasks": 92
+  },
+  "uiContent": [
+    {
+      "id": "GO3-274",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-230",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-275",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-237",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-222",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-242",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-212",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-233",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-206",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-226",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-211",
+      "hasUiScope": true
+    },
+    {
+      "id": "GO3-232",
+      "hasUiScope": true
+    }
+  ],
+  "coordinator": "Eze Chiana",
+  "specialistPeople": "Must be named before Ready; no appointments invented",
+  "sequenceCounts": {
+    "S0": 21,
+    "S1": 38,
+    "S2": 34,
+    "S3": 38,
+    "S4": 22
+  }
+}

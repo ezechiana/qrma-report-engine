@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block content %}
+<link rel="stylesheet" href="/static/css/clinic-registry.css">
+<section class="clinic-registry" id="clinic-registry" aria-labelledby="cr-title">
+  <a class="cr-skip" href="#cr-content">Skip to clinic administration</a>
+  <div class="cr-intro"><div><h1 id="cr-title">Organisations &amp; clinics</h1><p>Manage the organisations and clinics you administer.</p></div><button class="btn secondary" id="cr-create-org" type="button" hidden>Create organisation</button></div>
+  <div id="cr-message" class="cr-notice" role="status" aria-live="polite" hidden></div>
+  <div id="cr-recovery" class="cr-notice warning" hidden><p id="cr-recovery-text"></p><div class="cr-actions"><button class="btn" id="cr-resume" type="button" hidden>Resume creation</button><button class="btn secondary" id="cr-separate" type="button" hidden>I’ve reviewed the list — start separately</button><button class="btn secondary" id="cr-cleanup" type="button" hidden>Retry storage cleanup</button></div></div>
+  <div id="cr-content" tabindex="-1"><div class="card" role="status" aria-busy="true">Loading organisations…</div></div>
+</section>
+<dialog id="cr-dialog" class="clinic-dialog" aria-labelledby="cr-dialog-title" aria-describedby="cr-dialog-description">
+  <div class="cr-dialog-head"><h2 id="cr-dialog-title">Create clinic</h2><button id="cr-close" type="button" aria-label="Close creation dialog">×</button></div>
+  <div class="cr-dialog-body"><p id="cr-dialog-description"></p><div id="cr-parent" class="cr-parent" hidden></div>
+    <form id="cr-form" novalidate><label id="cr-name-label" for="cr-name">Clinic name</label><input id="cr-name" autocomplete="off" aria-describedby="cr-name-help cr-field-error"><p id="cr-name-help" class="cr-help">Use the name people recognise. Names do not need to be unique.</p><p id="cr-field-error" class="cr-field-error" role="alert" hidden></p>
+      <p id="cr-save-status" role="status" aria-live="polite" hidden></p><div id="cr-save-error" class="cr-notice error" role="alert" tabindex="-1" hidden></div>
+      <p class="cr-help">Registration does not add members, change subscriptions or grant access to patient records.</p>
+      <div class="cr-actions"><button class="btn secondary" id="cr-cancel" type="button">Cancel</button><button class="btn" id="cr-save" type="submit">Create clinic</button></div>
+    </form>
+  </div>
+</dialog>
+<script src="/static/js/clinic-registry.js" defer></script>
+{% endblock %}

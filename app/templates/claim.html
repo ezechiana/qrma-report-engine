@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "shared/brand_head.html" %}
+    <title>Claim your record · go360</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        {% include "shared/public_card_styles.html" %}
+    </style>
+</head>
+<body>
+<main class="public-page">
+    <a class="brand" href="/" aria-label="go360 home">
+        <img src="/static/brand/go360-v1/go360-wordmark-dark.svg" alt="go360">
+    </a>
+    <section class="card" id="claim-card">
+        <p class="muted">Checking your invite…</p>
+    </section>
+</main>
+<script>
+    const claimCard = document.getElementById("claim-card");
+    let invite = null;
+    let sending = false;
+
+    function claimToken() {
+        const parts = window.location.pathname.split("/").filter(Boolean);
+        if (parts[0] !== "claim" || !parts[1]) return "";
+        try {
+            return decodeURIComponent(parts[1]);
+        } catch (err) {
+            return "";
+        }
+    }
+
+    function clearCard() {
+        claimCard.textContent = "";
+    }
+
+    function add(parent, tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        parent.appendChild(node);
+        return node;
+    }
+
+    function formatInviteDate(value) {
+        const date = new Date(value);
+        if (Number.isNaN(date.getTime())) return "";
+        return date.toLocaleDateString("en-GB", { day: "numeric", month: "short", year: "numeric" });
+    }
+
+    function detailMessage(data, fallback) {
+        if (data && typeof data.detail === "string" && data.detail.trim()) return data.detail;
+        return fallback;
+    }
+
+    function passwordProblem(password) {
+        if (password.length < 10) return "Password must be at least 10 characters.";
+        if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+        if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+        if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+        return "";
+    }
+
+    function unavailable(message) {
+        clearCard();
+        add(claimCard, "h1", "", "Claim your record");
+        add(claimCard, "p", "lede", message);
+        const link = add(claimCard, "a", "text-link", "Sign in");
+        link.href = "/login";
+    }
+
+    function showSuccess(email) {
+        clearCard();
+        add(claimCard, "h1", "", "Check your email");
+        add(claimCard, "p", "lede", "Account created. Verify your email to claim this record.");
+        add(claimCard, "p", "muted", "We sent a verification link to " + email + ". Open that link, then sign in.");
+        const link = add(claimCard, "a", "text-link", "Go to sign in");
+        link.href = "/login";
+    }
+
+    function syncSubmit(button, email, password, confirm, consent) {
+        button.disabled = sending || !email.value.trim() || !password.value || !confirm.value || !consent.checked;
+        button.textContent = sending ? "Creating account…" : "Create account";
+    }
+
+    function renderForm(errorText, showSignIn, showResend, kept) {
+        const emailValue = invite && invite.email ? invite.email : "";
+        const name = (invite && invite.client_name && String(invite.client_name).trim()) ? invite.client_name : "you";
+        const clinic = (invite && invite.clinic_name) ? invite.clinic_name : "Your clinic";
+        const when = formatInviteDate(invite && invite.expires_at);
+        clearCard();
+        add(claimCard, "h1", "", "Claim your record");
+        add(claimCard, "p", "lede", clinic + " invited " + name + " to view this record.");
+        if (when) add(claimCard, "p", "muted", "This invite expires on " + when + ".");
+
+        if (errorText) {
+            const error = add(claimCard, "div", "error", errorText);
+            if (showSignIn) {
+                error.appendChild(document.createTextNode(" "));
+                const link = document.createElement("a");
+                link.className = "text-link";
+                link.href = "/login?next=" + encodeURIComponent(window.location.pathname);
+                link.textContent = "Sign in";
+                error.appendChild(link);
+            }
+        }
+
+        const form = document.createElement("form");
+        form.id = "claim-form";
+        claimCard.appendChild(form);
+
+        const emailField = add(form, "div", "field");
+        add(emailField, "label", "", "Email").htmlFor = "claim-email";
+        const email = add(emailField, "input");
+        email.id = "claim-email";
+        email.type = "email";
+        email.value = emailValue;
+        email.readOnly = true;
+        email.autocomplete = "username";
+        add(emailField, "p", "help", "Use this address. It is the one that received the invite.");
+
+        function passwordField(id, label) {
+            const field = add(form, "div", "field");
+            add(field, "label", "", label).htmlFor = id;
+            const wrap = add(field, "div", "input-wrap");
+            const input = add(wrap, "input");
+            input.id = id;
+            input.type = "password";
+            input.autocomplete = "new-password";
+            if (id === "claim-password" && kept) input.value = kept.password || "";
+            if (id === "claim-confirm" && kept) input.value = kept.confirm || "";
+            const toggle = add(wrap, "button", "password-toggle", "👁");
+            toggle.type = "button";
+            toggle.setAttribute("aria-label", "Show password");
+            toggle.addEventListener("click", () => {
+                const showing = input.type === "text";
+                input.type = showing ? "password" : "text";
+                toggle.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+            });
+            return input;
+        }
+
+        const password = passwordField("claim-password", "Password");
+        add(form, "p", "help", "At least 10 characters, with one uppercase letter, one lowercase letter, and one number.");
+        const confirm = passwordField("claim-confirm", "Confirm password");
+
+        const consentRow = add(form, "label", "consent");
+        const consent = add(consentRow, "input");
+        consent.type = "checkbox";
+        consent.id = "claim-consent";
+        consent.checked = !!(kept && kept.consent);
+        add(consentRow, "span", "", invite && invite.consent_text ? invite.consent_text : "");
+
+        const existing = add(form, "button", "secondary-btn", "Accept with my existing account");
+        existing.type = "button";
+        existing.addEventListener("click", async () => {
+            if (!consent.checked) {
+                renderForm("Consent is required to claim this record.", false, false);
+                return;
+            }
+            existing.disabled = true;
+            try {
+                const headers = { "Content-Type": "application/json" };
+                const accessToken = localStorage.getItem("access_token");
+                if (accessToken) headers.Authorization = "Bearer " + accessToken;
+                const response = await fetch("/api/claim/" + encodeURIComponent(claimToken()) + "/accept", {
+                    method: "POST",
+                    credentials: "same-origin",
+                    headers,
+                    body: JSON.stringify({ consent: true }),
+                });
+                if (response.status === 401) {
+                    window.location.href = "/login?next=" + encodeURIComponent(window.location.pathname);
+                    return;
+                }
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok) {
+                    renderForm(detailMessage(data, "This invitation could not be accepted."), true, false);
+                    return;
+                }
+                window.location.href = "/client";
+            } catch (err) {
+                renderForm("This invitation could not be accepted. Try again.", false, false);
+            } finally {
+                existing.disabled = false;
+            }
+        });
+
+        const button = add(form, "button", "primary-btn", "Create account");
+        button.type = "submit";
+        button.id = "claim-submit";
+
+        if (showResend) {
+            const resend = add(claimCard, "button", "secondary-btn", "Send the verification email again");
+            resend.type = "button";
+            resend.addEventListener("click", () => resendVerification(emailValue, resend));
+        }
+
+        function refresh() {
+            syncSubmit(button, email, password, confirm, consent);
+        }
+        [email, password, confirm, consent].forEach((node) => node.addEventListener("input", refresh));
+        consent.addEventListener("change", refresh);
+        refresh();
+
+        form.addEventListener("submit", (event) => {
+            event.preventDefault();
+            submitClaim(email.value.trim(), password.value, confirm.value, consent.checked);
+        });
+    }
+
+    async function resendVerification(email, button) {
+        button.disabled = true;
+        try {
+            const response = await fetch("/auth/resend-verification", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({ email }),
+            });
+            if (!response.ok) {
+                renderForm("Something went wrong. Try again.", false, true);
+                return;
+            }
+            renderForm("If an unverified account exists for this email, a verification email has been sent.", false, true);
+        } catch (err) {
+            renderForm("Something went wrong. Try again.", false, true);
+        }
+    }
+
+    async function submitClaim(email, password, confirm, consent) {
+        if (sending) return;
+        const kept = { password: password, confirm: confirm, consent: consent };
+        if (!consent) {
+            renderForm("Consent is required to create an account and claim this record.", false, false, kept);
+            return;
+        }
+        const invited = String((invite && invite.email) || "").trim().toLowerCase();
+        if (invited && email.toLowerCase() !== invited) {
+            renderForm("Use the email address that received this invite.", false, false, kept);
+            return;
+        }
+        if (password !== confirm) {
+            renderForm("Passwords do not match.", false, false, kept);
+            return;
+        }
+        const weak = passwordProblem(password);
+        if (weak) {
+            renderForm(weak, false, false, kept);
+            return;
+        }
+
+        sending = true;
+        const button = document.getElementById("claim-submit");
+        if (button) {
+            button.disabled = true;
+            button.textContent = "Creating account…";
+        }
+
+        const token = claimToken();
+        try {
+            const response = await fetch("/claim/" + encodeURIComponent(token), {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                credentials: "same-origin",
+                body: JSON.stringify({
+                    email: email,
+                    password: password,
+                    confirm_password: confirm,
+                    consent: true,
+                }),
+            });
+            const data = await response.json().catch(() => ({}));
+            sending = false;
+            if (response.ok) {
+                showSuccess(email);
+                return;
+            }
+            const message = response.status === 502
+                ? "The account was created, but the verification email could not be sent."
+                : detailMessage(data, "Something went wrong. Try again.");
+            if (response.status === 409 && message === "This invite can no longer be used.") {
+                unavailable(message);
+                return;
+            }
+            if (response.status === 404) {
+                unavailable("This invite is no longer available.");
+                return;
+            }
+            renderForm(message, response.status === 409, response.status === 502, kept);
+        } catch (err) {
+            sending = false;
+            renderForm("Something went wrong. Try again.", false, false, kept);
+        }
+    }
+
+    async function loadInvite() {
+        const token = claimToken();
+        if (!token) {
+            unavailable("This invite is no longer available.");
+            return;
+        }
+        try {
+            const response = await fetch("/api/claim/" + encodeURIComponent(token), { credentials: "same-origin" });
+            const data = await response.json().catch(() => ({}));
+            if (response.status === 404) {
+                unavailable("This invite is no longer available.");
+                return;
+            }
+            if (response.status === 409) {
+                unavailable("This invite can no longer be used.");
+                return;
+            }
+            if (!response.ok) {
+                unavailable(detailMessage(data, "This invite is no longer available."));
+                return;
+            }
+            invite = {
+                clinic_name: data.clinic_name,
+                client_name: data.client_name,
+                email: data.email,
+                expires_at: data.expires_at,
+                consent_text: data.consent_text,
+            };
+            renderForm("", false, false);
+        } catch (err) {
+            clearCard();
+            add(claimCard, "h1", "", "Claim your record");
+            add(claimCard, "div", "error", "Something went wrong. Try again.");
+        }
+    }
+
+    loadInvite();
+</script>
+</body>
+</html>

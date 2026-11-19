@@ -1,0 +1,18 @@
+{
+  "version": 1,
+  "clinics": [
+    {"key": "clinic_a", "name": "Synthetic North Clinic", "owner": "owner_a", "patient": "patient_a", "patient_name": "Alex Morgan"},
+    {"key": "clinic_b", "name": "Synthetic South Clinic", "owner": "owner_b", "patient": "patient_b", "patient_name": "Alexa Morgan"}
+  ],
+  "target_memberships": [
+    {"actor": "shared_practitioner", "clinic": "clinic_a", "role": "practitioner"},
+    {"actor": "shared_practitioner", "clinic": "clinic_b", "role": "billing_admin"}
+  ],
+  "actor_without_membership": "outsider",
+  "target_role_assertions": [
+    "shared_practitioner can perform permitted clinical work in clinic_a",
+    "shared_practitioner cannot sign a clinical note in clinic_b",
+    "outsider cannot open either clinic chart",
+    "revoking clinic_a membership preserves authorised clinic_b access"
+  ]
+}
