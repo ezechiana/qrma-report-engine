@@ -110,7 +110,7 @@ def default_platform_settings() -> dict[str, Any]:
             "trigger": "referred_user_becomes_paid",
         },
         "subscription": {
-            "free_features": dict.fromkeys(FREE_PLAN_FEATURES, False),
+            "free_features": dict.fromkeys(FREE_PLAN_FEATURES, True),
             "trial_days": _int_env("SUBSCRIPTION_TRIAL_DAYS", 30),
             "plan_code": os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly")),
             "plan_name": os.getenv("SUBSCRIPTION_PLAN_NAME", "go360 Practitioner"),
@@ -131,6 +131,7 @@ def default_platform_settings() -> dict[str, Any]:
             "country": os.getenv("STRIPE_CONNECT_COUNTRY", "GB"),
             "fallback_to_platform": _bool_env("STRIPE_CONNECT_FALLBACK_TO_PLATFORM", True),
             "platform_fee_percent": _float_env("STRIPE_PLATFORM_FEE_PERCENT", 15.0),
+            "pro_platform_fee_percent": 5.0,
             "platform_fee_fixed_amount": _int_env("STRIPE_PLATFORM_FEE_FIXED_AMOUNT", 0),
         },
         "report": {
@@ -168,6 +169,8 @@ def get_platform_settings(db: Session) -> dict[str, Any]:
         "report": _load_json_setting(db, REPORT_CONFIG_KEY, defaults["report"]),
         "features": _load_json_setting(db, FEATURE_FLAGS_CONFIG_KEY, defaults["features"]),
     }
+    settings["subscription"]["free_features"] = free_feature_settings(settings["subscription"])
+
     # Defensive normalisation.
     settings["revenue"]["fee_model"] = settings["revenue"].get("fee_model") if settings["revenue"].get("fee_model") in VALID_FEE_MODELS else defaults["revenue"]["fee_model"]
     settings["revenue"]["default_currency"] = _currency(settings["revenue"].get("default_currency"), defaults["revenue"]["default_currency"])
@@ -176,6 +179,12 @@ def get_platform_settings(db: Session) -> dict[str, Any]:
     for key, default_value in defaults["features"].items():
         settings["features"][key] = bool(settings["features"].get(key, default_value))
     return settings
+
+
+def free_feature_settings(subscription: dict[str, Any]) -> dict[str, bool]:
+    flags = subscription.get("free_features")
+    flags = flags if isinstance(flags, dict) else {}
+    return {feature: flags.get(feature, True) is True for feature in FREE_PLAN_FEATURES}
 
 
 def save_platform_settings(db: Session, payload: dict[str, Any]) -> dict[str, Any]:
@@ -188,6 +197,20 @@ def save_platform_settings(db: Session, payload: dict[str, Any]) -> dict[str, An
             for key, value in free_features.items()
         ):
             raise HTTPException(status_code=422, detail="Free plan features must be known feature names with boolean values.")
+    connect = payload.get("stripe_connect")
+    if isinstance(connect, dict):
+        settings = {**current["stripe_connect"], **connect}
+        free = settings.get("platform_fee_percent")
+        pro = settings.get("pro_platform_fee_percent")
+        fixed = settings.get("platform_fee_fixed_amount")
+        if (
+            type(free) not in (int, float)
+            or type(pro) not in (int, float)
+            or not 0 <= pro <= free <= 100
+            or type(fixed) is not int
+            or fixed < 0
+        ):
+            raise HTTPException(status_code=422, detail="Commission rates must satisfy 0 ≤ Pro ≤ Free ≤ 100 and the fixed fee must be a non-negative integer.")
     key_map = {
         "platform": PLATFORM_CONFIG_KEY,
         "revenue": REVENUE_CONFIG_KEY,

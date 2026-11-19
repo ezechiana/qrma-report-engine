@@ -40,7 +40,8 @@ def _route_set(router):
 
 def test_claim_account_routes_stay_off_share_links():
     assert _route_set(routes_patient_claims.router) == {
-        ("/claim/{token}", "GET"),
+        ("/api/claim/{token}", "GET"),
+        ("/api/claim/{token}/accept", "POST"),
         ("/claim/{token}", "POST"),
     }
     share_paths = [route.path for route in routes_share.router.routes]
@@ -133,7 +134,7 @@ def test_client_previews_consents_verifies_and_claims(monkeypatch):
         client = TestClient(app)
         password = "ClientPass1"
 
-        preview = client.get(f"/claim/{raw_token}")
+        preview = client.get(f"/api/claim/{raw_token}")
         assert preview.status_code == 200
         shown = preview.json()
         assert shown["clinic_name"] == "North Clinic"
@@ -211,7 +212,7 @@ def test_client_previews_consents_verifies_and_claims(monkeypatch):
         assert invite.claimed_by_user_id == account.id
         assert invite.accepted_at is not None
 
-        used = client.get(f"/claim/{raw_token}")
+        used = client.get(f"/api/claim/{raw_token}")
         assert used.status_code == 409
         again = client.post(
             f"/claim/{raw_token}",
@@ -247,9 +248,9 @@ def test_client_previews_consents_verifies_and_claims(monkeypatch):
         )
         db.add_all([expired, cancelled])
         db.commit()
-        assert client.get("/claim/expired-token").status_code == 409
-        assert client.get("/claim/cancelled-token").status_code == 409
-        assert client.get("/claim/missing-token").status_code == 404
+        assert client.get("/api/claim/expired-token").status_code == 409
+        assert client.get("/api/claim/cancelled-token").status_code == 409
+        assert client.get("/api/claim/missing-token").status_code == 404
         db.close()
     finally:
         for column, kind in originals:

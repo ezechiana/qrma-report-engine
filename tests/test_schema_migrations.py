@@ -8,7 +8,7 @@ os.environ.setdefault("DATABASE_URL", "postgresql://localhost/qrma_import_check"
 from fastapi.testclient import TestClient
 
 from app import main as app_main
-from app.db.migrate import sql_statements
+from app.db.migrate import MIGRATIONS_DIR, ordered_migrations, sql_statements
 
 
 def test_sql_statements_keep_casts_and_quoted_semicolons():
@@ -28,6 +28,14 @@ def test_sql_statements_keep_casts_and_quoted_semicolons():
     assert "claimed_by_user_id" in statements[0]
     assert "keep; this" in statements[1]
     assert "'{}'::jsonb" in statements[2]
+
+
+def test_claim_invite_table_precedes_acceptance_without_renaming_migrations():
+    filenames = [path.name for path in ordered_migrations()]
+    assert sorted(filenames) == sorted(path.name for path in MIGRATIONS_DIR.glob("*.sql"))
+    assert filenames.index("20261115_patient_claim_invites.sql") < filenames.index(
+        "20261115_patient_claim_acceptance.sql"
+    )
 
 
 def test_claim_migration_includes_the_patient_column():

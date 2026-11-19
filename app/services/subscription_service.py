@@ -8,7 +8,7 @@ from fastapi import HTTPException
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from app.services.platform_settings_service import FREE_PLAN_FEATURES, SUBSCRIPTION_CONFIG_KEY, _load_json_setting
+from app.services.platform_settings_service import FREE_PLAN_FEATURES, SUBSCRIPTION_CONFIG_KEY, _load_json_setting, free_feature_settings
 
 DEFAULT_PLAN_CODE = os.getenv("DEFAULT_SUBSCRIPTION_PLAN_CODE", os.getenv("SUBSCRIPTION_PLAN_CODE", "practitioner_monthly"))
 SUBSCRIPTION_REQUIRED = os.getenv("SUBSCRIPTION_REQUIRED", "true").lower() == "true"
@@ -19,16 +19,17 @@ PRO_FEATURES = FREE_FEATURES | set(FREE_PLAN_FEATURES)
 
 def configured_free_features(db: Session) -> frozenset[str]:
     config = _load_json_setting(db, SUBSCRIPTION_CONFIG_KEY)
-    toggles = config.get("free_features")
-    if not isinstance(toggles, dict):
-        return FREE_FEATURES
-    return FREE_FEATURES | {feature for feature in FREE_PLAN_FEATURES if toggles.get(feature) is True}
+    return FREE_FEATURES | {feature for feature, enabled in free_feature_settings(config).items() if enabled}
 
 
 def latest_subscription(db: Session, user) -> dict[str, Any]:
+    return latest_subscription_for_user(db, user.id)
+
+
+def latest_subscription_for_user(db: Session, user_id) -> dict[str, Any]:
     row = db.execute(
         text("SELECT * FROM subscriptions WHERE user_id = :user_id ORDER BY created_at DESC LIMIT 1"),
-        {"user_id": user.id},
+        {"user_id": user_id},
     ).mappings().first()
     return dict(row) if row else {}
 
@@ -74,16 +75,31 @@ def plan_access(sub: dict[str, Any], *, free_features: frozenset[str] = FREE_FEA
     }
 
 
+def effective_access(db: Session, user, *, subscription: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Commercial access for the effective actor; never the restoring admin.
+
+    Billing remains factual. Resource authority and integration readiness are
+    separate checks and are not granted by an entitlement.
+    """
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    sub = latest_subscription(db, user) if subscription is None else subscription
+    admin = is_platform_admin_user(db, user)
+    access = plan_access(sub, free_features=configured_free_features(db), platform_admin=admin)
+    return {**access, "is_platform_admin": admin,
+            "entitlement_source": "platform_admin" if admin else "subscription",
+            "billing_plan_code": sub.get("plan_code")}
+
+
 def require_subscription_feature(db: Session, user, feature: str = "create") -> None:
+    if feature == "sell_shares":
+        from app.services.platform_settings_service import is_feature_enabled
+        if not is_feature_enabled(db, "paid_shares_enabled"):
+            raise HTTPException(status_code=403, detail="Paid sharing is currently disabled by the platform.")
     if not SUBSCRIPTION_REQUIRED:
         return
 
-    from app.services.platform_settings_service import is_platform_admin_user
-
-    if is_platform_admin_user(db, user):
-        return
-
-    state = plan_access(latest_subscription(db, user), free_features=configured_free_features(db))
+    state = effective_access(db, user)
     if feature in state["features"] or (feature == "create" and state["can_create_reports"]):
         return
 

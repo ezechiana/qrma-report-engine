@@ -53,6 +53,8 @@ async def confirm(bind, owner_id, assessment_id, payload, observation=None):
                 try:
                     report = await generate_report_version(tx, case, user, job_id=str(row.job_id))
                     row.report_id, row.state = report.id, 'completed'
+                except HTTPException:
+                    raise
                 except Exception:
                     # Existing builder records a failed version. Preserve its ID
                     # so retries of confirmation never create another version.

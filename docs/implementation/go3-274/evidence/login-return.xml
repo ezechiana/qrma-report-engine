@@ -1,0 +1,1 @@
+<?xml version="1.0" encoding="utf-8"?><testsuites><testsuite name="pytest" errors="0" failures="0" skipped="0" tests="1" time="2.914" timestamp="2026-11-19T22:03:37.222797" hostname="SWAN25"><testcase classname="tests.test_clinic_registry_access" name="test_client_login_return_is_limited_to_exact_registry_page" time="0.293" /></testsuite></testsuites>

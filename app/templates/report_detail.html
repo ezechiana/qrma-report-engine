@@ -58,6 +58,11 @@
 <div class="card">
     <h3 id="actions-heading">Report actions</h3>
     <div class="action-grid" id="actions-grid"></div>
+    <div id="new-version-actions" hidden style="margin-top:16px;">
+        <button class="btn secondary" type="button" id="create-report-version-btn" disabled aria-describedby="new-version-help new-version-status">Create new report version</button>
+        <p class="muted" id="new-version-help">Generate again from this scan. Existing versions and share links stay unchanged. Your Assessment allowance applies where limited.</p>
+        <p class="muted" id="new-version-status" role="status"></p>
+    </div>
 </div>
 
 <div class="card">
@@ -65,6 +70,11 @@
     <p class="muted" id="share-description" style="margin-top:0;">Create a secure client link.</p>
 
     <div class="share-grid">
+        <div class="field" id="share-price-field" hidden>
+            <label for="share-price">Price (GBP)</label>
+            <input id="share-price" type="number" min="0" max="999999.99" step="0.01" placeholder="Leave blank for free" disabled aria-describedby="share-price-help" />
+            <p id="share-price-help" class="muted">Leave blank or enter 0 for an unpaid link.</p>
+        </div>
         <div class="field">
             <label>Expires in days</label>
             <input id="share-expires-days" type="number" min="1" step="1" value="7" />
@@ -94,6 +104,8 @@ let currentReport = null;
 let portalPatientId = null;
 let portalRelease = null;
 let portalBusy = false;
+let generatingVersion = false;
+let reportAccess = null;
 
 function setError(msg) {
     const box = document.getElementById("error-box");
@@ -427,6 +439,7 @@ async function loadReport() {
             : "This assessment report represents one QRMA scan and the generated clinical-style report output.";
         renderMetadata(currentReport);
         renderActions(currentReport);
+        renderSharePermission(reportAccess);
         await loadPortalRelease(currentReport);
         await renderSourceReports(currentReport);
     } catch (err) {
@@ -444,8 +457,21 @@ async function createShareLink() {
     }
 
     try {
+        const priceText = document.getElementById("share-price").disabled ? "" : document.getElementById("share-price").value.trim();
+        if (priceText && !/^\d+(?:\.\d{1,2})?$/.test(priceText)) {
+            document.getElementById("share-feedback").textContent = "Enter a non-negative price with at most two decimal places.";
+            return;
+        }
+        const [whole, fraction = ""] = (priceText || "0").split(".");
+        const priceAmount = Number(whole) * 100 + Number(fraction.padEnd(2, "0"));
+        if (!Number.isSafeInteger(priceAmount) || priceAmount > 99999999) {
+            document.getElementById("share-feedback").textContent = "Enter a price no higher than GBP 999,999.99.";
+            return;
+        }
         const expiresDays = Number(document.getElementById("share-expires-days").value || 7);
         const payload = {
+            price_amount: priceAmount || null,
+            price_currency: "gbp",
             password: document.getElementById("share-password").value || null,
             expires_in_days: Number.isFinite(expiresDays) ? expiresDays : 7,
             share_type: isTrend(currentReport) ? "trend" : "assessment",
@@ -459,7 +485,7 @@ async function createShareLink() {
         const data = await response.json().catch(() => ({}));
         if (!response.ok) {
             if (response.status === 402 && data.detail?.code === "subscription_required") {
-                renderSharePermission(false);
+                renderSharePermission(null);
             } else {
                 document.getElementById("share-feedback").textContent = typeof data.detail === "string" ? data.detail : "Could not create share link. Try again.";
             }
@@ -476,19 +502,64 @@ async function createShareLink() {
     }
 }
 
-function renderSharePermission(allowed) {
+function renderSharePermission(state) {
+    reportAccess = state;
+    const allowed = Boolean(state?.features?.includes("share_link"));
+    const priceEntitled = allowed && state?.features?.includes("sell_shares");
+    const sell = priceEntitled && state.paid_shares_enabled !== false;
     for (const id of ["create-share-link-btn", "share-expires-days", "share-password"]) {
         document.getElementById(id).disabled = !allowed;
     }
-    document.getElementById("share-feedback").textContent = allowed ? "" : "Your current plan does not include individual share links.";
+    document.getElementById("share-price-field").hidden = !priceEntitled;
+    document.getElementById("share-price").disabled = !sell;
+    document.getElementById("share-price-help").textContent = priceEntitled && !sell ? "Paid sharing is currently disabled by the platform. Unpaid links remain available." : "Leave blank or enter 0 for an unpaid link.";
+    if (!sell) document.getElementById("share-price").value = "";
+    document.getElementById("share-feedback").textContent = allowed ? "" : "Your current access does not include individual share links.";
+    document.getElementById("new-version-actions").hidden = !currentReport || isTrend(currentReport);
+    document.getElementById("create-report-version-btn").disabled = generatingVersion || !state?.features?.includes("report_generation");
 }
-
-AppBus.on("subscription:updated", state => renderSharePermission(state.features?.includes("share_link")));
+AppBus.on("subscription:updated", renderSharePermission);
 AppBus.on("subscription:error", () => {
-    renderSharePermission(false);
-    document.getElementById("share-feedback").textContent = "Could not check sharing permissions. Reload the page to try again.";
+    renderSharePermission(null);
+    document.getElementById("share-feedback").textContent = "Could not check permissions. Reload the page to try again.";
 });
-if (AppState.subscription) renderSharePermission(AppState.subscription.features?.includes("share_link"));
+if (AppState.subscription) renderSharePermission(AppState.subscription);
+
+async function createNewReportVersion() {
+    if (generatingVersion || !currentReport || isTrend(currentReport)) return;
+    generatingVersion = true;
+    renderSharePermission(reportAccess);
+    const status = document.getElementById("new-version-status");
+    status.textContent = "Generating a new version… This may take a minute.";
+    const controller = new AbortController(), timeout = setTimeout(() => controller.abort(), 120000);
+    try {
+        const me = await appFetch("/auth/me");
+        if (!me.ok) throw new Error("Sign in again before creating a new version.");
+        const actor = (await me.json()).user?.id;
+        const caseId = currentReport.case_id;
+        if (!actor || !caseId) throw new Error("Could not verify the account or scan.");
+        const storage = "go360:assessment-request:" + actor + ":" + caseId;
+        let key;
+        try {
+            key = sessionStorage.getItem(storage) || crypto.randomUUID();
+            sessionStorage.setItem(storage, key);
+            if (sessionStorage.getItem(storage) !== key) throw new Error();
+        } catch (_) { throw new Error("Browser recovery storage is unavailable. Nothing was sent."); }
+        const response = await appFetch("/api/cases/" + caseId + "/generate-report", {
+            method: "POST", headers: {"Idempotency-Key": key}, signal: controller.signal
+        });
+        const data = await response.json().catch(() => ({}));
+        if (!response.ok) throw new Error(typeof data.detail === "string" ? data.detail : data.detail?.message || "Could not confirm the new version. Retry to check the same request.");
+        if (!/^[0-9a-f-]{36}$/i.test(data.report_version_id || "")) throw new Error("Could not confirm the new version. Retry to check the same request.");
+        try { sessionStorage.removeItem(storage); } catch (_) {}
+        window.location.assign("/app/reports/" + data.report_version_id);
+    } catch (error) {
+        status.textContent = error.name === "AbortError" ? "The result could not be confirmed. Retry to check the same request." : error.message;
+    } finally {
+        clearTimeout(timeout); generatingVersion = false; renderSharePermission(reportAccess);
+    }
+}
+document.getElementById("create-report-version-btn").addEventListener("click", createNewReportVersion);
 
 document.getElementById("create-share-link-btn").addEventListener("click", createShareLink);
 document.getElementById("actions-grid").addEventListener("click", (event) => {

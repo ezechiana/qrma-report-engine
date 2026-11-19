@@ -121,6 +121,19 @@ def _send_verification_for_user(db: CurrentDB, user, *, event_context: str = "ve
     return {"token": token, "email_result": result}
 
 
+def _after_login_path(user, next_path: str | None) -> str:
+    """Send a client to their record. Leave practitioners on the workspace path."""
+    role = str(getattr(user, "role", "") or "").lower()
+    if role == "client":
+        chosen = safe_next_path(next_path, default="/client") if next_path else "/client"
+        if chosen.split("?", 1)[0].split("#", 1)[0] == "/app/organisations":
+            return chosen  # The exact registry page rechecks live authority.
+        if chosen == "/client" or chosen.startswith("/client/") or chosen.startswith("/claim/"):
+            return chosen
+        return "/client"
+    return safe_next_path(next_path, default="/app")
+
+
 def _login_redirect_response(auth: dict, *, next_path: str = "/app", status_code: int = status.HTTP_303_SEE_OTHER) -> RedirectResponse:
     response = RedirectResponse(url=safe_next_path(next_path), status_code=status_code)
     _set_session_cookies(response, auth)
@@ -323,7 +336,7 @@ def social_login_callback(
         )
 
         auth = build_auth_response(user)
-        return _login_redirect_response(auth, next_path=state_payload.get("next") or "/app")
+        return _login_redirect_response(auth, next_path=_after_login_path(user, state_payload.get("next")))
 
     except Exception as exc:
         db.rollback()

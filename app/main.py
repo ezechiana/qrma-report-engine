@@ -10,6 +10,8 @@ from fastapi.responses import HTMLResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
+from app.api import routes_share
+from app.api.routes_clinics import router as clinics_router
 from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router, pages_router as auth_pages_router
 from app.api.routes_cases import router as cases_router
@@ -44,6 +46,7 @@ from app.db import connector_models
 from app.db.base import Base
 from app.db.session import engine
 from app.db.migrate import run_migrations
+from app.services.module_registry import get_module_registry
 from app.middleware.domain_routing import DomainRoutingMiddleware
 from app.api.routes_webhooks import router as webhooks_router
 
@@ -65,6 +68,7 @@ async def lifespan(app: FastAPI):
     - Allows startup even if DB is temporarily unavailable during first boot.
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
+    get_module_registry()
     # Railway release schemas are applied explicitly before deployment.
     if APP_ENV in {"dev", "development", "local", "test"}:
         run_migrations(engine)
@@ -179,6 +183,7 @@ def create_app() -> FastAPI:
     app.include_router(revenue_router)
     app.include_router(share_pages_router)
     app.include_router(platform_settings_router)
+    app.include_router(clinics_router)
     app.include_router(referrals_router)
     app.include_router(platform_monitoring_router)
     app.include_router(platform_users_router)

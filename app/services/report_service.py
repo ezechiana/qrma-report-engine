@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import asyncio
 import os
+from uuid import uuid4
 from pathlib import Path
 from typing import Optional
 
@@ -9,6 +11,7 @@ from sqlalchemy.orm import Session
 
 from app.db.models import Case, CaseStatus, ReportStatus, ReportVersion, User
 from app.services.audit_service import log_action
+from app.services.assessment_quota import assessment_period, check_assessment_slot, reserve_assessment, settle_assessment
 from app.services.report_builder import build_report
 from app.services.settings_service import get_or_create_settings
 from app.services.scan_import_service import load_case_html
@@ -316,13 +319,21 @@ def create_report_version(
     case: Case,
     user: User,
     job_id: Optional[str] = None,
+    request_key: str | None = None,
 ) -> ReportVersion:
     """
     Create a queued report version row before generation starts.
     This is the SaaS-safe lifecycle entry point.
     """
+    key = request_key or (f"connector:{job_id}" if job_id else f"generated:{uuid4()}")
+    period = assessment_period()
+    existing = check_assessment_slot(db, user, case.id, key, period)
+    if existing is not None:
+        db.commit()
+        return existing
+
     version_number = get_next_version_number(db, case.id)
-    settings = get_or_create_settings(db, user)
+    settings = get_or_create_settings(db, user, commit=False)
     effective_mode = settings.recommendation_mode_default or case.recommendation_mode
 
     report = ReportVersion(
@@ -342,22 +353,32 @@ def create_report_version(
         error_message=None,
     )
     db.add(report)
+    db.flush()
+    reserve_assessment(db, report, key, period[0])
 
     case.status = CaseStatus.queued
     db.commit()
     db.refresh(report)
 
-    log_action(
-        db,
-        action="report_queued",
-        user_id=user.id,
-        case_id=case.id,
-        report_version_id=report.id,
-        metadata_json={
-            "version_number": version_number,
-            "job_id": job_id,
-        },
-    )
+    try:
+        log_action(
+            db,
+            action="report_queued",
+            user_id=user.id,
+            case_id=case.id,
+            report_version_id=report.id,
+            metadata_json={
+                "version_number": version_number,
+                "job_id": job_id,
+            },
+        )
+    except Exception:
+        db.rollback()
+        report.status = ReportStatus.failed
+        case.status = CaseStatus.failed
+        settle_assessment(db, report.id, succeeded=False)
+        db.commit()
+        raise
 
     return report
 
@@ -477,33 +498,19 @@ async def build_report_version(
             report.failed_at = None
 
         case.status = CaseStatus.generated
-
+        settle_assessment(db, report.id, succeeded=True)
         db.commit()
-        db.refresh(report)
 
-        log_action(
-            db,
-            action="report_generated",
-            user_id=user.id,
-            case_id=case.id,
-            report_version_id=report.id,
-            metadata_json={"version_number": version_number},
-        )
-
-        return report
-
-    except Exception as exc:
+    except (Exception, asyncio.CancelledError) as exc:
+        if not db.is_active:
+            db.rollback()
         report.status = ReportStatus.failed
         report.error_message = str(exc)
-
         if hasattr(report, "failed_at"):
             report.failed_at = func.now()
-
         case.status = CaseStatus.failed
-
+        settle_assessment(db, report.id, succeeded=False)
         db.commit()
-        db.refresh(report)
-
         log_action(
             db,
             action="report_generation_failed",
@@ -512,8 +519,18 @@ async def build_report_version(
             report_version_id=report.id,
             metadata_json={"error": str(exc)},
         )
-
         raise
+
+    db.refresh(report)
+    log_action(
+        db,
+        action="report_generated",
+        user_id=user.id,
+        case_id=case.id,
+        report_version_id=report.id,
+        metadata_json={"version_number": version_number},
+    )
+    return report
 
 
 async def generate_report_version(
@@ -521,6 +538,7 @@ async def generate_report_version(
     case: Case,
     user: User,
     job_id: Optional[str] = None,
+    request_key: str | None = None,
 ) -> ReportVersion:
     """
     Backward-compatible convenience wrapper.
@@ -531,6 +549,7 @@ async def generate_report_version(
     Internally it now follows the SaaS lifecycle:
     queued -> processing -> ready/failed
     """
-    report = create_report_version(db=db, case=case, user=user, job_id=job_id)
-    report = await build_report_version(db=db, report=report, case=case, user=user)
-    return report
+    report = create_report_version(db=db, case=case, user=user, job_id=job_id, request_key=request_key)
+    if report.status == ReportStatus.ready:
+        return report
+    return await build_report_version(db=db, report=report, case=case, user=user)

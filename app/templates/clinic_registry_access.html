@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" aria-labelledby="registry-access-title">
+  <h1 id="registry-access-title">{% if signed_out %}Your session has ended{% else %}Clinic administration is unavailable{% endif %}</h1>
+  <p>{% if signed_out %}Sign in to continue to organisations and clinics.{% else %}You need an active, verified practitioner or platform administrator account to manage organisations and clinics.{% endif %}</p>
+  {% if signed_out %}<a class="btn" href="{{ login_url }}">Sign in</a>{% else %}<a class="btn secondary" href="/app/organisations">Check again</a>{% endif %}
+  <a class="btn secondary" href="/">Return home</a>
+</section>
+{% endblock %}

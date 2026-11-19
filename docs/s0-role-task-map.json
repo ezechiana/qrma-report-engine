@@ -1,0 +1,183 @@
+{
+  "date": "2026-11-19",
+  "core": {
+    "GO360-003": {
+      "contract": "GO3-184",
+      "implementation": "GO3-206",
+      "verification": "GO3-226",
+      "release": "GO3-247"
+    },
+    "GO360-004": {
+      "contract": "GO3-185",
+      "implementation": "GO3-205",
+      "verification": "GO3-227",
+      "release": "GO3-248"
+    },
+    "GO360-006": {
+      "contract": "GO3-187",
+      "implementation": "GO3-207",
+      "verification": "GO3-229",
+      "release": "GO3-249"
+    },
+    "GO360-007": {
+      "contract": "GO3-186",
+      "implementation": "GO3-209",
+      "verification": "GO3-228",
+      "release": "GO3-252"
+    },
+    "GO360-008": {
+      "contract": "GO3-188",
+      "implementation": "GO3-210",
+      "verification": "GO3-230",
+      "release": "GO3-251"
+    },
+    "GO360-012": {
+      "contract": "GO3-189",
+      "implementation": "GO3-208",
+      "verification": "GO3-231",
+      "release": "GO3-250"
+    },
+    "GO360-073": {
+      "contract": "GO3-190",
+      "implementation": "GO3-211",
+      "verification": "GO3-232",
+      "release": "GO3-253"
+    },
+    "GO360-074": {
+      "contract": "GO3-191",
+      "implementation": "GO3-212",
+      "verification": "GO3-233",
+      "release": "GO3-255"
+    },
+    "MOD-001": {
+      "contract": "GO3-193",
+      "implementation": "GO3-213",
+      "verification": "GO3-235",
+      "release": "GO3-254"
+    },
+    "GO360-005": {
+      "contract": "GO3-192",
+      "implementation": "GO3-214",
+      "verification": "GO3-234",
+      "release": "GO3-256"
+    },
+    "GO360-014": {
+      "contract": "GO3-194",
+      "implementation": "GO3-216",
+      "verification": "GO3-236",
+      "release": "GO3-257"
+    },
+    "GO360-017": {
+      "contract": "GO3-195",
+      "implementation": "GO3-215",
+      "verification": "GO3-237",
+      "release": "GO3-258"
+    },
+    "GO360-120": {
+      "contract": "GO3-197",
+      "implementation": "GO3-220",
+      "verification": "GO3-238",
+      "release": "GO3-259"
+    },
+    "MOD-002": {
+      "contract": "GO3-198",
+      "implementation": "GO3-218",
+      "verification": "GO3-239",
+      "release": "GO3-260"
+    },
+    "GO360-001": {
+      "contract": "GO3-196",
+      "implementation": "GO3-217",
+      "verification": "GO3-240",
+      "release": "GO3-261"
+    },
+    "GO360-010": {
+      "contract": "GO3-200",
+      "implementation": "GO3-219",
+      "verification": "GO3-241",
+      "release": "GO3-262"
+    },
+    "GO360-018": {
+      "contract": "GO3-199",
+      "implementation": "GO3-222",
+      "verification": "GO3-242",
+      "release": "GO3-264"
+    },
+    "MOD-003": {
+      "contract": "GO3-201",
+      "implementation": "GO3-221",
+      "verification": "GO3-243",
+      "release": "GO3-263"
+    },
+    "MOD-016": {
+      "contract": "GO3-202",
+      "implementation": "GO3-223",
+      "verification": "GO3-245",
+      "release": "GO3-265"
+    },
+    "GO360-002": {
+      "contract": "GO3-204",
+      "implementation": "GO3-225",
+      "verification": "GO3-244",
+      "release": "GO3-266"
+    },
+    "MOD-004": {
+      "contract": "GO3-203",
+      "implementation": "GO3-224",
+      "verification": "GO3-246",
+      "release": "GO3-267"
+    }
+  },
+  "ui": {
+    "GO360-008": {
+      "design": "GO3-273",
+      "implementation": "GO3-274",
+      "browser": "GO3-230",
+      "browserConsolidated": true
+    },
+    "GO360-017": {
+      "design": "GO3-269",
+      "implementation": "GO3-275",
+      "browser": "GO3-237",
+      "browserConsolidated": true
+    },
+    "GO360-018": {
+      "design": "GO3-268",
+      "implementation": "GO3-222",
+      "implementationConsolidated": true,
+      "browser": "GO3-242",
+      "browserConsolidated": true
+    },
+    "GO360-074": {
+      "design": "GO3-271",
+      "implementation": "GO3-212",
+      "implementationConsolidated": true,
+      "browser": "GO3-233",
+      "browserConsolidated": true
+    },
+    "GO360-003": {
+      "design": "GO3-270",
+      "implementation": "GO3-206",
+      "implementationConsolidated": true,
+      "browser": "GO3-226",
+      "browserConsolidated": true
+    },
+    "GO360-073": {
+      "design": "GO3-272",
+      "implementation": "GO3-211",
+      "implementationConsolidated": true,
+      "browser": "GO3-232",
+      "browserConsolidated": true
+    }
+  },
+  "issueCap": "Further creation rejected by Linear; UI implementation/browser scope consolidated as marked.",
+  "verification": {
+    "sourceDependencyEdges": 260,
+    "missingSourceEdges": [],
+    "missingTaskEdges": [],
+    "parentErrors": [],
+    "cyclesIncludingCompletion": [],
+    "legacyRoleCoverageMissing": [],
+    "s0UniqueSubtasks": 92
+  }
+}

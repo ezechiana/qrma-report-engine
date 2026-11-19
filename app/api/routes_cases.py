@@ -1,7 +1,8 @@
+from typing import Annotated
 from uuid import UUID
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -18,6 +19,7 @@ from app.schemas.cases import (
 )
 from app.schemas.patients import PatientCreate
 from app.schemas.reports import GenerateReportResponse
+from app.services.assessment_quota import assessment_tier, assessment_usage
 from app.services.audit_service import log_action
 from app.services.case_service import create_case, update_case
 from app.services.patient_service import create_patient
@@ -160,25 +162,6 @@ def _normalise_sex(value):
     return mapping.get(v, None)
 
 
-def _ensure_report_source_hash_schema(db: Session) -> None:
-    """
-    Defensive safeguard for older local databases.
-
-    report_service.py uses report_versions.source_hash for report-generation
-    idempotency. The formal migration should still exist, but this prevents
-    desktop/laptop schema drift from crashing imports.
-    """
-    db.execute(text("""
-        ALTER TABLE report_versions
-        ADD COLUMN IF NOT EXISTS source_hash TEXT
-    """))
-    db.execute(text("""
-        CREATE INDEX IF NOT EXISTS idx_report_versions_case_source_hash
-        ON report_versions (case_id, source_hash)
-    """))
-    db.commit()
-
-
 def _enum_value(value) -> str:
     return value.value if hasattr(value, "value") else str(value)
 
@@ -231,6 +214,11 @@ def create_case_endpoint(
     case = create_case(db, current_user, patient, payload)
     log_action(db, "case_created", user_id=current_user.id, case_id=case.id)
     return _serialize_case(case)
+
+
+@router.get("/assessment-quota")
+def get_assessment_quota(db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    return assessment_usage(db, current_user, tier=assessment_tier(db, current_user))
 
 
 @router.get("/{case_id}", response_model=CaseRead)
@@ -530,13 +518,12 @@ async def create_from_import(
     # - The detailed error is returned for debugging, but no red "failed" banner
     #   is shown on the import page for an otherwise-created case.
     try:
-        _ensure_report_source_hash_schema(db)
 
         case = _get_owned_case(db, current_user, case.id)
         if not case:
             raise HTTPException(status_code=404, detail="Case not found after import")
 
-        report = await generate_report_version(db, case, current_user)
+        report = await generate_report_version(db, case, current_user, request_key=f"import:{payload.temporary_upload_id}")
 
         db.refresh(case)
         db.refresh(report)
@@ -551,8 +538,11 @@ async def create_from_import(
             "warning": None,
         }
 
-    except HTTPException:
+    except HTTPException as exc:
+        saved_case_id = str(case.id)
         db.rollback()
+        if exc.status_code == 429 and isinstance(exc.detail, dict):
+            raise HTTPException(429, detail={**exc.detail, "case_id": saved_case_id}) from exc
         raise
 
     except Exception as exc:
@@ -595,6 +585,7 @@ async def generate_report(
     case_id: UUID,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
+    idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
     case = _get_owned_case(db, current_user, case_id)
     if not case:
@@ -609,9 +600,9 @@ async def generate_report(
         )
 
     try:
-        _ensure_report_source_hash_schema(db)
         case = _get_owned_case(db, current_user, case_id)
-        report = await generate_report_version(db, case, current_user)
+        request_key = f"browser:{idempotency_key}" if idempotency_key else None
+        report = await generate_report_version(db, case, current_user, request_key=request_key)
     except HTTPException:
         db.rollback()
         raise

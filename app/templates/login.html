@@ -919,6 +919,20 @@
 
         setAuthSession(data);
 
+        const role = String((data.user && data.user.role) || "").toLowerCase();
+        if (role === "client") {
+            const clientNext = getNextParam() || getFallbackRedirect();
+            localStorage.removeItem("redirect_after_login");
+            if (clientNext && (
+                clientNext === "/client" || clientNext.startsWith("/client/") || clientNext.startsWith("/claim/") || clientNext.split(/[?#]/, 1)[0] === "/app/organisations"
+            )) {
+                window.location.href = clientNext;
+                return;
+            }
+            window.location.href = "/client";
+            return;
+        }
+
         const next = getNextParam();
         if (next) {
             localStorage.removeItem("redirect_after_login");

@@ -892,26 +892,32 @@
 
 </style>
 
+    <script src="/static/js/clinic-registry-session.js"></script>
+    <style>#account-clinic-registry-link[hidden],#settings-clinic-registry-link[hidden]{display:none!important}</style>
     <script>
         function getAccessToken() { return localStorage.getItem("access_token"); }
         function getRefreshToken() { return localStorage.getItem("refresh_token"); }
 
         function getCurrentUser() {
-            const raw = localStorage.getItem("current_user");
-            if (!raw) return null;
-            try { return JSON.parse(raw); } catch { return null; }
+            try { return JSON.parse(localStorage.getItem("current_user") || "null"); } catch { return null; }
         }
 
         function setAuthSession(payload) {
-            localStorage.setItem("access_token", payload.access_token || "");
-            localStorage.setItem("refresh_token", payload.refresh_token || "");
-            localStorage.setItem("current_user", JSON.stringify(payload.user || null));
+            try { if (payload.user?.id) window.GO360ClinicSession?.observeActor(String(payload.user.id)); } catch (_) {}
+            try {
+                localStorage.setItem("access_token", payload.access_token || "");
+                localStorage.setItem("refresh_token", payload.refresh_token || "");
+                localStorage.setItem("current_user", JSON.stringify(payload.user || null));
+            } catch (_) {} // Authentication uses the cookie, not this optional cache.
         }
 
         function clearAuthSession() {
-            localStorage.removeItem("access_token");
-            localStorage.removeItem("refresh_token");
-            localStorage.removeItem("current_user");
+            try {
+                localStorage.removeItem("access_token");
+                localStorage.removeItem("refresh_token");
+                localStorage.removeItem("current_user");
+            } catch (_) {}
+            window.GO360ClinicSession?.authenticationLost();
         }
 
         function getRedirectTarget() {
@@ -967,9 +973,12 @@
 
                 const data = await response.json();
                 if (data && data.user) {
-                    localStorage.setItem("current_user", JSON.stringify(data.user));
-                    const caps = Array.isArray(data.capabilities) ? data.capabilities : [];
-                    localStorage.setItem("current_capabilities", JSON.stringify(caps));
+                    try { window.GO360ClinicSession?.observeActor(String(data.user.id)); } catch (_) {}
+                    try {
+                        localStorage.setItem("current_user", JSON.stringify(data.user));
+                        const caps = Array.isArray(data.capabilities) ? data.capabilities : [];
+                        localStorage.setItem("current_capabilities", JSON.stringify(caps));
+                    } catch (_) {}
                 }
                 return true;
             } catch (e) {
@@ -980,6 +989,9 @@
         }
 
         async function logoutNow() {
+            // Explicit logout differs from automatic 401 recovery: clear pending
+            // registry labels and invalidate copied tabs even if logout fails.
+            try { window.GO360ClinicSession?.logout(); } catch (_) {}
             try {
                 await fetch("/auth/logout", {
                     method: "POST",
@@ -1022,7 +1034,7 @@
         }
 
         function isSettingsPage() {
-            return (window.location.pathname || "") === "/app/settings";
+            return ["/app/settings", "/app/organisations"].includes(window.location.pathname || "");
         }
 
         function isPublicOrAuthPage() {
@@ -1225,6 +1237,26 @@
             });
         }
 
+        async function refreshAssessmentQuota(element) {
+            if (!element) return;
+            try {
+                const response = await apiFetch("/api/cases/assessment-quota");
+                if (!response.ok) return;
+                const quota = await response.json();
+                const reset = new Date(quota.resets_at).toLocaleDateString(undefined, {
+                    timeZone: "UTC", month: "long", day: "numeric",
+                });
+                const inProgress = quota.reserved ? " · " + quota.reserved + " in progress" : "";
+                const count = quota.limit === null
+                    ? quota.used + " Assessments this month · Unlimited"
+                    : quota.used + " of " + quota.limit + " Assessments used · " + quota.remaining + " remaining";
+                element.textContent = count + inProgress + " · Resets " + reset + ", 00:00 UTC";
+                element.classList.toggle("notice", quota.remaining === 1 || quota.remaining === 0);
+            } catch (error) {
+                console.warn("Could not refresh Assessment allowance", error);
+            }
+        }
+
         async function ensureSubscriptionCanCreate(contextLabel, feature = "report_generation") {
             if (!AppState.subscription) {
                 await refreshSubscriptionState();
@@ -1403,6 +1435,7 @@
                         <div class="account-menu-email" id="account-menu-email">Signed in</div>
                     </div>
                     <a href="/app/settings">Settings</a>
+                    <a href="/app/organisations" id="account-clinic-registry-link" hidden>Organisations &amp; clinics</a>
                     <a href="/app/billing">Billing</a>
                     <a href="/app/platform-settings" id="account-platform-settings-link" style="display:none;">Platform Settings</a>
                     <a href="/app/platform-monitoring" id="account-platform-monitoring-link" style="display:none;">Platform Monitoring</a>
@@ -1441,6 +1474,18 @@
         }
 
         const user = getCurrentUser();
+        const registryLinks = ['account-clinic-registry-link', 'settings-clinic-registry-link'];
+        window.GO360ClinicSession?.onInvalidation(() => registryLinks.forEach(id => document.getElementById(id)?.setAttribute('hidden', '')));
+        let registryNavigationCancelled = false;
+        window.GO360ClinicSession?.onInvalidation(() => { registryNavigationCancelled = true; });
+        (async function registryNavigation() {
+            const controller = new AbortController(), timer = setTimeout(() => controller.abort(), 5000);
+            try {
+                const accessResponse = await fetch('/api/organisations/access', {credentials: 'same-origin', cache: 'no-store', signal: controller.signal});
+                const access = await accessResponse.json().catch(() => ({}));
+                if (!registryNavigationCancelled && accessResponse.ok && access.can_manage === true) registryLinks.forEach(id => document.getElementById(id)?.removeAttribute('hidden'));
+            } catch (_) {} finally { clearTimeout(timer); }
+        })();
         if (user) {
             const emailEl = document.getElementById("sidebar-user-email");
             const menuNameEl = document.getElementById("account-menu-name");
@@ -1583,7 +1628,7 @@
         wireSubscriptionGates();
 
         if (isAuthenticatedAppPage() && !isPublicOrAuthPage()) {
-            await refreshSubscriptionState();
+            if (path !== '/app/organisations') await refreshSubscriptionState();
             await refreshImpersonationBanner();
         }
     })();

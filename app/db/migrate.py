@@ -105,6 +105,17 @@ def sql_statements(sql: str) -> list[str]:
     return statements
 
 
+def ordered_migrations() -> list[Path]:
+    files = sorted(MIGRATIONS_DIR.glob("*.sql"))
+    invites = MIGRATIONS_DIR / "20261115_patient_claim_invites.sql"
+    acceptance = MIGRATIONS_DIR / "20261115_patient_claim_acceptance.sql"
+    if acceptance in files:
+        # Acceptance alters the invite table. Preserve both historical ledger names.
+        files.remove(invites)
+        files.insert(files.index(acceptance), invites)
+    return files
+
+
 def run_migrations(engine):
     with engine.begin() as conn:
         conn.exec_driver_sql("""
@@ -118,7 +129,7 @@ def run_migrations(engine):
             for row in conn.execute(text("SELECT version FROM schema_migrations"))
         }
 
-    for file in sorted(MIGRATIONS_DIR.glob("*.sql")):
+    for file in ordered_migrations():
         version = file.name
         if version in applied:
             continue

@@ -11,7 +11,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db
-from app.api.share_helpers import DEFAULT_SHARE_PRICE_CURRENCY, _ensure_share_link_events_table
+from app.api.share_helpers import DEFAULT_SHARE_PRICE_CURRENCY, _ensure_share_link_events_table, _set_share_payment_config
 from app.db.models import Case, Patient, ReportVersion, ShareLink, User
 from app.schemas.share import ReportShareLinkCreate, ShareLinkRead
 from app.services.audit_service import log_action
@@ -30,6 +30,8 @@ def create_report_share_link(
     current_user: User = Depends(get_current_user),
 ):
     require_subscription_feature(db, current_user, "share_link")
+    if payload.price_amount:
+        require_subscription_feature(db, current_user, "sell_shares")
 
     report = (
         db.query(ReportVersion)
@@ -46,7 +48,15 @@ def create_report_share_link(
         password=payload.password,
         expires_days=payload.expires_in_days,
         expires_at=payload.expires_at,
+        commit=not bool(payload.price_amount),
     )
+    if payload.price_amount:
+        _set_share_payment_config(db, link, requires_payment=True,
+            price_amount=payload.price_amount, price_currency=payload.price_currency,
+            access_label="Report", commit=False)
+        link.price_pence = payload.price_amount
+        db.commit()
+        db.refresh(link)
 
     log_action(
         db,

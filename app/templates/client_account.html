@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    {% include "shared/brand_head.html" %}
+    <title>Account · go360</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <style>
+        {% include "shared/public_card_styles.html" %}
+        #account-card { width: min(100%, 640px); }
+        #account-card h2 { margin: 20px 0 12px; font-size: 18px; }
+        #account-card .field input[type="text"] {
+            width: 100%;
+            min-height: 48px;
+            padding: 0 14px;
+            border: 1px solid #cbd5e1;
+            border-radius: 16px;
+            font-size: 16px;
+            background: #f8fafc;
+            color: #334155;
+        }
+        #account-card .logout-row { margin-top: 20px; }
+        #account-card .text-button {
+            border: 0;
+            background: none;
+            padding: 0;
+            min-height: 44px;
+            color: var(--muted);
+            font: inherit;
+            font-weight: 700;
+            cursor: pointer;
+        }
+    </style>
+</head>
+<body>
+<main class="public-page">
+    {% set portal_section = "account" %}
+    {% include "shared/client_portal_header.html" %}
+    <section class="card" id="account-card">
+        <p class="muted">Loading your account…</p>
+    </section>
+</main>
+<script>
+    const card = document.getElementById("account-card");
+    let accountName = "";
+    let accountEmail = "";
+    let passwordError = "";
+    let passwordSuccess = "";
+    let logoutError = "";
+    let updating = false;
+
+    function add(parent, tag, className, text) {
+        const node = document.createElement(tag);
+        if (className) node.className = className;
+        if (text) node.textContent = text;
+        parent.appendChild(node);
+        return node;
+    }
+
+    function textOf(value) {
+        return typeof value === "string" ? value.trim() : "";
+    }
+
+    function passwordProblem(password) {
+        if (password.length < 10) return "Password must be at least 10 characters.";
+        if (!/[A-Z]/.test(password)) return "Password must contain at least one uppercase letter.";
+        if (!/[a-z]/.test(password)) return "Password must contain at least one lowercase letter.";
+        if (!/[0-9]/.test(password)) return "Password must contain at least one number.";
+        return "";
+    }
+
+    function passwordField(parent, id, label, value) {
+        const field = add(parent, "div", "field");
+        add(field, "label", "", label).htmlFor = id;
+        const wrap = add(field, "div", "input-wrap");
+        const input = add(wrap, "input");
+        input.id = id;
+        input.type = "password";
+        input.autocomplete = id === "current-password" ? "current-password" : "new-password";
+        input.value = value || "";
+        const toggle = add(wrap, "button", "password-toggle", "👁");
+        toggle.type = "button";
+        toggle.setAttribute("aria-label", "Show password");
+        toggle.addEventListener("click", () => {
+            const showing = input.type === "text";
+            input.type = showing ? "password" : "text";
+            toggle.setAttribute("aria-label", showing ? "Show password" : "Hide password");
+        });
+        return input;
+    }
+
+    function render(passwords) {
+        const kept = passwords || { current: "", next: "", confirm: "" };
+        card.textContent = "";
+        add(card, "h1", "", "Account");
+
+        add(card, "h2", "", "Your details");
+        const nameField = add(card, "div", "field");
+        add(nameField, "label", "", "Name").htmlFor = "account-name";
+        const name = add(nameField, "input");
+        name.id = "account-name";
+        name.type = "text";
+        name.value = accountName;
+        name.readOnly = true;
+        const emailField = add(card, "div", "field");
+        add(emailField, "label", "", "Email").htmlFor = "account-email";
+        const email = add(emailField, "input");
+        email.id = "account-email";
+        email.type = "email";
+        email.value = accountEmail;
+        email.readOnly = true;
+        const save = add(card, "button", "primary-btn", "Save details");
+        save.type = "button";
+        save.disabled = true;
+        add(card, "p", "help", "Saving a new name or email is not available yet.");
+
+        add(card, "h2", "", "Password");
+        if (passwordSuccess) add(card, "div", "success", passwordSuccess);
+        if (passwordError) add(card, "div", "error", passwordError);
+        const current = passwordField(card, "current-password", "Current password", kept.current);
+        const next = passwordField(card, "new-password", "New password", kept.next);
+        add(card, "p", "help", "At least 10 characters, with one uppercase letter, one lowercase letter, and one number.");
+        const confirm = passwordField(card, "confirm-password", "Confirm new password", kept.confirm);
+        const update = add(card, "button", "primary-btn", updating ? "Updating…" : "Update password");
+        update.type = "button";
+        function refresh() {
+            update.disabled = updating || !current.value || !next.value || !confirm.value;
+            update.textContent = updating ? "Updating…" : "Update password";
+        }
+        [current, next, confirm].forEach((input) => input.addEventListener("input", refresh));
+        refresh();
+        update.addEventListener("click", () => submitPassword(current.value, next.value, confirm.value));
+
+        if (logoutError) add(card, "p", "error", logoutError);
+        const logoutRow = add(card, "div", "logout-row");
+        const logout = add(logoutRow, "button", "text-button", "Log out");
+        logout.type = "button";
+        logout.addEventListener("click", logOut);
+    }
+
+    async function submitPassword(current, next, confirm) {
+        if (updating) return;
+        const kept = { current: current, next: next, confirm: confirm };
+        passwordSuccess = "";
+        if (next !== confirm) {
+            passwordError = "Passwords do not match.";
+            render(kept);
+            return;
+        }
+        const weak = passwordProblem(next);
+        if (weak) {
+            passwordError = weak;
+            render(kept);
+            return;
+        }
+        updating = true;
+        passwordError = "";
+        render(kept);
+        try {
+            const response = await fetch("/auth/change-password", {
+                method: "POST",
+                credentials: "same-origin",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ current_password: current, new_password: next }),
+            });
+            const data = await response.json().catch(() => ({}));
+            updating = false;
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            if (!response.ok) {
+                const detail = data && typeof data.detail === "string" ? data.detail : "";
+                passwordError = detail || "Something went wrong. Try again.";
+                render(kept);
+                return;
+            }
+            passwordError = "";
+            passwordSuccess = "Password updated.";
+            render({ current: "", next: "", confirm: "" });
+        } catch (err) {
+            updating = false;
+            passwordError = "Something went wrong. Try again.";
+            render(kept);
+        }
+    }
+
+    function currentPasswords() {
+        return {
+            current: (document.getElementById("current-password") || {}).value || "",
+            next: (document.getElementById("new-password") || {}).value || "",
+            confirm: (document.getElementById("confirm-password") || {}).value || "",
+        };
+    }
+
+    async function logOut() {
+        logoutError = "";
+        try {
+            const response = await fetch("/auth/logout", {
+                method: "POST",
+                credentials: "same-origin",
+            });
+            if (!response.ok) {
+                logoutError = "You could not be logged out. Try again.";
+                render(currentPasswords());
+                return;
+            }
+            window.location.href = "/login";
+        } catch (err) {
+            logoutError = "You could not be logged out. Try again.";
+            render(currentPasswords());
+        }
+    }
+
+    async function loadAccount() {
+        try {
+            const response = await fetch("/auth/me", { credentials: "same-origin" });
+            if (response.status === 401) {
+                window.location.href = "/login";
+                return;
+            }
+            const data = await response.json().catch(() => ({}));
+            if (!response.ok) {
+                card.textContent = "";
+                add(card, "h1", "", "Account");
+                add(card, "p", "error", "Could not load your account.");
+                return;
+            }
+            const user = data.user || {};
+            const role = String(user.role || "").toLowerCase();
+            if (role === "client" && !user.email_verified_at) {
+                window.location.href = "/login";
+                return;
+            }
+            accountName = textOf(user.full_name);
+            accountEmail = textOf(user.email);
+            render();
+        } catch (err) {
+            card.textContent = "";
+            add(card, "h1", "", "Account");
+            add(card, "p", "error", "Could not load your account.");
+        }
+    }
+
+    loadAccount();
+</script>
+</body>
+</html>

@@ -1,0 +1,163 @@
+{
+  "environment": "local app in Staging mode against fresh Staging schema+ledger with synthetic users",
+  "real_password_login_and_jwt_cookies": true,
+  "checks": [
+    {
+      "operation": "GET /api/organisations",
+      "expected": 401,
+      "observed": 401
+    },
+    {
+      "operation": "POST /auth/login",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /app/organisations",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /api/organisations",
+      "expected": 201,
+      "observed": 201
+    },
+    {
+      "operation": "POST /api/organisations/ca4f5dc7-03a3-4aa6-8122-afb933cda0cc/clinics",
+      "expected": 201,
+      "observed": 201
+    },
+    {
+      "operation": "POST /api/organisations/ca4f5dc7-03a3-4aa6-8122-afb933cda0cc/clinics",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /api/organisations/ca4f5dc7-03a3-4aa6-8122-afb933cda0cc/clinics",
+      "expected": 201,
+      "observed": 201
+    },
+    {
+      "operation": "GET /app/patients",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /app/cases",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /app/reports",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /app/share-links",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/patients",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/cases",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/reports",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/share-links",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/organisations/access",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /auth/logout",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /auth/login",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/organisations/ca4f5dc7-03a3-4aa6-8122-afb933cda0cc/clinics",
+      "expected": 404,
+      "observed": 404
+    },
+    {
+      "operation": "POST /auth/logout",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /auth/login",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /app/organisations",
+      "expected": 403,
+      "observed": 403
+    },
+    {
+      "operation": "POST /auth/logout",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /auth/login",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/organisations/ca4f5dc7-03a3-4aa6-8122-afb933cda0cc/clinics",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /auth/impersonate/d90ff295-ed1b-4dda-9653-fcfc2676b6b0",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/organisations/access",
+      "expected": 403,
+      "observed": 403
+    },
+    {
+      "operation": "POST /auth/impersonate/exit",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/organisations/access",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "POST /auth/logout",
+      "expected": 200,
+      "observed": 200
+    },
+    {
+      "operation": "GET /api/organisations/access",
+      "expected": 401,
+      "observed": 401
+    }
+  ],
+  "same_key_same_record": true,
+  "same_name_distinct_records": true
+}

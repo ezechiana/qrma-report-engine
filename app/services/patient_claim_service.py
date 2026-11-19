@@ -290,6 +290,7 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
     """
     if str(getattr(user, "role", "") or "").lower() != "client" or not user.email_verified_at:
         return None
+    db.query(User).filter(User.id == user.id).with_for_update().one()
     invite = (
         db.query(PatientClaimInvite)
         .filter(
@@ -297,15 +298,75 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
             PatientClaimInvite.status == "pending",
         )
         .order_by(PatientClaimInvite.created_at.desc())
+        .with_for_update()
+        .populate_existing()
         .first()
     )
     if invite is None or display_status(invite) != "pending":
         return None
-    patient = db.query(Patient).filter(Patient.id == invite.patient_id).first()
+    return _complete_invite(db, user, invite)
+
+
+def accept_claim_invite(db: Session, user: User, raw_token: str, consent: bool) -> PatientClaimInvite:
+    """Accept an invitation with a verified existing client session."""
+    if user.role != "client" or not user.email_verified_at:
+        raise HTTPException(403, "A verified client account is required.")
+    if consent is not True:
+        raise HTTPException(400, "Consent is required to claim this record.")
+    db.query(User).filter(User.id == user.id).with_for_update().one()
+    invite = (
+        db.query(PatientClaimInvite)
+        .filter(PatientClaimInvite.token_hash == hash_claim_token(raw_token))
+        .with_for_update()
+        .populate_existing()
+        .first()
+    )
+    if invite is None:
+        raise HTTPException(404, "This invite is no longer available.")
+    _ensure_usable(invite)
+    if invite.email.strip().lower() != user.email.strip().lower():
+        raise HTTPException(403, "Sign in with the email address that received this invite.")
+    if invite.reserved_by_user_id not in (None, user.id):
+        raise HTTPException(409, INVITE_UNUSABLE)
+    completed = _complete_invite(db, user, invite)
+    if completed is None:
+        raise HTTPException(409, "This record cannot be claimed with this account.")
+    now = datetime.now(timezone.utc)
+    invite.reserved_by_user_id = user.id
+    invite.reserved_at = invite.reserved_at or now
+    invite.consent_at = now
+    invite.consent_version = CLAIM_CONSENT_VERSION
+    db.commit()
+    db.refresh(invite)
+    return invite
+
+
+def _complete_invite(db: Session, user: User, invite: PatientClaimInvite) -> PatientClaimInvite | None:
+    patient = (
+        db.query(Patient).filter(Patient.id == invite.patient_id).with_for_update().populate_existing().first()
+    )
     if patient is None or patient.user_id == user.id:
         return None
     if patient.claimed_by_user_id and patient.claimed_by_user_id != user.id:
         return None
+    from app.services.clinic_association_service import activate_practitioner_association
+    from app.services.personal_record_service import ensure_personal_record
+    from app.db.models import ClinicAssociation
+
+    personal = ensure_personal_record(db, user, commit=False)
+    active = (
+        db.query(ClinicAssociation)
+        .filter(ClinicAssociation.personal_patient_id == personal.id, ClinicAssociation.status == "active")
+        .with_for_update()
+        .first()
+    )
+    if active is not None and (
+        active.clinic_patient_id != patient.id or active.practitioner_user_id != patient.user_id
+    ):
+        raise HTTPException(409, "End the current clinic connection before accepting this invitation.")
+    association = activate_practitioner_association(db, personal=personal, clinic=patient)
+    if association.status != "active" or association.clinic_patient_id != patient.id:
+        raise HTTPException(409, "This clinic connection could not be activated.")
     now = datetime.now(timezone.utc)
     invite.status = "accepted"
     invite.accepted_at = now
@@ -314,11 +375,6 @@ def complete_reserved_claim(db: Session, user: User) -> PatientClaimInvite | Non
     patient.claimed_at = now
     patient.claim_access_ended_at = None
     patient.claim_access_ended_by = None
-    from app.services.clinic_association_service import activate_practitioner_association
-    from app.services.personal_record_service import ensure_personal_record
-
-    personal = ensure_personal_record(db, user, commit=False)
-    activate_practitioner_association(db, personal=personal, clinic=patient)
     return invite
 
 

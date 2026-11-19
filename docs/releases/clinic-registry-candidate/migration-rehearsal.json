@@ -1,0 +1,14 @@
+{
+  "source": "fresh Staging schema and ledger; no application rows",
+  "schema_sha256": "6f042c886aaa349469bafe9c18191e0627d9f54801930dcfc73cb2d0c7bd0439",
+  "ledger_sha256": "8bbe50bfd874ff073917c95630c0b1df4b6b71eceb880f7bb0841bc02f223ab9",
+  "baseline_entries": 23,
+  "pending": [
+    "20261119_tenant_organisations_clinics.sql",
+    "2026_11_17_assessment_quota.sql",
+    "2026_11_17_enable_free_paid_sharing.sql"
+  ],
+  "final_entries": 26,
+  "history_preserved": true,
+  "second_replay_unchanged": true
+}
