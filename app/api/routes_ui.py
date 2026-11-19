@@ -79,6 +79,15 @@ def login_page(request: Request):
     return templates.TemplateResponse(request=request, name="login.html", context={"request": request, "title": "Login"})
 
 
+@router.get("/claim/{token}", response_class=HTMLResponse)
+def claim_page(request: Request, token: str):
+    return templates.TemplateResponse(
+        request=request,
+        name="claim.html",
+        context={"request": request, "title": "Claim your record"},
+    )
+
+
 @router.get("/client/records/{patient_id}/reports/{report_id}", response_class=HTMLResponse)
 def client_report_page(request: Request, patient_id: str, report_id: str):
     return templates.TemplateResponse(

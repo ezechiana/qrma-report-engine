@@ -35,7 +35,97 @@ from app.services.patient_claim_service import (
     begin_client_claim,
     complete_reserved_claim,
     create_claim_invite,
+    hash_claim_token,
 )
+
+
+def test_existing_client_acceptance_and_second_clinic_conflict():
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from app.api.deps import get_current_user, get_db
+    from app.api.routes_patient_claims import router
+    from app.api.routes_auth import _after_login_path
+
+    engine, originals, db = _session()
+    try:
+        owner = _user("owner@example.com", "practitioner", "Owner")
+        client = _user("client@example.com", "client", "Client")
+        other = _user("other@example.com", "client", "Other")
+        db.add_all([owner, client, other])
+        db.commit()
+        chart = Patient(id=uuid.uuid4(), user_id=owner.id, first_name="Client",
+                        last_name="Test", full_name="Client Test")
+        db.add(chart)
+        db.flush()
+        invite = PatientClaimInvite(
+            patient_id=chart.id, practitioner_user_id=owner.id, email=client.email,
+            token_hash=hash_claim_token("existing-client"), status="pending",
+            expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+        )
+        db.add(invite)
+        db.commit()
+        app = FastAPI()
+        app.include_router(router)
+        app.dependency_overrides[get_db] = lambda: db
+        http = TestClient(app)
+        path = "/api/claim/existing-client/accept"
+        assert http.post(path, json={"consent": True}).status_code == 401
+        app.dependency_overrides[get_current_user] = lambda: other
+        assert http.post(path, json={"consent": True}).status_code == 403
+        db.rollback()
+        app.dependency_overrides[get_current_user] = lambda: client
+        assert http.post(path, json={"consent": False}).status_code == 400
+        client.email_verified_at = None
+        db.commit()
+        assert http.post(path, json={"consent": True}).status_code == 403
+        client.email_verified_at = datetime.now(timezone.utc)
+        invite.expires_at = datetime.now(timezone.utc) - timedelta(seconds=1)
+        db.commit()
+        assert http.post(path, json={"consent": True}).status_code == 409
+        db.rollback()
+        invite.expires_at = datetime.now(timezone.utc) + timedelta(days=1)
+        db.commit()
+        assert http.post(path, json={"consent": True}).status_code == 200
+        assert chart.claimed_by_user_id == client.id
+        assert invite.status == "accepted"
+        assert invite.consent_version == "client-claim-v1"
+        assert db.query(ClinicAssociation).filter_by(clinic_patient_id=chart.id, status="active").count() == 1
+        assert db.query(ContentRelease).count() == 0
+        assert http.post(path, json={"consent": True}).status_code == 409
+        db.rollback()
+        assert _after_login_path(client, "/claim/existing-client") == "/claim/existing-client"
+        second_owner = _user("second-owner@example.com", "practitioner", "Second")
+        db.add(second_owner)
+        db.flush()
+        second = Patient(id=uuid.uuid4(), user_id=second_owner.id, first_name="Client",
+                         last_name="Test", full_name="Client Test")
+        db.add(second)
+        db.flush()
+        second_invite = PatientClaimInvite(
+            patient_id=second.id, practitioner_user_id=second_owner.id, email=client.email,
+            reserved_by_user_id=client.id, token_hash=hash_claim_token("second-clinic"),
+            status="pending", expires_at=datetime.now(timezone.utc) + timedelta(days=1),
+        )
+        db.add(second_invite)
+        db.commit()
+        assert http.post("/api/claim/second-clinic/accept", json={"consent": True}).status_code == 409
+        db.rollback()
+        assert second.claimed_by_user_id is None
+        assert second_invite.status == "pending"
+        from fastapi import HTTPException
+        try:
+            complete_reserved_claim(db, client)
+            raise AssertionError("Reserved completion accepted a conflicting clinic")
+        except HTTPException as error:
+            assert error.status_code == 409
+            db.rollback()
+        assert second.claimed_by_user_id is None
+        assert second_invite.status == "pending"
+    finally:
+        db.close()
+        for column, kind in originals:
+            column.type = kind
+        engine.dispose()
 from app.services.patient_source_service import (
     CLINIC_TO_CLIENT,
     create_clinic_note,

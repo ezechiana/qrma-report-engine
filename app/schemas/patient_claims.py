@@ -42,6 +42,10 @@ class ClaimAccountCreate(BaseModel):
     consent: bool
 
 
+class ClaimInviteAccept(BaseModel):
+    consent: bool
+
+
 class ClaimAccessRead(BaseModel):
     """Current account access for one practitioner-owned record."""
 
