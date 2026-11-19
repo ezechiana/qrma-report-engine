@@ -13,7 +13,19 @@ jobs:
   s0-regression:
     runs-on: ubuntu-22.04
     timeout-minutes: 20
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_USER: synthetic
+          POSTGRES_PASSWORD: synthetic
+          POSTGRES_DB: synthetic
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U synthetic"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     env:
+      GO360_CLINIC_TEST_DATABASE_URL: postgresql+psycopg://synthetic:synthetic@localhost:5432/synthetic
       DATABASE_URL: postgresql://localhost/s0_synthetic
       S3_BUCKET: synthetic-s0-tests
       AWS_ACCESS_KEY_ID: synthetic
@@ -32,7 +44,7 @@ jobs:
       - name: Verify fixtures and QRMA artifacts
         run: |
           mkdir -p artifacts
-          python -m pytest tests/s0 -q -o junit_family=xunit1 --junitxml=artifacts/s0.xml
+          python -m pytest tests/s0 tests/test_clinic_registry.py tests/test_clinic_registry_access.py -q -o junit_family=xunit1 --junitxml=artifacts/s0.xml
       - name: Verify the incorrect clinic fixture fails
         shell: bash
         run: |

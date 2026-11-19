@@ -1,0 +1,27 @@
+{
+  "artifact": "GO3-273 draft prototype v1",
+  "prototype_sha256": "ec859dc50755444f5846f07cec0717621271b77194f3ffc8e4932d5de4b08c42",
+  "browser_version": "145.0.7632.6",
+  "browser_path_override": true,
+  "checks": [
+    "Same-named clinics have distinct visible read-only references",
+    "Account entry moves focus to the administrative page",
+    "Dialog initial focus, native focus containment, Escape and focus restoration",
+    "Blank and overlength names fail locally without a synthetic request",
+    "Lost response after commit, close/resume and retry reuse the exact intent; one creation",
+    "Separate same-name creation uses a fresh key and a distinct record",
+    "Timeout before commit retries the same intent and creates once",
+    "Confirmed save remains visible when refresh fails; refresh does not repeat creation",
+    "Known validation refusal preserves input and makes it editable",
+    "Conflict blocks blind retry; only explicit separate creation starts a new intent",
+    "Synthetic access revocation clears affected data and stops mutation",
+    "Changing organisation clears the previous clinic rows",
+    "Thirteen additional page states render; organisation creation does not auto-create a clinic",
+    "255 Unicode code points accepted consistently with the API boundary",
+    "390px and 320px page/dialog layouts have no horizontal overflow"
+  ],
+  "count": 15,
+  "page_errors": [],
+  "http_requests": [],
+  "limits": "Offline synthetic interactions only; not production authentication, API, race, storage, screen-reader or UAT evidence."
+}

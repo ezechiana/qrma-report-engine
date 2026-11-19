@@ -26,4 +26,6 @@ scenario.json also specifies the target practitioner with different roles in two
 
 The S0 foundation regression workflow runs the suite on pull requests, pushes to main and manual dispatch. It checks that the deliberately incorrect fixture fails and uploads JUnit and control output for 14 days.
 
+GO3-35 extends this workflow with disposable PostgreSQL and tests/test_clinic_registry.py. See clinic-registry.md for its administrative registry, concurrency and migration-rehearsal scope; the original S0 fixtures still use in-memory SQLite.
+
 The workflow is local and has not run in GitHub. Repository branch protection and Railway Wait for CI must require the S0 regression result before claiming that it prevents promotion. Those remote settings were not changed in this task. The recovery, audit, clinical and privacy gates in the approved blueprint remain separately attributable decisions.

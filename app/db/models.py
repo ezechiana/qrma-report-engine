@@ -141,6 +141,43 @@ class User(Base):
     feedback_items: Mapped[list["FeedbackItem"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
+class Organisation(Base):
+    """Durable administrative tenant; identity does not confer chart access."""
+    __tablename__ = "organisations"
+    __table_args__ = (UniqueConstraint("created_by_user_id", "request_key", name="uq_organisation_creation"),)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    display_name: Mapped[str] = mapped_column(String(255))
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"))
+    request_key: Mapped[str] = mapped_column(String(120))
+    legacy_owner_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class Clinic(Base):
+    __tablename__ = "clinics"
+    __table_args__ = (UniqueConstraint("created_by_user_id", "request_key", name="uq_clinic_creation"),)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    organisation_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("organisations.id", ondelete="RESTRICT"), index=True)
+    display_name: Mapped[str] = mapped_column(String(255))
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"))
+    request_key: Mapped[str] = mapped_column(String(120))
+    legacy_owner_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ClinicRegistryEvent(Base):
+    """Attributable registry decisions, deliberately without names or clinical data."""
+    __tablename__ = "clinic_registry_events"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"))
+    organisation_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("organisations.id", ondelete="RESTRICT"))
+    clinic_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("clinics.id", ondelete="RESTRICT"))
+    action: Mapped[str] = mapped_column(String(40))
+    outcome: Mapped[str] = mapped_column(String(30))
+    policy_revision: Mapped[str] = mapped_column(String(40), default="clinic-registry-v1")
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class UserCapability(Base):
     """A capability on one login. Practitioner and admin do not get a second account."""
 

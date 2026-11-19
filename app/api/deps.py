@@ -65,7 +65,14 @@ def get_current_user(
             headers={"WWW-Authenticate": "Bearer"},
         )
 
-    if _client_blocked_from_practitioner_path(user, request.url.path):
+    if request.method in {"GET", "HEAD"} and request.url.path == "/app/organisations":
+        # Administrative registry only. Use the same live capability/active/
+        # verification gate as its API; do not open other practitioner paths
+        # to a client-role login that also has a practitioner capability.
+        from app.services.clinic_registry import authorize
+
+        authorize(db, user, "registry.page")
+    elif _client_blocked_from_practitioner_path(user, request.url.path):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Client accounts cannot use practitioner tools.",

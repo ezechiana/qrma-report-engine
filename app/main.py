@@ -11,6 +11,7 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.templating import Jinja2Templates
 
 from app.api import routes_share
+from app.api.routes_clinics import router as clinics_router
 from app.api.routes import router as engine_router
 from app.api.routes_auth import router as auth_router, pages_router as auth_pages_router
 from app.api.routes_cases import router as cases_router
@@ -188,6 +189,7 @@ def create_app() -> FastAPI:
     app.include_router(revenue_router)
     app.include_router(share_pages_router)
     app.include_router(platform_settings_router)
+    app.include_router(clinics_router)
     app.include_router(referrals_router)
     app.include_router(platform_monitoring_router)
     app.include_router(platform_users_router)
