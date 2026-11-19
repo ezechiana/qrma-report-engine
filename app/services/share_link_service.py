@@ -51,6 +51,7 @@ def create_share_link(
     expires_days=7,
     expires_at=None,
     password=None,
+    commit=True,
 ):
 
     """
@@ -91,7 +92,10 @@ def create_share_link(
     )
 
     db.add(link)
-    db.commit()
-    db.refresh(link)
+    if commit:
+        db.commit()
+        db.refresh(link)
+    else:
+        db.flush()
 
     return link

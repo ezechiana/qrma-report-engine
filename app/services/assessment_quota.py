@@ -5,8 +5,7 @@ from sqlalchemy import text
 from sqlalchemy.orm import Session
 
 from app.db.models import ReportVersion, User
-from app.services.platform_settings_service import is_platform_admin_user
-from app.services.subscription_service import latest_subscription, plan_access
+from app.services.subscription_service import effective_access
 
 FREE_ASSESSMENT_LIMIT = 5
 
@@ -38,7 +37,7 @@ def assessment_usage(db: Session, user: User, *, tier: str, period: tuple[date, 
 
 
 def assessment_tier(db: Session, user: User) -> str:
-    return plan_access(latest_subscription(db, user), platform_admin=is_platform_admin_user(db, user))["tier"]
+    return effective_access(db, user)["tier"]
 
 
 def check_assessment_slot(db: Session, user: User, case_id, request_key: str, period: tuple[date, date]) -> ReportVersion | None:

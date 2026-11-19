@@ -144,10 +144,9 @@
         </div>
 
         <div class="eyebrow">Secure client access</div>
-        <h1>Unlock your progress view</h1>
+        <h1>{{ access_heading or "Unlock your progress view" }}</h1>
         <p class="lead">
-            Your practitioner has shared a secure progress dashboard with clinical trend interpretation,
-            priorities, and suggested discussion points.
+            {{ access_description or "Your practitioner has shared a secure progress dashboard with clinical trend interpretation, priorities, and suggested discussion points." }}
         </p>
 
         <div class="price-box">

@@ -157,6 +157,7 @@ def _set_share_payment_config(
     price_amount: int | None = None,
     price_currency: str | None = None,
     access_label: str | None = None,
+    commit: bool = True,
 ) -> None:
     amount = int(price_amount or DEFAULT_SHARE_PRICE_AMOUNT) if requires_payment else None
     currency = (price_currency or DEFAULT_SHARE_PRICE_CURRENCY or "gbp").strip().lower()
@@ -183,7 +184,8 @@ def _set_share_payment_config(
             "access_label": access_label or "Client progress view",
         },
     )
-    db.commit()
+    if commit:
+        db.commit()
 
 
 def _mark_share_paid(

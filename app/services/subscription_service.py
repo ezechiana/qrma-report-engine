@@ -75,16 +75,31 @@ def plan_access(sub: dict[str, Any], *, free_features: frozenset[str] = FREE_FEA
     }
 
 
+def effective_access(db: Session, user, *, subscription: dict[str, Any] | None = None) -> dict[str, Any]:
+    """Commercial access for the effective actor; never the restoring admin.
+
+    Billing remains factual. Resource authority and integration readiness are
+    separate checks and are not granted by an entitlement.
+    """
+    from app.services.platform_settings_service import is_platform_admin_user
+
+    sub = latest_subscription(db, user) if subscription is None else subscription
+    admin = is_platform_admin_user(db, user)
+    access = plan_access(sub, free_features=configured_free_features(db), platform_admin=admin)
+    return {**access, "is_platform_admin": admin,
+            "entitlement_source": "platform_admin" if admin else "subscription",
+            "billing_plan_code": sub.get("plan_code")}
+
+
 def require_subscription_feature(db: Session, user, feature: str = "create") -> None:
+    if feature == "sell_shares":
+        from app.services.platform_settings_service import is_feature_enabled
+        if not is_feature_enabled(db, "paid_shares_enabled"):
+            raise HTTPException(status_code=403, detail="Paid sharing is currently disabled by the platform.")
     if not SUBSCRIPTION_REQUIRED:
         return
 
-    from app.services.platform_settings_service import is_platform_admin_user
-
-    if is_platform_admin_user(db, user):
-        return
-
-    state = plan_access(latest_subscription(db, user), free_features=configured_free_features(db))
+    state = effective_access(db, user)
     if feature in state["features"] or (feature == "create" and state["can_create_reports"]):
         return
 

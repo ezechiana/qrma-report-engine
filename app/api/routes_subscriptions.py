@@ -13,7 +13,7 @@ from sqlalchemy.orm import Session
 from app.api.deps import get_current_user, get_db
 from app.db.models import User
 from app.services.share_commission import share_commission
-from app.services.subscription_service import DEFAULT_PLAN_CODE, configured_free_features, latest_subscription, plan_access
+from app.services.subscription_service import DEFAULT_PLAN_CODE, configured_free_features, effective_access, latest_subscription, plan_access
 
 router = APIRouter(tags=["subscriptions"])
 
@@ -150,13 +150,18 @@ def _stripe_display_plan_name(price_id: str | None = None) -> str:
 
     return fallback
 
-def _subscription_payload(sub: dict[str, Any], *, free_features: frozenset[str], stripe_connect: dict[str, Any] | None = None) -> dict[str, Any]:
-    access = plan_access(sub, free_features=free_features)
+def _subscription_payload(sub: dict[str, Any], *, free_features: frozenset[str], stripe_connect: dict[str, Any] | None = None, access: dict[str, Any] | None = None) -> dict[str, Any]:
+    access = access if access is not None else plan_access(sub, free_features=free_features)
     status = access["status"]
     usable = access["is_active"]
     days_remaining = _days_remaining(access["trial_ends_at"] if status == "trialing" else access["current_period_end"]) if usable else None
 
-    if usable and status == "active":
+    if status == "platform_admin":
+        access_message = "Platform admin access."
+        trial_banner = None
+        upgrade_nudge = None
+        days_remaining = None
+    elif usable and status == "active":
         access_message = "Subscription active."
         trial_banner = None
         upgrade_nudge = None
@@ -200,7 +205,7 @@ def _subscription_payload(sub: dict[str, Any], *, free_features: frozenset[str],
         "id": str(sub.get("id")) if sub.get("id") else None,
         "subscription_id": str(sub.get("id")) if sub.get("id") else None,
         **access,
-        "display_plan_name": _stripe_display_plan_name(sub.get("stripe_price_id")) if usable else "Free",
+        "display_plan_name": "Platform Admin" if status == "platform_admin" else (_stripe_display_plan_name(sub.get("stripe_price_id")) if usable else "Free"),
         "days_remaining": days_remaining,
         "cancel_at_period_end": bool(sub.get("cancel_at_period_end")),
         "stripe_customer_id": sub.get("stripe_customer_id"),
@@ -385,32 +390,16 @@ def get_subscription_status(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
 ):
-    from app.services.platform_settings_service import is_platform_admin_user
+    from app.services.platform_settings_service import is_feature_enabled
 
     sub = latest_subscription(db, current_user)
-    commission = share_commission(db, sub)
-    if is_platform_admin_user(db, current_user):
-        return {
-            "share_commission": commission,
-            "id": None,
-            "subscription_id": None,
-            **plan_access({}, platform_admin=True),
-            "display_plan_name": "Platform Admin",
-            "days_remaining": None,
-            "cancel_at_period_end": False,
-            "stripe_customer_id": None,
-            "stripe_subscription_id": None,
-            "stripe_price_id": None,
-            "voucher_code": None,
-            "access_message": "Platform admin access.",
-            "trial_banner": None,
-            "upgrade_nudge": None,
-            "stripe_connect": {"has_stripe_connect_account": True, "ready_for_direct_payouts": True},
-            "stripe_connect_reminder": {"show": False},
-        }
-
+    access = effective_access(db, current_user, subscription=sub)
     stripe_connect = _get_stripe_connect_status(db, current_user)
-    return {**_subscription_payload(sub, free_features=configured_free_features(db), stripe_connect=stripe_connect), "share_commission": commission}
+    return {**_subscription_payload(sub, free_features=frozenset(access["features"]),
+                                   stripe_connect=stripe_connect, access=access),
+            "share_commission": share_commission(db, sub),
+            "paid_shares_enabled": is_feature_enabled(db, "paid_shares_enabled")}
+
 
 
 @router.post("/api/subscription/checkout")

@@ -1,0 +1,12 @@
+{
+  "source": "fresh Staging schema and ledger only",
+  "schema_sha256": "98f9bc6fa3b93ca96436cec540015285e46b52cc9a2b50dd1b40974b6fa7c5cc",
+  "ledger_sha256": "93a744e17edfdc12ee03a984b16af617e86eb19815f033a417718d9a3fe9a8cb",
+  "previous_entries": 26,
+  "pending": [
+    "20261119_report_share_pricing.sql"
+  ],
+  "final_entries": 27,
+  "historical_entries_preserved": true,
+  "second_replay_unchanged": true
+}

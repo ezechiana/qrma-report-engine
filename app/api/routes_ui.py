@@ -88,6 +88,18 @@ def claim_page(request: Request, token: str):
     )
 
 
+@router.get("/client", response_class=HTMLResponse)
+def client_records_page(request: Request):
+    return templates.TemplateResponse(request=request, name="client_records.html",
+        context={"request": request, "title": "Your records"})
+
+
+@router.get("/client/account", response_class=HTMLResponse)
+def client_account_page(request: Request):
+    return templates.TemplateResponse(request=request, name="client_account.html",
+        context={"request": request, "title": "Account"})
+
+
 @router.get("/client/records/{patient_id}/reports/{report_id}", response_class=HTMLResponse)
 def client_report_page(request: Request, patient_id: str, report_id: str):
     return templates.TemplateResponse(

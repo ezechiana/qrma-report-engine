@@ -56,6 +56,22 @@ templates = Jinja2Templates(directory="app/templates")
 
 
 
+def _share_landing_url(link, report, token):
+    trend = getattr(report, "report_type", "assessment") == "trend" or getattr(link, "share_type", "") in {"trend", "patient_trend"}
+    return f"/share/{token}/trend" if trend else f"/share/{token}"
+
+
+def _assessment_paywall(request, db, link, report, token):
+    payment = _share_payment_state(db, link)
+    if payment["requires_payment"] and not payment["is_unlocked"]:
+        return templates.TemplateResponse(request=request, name="patient_trend_paywall.html",
+            context={"request": request, "token": token,
+                     "tenant": _tenant_theme_from_report(db, report), "payment": payment,
+                     "access_heading": "Unlock your assessment report",
+                     "access_description": "Your practitioner has shared a secure assessment report. Payment is required before the report can be opened."})
+    return None
+
+
 @router.get("/share/{token}", response_class=HTMLResponse)
 def access_shared_report(
     token: str,
@@ -94,6 +110,12 @@ def access_shared_report(
     if request.query_params.get("preview") != "1":
         _track_share_event(db, token, "client_view", {"share_type": "assessment", "source": "report_view", "actor": "client"})
 
+    paywall = _assessment_paywall(request, db, link, report, token)
+
+    if paywall is not None:
+
+        return paywall
+
     payload = _public_report_payload(db, report, token)
     tenant = _tenant_theme_from_report(db, report)
 
@@ -122,6 +144,9 @@ def verify_share_password(
 
     if not link.password_hash:
         report = _get_report_for_share_or_404(db, link)
+        paywall = _assessment_paywall(request, db, link, report, token)
+        if paywall is not None:
+            return paywall
         payload = _public_report_payload(db, report, token)
         tenant = _tenant_theme_from_report(db, report)
         return templates.TemplateResponse(
@@ -148,6 +173,12 @@ def verify_share_password(
         metadata_json={"token": token, "password_verified": True},
     )
     _track_share_event(db, token, "client_view", {"share_type": "assessment", "source": "password_verified", "actor": "client"})
+
+    paywall = _assessment_paywall(request, db, link, report, token)
+
+    if paywall is not None:
+        _set_share_cookie(paywall, token)
+        return paywall
 
     payload = _public_report_payload(db, report, token)
     tenant = _tenant_theme_from_report(db, report)
@@ -176,6 +207,7 @@ def get_shared_report_data(
     if error_response:
         return error_response
     _enforce_password_gate(request, link)
+    _enforce_share_payment_or_402(db, link)
 
     report = _get_report_for_share_or_404(db, link)
     payload = _public_report_payload(db, report, token)
@@ -200,6 +232,7 @@ def get_shared_report_pdf(
     if error_response:
         return error_response
     _enforce_password_gate(request, link)
+    _enforce_share_payment_or_402(db, link)
 
     report = _get_report_for_share_or_404(db, link)
 
@@ -231,6 +264,7 @@ def get_shared_report_html(
     if error_response:
         return error_response
     _enforce_password_gate(request, link)
+    _enforce_share_payment_or_402(db, link)
 
     report = _get_report_for_share_or_404(db, link)
 
@@ -444,7 +478,7 @@ def create_share_checkout_session(
     payment = _share_payment_state(db, link)
 
     if not payment["requires_payment"] or payment["is_unlocked"]:
-        return RedirectResponse(url=f"/share/{token}/trend", status_code=303)
+        return RedirectResponse(url=_share_landing_url(link, _get_report_for_share_or_404(db, link), token), status_code=303)
 
     base_url = str(request.base_url).rstrip("/")
     label = payment.get("access_label") or "Client progress view"
@@ -464,7 +498,7 @@ def create_share_checkout_session(
     checkout_payload = {
         "mode": "payment",
         "success_url": f"{base_url}/share/{token}/payment-success?session_id={{CHECKOUT_SESSION_ID}}",
-        "cancel_url": f"{base_url}/share/{token}/trend",
+        "cancel_url": base_url + _share_landing_url(link, report, token),
         "client_reference_id": token,
         "metadata[token]": token,
         "metadata[share_link_id]": str(link.id),
@@ -539,7 +573,7 @@ def confirm_share_payment_success(
     if session.get("client_reference_id") != token:
         raise HTTPException(status_code=400, detail="Stripe session does not match this share link")
 
-    if session.get("payment_status") == "paid" or session.get("status") == "complete":
+    if session.get("payment_status") == "paid":
         report = _get_report_for_share_or_404(db, link)
         metadata = session.get("metadata") or {}
 
@@ -586,7 +620,7 @@ def confirm_share_payment_success(
             "stripe_payment_intent_id": payment_intent_id,
             "stripe_connect_mode": connect_mode,
         })
-        return RedirectResponse(url=f"/share/{token}/trend", status_code=303)
+        return RedirectResponse(url=_share_landing_url(link, _get_report_for_share_or_404(db, link), token), status_code=303)
 
     raise HTTPException(status_code=402, detail="Payment has not completed")
 
