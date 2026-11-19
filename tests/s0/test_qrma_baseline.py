@@ -3,6 +3,7 @@
 import asyncio
 import hashlib
 import json
+import os
 from datetime import datetime, timezone
 from pathlib import Path
 from types import SimpleNamespace
@@ -63,6 +64,8 @@ def test_unreviewed_renderer_cannot_reuse_a_baseline(tmp_path):
 
 
 def test_qrma_build_matches_baseline(monkeypatch, record_property):
+    # Match the reviewed baseline explicitly, independent of a developer .env.
+    monkeypatch.setenv("REPORT_RECOMMENDATION_MODE", "vitalhealth_clinical_optimised")
     fixed_time = datetime(2026, 11, 19, 12, tzinfo=timezone.utc)
     monkeypatch.setattr(report_builder, "datetime", SimpleNamespace(now=lambda zone: fixed_time.astimezone(zone)))
     profiles = json.loads(Path(__file__).with_name("qrma_baseline.json").read_text())
@@ -100,6 +103,11 @@ def test_qrma_build_matches_baseline(monkeypatch, record_property):
         "viewer_sha256": json_digest(result["viewer_payload"]),
         "html_sha256": digest(artifacts["html"]),
     }
+    if os.getenv("GO360_S0_ARTIFACT_DIR"):
+        output = Path(os.environ["GO360_S0_ARTIFACT_DIR"])
+        output.mkdir(parents=True, exist_ok=True)
+        (output / "viewer.json").write_text(json.dumps(result["viewer_payload"], sort_keys=True, indent=2), encoding="utf-8")
+        (output / "report.html").write_bytes(artifacts["html"])
     assert observed == baseline
     record_property("qrma_fixture_version", "s0-v1")
     record_property("qrma_baseline_profile", profile_name)

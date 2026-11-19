@@ -33,6 +33,7 @@ jobs:
       AWS_DEFAULT_REGION: eu-west-2
       AWS_EC2_METADATA_DISABLED: "true"
       OPENAI_API_KEY: ""
+      GO360_S0_ARTIFACT_DIR: artifacts/qrma
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
