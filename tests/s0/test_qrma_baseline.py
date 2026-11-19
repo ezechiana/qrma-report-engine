@@ -20,6 +20,18 @@ def digest(value):
     return hashlib.sha256(value).hexdigest()
 
 
+def baseline_fixture_bytes(raw):
+    # The reviewed cp1252 export and its existing baseline use CRLF. Git's
+    # checkout conversion must not change embedded source HTML in this test.
+    return raw.replace(b"\r\n", b"\n").replace(b"\n", b"\r\n")
+
+
+@pytest.mark.parametrize("newline", [b"\n", b"\r\n"])
+def test_fixture_baseline_is_independent_of_checkout_newlines(newline):
+    raw = SOURCE.read_bytes().replace(b"\r\n", b"\n").replace(b"\n", newline)
+    assert digest(baseline_fixture_bytes(raw)) == "8c0bdcb469ee4c2a7334ead1a3923141f7c5f772fbce402c35169d8c14be15eb"
+
+
 def json_digest(value):
     return digest(json.dumps(value, sort_keys=True, ensure_ascii=False, separators=(",", ":")).encode())
 
@@ -55,7 +67,7 @@ def test_qrma_build_matches_baseline(monkeypatch, record_property):
     monkeypatch.setattr(report_builder, "datetime", SimpleNamespace(now=lambda zone: fixed_time.astimezone(zone)))
     profiles = json.loads(Path(__file__).with_name("qrma_baseline.json").read_text())
     profile_name, baseline = baseline_for_sources(profiles, ROOT)
-    raw = SOURCE.read_bytes()
+    raw = baseline_fixture_bytes(SOURCE.read_bytes())
     parsed = parse_html_report(raw.decode("cp1252"))
     parsed.patient.full_name = "Alex Morgan"
     parsed_sha256 = json_digest(parsed.model_dump(mode="json"))

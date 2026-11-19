@@ -20,3 +20,7 @@ Observed hosted Staging: `179723e`; Production: `9fee6a4`. Preparing this candid
 The deployed Staging configuration has `APP_ENV=staging` and `AUTO_CREATE_TABLES=false`; apply reviewed migrations explicitly before advancing its deploy branch. The UI requires the registry migration and must not precede it. Rollback application code to the prior Staging commit if checks fail; retain additive registry tables, new quota tables and migration ledger history rather than deleting new records or rewriting ledger entries. Review policy/data effects of the Free-selling migration before rollout; code rollback alone does not reverse its setting update. Production stays on its existing branch until a separately approved release candidate is advanced.
 
 The raw schema/ledger and disposable test database remain local/private for rehearsal. No credentials, real users or application health data are included in these release artifacts.
+
+## Hosted CI portability correction
+
+First hosted run 44628809726 passed 70 checks and failed the QRMA artifact baseline because Linux checkout converted the original CRLF export to LF. Source LF SHA-256 exactly matched the hosted observation; parsed clinical values were identical. The test now explicitly reconstructs the reviewed CRLF fixture bytes before building artifacts. Existing golden hashes and production code are unchanged. Two LF/CRLF checkout checks were added; all four local QRMA checks pass. Hosted CI is rerun for the corrected candidate.
