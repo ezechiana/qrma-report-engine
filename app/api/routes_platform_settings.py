@@ -10,6 +10,7 @@ from sqlalchemy.orm import Session
 
 from app.api.deps import get_current_user, get_db, require_platform_admin
 from app.db.models import User
+from app.services.module_registry import ModuleRegistry, get_module_registry
 from app.services.fx_service import ensure_current_month_fx_snapshot, refresh_current_month_fx_snapshot
 from app.services.platform_settings_service import (
     get_platform_settings,
@@ -20,6 +21,11 @@ from app.services.platform_settings_service import (
 
 router = APIRouter(tags=["platform-settings"])
 templates = Jinja2Templates(directory="app/templates")
+
+
+@router.get("/api/platform-settings/modules", response_model=ModuleRegistry)
+def read_module_registry(current_user: User = Depends(require_platform_admin)):
+    return get_module_registry()
 
 
 

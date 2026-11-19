@@ -1,0 +1,308 @@
+{
+  "version": 1,
+  "modules": [
+    {
+      "code": "CORE",
+      "name": "Chart foundation",
+      "owner": "CORE",
+      "kind": "foundation",
+      "dependencies": [
+        {
+          "module": "CLINIC",
+          "kind": "required"
+        }
+      ]
+    },
+    {
+      "code": "CLINIC",
+      "name": "Organizations and memberships",
+      "owner": "CLINIC",
+      "kind": "foundation",
+      "dependencies": []
+    },
+    {
+      "code": "SCHED",
+      "name": "Appointments",
+      "owner": "SCHED",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "CLINIC",
+          "kind": "required"
+        },
+        {
+          "module": "PORTAL",
+          "kind": "optional"
+        },
+        {
+          "module": "COMMS",
+          "kind": "optional"
+        },
+        {
+          "module": "BILL",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "QRMA",
+      "name": "Assessment and reporting",
+      "owner": "QRMA",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "AI",
+          "kind": "optional"
+        },
+        {
+          "module": "INTEGRATIONS",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "HERBAL",
+      "name": "Herbal prescribing",
+      "owner": "HERBAL",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "DISP",
+          "kind": "optional"
+        },
+        {
+          "module": "STOCK",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "FUNC",
+      "name": "Functional medicine",
+      "owner": "FUNC",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "PORTAL",
+          "kind": "optional"
+        },
+        {
+          "module": "AI",
+          "kind": "optional"
+        },
+        {
+          "module": "INTEGRATIONS",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "NATURO",
+      "name": "Naturopathic workflows",
+      "owner": "NATURO",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "FUNC",
+          "kind": "optional"
+        },
+        {
+          "module": "QRMA",
+          "kind": "optional"
+        },
+        {
+          "module": "PORTAL",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "DISP",
+      "name": "Dispensary management",
+      "owner": "DISP",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "STOCK",
+          "kind": "conditional",
+          "condition": "managed_stock_required"
+        },
+        {
+          "module": "HERBAL",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "STOCK",
+      "name": "Inventory management",
+      "owner": "STOCK",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "DISP",
+          "kind": "optional"
+        },
+        {
+          "module": "COMMS",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "PORTAL",
+      "name": "Patient self service",
+      "owner": "PORTAL",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "SCHED",
+          "kind": "optional"
+        },
+        {
+          "module": "BILL",
+          "kind": "optional"
+        },
+        {
+          "module": "COMMS",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "BILL",
+      "name": "Clinic billing and payments",
+      "owner": "BILL",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "SCHED",
+          "kind": "optional"
+        },
+        {
+          "module": "DISP",
+          "kind": "optional"
+        },
+        {
+          "module": "PORTAL",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "COMMS",
+      "name": "Messages and notifications",
+      "owner": "COMMS",
+      "kind": "shared",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        }
+      ]
+    },
+    {
+      "code": "AI",
+      "name": "AI clinical assistance",
+      "owner": "AI",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "QRMA",
+          "kind": "optional"
+        },
+        {
+          "module": "HERBAL",
+          "kind": "optional"
+        },
+        {
+          "module": "FUNC",
+          "kind": "optional"
+        },
+        {
+          "module": "NATURO",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "ANALYTICS",
+      "name": "Operational and clinical analytics",
+      "owner": "ANALYTICS",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        },
+        {
+          "module": "BILL",
+          "kind": "optional"
+        },
+        {
+          "module": "SCHED",
+          "kind": "optional"
+        }
+      ]
+    },
+    {
+      "code": "INTEGRATIONS",
+      "name": "External integrations",
+      "owner": "INTEGRATIONS",
+      "kind": "optional",
+      "dependencies": [
+        {
+          "module": "CORE",
+          "kind": "required"
+        }
+      ]
+    },
+    {
+      "code": "SUBS",
+      "name": "Subscription control plane",
+      "owner": "SUBS",
+      "kind": "shared",
+      "dependencies": []
+    }
+  ]
+}

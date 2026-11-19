@@ -45,6 +45,7 @@ from app.db import connector_models
 from app.db.base import Base
 from app.db.session import engine
 from app.db.migrate import run_migrations
+from app.services.module_registry import get_module_registry
 from app.middleware.domain_routing import DomainRoutingMiddleware
 from app.api.routes_webhooks import router as webhooks_router
 
@@ -66,6 +67,7 @@ async def lifespan(app: FastAPI):
     - Allows startup even if DB is temporarily unavailable during first boot.
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
+    get_module_registry()
     try:
         # on_event("startup") is ignored while this lifespan is installed.
         run_migrations(engine)
