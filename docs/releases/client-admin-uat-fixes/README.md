@@ -17,3 +17,7 @@ Restoring pricing exposed an existing payment gap: Assessment public HTML, data 
 - Exact hosted CI, deployment and synthetic smoke evidence will be recorded on GO3-230/GO3-251. Product/UAT and applicable manual review are not inferred from engineering checks.
 
 DEV source edits were applied selectively with local backups. DEV uses packaged container code rather than a source bind mount, so the scoped runtime files were installed and the local application restarted. A future DEV image rebuild must include these checkout changes. Unrelated existing checkout edits and the original staged parser rename remain preserved; the release commit is made only in the isolated candidate worktree.
+
+## Recovery timing follow-up
+
+Hosted run 44637802468 passed the backend checks and exposed a clinic recovery race in the copied-tab browser check: Resume was enabled before the scoped clinic list loaded, so opening the form could silently return. Disable clinic recovery until that read finishes, retaining the same actor/key/parent. A delayed-list regression and the copied-tab retry pass in network-disabled Linux QA. Rerun hosted CI before advancing Staging.

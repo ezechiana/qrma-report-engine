@@ -47,7 +47,7 @@
         $('cr-separate').hidden = !(s.pending || s.recovery) || !!s.confirmed;
         $('cr-cleanup').hidden = !s.confirmed;
         $('cr-recovery-text').textContent = s.confirmed ? 'The record was saved, but browser recovery storage could not be cleared. Clear it before starting another creation.' : 'An earlier creation cannot be confirmed. Review this list before retrying the same request or explicitly starting a separate creation. The earlier request may already have created a record.';
-        $('cr-resume').disabled = !!s.storageError || !s.ready; $('cr-separate').disabled = !!s.storageError || !s.ready;
+        $('cr-resume').disabled = !!s.storageError || !s.ready || (s.pending?.kind === 'clinic' && (s.loading || !s.loaded)); $('cr-separate').disabled = !!s.storageError || !s.ready;
     }
     function render() {
         const content = $('cr-content'); content.replaceChildren();

@@ -275,6 +275,19 @@ def test_copied_tab_retry_keeps_original_key(page, ui_server):
     assert len(data['requests'])==3 and all(r==data['requests'][0] for r in data['requests'])
 
 
+def test_pending_resume_waits_for_clinic_list_verification(page, ui_server):
+    page.request.post(ui_server+'/__test/control',data={'failure':'after'})
+    create(page,'Delayed recovery')
+    expect(page.locator('#cr-save-error')).to_be_visible()
+    page.request.post(ui_server+'/__test/control',data={'slow_parent':str(ORG_A),'delay':2})
+    page.reload()
+    expect(page.locator('#cr-resume')).to_be_visible()
+    expect(page.locator('#cr-resume')).to_be_disabled()
+    expect(page.locator('#cr-resume')).to_be_enabled()
+    page.locator('#cr-resume').click()
+    expect(page.locator('#cr-dialog')).to_be_visible()
+
+
 def test_organisation_creation_renders_untrusted_name_as_text(page, ui_server):
     page.locator('#cr-create-org').click()
     name='<img src=x onerror="window.registryXss=true">'
