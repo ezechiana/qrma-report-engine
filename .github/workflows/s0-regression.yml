@@ -45,6 +45,8 @@ jobs:
         run: |
           mkdir -p artifacts
           python -m pytest tests/s0 tests/test_clinic_registry.py tests/test_clinic_registry_access.py -q -o junit_family=xunit1 --junitxml=artifacts/s0.xml
+      - name: Verify clinic administration in Chromium
+        run: python -m pytest tests/test_clinic_registry_ui.py -q --junitxml=artifacts/clinic-ui.xml
       - name: Verify the incorrect clinic fixture fails
         shell: bash
         run: |

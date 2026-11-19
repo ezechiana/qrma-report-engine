@@ -126,6 +126,8 @@ def _after_login_path(user, next_path: str | None) -> str:
     role = str(getattr(user, "role", "") or "").lower()
     if role == "client":
         chosen = safe_next_path(next_path, default="/client") if next_path else "/client"
+        if chosen.split("?", 1)[0].split("#", 1)[0] == "/app/organisations":
+            return chosen  # The exact registry page rechecks live authority.
         if chosen == "/client" or chosen.startswith("/client/") or chosen.startswith("/claim/"):
             return chosen
         return "/client"

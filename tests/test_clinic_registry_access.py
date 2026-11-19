@@ -162,3 +162,31 @@ def test_page_selection_does_not_grant_organisation_authority(access_app):
     headers = {"Authorization": "Bearer synthetic-access"}
     assert client.get(f"/app/organisations?organisation={org_id}", headers=headers).status_code == 200
     assert client.get(f"/api/organisations/{org_id}/clinics", headers=headers).status_code == 404
+
+
+def test_navigation_capability_is_live_and_private(access_app):
+    client, holder, _, _ = access_app
+    headers = {"Authorization": "Bearer synthetic-access"}
+    response = client.get("/api/organisations/access", headers=headers)
+    assert response.status_code == 200
+    assert response.json() == {"can_manage": True, "is_platform_admin": False}
+    assert response.headers["cache-control"] == "no-store"
+    page = client.get("/app/organisations", headers=headers)
+    assert 'id="clinic-registry"' in page.text
+    assert page.headers["cache-control"] == "no-store"
+    holder["actor"] = "client"
+    assert client.get("/api/organisations/access", headers=headers).status_code == 403
+    denied = client.get("/app/organisations", headers=headers)
+    assert denied.status_code == 403
+    assert 'id="clinic-registry"' not in denied.text
+
+
+def test_client_login_return_is_limited_to_exact_registry_page():
+    from types import SimpleNamespace
+    from app.api.routes_auth import _after_login_path
+    actor = SimpleNamespace(role="client")
+    path = "/app/organisations?organisation=synthetic"
+    assert _after_login_path(actor, path) == path
+    for path in ("/app/patients", "/app/organisations/other", "/app/organisations-extra",
+                 "//example.invalid/app/organisations", "https://example.invalid/app/organisations"):
+        assert _after_login_path(actor, path) == "/client"

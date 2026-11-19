@@ -77,3 +77,7 @@ Assigned role: **Healthcare Security and Privacy Specialist**, per the user's in
 GO3-274 must test: same-actor reload; 401→same/different actor; explicit logout (including failed logout request); impersonation/restore; blocked/quota-exhausted/corrupt storage; double submit; duplicate tab; same-name new intent; timeout before/after commit; changed parent; 409/422/403/404; wrong-parent response; success followed by refresh/cleanup failure; stale GET response after switching organisation; and keyboard/mobile behavior. Add a bounded storage test harness when the actual helper is implemented; do not substitute prototype checks for this integration.
 
 The engineering decisions and reviewer-role assignment are recorded here. Actual production implementation, independent release review, commit, hosted CI and deployment acceptance are separate work. Eze's approved design is reused without another approval request.
+
+## GO3-274 implementation update — 19 November 2026
+
+The application page, shared auth lifecycle integration and recovery helper are now implemented locally. See `docs/implementation/go3-274/clinic-administration.md` for the delivered scope, 59 passing checks, screenshots and remaining release gates. Earlier statements above that the helper/page have not been implemented describe the readiness baseline. They are superseded by this implementation update; hosted CI, Staging authentication/UAT and deployment remain unverified. No new migration was introduced.
