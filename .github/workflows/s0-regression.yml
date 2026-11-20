@@ -45,9 +45,9 @@ jobs:
       - name: Verify fixtures and QRMA artifacts
         run: |
           mkdir -p artifacts
-          python -m pytest tests/s0 tests/test_clinic_registry.py tests/test_clinic_registry_access.py tests/test_module_registry.py tests/test_schema_migrations.py tests/test_patient_claim_account.py tests/test_claim_association.py tests/test_admin_entitlements.py tests/test_share_links_independent_of_claims.py tests/test_personal_record_signup.py tests/test_practitioner_identity.py tests/test_clinic_memberships.py tests/test_auth_debug_links.py -q -o junit_family=xunit1 --junitxml=artifacts/s0.xml
+          python -m pytest tests/s0 tests/test_clinic_registry.py tests/test_clinic_registry_access.py tests/test_module_registry.py tests/test_schema_migrations.py tests/test_patient_claim_account.py tests/test_claim_association.py tests/test_admin_entitlements.py tests/test_share_links_independent_of_claims.py tests/test_personal_record_signup.py tests/test_practitioner_identity.py tests/test_clinic_memberships.py tests/test_auth_debug_links.py tests/test_identity_linking.py -q -o junit_family=xunit1 --junitxml=artifacts/s0.xml
       - name: Verify clinic administration in Chromium
-        run: python -m pytest tests/test_clinic_registry_ui.py tests/test_report_workspace_ui.py tests/test_practitioner_profile_ui.py tests/test_clinic_memberships_ui.py -q --junitxml=artifacts/clinic-ui.xml
+        run: python -m pytest tests/test_clinic_registry_ui.py tests/test_report_workspace_ui.py tests/test_practitioner_profile_ui.py tests/test_clinic_memberships_ui.py tests/test_identity_linking_ui.py -q --junitxml=artifacts/clinic-ui.xml
       - name: Verify the incorrect clinic fixture fails
         shell: bash
         run: |

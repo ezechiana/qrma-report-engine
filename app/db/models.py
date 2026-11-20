@@ -152,11 +152,31 @@ class User(Base):
 
 class ExternalIdentity(Base):
     __tablename__ = "external_identities"
-    __table_args__ = (UniqueConstraint("provider", "subject", name="uq_external_identity_subject"),)
+    __table_args__ = (
+        UniqueConstraint("provider", "subject", name="uq_external_identity_subject"),
+        UniqueConstraint("user_id", "provider", name="uq_external_identity_user_provider"),
+    )
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
     provider: Mapped[str] = mapped_column(String(30), nullable=False)
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class IdentityLinkAttempt(Base):
+    __tablename__ = "identity_link_attempts"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False)
+    state_hash: Mapped[str] = mapped_column(String(64), nullable=False, unique=True)
+    browser_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    session_hash: Mapped[str] = mapped_column(String(64), nullable=False)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="pending")
+    candidate_subject: Mapped[Optional[str]] = mapped_column(String(255), nullable=True)
+    candidate_email: Mapped[Optional[str]] = mapped_column(String(320), nullable=True)
+    password_failures: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), nullable=False, index=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

@@ -10,6 +10,16 @@ from app.services.personal_record_service import ensure_personal_record
 from app.services.user_capability_service import grant_capability, PRACTITIONER
 
 
+def bound_user(db,binding,email):
+    user=db.get(User,binding.user_id)
+    if not user or not user.is_active:
+        raise HTTPException(403,"User account is inactive.")
+    user.last_login_at=datetime.now(timezone.utc)
+    binding.email=email
+    db.commit()
+    return user
+
+
 def resolve_social_user(db, *, provider, provider_subject, email, full_name=None):
     provider = (provider or "").strip().lower()
     subject = (provider_subject or "").strip()
@@ -21,13 +31,14 @@ def resolve_social_user(db, *, provider, provider_subject, email, full_name=None
             binding = db.scalar(select(ExternalIdentity).where(
                 ExternalIdentity.provider == provider, ExternalIdentity.subject == subject))
             if binding:
-                user = db.get(User, binding.user_id)
-                if not user or not user.is_active:
-                    raise HTTPException(403, "User account is inactive.")
-                user.last_login_at = datetime.now(timezone.utc)
-                db.commit()
-                return user
+                return bound_user(db,binding,email)
             if db.scalar(select(User.id).where(User.email == email)) is not None:
+                # Another callback may have atomically committed both user and
+                # binding between our two reads. Recheck the exact subject,
+                # never acquire an existing account solely by matching email.
+                binding=db.scalar(select(ExternalIdentity).where(
+                    ExternalIdentity.provider==provider,ExternalIdentity.subject==subject))
+                if binding:return bound_user(db,binding,email)
                 raise HTTPException(409, "Sign in with your existing account. This provider is not linked.")
             now = datetime.now(timezone.utc)
             user = User(email=email, password_hash=hash_password(token_urlsafe(48)),
@@ -37,7 +48,7 @@ def resolve_social_user(db, *, provider, provider_subject, email, full_name=None
                 recommendation_mode_default=RecommendationMode.natural_approaches_clinical)
             db.add(user)
             db.flush()
-            db.add(ExternalIdentity(provider=provider, subject=subject, user_id=user.id))
+            db.add(ExternalIdentity(provider=provider, subject=subject, user_id=user.id, email=email))
             ensure_personal_record(db, user, commit=False)
             grant_capability(db, user, PRACTITIONER, commit=False)
             db.add(AuditLog(user_id=user.id, action="identity.created", actor_type="user",

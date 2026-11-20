@@ -133,7 +133,7 @@ def _after_login_path(user, next_path: str | None) -> str:
         chosen = safe_next_path(next_path, default="/client") if next_path else "/client"
         page = chosen.split("?", 1)[0].split("#", 1)[0]
         import re
-        if page in {"/app/organisations", "/app/profile", "/app/memberships"} or re.fullmatch(r"/app/clinics/[0-9a-fA-F-]{36}/members", page):
+        if page in {"/app/organisations", "/app/profile", "/app/memberships", "/account/sign-in-methods"} or re.fullmatch(r"/app/clinics/[0-9a-fA-F-]{36}/members", page):
             return chosen  # These bounded administration pages recheck live authority.
         if chosen == "/client" or chosen.startswith("/client/") or chosen.startswith("/claim/"):
             return chosen
@@ -294,6 +294,9 @@ def social_login_callback(
     error_description: str | None = None,
 ):
     provider = provider.lower().strip()
+    if state and state.startswith("link."):
+        from app.api.routes_sign_in_methods import callback
+        return callback(provider,request,db,code,state,error)
     if provider not in SUPPORTED_SOCIAL_PROVIDERS:
         return RedirectResponse(url="/login?social_error=unsupported_provider", status_code=status.HTTP_303_SEE_OTHER)
 

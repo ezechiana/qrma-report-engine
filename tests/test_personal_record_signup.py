@@ -58,6 +58,9 @@ def _session():
 def _restore(originals):
     for column, original in originals:
         column.type = original
+        # SQLite's temporary TypeDecorator comparator refers back to the column.
+        # Do not let it outlive restoration into the shared PostgreSQL metadata.
+        column._reset_memoizations()
 
 
 def test_migration_adds_a_unique_subject_user_id():
