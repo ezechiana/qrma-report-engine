@@ -9,6 +9,7 @@ from sqlalchemy import (
     Boolean,
     JSON,
     Column,
+    CheckConstraint,
     Date,
     DateTime,
     Enum,
@@ -107,6 +108,8 @@ class PractitionerSettings(Base):
 class User(Base):
     __tablename__ = "users"
 
+    profile_revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+
     id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     email: Mapped[str] = mapped_column(String(255), unique=True, index=True)
     password_hash: Mapped[str] = mapped_column(String(255))
@@ -147,6 +150,16 @@ class User(Base):
     feedback_items: Mapped[list["FeedbackItem"]] = relationship(back_populates="user", cascade="all, delete-orphan")
 
 
+class ExternalIdentity(Base):
+    __tablename__ = "external_identities"
+    __table_args__ = (UniqueConstraint("provider", "subject", name="uq_external_identity_subject"),)
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, index=True)
+    provider: Mapped[str] = mapped_column(String(30), nullable=False)
+    subject: Mapped[str] = mapped_column(String(255), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
 class Organisation(Base):
     """Durable administrative tenant; identity does not confer chart access."""
     __tablename__ = "organisations"
@@ -168,6 +181,42 @@ class Clinic(Base):
     created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"))
     request_key: Mapped[str] = mapped_column(String(120))
     legacy_owner_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), unique=True)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
+
+class ClinicMembership(Base):
+    """Administrative participation; never a credential or clinical grant."""
+    __tablename__ = "clinic_memberships"
+    __table_args__ = (
+        UniqueConstraint("clinic_id", "practitioner_user_id", name="uq_clinic_membership_principal"),
+        UniqueConstraint("created_by_user_id", "request_key", name="uq_clinic_membership_request"),
+        CheckConstraint("status IN ('active','suspended','revoked')", name="ck_clinic_membership_status"),
+        CheckConstraint("revision >= 0", name="ck_clinic_membership_revision"),
+    )
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    clinic_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("clinics.id", ondelete="RESTRICT"), index=True)
+    practitioner_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"), index=True)
+    status: Mapped[str] = mapped_column(String(20), nullable=False, default="active", server_default="active")
+    revision: Mapped[int] = mapped_column(Integer, nullable=False, default=0, server_default="0")
+    created_by_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"))
+    request_key: Mapped[str] = mapped_column(String(120), nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    updated_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now(), onupdate=func.now())
+
+
+class ClinicMembershipEvent(Base):
+    __tablename__ = "clinic_membership_events"
+    id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    actor_user_id: Mapped[uuid.UUID] = mapped_column(UUID(as_uuid=True), ForeignKey("users.id", ondelete="RESTRICT"))
+    membership_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("clinic_memberships.id", ondelete="RESTRICT"), nullable=True, index=True)
+    clinic_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), ForeignKey("clinics.id", ondelete="RESTRICT"), nullable=True)
+    action: Mapped[str] = mapped_column(String(40), nullable=False)
+    outcome: Mapped[str] = mapped_column(String(30), nullable=False)
+    prior_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    new_status: Mapped[Optional[str]] = mapped_column(String(20), nullable=True)
+    revision: Mapped[Optional[int]] = mapped_column(Integer, nullable=True)
+    policy_revision: Mapped[str] = mapped_column(String(40), nullable=False, default="membership-admin-v1", server_default="membership-admin-v1")
+    original_admin_user_id: Mapped[Optional[uuid.UUID]] = mapped_column(UUID(as_uuid=True), nullable=True)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
 
 

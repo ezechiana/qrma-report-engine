@@ -72,6 +72,15 @@ def get_current_user(
         from app.services.clinic_registry import authorize
 
         authorize(db, user, "registry.page")
+    elif request.method in {"GET", "HEAD"} and request.url.path == "/app/profile":
+        from app.services.practitioner_profile import authorize
+        authorize(db, user)
+    elif request.method in {"GET", "HEAD"} and (request.url.path == "/app/memberships" or (
+        request.url.path.startswith("/app/clinics/") and request.url.path.endswith("/members")
+        and len(request.url.path.split("/")) == 5)):
+        from app.services.clinic_membership import eligible, refuse
+        if not eligible(db, user):
+            refuse(db, user, "membership.page", 403, "Practitioner access required.")
     elif _client_blocked_from_practitioner_path(user, request.url.path):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,

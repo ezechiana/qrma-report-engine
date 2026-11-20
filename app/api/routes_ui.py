@@ -247,6 +247,15 @@ def trend_report_view(request: Request, trend_report_id: str):
     )
 
 
+@router.get("/app/profile")
+def practitioner_profile_page(request: Request, db: Session = Depends(get_db),
+                              actor: User = Depends(get_current_user)):
+    from app.services.practitioner_profile import authorize
+    authorize(db, actor)
+    return templates.TemplateResponse(request=request, name="practitioner_profile.html",
+                                      context={"request": request, "title": "Personal profile"})
+
+
 @router.get("/app/settings")
 def settings_page(request: Request):
     return templates.TemplateResponse(request=request, name="settings.html", context={"request": request, "title": "Settings"})

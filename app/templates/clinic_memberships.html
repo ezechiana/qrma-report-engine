@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block content %}
+<section class="card" id="clinic-memberships" data-clinic-id="{{ clinic_id or '' }}" data-own-view="{{ 'true' if own_view else 'false' }}">
+  <p><a href="/app/organisations">Organisations &amp; clinics</a></p>
+  <h1>{{ 'My clinic memberships' if own_view else 'Clinic members' }}</h1>
+  <h2 id="cm-clinic-name">{{ clinic_name or '' }}</h2>
+  <p>Membership controls participation in one clinic. Clinical approval, patient access and paid seats are managed separately.</p>
+  <p id="cm-support" hidden>Membership editing is unavailable in support mode.</p>
+  <p id="cm-status" role="status">Loading memberships…</p>
+  <div id="cm-error" role="alert" tabindex="-1" hidden></div>
+  <button id="cm-reload" class="btn secondary" type="button">Reload memberships</button>
+  {% if not own_view %}
+  <form id="cm-add-form">
+    <fieldset id="cm-add-fields" disabled>
+      <legend>Add an existing practitioner</legend>
+      <label for="cm-practitioner">Practitioner ID</label>
+      <input id="cm-practitioner" required autocomplete="off" aria-describedby="cm-id-help">
+      <p id="cm-id-help">Use the practitioner’s durable ID from their Personal profile. Adding a membership does not approve clinical work.</p>
+      <button id="cm-add" class="btn primary" type="submit">Review membership</button>
+    </fieldset>
+  </form>
+  {% endif %}
+  <ul id="cm-list" aria-label="Clinic memberships"></ul>
+  <dialog id="cm-confirm" aria-labelledby="cm-confirm-title" aria-describedby="cm-confirm-description">
+    <h2 id="cm-confirm-title">Confirm membership change</h2>
+    <p id="cm-confirm-description"></p>
+    <p id="cm-confirm-error" role="alert" tabindex="-1" hidden></p>
+    <button id="cm-submit" class="btn primary" type="button">Confirm</button>
+    <button id="cm-cancel" class="btn secondary" type="button">Cancel</button>
+  </dialog>
+  <div id="cm-pending" hidden><p>A previous change could not be confirmed. Reload memberships to check the result or retry the same change.</p><button id="cm-retry" class="btn secondary" type="button">Review pending change</button></div>
+</section>
+<link rel="stylesheet" href="/static/css/clinic-memberships.css">
+<script src="/static/js/clinic-memberships.js" defer></script>
+{% endblock %}

@@ -126,8 +126,10 @@ def _after_login_path(user, next_path: str | None) -> str:
     role = str(getattr(user, "role", "") or "").lower()
     if role == "client":
         chosen = safe_next_path(next_path, default="/client") if next_path else "/client"
-        if chosen.split("?", 1)[0].split("#", 1)[0] == "/app/organisations":
-            return chosen  # The exact registry page rechecks live authority.
+        page = chosen.split("?", 1)[0].split("#", 1)[0]
+        import re
+        if page in {"/app/organisations", "/app/profile", "/app/memberships"} or re.fullmatch(r"/app/clinics/[0-9a-fA-F-]{36}/members", page):
+            return chosen  # These bounded administration pages recheck live authority.
         if chosen == "/client" or chosen.startswith("/client/") or chosen.startswith("/claim/"):
             return chosen
         return "/client"
@@ -332,7 +334,7 @@ def social_login_callback(
             user=user,
             email=user.email,
             request=request,
-            meta={"method": "social", "provider": provider, "provider_subject": profile.get("provider_subject")},
+            meta={"method": "social", "provider": provider},
         )
 
         auth = build_auth_response(user)
@@ -340,9 +342,11 @@ def social_login_callback(
 
     except Exception as exc:
         db.rollback()
-        print(f"[social-auth] {provider} callback failed: {exc}")
-        log_auth_event(db, event_type="social_login", status="failed", email=None, request=request, meta={"provider": provider, "reason": str(exc)[:250]})
-        return RedirectResponse(url=f"/login?social_error={provider}_failed", status_code=status.HTTP_303_SEE_OTHER)
+        conflict = isinstance(exc, HTTPException) and exc.status_code == 409
+        reason = "account_not_linked" if conflict else "provider_callback_failed"
+        log_auth_event(db, event_type="social_login", status="failed", email=None, request=request, meta={"provider": provider, "reason": reason})
+        code = "account_not_linked" if conflict else f"{provider}_failed"
+        return RedirectResponse(url=f"/login?social_error={code}", status_code=status.HTTP_303_SEE_OTHER)
 
 
 @router.post("/refresh", response_model=TokenPairResponse)

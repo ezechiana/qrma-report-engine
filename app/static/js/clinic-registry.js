@@ -81,6 +81,7 @@
             for (const clinic of s.clinics) {
                 const entry = el('article', null, {class: 'cr-clinic', 'data-clinic': clinic.id}), details = el('details', null);
                 entry.append(el('h3', clinic.display_name, {id: 'cr-record-' + clinic.id, tabindex: '-1'}), el('div', 'Clinic reference ' + ref(clinic.id, s.clinics), {class: 'cr-ref'}));
+                entry.append(el('a', 'Manage members', {href: '/app/clinics/' + encodeURIComponent(clinic.id) + '/members', class: 'btn secondary'}));
                 details.append(el('summary', 'Record details'), el('span', 'Read-only clinic reference'), el('code', clinic.id), el('p', 'Organisation: ' + org.display_name + ' · ' + ref(org.id, s.orgs), {class: 'cr-help'})); entry.append(details); grid.append(entry);
             }
             card.append(grid);

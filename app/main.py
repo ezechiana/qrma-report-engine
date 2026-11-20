@@ -158,6 +158,10 @@ def create_app() -> FastAPI:
     # Auth
     app.include_router(auth_pages_router)
     app.include_router(auth_router)
+    from app.api.routes_practitioner_profile import router as profile_router
+    app.include_router(profile_router)
+    from app.api.routes_clinic_memberships import router as membership_router
+    app.include_router(membership_router)
 
     # SaaS application routes
     app.include_router(patient_records_router)

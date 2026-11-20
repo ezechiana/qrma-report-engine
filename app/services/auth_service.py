@@ -324,73 +324,9 @@ def get_or_create_social_user(
     email: str,
     full_name: str | None = None,
 ) -> User:
-    """Return an existing user or create a verified practitioner account from a trusted OAuth provider.
-
-    Social login must never grant platform-admin access by itself. Admin access remains
-    controlled by role/platform-admin checks.
-    """
-    clean_email = email.lower().strip()
-    user = get_user_by_email(db, clean_email)
-
-    if user:
-        if not user.is_active:
-            log_auth_event(
-                db,
-                event_type="social_login",
-                status="failed",
-                user=user,
-                email=clean_email,
-                meta={"provider": provider, "reason": "inactive_user"},
-            )
-            raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
-
-        if not user.email_verified_at:
-            user.email_verified_at = utcnow()
-        user.last_login_at = utcnow()
-        user.updated_at = utcnow()
-        db.commit()
-        db.refresh(user)
-        return user
-
-    generated_password = token_urlsafe(48)
-    display_name = (full_name or clean_email.split("@")[0]).strip()
-
-    user = User(
-        email=clean_email,
-        password_hash=hash_password(generated_password),
-        full_name=display_name,
-        clinic_name=None,
-        phone=None,
-        role="practitioner",
-        is_active=True,
-        email_verified_at=utcnow(),
-        last_login_at=utcnow(),
-        recommendation_mode_default=RecommendationMode.natural_approaches_clinical,
-        logo_url=None,
-        primary_color=None,
-        accent_color=None,
-        support_email=clean_email,
-        website_url=None,
-        timezone="Europe/London",
-    )
-    db.add(user)
-    db.commit()
-    db.refresh(user)
-    from app.services.personal_record_service import ensure_personal_record
-    from app.services.user_capability_service import PRACTITIONER, grant_capability
-
-    ensure_personal_record(db, user)
-    grant_capability(db, user, PRACTITIONER)
-
-    log_auth_event(
-        db,
-        event_type="register",
-        status="success",
-        user=user,
-        email=clean_email,
-        meta={"method": "social", "provider": provider, "provider_subject": provider_subject},
-    )
-    return user
+    from app.services.external_identity_service import resolve_social_user
+    return resolve_social_user(db, provider=provider, provider_subject=provider_subject,
+                               email=email, full_name=full_name)
 
 
 def _is_platform_admin(db: Session, user: User) -> bool:

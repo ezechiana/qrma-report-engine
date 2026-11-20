@@ -230,7 +230,7 @@ def normalise_social_profile(provider: str, user_info: dict[str, Any]) -> dict[s
         full_name = user_info.get("name") or " ".join(
             part for part in [user_info.get("given_name"), user_info.get("family_name")] if part
         )
-        email_verified = bool(user_info.get("email_verified", True))
+        email_verified = user_info.get("email_verified") is True
     elif provider == "microsoft":
         email = user_info.get("email") or user_info.get("preferred_username") or user_info.get("upn")
         full_name = user_info.get("name") or " ".join(
