@@ -114,3 +114,18 @@ def test_environment_and_host_must_match(monkeypatch):
     monkeypatch.setenv('DATABASE_URL','postgresql://synthetic:synthetic@postgres-ns3m.railway.internal/synthetic')
     with pytest.raises(ReleaseBlocked):target('production','postgres.railway.internal')
     with pytest.raises(ReleaseBlocked):target('staging','postgres-ns3m.railway.internal')
+
+
+def test_production_startup_refuses_missing_links_then_passes(database,monkeypatch):
+    from fastapi.testclient import TestClient
+    from app import main as app_main
+    monkeypatch.setattr(app_main,'APP_ENV','production')
+    monkeypatch.setattr(app_main,'engine',database)
+    with database.begin() as conn:
+        account(conn);plan=inspect_coverage(conn)
+    with pytest.raises(ReleaseBlocked):
+        with TestClient(app_main.create_app()):pass
+    with database.connect() as conn:
+        assert conn.execute(text('SELECT COUNT(*) FROM external_identities')).scalar()==0
+    with database.begin() as conn:apply_backfill(conn,plan.fingerprint)
+    with TestClient(app_main.create_app()) as client:assert client.get('/health').status_code==200

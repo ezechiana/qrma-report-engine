@@ -48,6 +48,10 @@ same rule; no special email/admin authentication bypass is introduced.
    before promoting the candidate image. Preserve other required migration gates,
    including the connector checks; they are not a substitute for this gate or
    for the rest of the full schema migration plan.
+   Verify the Railway readiness healthcheck and keep the old healthy version
+   serving until the candidate passes. The candidate also runs the same read-only
+   coverage check at Production startup, so forgetting the hook cannot silently
+   serve the strict resolver with missing known legacy links.
 7. Confirm the exact deployed commit, perform authenticated API/browser smoke
    with synthetic accounts, and verify a real legacy Google/Microsoft login
    retains its User.id, admin eligibility and memberships. Re-enable social
@@ -82,6 +86,13 @@ or changed plan requires review; the tool must not accept ambiguity automaticall
 **Production currently has no pre-deploy hook. Installing this hook is still a
 required action in the separately approved Production rollout; it has not been
 changed as part of this preparation.**
+
+The Production startup backstop is repository code, not a live infrastructure
+change: it takes effect when this release candidate is deployed. It never
+backfills or guesses identities automatically. Missing coverage stops startup;
+complete the reviewed data migration and restart the candidate. It also fails
+closed when the database/history/schema is unavailable. Staging's current working
+deployment is unchanged by this release-preparation commit.
 
 ## Invariants and failure behaviour
 

@@ -69,6 +69,14 @@ async def lifespan(app: FastAPI):
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
     get_module_registry()
+    if APP_ENV.strip() == "production":
+        # Backstop even if a release operator forgets the pre-deploy data gate.
+        # Refuse startup before serving strict social login with missing links.
+        from sqlalchemy import text
+        from app.db.legacy_identity_release import inspect_coverage, check_ready
+        with engine.connect() as conn:
+            conn.execute(text("SET TRANSACTION READ ONLY"))
+            check_ready(inspect_coverage(conn))
     # Railway release schemas are applied explicitly before deployment.
     if APP_ENV in {"dev", "development", "local", "test"}:
         run_migrations(engine)
