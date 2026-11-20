@@ -56,6 +56,14 @@ timestamps and proves the second replay leaves the ledger unchanged. Historical
 migration filenames are unchanged. This is synthetic rehearsal, not a fresh
 Staging schema snapshot rehearsal.
 
+Release review on 20 November found that legacy auth routes exposed development
+reset/verification links in all non-production environments, including Staging.
+The release hardening restricts those links to development/dev/local/test only;
+Staging, Production and unknown environments return no mailbox proof. Regression
+checks exercise forgot-password, registration and verification resend, including
+identical generic known/unknown reset responses in hosted environments. This
+change is required before the authorized Staging rollout.
+
 CI now includes the feature-specific backend and browser suites. Hosted CI,
 independent specialist release review, Staging snapshot rehearsal/deployment and
 UAT remain outstanding on GO3-233/255; no deployment or commit is asserted here.

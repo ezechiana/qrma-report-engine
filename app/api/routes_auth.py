@@ -73,6 +73,11 @@ def _cookie_secure() -> bool:
     return os.getenv("APP_ENV", "development").lower() == "production"
 
 
+def _auth_debug_links_enabled() -> bool:
+    # Hosted and unrecognised environments must never disclose mailbox proofs.
+    return os.getenv("APP_ENV", "development").strip().lower() in {"development", "dev", "local", "test"}
+
+
 def _set_session_cookies(response: Response, auth: dict) -> None:
     response.set_cookie(
         key="access_token",
@@ -178,7 +183,7 @@ def register(payload: AuthRegisterRequest, db: CurrentDB, request: Request):
         "requires_email_verification": True,
     }
 
-    if os.getenv("APP_ENV", "development").lower() != "production":
+    if _auth_debug_links_enabled():
         response["dev_verification_url"] = verification_url(email_payload["token"])
 
     if personal_payload is not None:
@@ -205,7 +210,7 @@ def resend_verification(payload: ResendVerificationRequest, db: CurrentDB):
     log_auth_event(db, event_type="resend_verification", status="requested", user=user, email=user.email)
     response = {"ok": True, "message": "If an unverified account exists for this email, a verification email has been sent."}
 
-    if os.getenv("APP_ENV", "development").lower() != "production":
+    if _auth_debug_links_enabled():
         response["dev_verification_url"] = verification_url(email_payload["token"])
 
     return response
@@ -239,7 +244,7 @@ def forgot_password(payload: ForgotPasswordRequest, request: Request, db: Curren
     )
     log_auth_event(db, event_type="password_reset_request", status="requested", user=user, email=user.email, request=request)
 
-    if os.getenv("APP_ENV", "development").lower() != "production":
+    if _auth_debug_links_enabled():
         generic["dev_reset_url"] = password_reset_url(token)
 
     return generic
