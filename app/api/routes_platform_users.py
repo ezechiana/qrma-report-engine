@@ -22,6 +22,10 @@ class UserEmailPayload(BaseModel):
 
 def _ensure_audit_table(db: Session) -> None:
     """Create a lightweight admin audit log table if migrations have not done so yet."""
+    from app.db.runtime_schema import existing_objects
+    if existing_objects(db, ('platform_admin_audit_log', 'idx_platform_admin_audit_created_at')):
+        db.commit()
+        return
     db.execute(
         text(
             """

@@ -504,3 +504,27 @@ def test_runtime_password_login_and_recovery_helpers(fixture,caplog):
         user=db.get(User,f.ids['a'])
         assert create_password_reset_token(db,user)
         assert create_email_verification_token(db,user)
+
+
+def test_restricted_runtime_keeps_admin_sharing_and_webhook_paths(fixture):
+    from app.api import routes_platform_users, routes_webhooks, routes_share_bundles, share_helpers
+    from app.services.share_analytics import ensure_share_events_table,log_share_event
+    f=fixture;queries=[]
+    def capture(conn,cursor,statement,parameters,context,executemany):queries.append(statement)
+    event.listen(f.writer,'before_cursor_execute',capture)
+    try:
+        with Session(f.writer) as db:
+            routes_platform_users._audit(db,actor=db.get(User,f.ids['admin']),action='synthetic.release_check')
+            share_helpers._ensure_share_link_events_table(db)
+            ensure_share_events_table(db)
+            log_share_event(db,'synthetic-'+uuid4().hex,'view',{'synthetic':True})
+            first='synthetic-'+uuid4().hex;second='synthetic-'+uuid4().hex
+            routes_webhooks._record_webhook_event(db,first,'synthetic.event',{'synthetic':True})
+            assert routes_webhooks._webhook_event_seen(db,first)
+            routes_share_bundles._record_webhook_event(db,second,'synthetic.event')
+            assert routes_share_bundles._webhook_event_seen(db,second)
+        f.app.include_router(routes_platform_users.router)
+        response=f.client.get('/api/platform-users/audit-log',headers=f.headers('admin'))
+        assert response.status_code==200,response.text
+        assert not any(q.lstrip().upper().startswith(('CREATE','ALTER','DROP')) for q in queries)
+    finally:event.remove(f.writer,'before_cursor_execute',capture)

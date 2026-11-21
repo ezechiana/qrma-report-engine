@@ -1,0 +1,37 @@
+{
+  "synthetic_only": true,
+  "backend": {
+    "tests": 164,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  },
+  "fresh_staging_rehearsal": {
+    "source_environment": "staging",
+    "source_read_only": true,
+    "application_rows_copied": 0,
+    "checked_at": "2026-11-21T10:47:25.743182+00:00",
+    "previous_entries": 30,
+    "pending": [
+      "20261121_clinical_audit.sql",
+      "20261121_runtime_table_compatibility.sql"
+    ],
+    "final_entries": 32,
+    "historical_rows_and_ledger_preserved": true,
+    "second_replay_unchanged": true
+  },
+  "storage_synthetic_io": {
+    "synthetic_only": true,
+    "operations": {
+      "put": "allowed",
+      "get": "allowed",
+      "list_attempt": "allowed",
+      "delete": "allowed"
+    }
+  },
+  "release_blockers": [
+    "AWS bucket privacy inspection calls denied; operator permission grant required"
+  ],
+  "staging_deployed": false,
+  "production_changed": false
+}

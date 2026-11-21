@@ -103,11 +103,15 @@ the synthetic transport used in tests.
    existing Production identity backfill runbook as well; clinical audit does
    not replace that gate.
 2. As the migration identity, apply the additive
-   20261121_clinical_audit.sql through the filename-ledger runner. Existing
+   20261121_clinical_audit.sql and 20261121_runtime_table_compatibility.sql
+   through the filename-ledger runner. Existing
    AuditLog IDs/rows and ledger history are untouched. Authentication tables
    and indexes previously created at runtime are provisioned additively here,
    with identical legacy definitions. Auth helpers reuse complete existing
    objects, so a restricted login can sign in and use recovery without DDL.
+   The compatibility migration also provisions sharing analytics, webhook
+   idempotency and platform-admin audit objects. Their legacy helpers reuse
+   existing objects without DDL; local development retains its fallback.
 3. Operations provisions three independently controlled roles: a NOLOGIN
    non-superuser owner, a LOGIN application writer, and a separate LOGIN reviewer.
    Writer/reviewer must not own or CREATE objects in the application schema,
