@@ -1,0 +1,82 @@
+{
+  "requirement": "G360-08-001",
+  "test": "T-GO360-012",
+  "synthetic_only": true,
+  "backend": {
+    "tests": 163,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 75.329
+  },
+  "browser": {
+    "tests": 33,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0,
+    "seconds": 54.419
+  },
+  "negative_control": {
+    "expected_exit": 1,
+    "expected_failures": 2
+  },
+  "release_approved": false,
+  "deployed": false,
+  "restore": {
+    "requirement": "G360-08-001",
+    "test": "T-GO360-012-F",
+    "synthetic_only": true,
+    "dump_seconds": 0.359,
+    "restore_with_role_recreation_seconds": 4.266,
+    "reconciliation_seconds": 0.14,
+    "observed_missing_or_changed_rows": 0,
+    "tables_reconciled": 10,
+    "writer_and_scoped_reviewer_rechecked": true,
+    "database_dump_sha256": "3106cd0881256b1fe7c1745f44e098d3abcaadf4eab2b9ace0556f15c68c62e2",
+    "limitations": "Synthetic PostgreSQL recovery only; no hosted RTO/RPO/SLO or independent archive guarantee; S3 transport synthetic."
+  },
+  "staging_rehearsal": {
+    "source_environment": "staging",
+    "source_read_only": true,
+    "application_rows_copied": 0,
+    "checked_at": "2026-11-21T10:18:52.620194+00:00",
+    "previous_entries": 30,
+    "pending": [
+      "20261121_clinical_audit.sql"
+    ],
+    "final_entries": 31,
+    "historical_rows_and_ledger_preserved": true,
+    "second_replay_unchanged": true
+  },
+  "real_renderer": {
+    "synthetic_only": true,
+    "endpoint_seconds": 4.141,
+    "actor_lock_duration_upper_bound_seconds": 4.141,
+    "capacity_or_slo_target": false
+  },
+  "source_sha256_normalised_lf": {
+    "app/api/routes_cases.py": "ba17fb772ef74c13595d35d6c024c258c317ed428104e6378b635e04283c4de7",
+    "app/api/routes_reports.py": "a59b290a8ef4edb234b3d0b453c2ceb020a5089a00d1c1944ea4b4f8daaa933c",
+    "app/main.py": "971f61f5e95dc63e4573475e98c8438e7cc419a041798a506cb178816b0619d0",
+    "app/services/auth_service.py": "240b04c3ef931048026970c7d01446567562fcc486ca2bf12a2abca3987ac73c",
+    "app/services/audit_service.py": "b8d7deeea756ddeb06c71b8a01c59b9d8dad5d5a9e40b841548102db1d5c4579",
+    "app/services/report_service.py": "8b356d982d18412b05aafe2a00f1882705193bd71e86b4f44c569369f548cd84",
+    "app/services/clinical_audit.py": "6169470ffcd046fcb3293a8852fd51af86849f34fbb69173afb0ded8f4f3cd25",
+    "app/services/clinical_artifacts.py": "43433a00e900494d98b8051ada733f8d209c625c80e49cb32848fa20b0740dcd",
+    "app/db/clinical_audit_roles.py": "be9d25c11b82799817e7966892c7723fe769a8a5f166ffe6885856e80707637c",
+    "app/db/migrations/20261121_clinical_audit.sql": "2f9bd40042d17641ce78300e448b9968b7496b6c9f45322a9cf3b61552a786bf",
+    "tests/test_clinical_audit.py": "959d55941a5cab4aed9819c29bb22fff66a09db2a30188fb223df2464da26ae1"
+  },
+  "limitations": [
+    "Two-practice ownership; clinical clinic lineage unresolved",
+    "S3 transport synthetic; hosted IAM and credentials not changed",
+    "Independent signed-manifest export and wider DEC-12 objectives open",
+    "Independent release approval and hosted UAT outstanding"
+  ],
+  "final_role_checks": {
+    "tests": 4,
+    "failures": 0,
+    "errors": 0,
+    "skipped": 0
+  }
+}

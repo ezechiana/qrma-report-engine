@@ -2,7 +2,7 @@ from typing import Annotated
 from uuid import UUID
 from datetime import date, datetime
 
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Header, Request
 from sqlalchemy.orm import Session
 from sqlalchemy import text
 
@@ -581,48 +581,71 @@ async def create_from_import(
         }
 
 @router.post("/{case_id}/generate-report", response_model=GenerateReportResponse)
-async def generate_report(
+def generate_report(
     case_id: UUID,
+    request: Request,
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_user),
     idempotency_key: Annotated[UUID | None, Header(alias="Idempotency-Key")] = None,
 ):
+    import asyncio
+    from uuid import uuid4
+    from app.services import clinical_audit as audit
+    from app.services.clinical_artifacts import reconcile_attempt
+    correlation = uuid4()
+    audit.guard_session(request, db, current_user, 'assessment_report.regenerated', correlation)
     case = _get_owned_case(db, current_user, case_id)
     if not case:
         raise HTTPException(status_code=404, detail="Case not found")
-
     require_subscription_feature(db, current_user, "report_generation")
-
     if not case.raw_scan_html_path:
-        raise HTTPException(
-            status_code=400,
-            detail="Case has no uploaded QRMA HTML file",
-        )
-
+        raise HTTPException(status_code=400, detail="Case has no uploaded QRMA HTML file")
+    # Only regeneration of an existing Assessment is the reviewed amendment.
+    prior = db.query(ReportVersion.id).filter(ReportVersion.case_id == case.id,
+        ReportVersion.status.in_(['ready', 'final']), ReportVersion.report_type == 'assessment').first()
+    caller_owned = prior is not None
+    actor_id = current_user.id
+    db.info.pop('clinical_attempts', None)
     try:
-        case = _get_owned_case(db, current_user, case_id)
         request_key = f"browser:{idempotency_key}" if idempotency_key else None
-        report = await generate_report_version(db, case, current_user, request_key=request_key)
-    except HTTPException:
-        db.rollback()
-        raise
-    except Exception as exc:
-        db.rollback()
-        raise HTTPException(
-            status_code=500,
-            detail={
-                "code": "report_generation_failed",
-                "message": "Report generation failed.",
-                "case_id": str(case_id),
-                "error": str(exc),
-            },
-        )
+        if caller_owned:
+            # The sync endpoint runs in a worker: a competing SQL row lock must
+            # never block the ASGI event loop while another build awaits PDF IO.
+            db.execute(text("SET LOCAL lock_timeout = '5s'"))
+            report = asyncio.run(generate_report_version(db, case, current_user, request_key=request_key, caller_owned=True))
+        else:
+            report = asyncio.run(generate_report_version(db, case, current_user, request_key=request_key))
+        attempts = db.info.get('clinical_attempts', [])
+        if caller_owned and attempts:
+            audit.append(db, actor_id=actor_id, action='assessment_report.regenerated', outcome='success',
+                         correlation_id=correlation, target_id=case_id, resulting_version_id=report.id)
+        result = {"report_version_id": str(report.id), "version_number": report.version_number,
+                  "status": _enum_value(report.status)}
+        if caller_owned:
+            db.commit()
+        db.info.pop('clinical_attempts', None)
+        return result
+    except (Exception, asyncio.CancelledError) as exc:
+        attempts = db.info.pop('clinical_attempts', [])
+        bind = db.get_bind()
+        try:
+            db.rollback()
+        except Exception:
+            audit.operational_failure(correlation)
+        finally:
+            for owner, version in attempts:
+                try:
+                    reconcile_attempt(bind, owner, version)
+                except Exception:
+                    # An uncertain database/storage outcome must keep artifacts.
+                    audit.operational_failure(correlation)
+        if isinstance(exc, (HTTPException, asyncio.CancelledError)):
+            raise
+        audit.operational_failure(correlation)
+        raise HTTPException(status_code=503 if caller_owned else 500,
+            detail={"code": "report_generation_failed", "message": "Report generation failed. Retry safely with the same request key.",
+                    "correlation_id": str(correlation)}) from None
 
-    return {
-        "report_version_id": str(report.id),
-        "version_number": report.version_number,
-        "status": _enum_value(report.status),
-    }
 
 
 @router.post("/from-existing-patient-import")

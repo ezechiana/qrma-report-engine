@@ -32,7 +32,16 @@ def _token_hash(token: str) -> str:
     return hashlib.sha256(token.encode("utf-8")).hexdigest()
 
 
+def _auth_objects_ready(db: Session, names: tuple[str, ...]) -> bool:
+    # Hosted migrations provision these objects; restricted runtime credentials
+    # must not execute CREATE, even with IF NOT EXISTS. Keep legacy fallback.
+    return bool(db.scalar(text("SELECT bool_and(to_regclass(n) IS NOT NULL) FROM unnest(CAST(:names AS text[])) AS objects(n)"), {"names": list(names)}))
+
+
 def _ensure_auth_events_table(db: Session) -> None:
+    if _auth_objects_ready(db, ("auth_events", "idx_auth_events_created_at", "idx_auth_events_type_status", "idx_auth_events_email")):
+        db.commit()
+        return
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS auth_events (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -93,6 +102,9 @@ def get_user_by_id(db: Session, user_id: UUID | str) -> User | None:
 
 
 def _ensure_email_verification_table(db: Session) -> None:
+    if _auth_objects_ready(db, ("email_verification_tokens", "idx_email_verification_tokens_user_id", "idx_email_verification_tokens_expires_at")):
+        db.commit()
+        return
     db.execute(
         text(
             """
@@ -175,6 +187,9 @@ def verify_email_token(db: Session, token: str) -> User:
 
 
 def _ensure_password_reset_table(db: Session) -> None:
+    if _auth_objects_ready(db, ("password_reset_tokens", "idx_password_reset_tokens_user_id", "idx_password_reset_tokens_expires_at")):
+        db.commit()
+        return
     db.execute(text("""
         CREATE TABLE IF NOT EXISTS password_reset_tokens (
             id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
@@ -362,10 +377,13 @@ def authenticate_user(db: Session, payload: AuthLoginRequest) -> User:
     return user
 
 
-def build_auth_response(user: User) -> dict:
+def build_auth_response(user: User, *, support_actor_id=None, clinical_session=1) -> dict:
     subject = str(user.id)
-    access_token = create_access_token(subject=subject, extra_claims={"email": user.email, "full_name": user.full_name})
-    refresh_token = create_refresh_token(subject=subject, extra_claims={"email": user.email})
+    context = {"clinical_session": clinical_session}
+    if support_actor_id:
+        context["support_actor_id"] = str(support_actor_id)
+    access_token = create_access_token(subject=subject, extra_claims={"email": user.email, "full_name": user.full_name, **context})
+    refresh_token = create_refresh_token(subject=subject, extra_claims={"email": user.email, **context})
     return {"access_token": access_token, "refresh_token": refresh_token, "token_type": "bearer", "user": user}
 
 
@@ -382,7 +400,7 @@ def register_and_login_user(db: Session, payload: AuthRegisterRequest) -> dict:
 
 def refresh_user_tokens(db: Session, refresh_token: str) -> dict:
     try:
-        require_refresh_token(refresh_token)
+        claims = require_refresh_token(refresh_token)
         subject = get_token_subject(refresh_token)
     except TokenError as exc:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail=str(exc)) from exc
@@ -394,7 +412,8 @@ def refresh_user_tokens(db: Session, refresh_token: str) -> dict:
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="User account is inactive.")
     if not user.email_verified_at and not _is_platform_admin(db, user):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Please verify your email before continuing.")
-    return build_auth_response(user)
+    return build_auth_response(user, support_actor_id=claims.get("support_actor_id"),
+                               clinical_session=claims.get("clinical_session", 0))
 
 
 def get_current_user_from_token(db: Session, token: str) -> User:
@@ -457,7 +476,7 @@ def build_impersonation_response(db: Session, admin_user: User, target_user_id: 
     if str(target.id) == str(admin_user.id):
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You are already signed in as this admin user.")
 
-    auth = build_auth_response(target)
+    auth = build_auth_response(target, support_actor_id=admin_user.id)
     auth["admin_restore_token"] = build_admin_restore_token(admin_user)
     auth["admin_user"] = admin_user
     auth["impersonated_user"] = target

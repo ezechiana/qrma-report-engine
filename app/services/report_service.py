@@ -320,6 +320,7 @@ def create_report_version(
     user: User,
     job_id: Optional[str] = None,
     request_key: str | None = None,
+    *, caller_owned: bool = False,
 ) -> ReportVersion:
     """
     Create a queued report version row before generation starts.
@@ -329,7 +330,8 @@ def create_report_version(
     period = assessment_period()
     existing = check_assessment_slot(db, user, case.id, key, period)
     if existing is not None:
-        db.commit()
+        if not caller_owned:
+            db.commit()
         return existing
 
     version_number = get_next_version_number(db, case.id)
@@ -354,15 +356,21 @@ def create_report_version(
     )
     db.add(report)
     db.flush()
+    if caller_owned:
+        db.info.setdefault("clinical_attempts", []).append((user.id, report.id))
     reserve_assessment(db, report, key, period[0])
 
     case.status = CaseStatus.queued
-    db.commit()
-    db.refresh(report)
+    if caller_owned:
+        db.flush()
+    else:
+        db.commit()
+        db.refresh(report)
 
     try:
         log_action(
             db,
+            commit=not caller_owned,
             action="report_queued",
             user_id=user.id,
             case_id=case.id,
@@ -373,6 +381,8 @@ def create_report_version(
             },
         )
     except Exception:
+        if caller_owned:
+            raise
         db.rollback()
         report.status = ReportStatus.failed
         case.status = CaseStatus.failed
@@ -388,6 +398,7 @@ async def build_report_version(
     report: ReportVersion,
     case: Case,
     user: User,
+    *, caller_owned: bool = False,
 ) -> ReportVersion:
     """
     Process a queued report version into a ready or failed report.
@@ -400,11 +411,18 @@ async def build_report_version(
             report.started_at = func.now()
 
         case.status = CaseStatus.processing
-        db.commit()
-        db.refresh(report)
+        if caller_owned:
+            db.flush()
+        else:
+            db.commit()
+            db.refresh(report)
 
         version_number = report.version_number
         html_filename, pdf_filename = _build_case_filenames(case, version_number)
+        if caller_owned:
+            from app.services.clinical_artifacts import attempt_filenames, require_private_storage
+            require_private_storage()
+            html_filename, pdf_filename = attempt_filenames(user.id, report.id)
 
         enriched_report = parse_and_enrich_case_html(case)
 
@@ -431,12 +449,14 @@ async def build_report_version(
                 "execution_timestamp": datetime.now(timezone.utc).isoformat(),
             })
             import logging
-            logging.getLogger("go360.ai_practitioner_intelligence").exception(
-                "GO360_AI_ENRICHMENT_FAILED_USING_EXISTING_V3_FALLBACK"
-            )
+            ai_logger = logging.getLogger("go360.ai_practitioner_intelligence")
+            if caller_owned:
+                ai_logger.error("GO360_AI_ENRICHMENT_FAILED_USING_EXISTING_V3_FALLBACK")
+            else:
+                ai_logger.exception("GO360_AI_ENRICHMENT_FAILED_USING_EXISTING_V3_FALLBACK")
 
 
-        practitioner_settings = get_or_create_settings(db, user)
+        practitioner_settings = get_or_create_settings(db, user, commit=not caller_owned)
         # Practitioner default governs regeneration. The existing Case mode is a
         # legacy captured value; no explicit override flag exists in this schema.
         effective_mode = practitioner_settings.recommendation_mode_default or case.recommendation_mode
@@ -465,6 +485,10 @@ async def build_report_version(
 
         html_path = _to_str_path(built.get("html_path"))
         pdf_path = _to_str_path(built.get("pdf_path"))
+        if caller_owned:
+            from app.services.storage_service import normalise_key
+            if html_path not in (None, normalise_key(html_filename)) or pdf_path not in (None, normalise_key(pdf_filename)):
+                raise ValueError("Unexpected clinical artifact key")
         viewer_payload = built.get("viewer_payload") or {}
 
         metrics_snapshot = _build_metrics_snapshot(viewer_payload, enriched_report)
@@ -499,9 +523,14 @@ async def build_report_version(
 
         case.status = CaseStatus.generated
         settle_assessment(db, report.id, succeeded=True)
-        db.commit()
+        if caller_owned:
+            db.flush()
+        else:
+            db.commit()
 
     except (Exception, asyncio.CancelledError) as exc:
+        if caller_owned:
+            raise
         if not db.is_active:
             db.rollback()
         report.status = ReportStatus.failed
@@ -524,6 +553,7 @@ async def build_report_version(
     db.refresh(report)
     log_action(
         db,
+        commit=not caller_owned,
         action="report_generated",
         user_id=user.id,
         case_id=case.id,
@@ -539,6 +569,7 @@ async def generate_report_version(
     user: User,
     job_id: Optional[str] = None,
     request_key: str | None = None,
+    *, caller_owned: bool = False,
 ) -> ReportVersion:
     """
     Backward-compatible convenience wrapper.
@@ -549,7 +580,7 @@ async def generate_report_version(
     Internally it now follows the SaaS lifecycle:
     queued -> processing -> ready/failed
     """
-    report = create_report_version(db=db, case=case, user=user, job_id=job_id, request_key=request_key)
+    report = create_report_version(db=db, case=case, user=user, job_id=job_id, request_key=request_key, caller_owned=caller_owned)
     if report.status == ReportStatus.ready:
         return report
-    return await build_report_version(db=db, report=report, case=case, user=user)
+    return await build_report_version(db=db, report=report, case=case, user=user, caller_owned=caller_owned)

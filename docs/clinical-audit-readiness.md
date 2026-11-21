@@ -3,7 +3,13 @@
 20 November 2026. Trace: GO360-012 / G360-08-001 / T-GO360-012.
 Scope: S0 / M0 synthetic two-practice engineering demonstration.
 
-This is a proposed implementation contract, not an implemented audit control or
+Historical readiness record at commit 133ab5b. Product decisions and role-based
+design dispositions are now recorded on GO3-189, and Eze approved proceeding on
+21 November. See clinical-audit-implementation.md for the delivered boundary,
+verification and remaining release gates. The original findings below are kept
+as design history; their "not implemented" statements describe that earlier baseline.
+
+This was a proposed implementation contract, not an implemented audit control or
 specialist approval. Eze Chiana has approved one protected read, one versioned
 amendment and the fail-closed policy. GO3-189 still requires technical disposition
 and reviewer assignment before dependent GO3-208 implementation. No application,
