@@ -155,7 +155,8 @@ def test_new_version_endpoint_retains_ownership_and_entitlement_checks(auth_app,
     with Session(engine) as db:
         db.get(Case,case_id).user_id=ids['admin'];db.commit()
     called=[]
-    async def generate(db,case,user,request_key=None):
+    async def generate(db,case,user,request_key=None,*,caller_owned=False):
+        assert caller_owned is True
         from types import SimpleNamespace
         called.append((user.id,request_key))
         assert assessment_tier(db,user)=='internal_admin'

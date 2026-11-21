@@ -23,6 +23,10 @@ def _json_safe(value: Any) -> Any:
 
 def ensure_share_events_table(db: Session) -> None:
     """Idempotent table creation for local/dev and fresh Railway databases."""
+    from app.db.runtime_schema import existing_objects
+    if existing_objects(db, ('share_link_events', 'idx_share_link_events_token', 'idx_share_link_events_token_type_created')):
+        db.commit()
+        return
     db.execute(
         text(
             """

@@ -13,6 +13,7 @@ def log_action(
     case_id: Optional[UUID] = None,
     report_version_id: Optional[UUID] = None,
     metadata_json: Optional[dict] = None,
+    *, commit: bool = True,
 ) -> AuditLog:
     entry = AuditLog(
         action=action,
@@ -22,6 +23,9 @@ def log_action(
         metadata_json=metadata_json,
     )
     db.add(entry)
-    db.commit()
-    db.refresh(entry)
+    if commit:
+        db.commit()
+        db.refresh(entry)
+    else:
+        db.flush()
     return entry

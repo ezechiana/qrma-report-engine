@@ -119,6 +119,9 @@ def test_environment_and_host_must_match(monkeypatch):
 def test_production_startup_refuses_missing_links_then_passes(database,monkeypatch):
     from fastapi.testclient import TestClient
     from app import main as app_main
+    # This test isolates the identity readiness gate; clinical roles have their
+    # own distinct-login and startup tests in test_clinical_audit.py.
+    monkeypatch.setattr('app.db.clinical_audit_roles.check_runtime', lambda conn: None)
     monkeypatch.setattr(app_main,'APP_ENV','production')
     monkeypatch.setattr(app_main,'engine',database)
     with database.begin() as conn:

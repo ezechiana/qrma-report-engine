@@ -344,13 +344,22 @@ def get_report_status(report_version_id: UUID, db: Session = Depends(get_db), cu
 
 
 @router.get("/{report_version_id}/json")
-def get_report_json(report_version_id: UUID, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+def get_report_json(report_version_id: UUID, request: Request, db: Session = Depends(get_db), current_user: User = Depends(get_current_user)):
+    from copy import deepcopy
+    from uuid import uuid4
+    from app.services import clinical_audit as audit
+    correlation = uuid4()
+    audit.guard_session(request, db, current_user, 'report.read', correlation)
     report = _get_owned_report(db, current_user, report_version_id)
     if not report:
+        audit.read_decision(db, actor_id=current_user.id, correlation_id=correlation,
+                            reason='not_found_or_not_owned')
         raise HTTPException(status_code=404, detail="Report not found")
     if report.report_json is None:
         raise HTTPException(status_code=409, detail=f"Report is not ready yet. Current status: {report.status.value if hasattr(report.status, 'value') else report.status}")
-    return JSONResponse(report.report_json)
+    payload = deepcopy(report.report_json)
+    audit.read_decision(db, actor_id=current_user.id, correlation_id=correlation, report_id=report.id)
+    return JSONResponse(payload, headers={"Cache-Control": "no-store", "X-Correlation-ID": str(correlation)})
 
 
 @router.get("/{report_version_id}/viewer-data")

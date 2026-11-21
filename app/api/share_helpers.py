@@ -32,6 +32,10 @@ def _ensure_share_link_events_table(db: Session) -> None:
     behind the current codebase during rollout, so this keeps the dashboard and
     client share analytics from failing with UndefinedTable.
     """
+    from app.db.runtime_schema import existing_objects
+    if existing_objects(db, ('share_link_events', 'idx_share_link_events_token', 'idx_share_link_events_event_type', 'idx_share_link_events_created_at')):
+        db.commit()
+        return
     try:
         db.execute(
             text(

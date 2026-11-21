@@ -65,7 +65,7 @@ async def lifespan(app: FastAPI):
     App startup/shutdown lifecycle.
 
     Railway-ready behaviour:
-    - Allows startup even if DB is temporarily unavailable during first boot.
+    - Hosted startup requires prepared identity coverage and safe audit credentials.
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
     get_module_registry()
@@ -77,6 +77,11 @@ async def lifespan(app: FastAPI):
         with engine.connect() as conn:
             conn.execute(text("SET TRANSACTION READ ONLY"))
             check_ready(inspect_coverage(conn))
+    if APP_ENV.strip() in {"staging", "production"}:
+        # Hosted app credentials must be independently provisioned append writers.
+        from app.db.clinical_audit_roles import check_runtime
+        with engine.connect() as conn:
+            check_runtime(conn)
     # Railway release schemas are applied explicitly before deployment.
     if APP_ENV in {"dev", "development", "local", "test"}:
         run_migrations(engine)

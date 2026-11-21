@@ -1,0 +1,58 @@
+{
+  "story": "GO3-36",
+  "test": "T-GO360-012",
+  "kind": "baseline_only_not_feature_acceptance",
+  "runtime_sha": "4a527acf14d5140bcdfa5251e348084bf015385f",
+  "postgres": "18 disposable synthetic",
+  "results": [
+    {
+      "file": "artifacts/s0-baseline.xml",
+      "sha256": "dccd44f597f1027248429c8a072ee0c9f54c980cf28e9afcf4cff4e042d3bae1",
+      "suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "140",
+          "time": "77.111",
+          "timestamp": "2026-11-20T09:31:30.776096",
+          "hostname": "SWAN25"
+        }
+      ]
+    },
+    {
+      "file": "artifacts/browser-baseline.xml",
+      "sha256": "f6dba25fa1ddd1529248d1847dd1bad8d3d0c261a6c793a7c65acac263d9f1a0",
+      "suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "0",
+          "skipped": "0",
+          "tests": "33",
+          "time": "71.739",
+          "timestamp": "2026-11-20T09:34:21.188855",
+          "hostname": "SWAN25"
+        }
+      ]
+    },
+    {
+      "file": "artifacts/incorrect-clinic-baseline.xml",
+      "sha256": "7d273bea4f7bab488f304e0e90860bfa8595429d33f848e7a79d8a1adcad7b8e",
+      "suites": [
+        {
+          "name": "pytest",
+          "errors": "0",
+          "failures": "2",
+          "skipped": "0",
+          "tests": "2",
+          "time": "1.066",
+          "timestamp": "2026-11-20T09:35:01.097125",
+          "hostname": "SWAN25"
+        }
+      ]
+    }
+  ],
+  "new_feature_tests": "not_run_readiness_pending"
+}

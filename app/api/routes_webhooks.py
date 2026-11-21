@@ -33,6 +33,10 @@ if STRIPE_SECRET_KEY:
 
 
 def _ensure_webhook_events_table(db: Session) -> None:
+    from app.db.runtime_schema import existing_objects
+    if existing_objects(db, ('stripe_webhook_events',)):
+        db.commit()
+        return
     db.execute(
         text(
             """

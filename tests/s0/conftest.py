@@ -101,6 +101,12 @@ def two_practices(monkeypatch):
         app.include_router(routes_reports.router)
         app.include_router(routes_content_releases.router)
         actor = {"user": actors["owner_a"]}
+        @app.middleware("http")
+        async def synthetic_session(request, call_next):
+            from app.services.auth_service import build_auth_response
+            token = build_auth_response(actor["user"])["access_token"]
+            request.scope["headers"] = [(k,v) for k,v in request.scope["headers"] if k.lower() != b"authorization"] + [(b"authorization", ("Bearer " + token).encode())]
+            return await call_next(request)
         app.dependency_overrides[get_current_user] = lambda: actor["user"]
         app.dependency_overrides[get_db] = lambda: db
         monkeypatch.setattr(routes_reports, "object_exists", lambda key: True)
