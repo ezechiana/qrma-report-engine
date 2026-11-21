@@ -128,7 +128,7 @@ def provider_is_configured(provider: str) -> bool:
     return bool(_client_id(provider) and _client_secret(provider) and _redirect_uri(provider))
 
 
-def build_oauth_authorization_url(provider: str, *, state: str) -> str:
+def build_oauth_authorization_url(provider: str, *, state: str, code_challenge: str | None = None) -> str:
     if not social_login_enabled():
         raise RuntimeError("Social login is disabled.")
 
@@ -147,6 +147,8 @@ def build_oauth_authorization_url(provider: str, *, state: str) -> str:
             "prompt": "select_account",
             "state": state,
         }
+        if code_challenge:
+            params.update(code_challenge=code_challenge, code_challenge_method="S256")
         return f"{GOOGLE_AUTH_URL}?{urlencode(params)}"
 
     tenant = os.getenv("MICROSOFT_TENANT", "common").strip() or "common"
@@ -159,6 +161,8 @@ def build_oauth_authorization_url(provider: str, *, state: str) -> str:
         "prompt": "select_account",
         "state": state,
     }
+    if code_challenge:
+        params.update(code_challenge=code_challenge, code_challenge_method="S256")
     return f"{MICROSOFT_AUTH_BASE.format(tenant=tenant)}?{urlencode(params)}"
 
 
@@ -167,7 +171,7 @@ def build_google_oauth_url(state: str | None = None) -> str:
     return build_oauth_authorization_url("google", state=state or build_social_state(provider="google"))
 
 
-def exchange_code_for_token(provider: str, code: str) -> dict[str, Any]:
+def exchange_code_for_token(provider: str, code: str, *, code_verifier: str | None = None) -> dict[str, Any]:
     provider = provider.lower().strip()
     if provider not in SUPPORTED_SOCIAL_PROVIDERS:
         raise RuntimeError("Unsupported social provider.")
@@ -192,6 +196,8 @@ def exchange_code_for_token(provider: str, code: str) -> dict[str, Any]:
             "grant_type": "authorization_code",
         }
 
+    if code_verifier:
+        data["code_verifier"] = code_verifier
     response = requests.post(url, data=data, timeout=15)
     response.raise_for_status()
     return response.json()
@@ -230,7 +236,7 @@ def normalise_social_profile(provider: str, user_info: dict[str, Any]) -> dict[s
         full_name = user_info.get("name") or " ".join(
             part for part in [user_info.get("given_name"), user_info.get("family_name")] if part
         )
-        email_verified = bool(user_info.get("email_verified", True))
+        email_verified = user_info.get("email_verified") is True
     elif provider == "microsoft":
         email = user_info.get("email") or user_info.get("preferred_username") or user_info.get("upn")
         full_name = user_info.get("name") or " ".join(

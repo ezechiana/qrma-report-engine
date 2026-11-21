@@ -69,6 +69,14 @@ async def lifespan(app: FastAPI):
     - Optionally auto-creates tables when AUTO_CREATE_TABLES=true.
     """
     get_module_registry()
+    if APP_ENV.strip() == "production":
+        # Backstop even if a release operator forgets the pre-deploy data gate.
+        # Refuse startup before serving strict social login with missing links.
+        from sqlalchemy import text
+        from app.db.legacy_identity_release import inspect_coverage, check_ready
+        with engine.connect() as conn:
+            conn.execute(text("SET TRANSACTION READ ONLY"))
+            check_ready(inspect_coverage(conn))
     # Railway release schemas are applied explicitly before deployment.
     if APP_ENV in {"dev", "development", "local", "test"}:
         run_migrations(engine)
@@ -158,6 +166,12 @@ def create_app() -> FastAPI:
     # Auth
     app.include_router(auth_pages_router)
     app.include_router(auth_router)
+    from app.api.routes_practitioner_profile import router as profile_router
+    app.include_router(profile_router)
+    from app.api.routes_sign_in_methods import router as sign_in_methods_router
+    app.include_router(sign_in_methods_router)
+    from app.api.routes_clinic_memberships import router as membership_router
+    app.include_router(membership_router)
 
     # SaaS application routes
     app.include_router(patient_records_router)

@@ -918,6 +918,11 @@
                 localStorage.removeItem("current_user");
             } catch (_) {}
             window.GO360ClinicSession?.authenticationLost();
+            try {
+                for (const key of Object.keys(sessionStorage)) {
+                    if (key.startsWith('go360.membership.intent.v1:')) sessionStorage.removeItem(key);
+                }
+            } catch (_) {}
         }
 
         function getRedirectTarget() {
@@ -1034,7 +1039,8 @@
         }
 
         function isSettingsPage() {
-            return ["/app/settings", "/app/organisations"].includes(window.location.pathname || "");
+            const path = window.location.pathname || "";
+            return ["/app/settings", "/app/organisations", "/app/profile", "/app/memberships"].includes(path) || /^\/app\/clinics\/[a-f0-9-]+\/members$/i.test(path);
         }
 
         function isPublicOrAuthPage() {
@@ -1434,6 +1440,9 @@
                         <div class="account-menu-name" id="account-menu-name">Practitioner</div>
                         <div class="account-menu-email" id="account-menu-email">Signed in</div>
                     </div>
+                    <a href="/app/profile">Personal profile</a>
+                    <a href="/account/sign-in-methods">Sign-in methods</a>
+                    <a href="/app/memberships">My clinic memberships</a>
                     <a href="/app/settings">Settings</a>
                     <a href="/app/organisations" id="account-clinic-registry-link" hidden>Organisations &amp; clinics</a>
                     <a href="/app/billing">Billing</a>

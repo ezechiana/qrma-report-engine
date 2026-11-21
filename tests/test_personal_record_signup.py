@@ -17,7 +17,7 @@ from sqlalchemy.types import TypeDecorator
 
 from app.api import routes_auth, routes_patient_records
 from app.api.deps import get_current_user, get_db
-from app.db.models import Case, ContentRelease, Patient, ReportVersion, ShareLink, User, UserCapability
+from app.db.models import AuditLog, ExternalIdentity, Case, ContentRelease, Patient, ReportVersion, ShareLink, User, UserCapability
 from app.schemas.auth import AuthRegisterRequest
 from app.services.auth_service import get_or_create_social_user, register_user
 from app.services.patient_service import create_patient
@@ -44,7 +44,7 @@ def _session():
         poolclass=StaticPool,
     )
     originals = []
-    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease, UserCapability)
+    models = (User, Patient, Case, ReportVersion, ShareLink, ContentRelease, UserCapability, ExternalIdentity, AuditLog)
     for model in models:
         for column in model.__table__.columns:
             if isinstance(column.type, Uuid):
@@ -58,6 +58,9 @@ def _session():
 def _restore(originals):
     for column, original in originals:
         column.type = original
+        # SQLite's temporary TypeDecorator comparator refers back to the column.
+        # Do not let it outlive restoration into the shared PostgreSQL metadata.
+        column._reset_memoizations()
 
 
 def test_migration_adds_a_unique_subject_user_id():
@@ -167,14 +170,18 @@ def test_existing_accounts_keep_their_clinic_chart(monkeypatch):
         assert chart.subject_user_id is None
         assert db.query(Patient).count() == 1
 
-        same = get_or_create_social_user(
-            db,
-            provider="google",
-            provider_subject="existing-subject",
-            email="clinic@example.com",
-            full_name="Clinic Practitioner",
-        )
-        assert same.id == practitioner.id
+        # A matching email is not proof that this provider owns the existing login.
+        import pytest
+        from fastapi import HTTPException
+        with pytest.raises(HTTPException) as denied:
+            get_or_create_social_user(
+                db,
+                provider="google",
+                provider_subject="existing-subject",
+                email="clinic@example.com",
+                full_name="Clinic Practitioner",
+            )
+        assert denied.value.status_code == 409
         assert db.query(Patient).filter(Patient.subject_user_id.isnot(None)).count() == 0
         assert db.query(Patient).count() == 1
 

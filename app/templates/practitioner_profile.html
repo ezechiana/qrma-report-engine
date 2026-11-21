@@ -1,0 +1,81 @@
+{% extends "base.html" %}
+{% block content %}
+<style>
+#practitioner-profile [hidden] { display:none !important; }
+#practitioner-profile input { border:1px solid #cbd5e1; border-radius:8px; padding:11px; margin-top:6px; font:inherit; }
+#practitioner-profile input:focus-visible, #practitioner-profile button:focus-visible { outline:3px solid #2563eb; outline-offset:3px; }
+#profile-error { color:#991b1b; background:#fef2f2; padding:12px; border-radius:8px; margin-bottom:16px; }
+#profile-zone-help { display:block; color:#475569; font-size:.875rem; margin-top:6px; }
+</style>
+<section class="card" id="practitioner-profile" style="max-width:760px">
+  <h1>Personal profile</h1>
+  <p>Your profile identifies you across clinics. Clinic roles and professional credentials are managed separately.</p>
+  <p id="profile-status" role="status">Loading your profile…</p>
+  <div id="profile-error" role="alert" tabindex="-1" hidden></div>
+  <dl style="overflow-wrap:anywhere"><dt>Practitioner ID</dt><dd id="profile-id"></dd><dt>Sign-in email</dt><dd id="profile-email"></dd></dl>
+  <p id="profile-support" hidden>Profile editing is unavailable in support mode. Return to your own account to make changes.</p>
+  <form id="profile-form">
+    <fieldset id="profile-fields" disabled style="border:0;padding:0;display:grid;gap:16px">
+      <label for="profile-name">Full name <input id="profile-name" name="full_name" maxlength="255" required autocomplete="name" style="display:block;width:100%;box-sizing:border-box"></label>
+      <label for="profile-phone">Phone (optional) <input id="profile-phone" name="phone" maxlength="50" autocomplete="tel" type="tel" style="display:block;width:100%;box-sizing:border-box"></label>
+      <div><label for="profile-zone">Timezone</label><input id="profile-zone" name="timezone" maxlength="100" required aria-describedby="profile-zone-help" style="display:block;width:100%;box-sizing:border-box"><span id="profile-zone-help">Use an IANA timezone, for example Europe/London.</span></div>
+      <div style="display:flex;gap:12px;flex-wrap:wrap"><button class="btn primary" id="profile-save" type="submit" disabled>Save profile</button><button class="btn secondary" id="profile-cancel" type="button">Cancel changes</button></div>
+    </fieldset>
+  </form>
+  <button class="btn secondary" id="profile-reload" type="button" hidden>Reload profile</button>
+</section>
+<script>
+(() => {
+  const byId = id => document.getElementById(id);
+  const form = byId('profile-form'), fields = byId('profile-fields');
+  const status = byId('profile-status'), error = byId('profile-error');
+  let loaded = null, busy = false, conflict = false;
+  const names = ['full_name', 'phone', 'timezone'];
+  const controls = [byId('profile-name'), byId('profile-phone'), byId('profile-zone')];
+  function showError(message) { error.textContent = message; error.hidden = false; error.focus(); }
+  function values() { return Object.fromEntries(names.map((name, i) => [name, controls[i].value.trim() || (name === 'phone' ? null : '')])); }
+  function dirty() { const v = values(); return loaded && names.some(n => v[n] !== loaded[n]); }
+  function state() { fields.disabled = busy || !loaded || loaded.read_only; byId('profile-save').disabled = busy || conflict || !dirty(); }
+  function render() {
+    controls.forEach((c, i) => { c.value = loaded[names[i]] || ''; c.removeAttribute('aria-invalid'); c.removeAttribute('aria-errormessage'); });
+    byId('profile-id').textContent = loaded.id; byId('profile-email').textContent = loaded.email;
+    byId('profile-support').hidden = !loaded.read_only; state();
+  }
+  async function load() {
+    busy = true; state(); error.hidden = true; status.textContent = 'Loading your profile…';
+    try {
+      const response = await apiFetch('/api/practitioner/profile/me');
+      if (!response.ok) throw new Error(response.status === 401 ? 'Sign in to view your profile.' : response.status === 403 ? 'An active, verified practitioner account is required.' : 'Could not load your profile. Please retry.');
+      loaded = await response.json(); conflict = false; render();
+      byId('profile-reload').hidden = true; status.textContent = '';
+    } catch(e) { showError(e.message); byId('profile-reload').hidden = false; status.textContent = ''; }
+    finally { busy = false; state(); }
+  }
+  form.addEventListener('input', state);
+  byId('profile-cancel').addEventListener('click', () => { render(); error.hidden = true; status.textContent = 'Changes cancelled.'; });
+  byId('profile-reload').addEventListener('click', load);
+  form.addEventListener('submit', async e => {
+    e.preventDefault(); if (busy || conflict || !loaded || loaded.read_only) return;
+    busy = true; state(); error.hidden = true; status.textContent = 'Saving…';
+    try {
+      const response = await apiFetch('/api/practitioner/profile/me', {method:'PATCH', headers:{'Content-Type':'application/json'}, body:JSON.stringify({...values(), revision:loaded.revision})});
+      const data = await response.json();
+      if (!response.ok) {
+        if (response.status === 409) { conflict = true; byId('profile-reload').hidden = false; }
+        if (Array.isArray(data.detail)) {
+          for (const item of data.detail) {
+            const index = names.indexOf(item.loc[item.loc.length - 1]);
+            if (index >= 0) { controls[index].setAttribute('aria-invalid','true'); controls[index].setAttribute('aria-errormessage','profile-error'); }
+          }
+          throw new Error(data.detail.map(item => item.msg).join(' '));
+        }
+        throw new Error(typeof data.detail === 'string' ? data.detail : 'Could not save your profile. Please retry.');
+      }
+      loaded = data; render(); status.textContent = 'Profile saved.';
+    } catch(e) { showError(e.message || 'Could not confirm the save. Please retry.'); status.textContent = ''; }
+    finally { busy = false; state(); }
+  });
+  load();
+})();
+</script>
+{% endblock %}

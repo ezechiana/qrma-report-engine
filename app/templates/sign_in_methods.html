@@ -1,0 +1,16 @@
+<!DOCTYPE html><html lang="en"><head>
+{% include "shared/brand_head.html" %}
+<meta name="viewport" content="width=device-width,initial-scale=1"><title>Sign-in methods · go360</title>
+<style>
+body{font-family:Arial,sans-serif;color:#142033;background:#f4f6f9;margin:0;padding:24px 16px}main{max-width:680px;margin:auto;background:white;padding:24px;border:1px solid #dce2eb;border-radius:16px;overflow-wrap:anywhere}article{border:1px solid #dce2eb;padding:20px;margin:18px 0;border-radius:12px}button,input{font:inherit;padding:12px;border:1px solid #cbd5e1;border-radius:8px;box-sizing:border-box}button{cursor:pointer;background:#284dde;color:white}button:disabled{opacity:.6;cursor:default}input{display:block;width:100%;margin:8px 0 14px}a{color:#2449cb}:focus-visible{outline:3px solid #2563eb;outline-offset:3px}[hidden]{display:none!important}#sim-error{color:#991b1b;background:#fef2f2;padding:14px;border-radius:8px}small{display:block;line-height:1.5;margin:12px 0}
+</style></head><body><main>
+<a id="sim-return" href="/app">Back to account</a>
+<h1>Sign-in methods</h1>
+<p>Link Google or Microsoft to your existing GO360 account. Your sign-in email, user ID, admin permissions and clinic access stay unchanged.</p>
+<p id="sim-account"></p><p id="sim-status" role="status">Loading sign-in methods…</p>
+<p id="sim-error" role="alert" tabindex="-1" hidden></p>
+<a id="sim-login" href="/login?next=%2Faccount%2Fsign-in-methods" hidden>Sign in to manage your methods</a>
+<p id="sim-read-only" hidden></p><div id="sim-providers"></div>
+<button id="sim-reload" type="button">Reload methods</button>
+<small>If you previously used only social sign-in, <a href="/forgot-password">reset your password</a> first, then sign in with your email and password to link the provider. Removing or replacing a linked provider is not available here.</small>
+</main><script src="/static/js/sign-in-methods.js" defer></script></body></html>

@@ -92,6 +92,8 @@
         const kept = passwords || { current: "", next: "", confirm: "" };
         card.textContent = "";
         add(card, "h1", "", "Account");
+        const methodsLink = add(card, "a", "", "Sign-in methods");
+        methodsLink.href = "/account/sign-in-methods";
 
         add(card, "h2", "", "Your details");
         const nameField = add(card, "div", "field");

@@ -1,0 +1,11 @@
+#clinic-memberships { max-width:1000px; }
+#clinic-memberships [hidden] { display:none !important; }
+#clinic-memberships fieldset { margin:20px 0; padding:16px; border:1px solid #cbd5e1; border-radius:10px; }
+#clinic-memberships input { display:block; box-sizing:border-box; width:100%; max-width:480px; border:1px solid #cbd5e1; border-radius:8px; padding:12px; font:inherit; }
+#cm-list { list-style:none; padding:0; display:grid; gap:14px; }
+#cm-list li { border:1px solid #cbd5e1; border-radius:10px; padding:16px; overflow-wrap:anywhere; }
+#clinic-memberships .cm-actions { display:flex; gap:10px; flex-wrap:wrap; margin-top:12px; }
+#clinic-memberships :focus-visible { outline:3px solid #2563eb; outline-offset:3px; }
+#cm-error,#cm-confirm-error { color:#991b1b; padding:12px; background:#fef2f2; border-radius:8px; }
+#cm-confirm { max-width:520px; width:calc(100% - 64px); border:1px solid #cbd5e1; border-radius:12px; padding:24px; overflow-wrap:anywhere; }
+#cm-confirm::backdrop { background:#0f172a80; }

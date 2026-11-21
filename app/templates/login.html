@@ -862,6 +862,7 @@
         const socialError = params.get("social_error");
         if (socialError) {
             const messages = {
+                account_not_linked: "This provider is not linked to your existing account. Sign in with your email and password (or reset it), then open Account → Sign-in methods to link the provider.",
                 google_not_configured: "Google sign in is not configured yet.",
                 microsoft_not_configured: "Microsoft sign in is not configured yet.",
                 google_cancelled: "Google sign in was cancelled.",
